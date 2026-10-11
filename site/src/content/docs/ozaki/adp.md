@@ -100,10 +100,14 @@ emulated path and the classical `γₖ` bound on the native path
   [`adpSafe_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L405)).
 - **The zero policy matters for the whole routine, not only the estimate.**
   The Z3 model stops its unsafe zero policies with an assertion. Without it,
-  the routine with the "skip zeros" policy returns `0` for a nonzero entry
-  on one of the Z3 model's own inputs, breaking Grade A; giving zeros
-  exponent `−1022` fails on a constructed input. The `−∞` policy is `adp`
-  itself ([`adpPolicy_negInf`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicy.lean#L77); kernel-checked on recorded inputs).
+  "skip zeros" fails for every block size of at least `2` and every length
+  in range: a row `(2^a, 1, 0, …)` against a column `(0, 2^d, 0, …)` emulates
+  with an estimate below the exact one and returns `0` for the product `2^d`
+  ([`adpPolicy_skip_wrong`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGeneral.lean#L465)); giving zeros exponent `−1022` fails likewise
+  ([`adpPolicy_field0_wrong`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGeneral.lean#L486)). With block size `1` skipping is safe
+  ([`escCoarsePolicy_skip_one`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGeneral.lean#L260)), and the `−∞` policy is `adp` itself
+  ([`adpPolicy_negInf`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicy.lean#L77)). These are proved for one-row, one-column products;
+  in larger matrices other rows can raise the matrix estimate.
 
 ## Correctly rounded
 
@@ -131,7 +135,7 @@ The whole variant also runs as one integer function from
 `(significand, exponent)` inputs: integer fixed-point conversion, byte slices
 on the INT8 engine, an integer check and the fallback in fixed-width
 registers, with one theorem bounding every register ([`adpCRJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L33),
-[`adpCRJS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L59) with signed zeros, [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L420); see
+[`adpCRJS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L59) with signed zeros, [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434); see
 [correct rounding](/TC-EFT/ozaki/correct-rounding/)).
 
 ## What is checked

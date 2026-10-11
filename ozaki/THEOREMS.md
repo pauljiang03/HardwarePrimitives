@@ -139,7 +139,7 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | **Integer checks for Ozaki-II and ADP.** The enclosure as `(N, q, K, q)`: `N` the CRT result or the recombined fixed-point product, and `K` a bound built from the scaled integers the engine already multiplies; the integer test equals the rational one, and the schemes with it are correctly rounded. Widths: `2\|N\| ≤ M` and `K ≤ k(2^(P+1) + 1)` (Ozaki-II), `\|N\| ≤ k 2^(2W)` and `K ≤ k(2^(W+1) + 1)` (ADP). | `Ozaki.checkB_eq`, `Ozaki.certifyB_eq`, `Ozaki.ozaki2EnclosureB_sound`, `Ozaki.ozaki2CRB_eq`, `Ozaki.ozaki2EnclosureB_width`, `Ozaki.TC.adpEnclosureB_sound`, `Ozaki.TC.adpCRB_eq`, `Ozaki.TC.adpEnclosureB_width` | [Ozaki/BoundedOzaki2.lean](Ozaki/BoundedOzaki2.lean), [OzakiTC/ADPBounded.lean](OzakiTC/ADPBounded.lean) |
 | **Integer input conversion.** Ozaki-II's scaling and truncation and ADP's fixed point as shifts of the significands, with the shift amounts from bit lengths; each equals the rational definition. | `Ozaki.truncShiftZ_eq`, `Ozaki.floorShiftZ_eq`, `Ozaki.scaleShiftZ_eq`, `Ozaki.toFixedZ_eq` | [Ozaki/BoundedOzaki2Int.lean](Ozaki/BoundedOzaki2Int.lean) |
 | **Correctly rounded Ozaki-II and ADP-style slicing as integer functions**, from `(significand, exponent)` inputs, with the jumping exact path; correctly rounded, with IEEE signed zeros; Ozaki-II on both vendors, ADP on the Tensor Core side. | `Ozaki.ozaki2CRZ_eq`, `Ozaki.ozaki2CRJ_eq_CRZ`, `Ozaki.ozaki2CRJ_eq`, `Ozaki.ozaki2CRJ64_eq`, `Ozaki.ozaki2CRJS_eq`, `Ozaki.TC.adpCRZ_eq`, `Ozaki.TC.adpCRJ_eq_CRZ`, `Ozaki.TC.adpCRJ_eq`, `Ozaki.TC.adpCRJS_eq`, `Ozaki.TC.tcOzaki2CRJS_eq`, `Ozaki.MC.mcOzaki2CRJS_eq` | [Ozaki/BoundedOzaki2Int.lean](Ozaki/BoundedOzaki2Int.lean), [Ozaki/BoundedOzaki2J.lean](Ozaki/BoundedOzaki2J.lean), [OzakiTC/ADPIntJ.lean](OzakiTC/ADPIntJ.lean), [OzakiMC/Ozaki2IntJ.lean](OzakiMC/Ozaki2IntJ.lean) |
-| **One theorem bounding every register.** A checked copy of each integer pipeline guards every integer it computes, data against `2^R` and exponents and counters against `2^X`; under explicit formulas the checked copy returns exactly the unchecked result. Ozaki-I: `R = 332`, `X = 24` for FP64 (`11`-bit slices, up to `175`, `k ≤ 2^20`), `303` and `17` for binary32. Ozaki-II: `264` and `24` for FP64 (twelve moduli up to `4096`, `P ≤ 69`), `161` and `17` for binary32. ADP-style: `264` and `25` for FP64 (up to `11` slices of width up to `81`). Kernel tests show the guards fail at narrower widths. | `Ozaki.ozaki1CRIC_eq`, `Ozaki.ozaki1CRISC_eq`, `Ozaki.ozaki1CRIC_binary64_eq`, `Ozaki.ozaki2CRJC_eq`, `Ozaki.ozaki2CRJC_binary64_eq`, `Ozaki.TC.adpCRJC_eq`, `Ozaki.TC.adpCRJC_binary64_eq`, `Ozaki.TC.v100_fp64CRI_widths`, `Ozaki.TC.v100_fp64CRJ_widths`, `Ozaki.MC.cdna3F16_fp64CRI_widths`, `Ozaki.MC.cdna3F16_fp64CRJ_widths` | [Ozaki/BoundedChecked.lean](Ozaki/BoundedChecked.lean), [Ozaki/BoundedChecked2.lean](Ozaki/BoundedChecked2.lean), [OzakiTC/ADPChecked.lean](OzakiTC/ADPChecked.lean), [OzakiMC/Ozaki2Checked.lean](OzakiMC/Ozaki2Checked.lean) |
+| **One theorem bounding every register.** A checked copy of each integer pipeline guards every integer it computes, data against `2^R` and exponents and counters against `2^X`; under explicit formulas the checked copy returns exactly the unchecked result. Ozaki-I: `R = 263`, `X = 17` for FP64 (`11`-bit slices, up to `175`, `k ≤ 2^20`), `207` and `15` for binary32. Ozaki-II: `263` and `17` for FP64 (twelve moduli up to `4096`, `P ≤ 69`), `161` and `15` for binary32. ADP-style: `259` and `17` for FP64 (up to `11` slices of width up to `81`). The guards include the engines' internals: split-K's chunk results and partial sums, the INT8 engine's 32-bit register (proved never to wrap) and the CRT constants; the signed-zero pipelines have checked copies too. Kernel tests show the guards fail at narrower widths. | `Ozaki.ozaki1CRIC_eq`, `Ozaki.ozaki1CRISC_eq`, `Ozaki.ozaki1CRIC_binary64_eq`, `Ozaki.ozaki2CRJC_eq`, `Ozaki.ozaki2CRJC_binary64_eq`, `Ozaki.TC.adpCRJC_eq`, `Ozaki.TC.adpCRJC_binary64_eq`, `Ozaki.TC.v100_fp64CRI_widths`, `Ozaki.TC.v100_fp64CRJ_widths`, `Ozaki.MC.cdna3F16_fp64CRI_widths`, `Ozaki.MC.cdna3F16_fp64CRJ_widths`, `Ozaki.ozaki1CRIC_binary64_tight`, `Ozaki.ozaki2CRJC_binary64_tight`, `Ozaki.TC.adpCRJC_binary64_tight`, `Ozaki.chunkedC_exactOn`, `Ozaki.TC.int8DotC_eq`, `Ozaki.ozaki2CRJSC_eq`, `Ozaki.TC.adpCRJSC_eq`, `Ozaki.TC.v100_fp64CRI_checked`, `Ozaki.MC.cdna3F16_fp64CRI_checked` | [Ozaki/BoundedChecked.lean](Ozaki/BoundedChecked.lean), [Ozaki/BoundedChecked2.lean](Ozaki/BoundedChecked2.lean), [Ozaki/CheckedTight.lean](Ozaki/CheckedTight.lean), [Ozaki/CheckedEngines.lean](Ozaki/CheckedEngines.lean), [Ozaki/BoundedCheckedSigned.lean](Ozaki/BoundedCheckedSigned.lean), [OzakiTC/ADPChecked.lean](OzakiTC/ADPChecked.lean), [OzakiTC/Int8Checked.lean](OzakiTC/Int8Checked.lean), [OzakiMC/Ozaki2Checked.lean](OzakiMC/Ozaki2Checked.lean) |
 
 ### IEEE rounding, special values and signed zeros
 
@@ -154,6 +154,7 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | **Native GEMM, plain Ozaki-I and Ozaki-II with special values**: IEEE operations, `±Inf` on overflow, IEEE zero signs; on finite inputs they return the rational schemes' results whenever those are finite, so the error bounds apply. | `Ozaki.nativeDotIEEE_fin`, `Ozaki.ozaki1IEEE_fin`, `Ozaki.ozaki2IEEE_fin`, `Ozaki.TC.tcOzaki1I_fin`, `Ozaki.TC.tcOzaki2I_fin`, `Ozaki.TC.tcOzaki1DI_fin`, `Ozaki.MC.mcOzaki1I_fin`, `Ozaki.MC.mcOzaki2I_fin`, `Ozaki.MC.mcOzaki1DI_fin` | [Ozaki/IEEEDot.lean](Ozaki/IEEEDot.lean), [OzakiTC/IEEESchemes.lean](OzakiTC/IEEESchemes.lean), [OzakiMC/IEEESchemes.lean](OzakiMC/IEEESchemes.lean) |
 | **Signed zeros.** The specification is IEEE's: the correctly rounded sum, `−0` when a nonzero exact sum rounds to zero from below, and for an exact zero `−0` only when every product is `−0`. The signed check settles the sign from the enclosure when it lies on one side of zero, and otherwise from the exact path; correctly rounded Ozaki-I with a window accumulator returns the specified signed value on both vendors, for binary32 and FP64. | `Ozaki.certifySigned_eq`, `Ozaki.ozaki1CRWS_eq`, `Ozaki.TC.tcOzaki1CRDS_eq`, `Ozaki.TC.tcOzaki1CRLS_eq`, `Ozaki.MC.mcOzaki1CRDS_eq`, `Ozaki.MC.mcOzaki1CRLS_eq` | [Ozaki/SignedZero.lean](Ozaki/SignedZero.lean), [OzakiTC/Signed.lean](OzakiTC/Signed.lean), [OzakiMC/Signed.lean](OzakiMC/Signed.lean) |
 | **Signed zeros for Ozaki-II and ADP-style slicing**, rational and with integer checks, proved equal to the specification. | `Ozaki.ozaki2CRS_eq`, `Ozaki.ozaki2CRBS_eq`, `Ozaki.TC.adpCRES_eq`, `Ozaki.TC.adpCRBS_eq`, `Ozaki.TC.tcOzaki2CRDS_eq`, `Ozaki.MC.mcOzaki2CRDS_eq` | [Ozaki/BoundedOzaki2.lean](Ozaki/BoundedOzaki2.lean), [OzakiTC/ADPBounded.lean](OzakiTC/ADPBounded.lean) |
+| **Special values from the stored words, in integer arithmetic.** Decoding a binary word into sign, exponent and significand fields, and detecting zeros, subnormals, infinities and NaN, by integer operations; it agrees with TensorCore's classification for any format, and the wrapper built on it meets the specification on stored words. | `Ozaki.decodeWord_inFormat`, `Ozaki.dotSpecialI_eq`, `Ozaki.crIEEEIW_eq`, `Ozaki.crIEEEWord_eq`, `Ozaki.TC.decodeWord_classifyNat`, `Ozaki.TC.decodeWord_binary64`, `Ozaki.TC.tcOzaki1CRIDW_eq` | [Ozaki/IEEEWords.lean](Ozaki/IEEEWords.lean), [OzakiTC/IEEEWords.lean](OzakiTC/IEEEWords.lean) |
 | **Special values for the integer pipelines.** Stored inputs (significand, exponent and sign, `±Inf`, NaN) and a wrapper whose overflow sign comes from the integer sign oracle; every integer and fixed-width variant meets the specification for every input. | `Ozaki.crIEEEI_eq`, `Ozaki.crIEEEI_exactSign`, `Ozaki.TC.tcOzaki1CRIDI_eq`, `Ozaki.TC.tcOzaki2CRJI_eq`, `Ozaki.TC.adpCRJI_eq`, `Ozaki.TC.tcOzaki2CRBI_eq`, `Ozaki.TC.adpCRBI_eq`, `Ozaki.TC.tcOzaki1CRBDZI_eq`, `Ozaki.MC.mcOzaki1CRIDI_eq`, `Ozaki.MC.mcOzaki2CRJI_eq` | [Ozaki/IEEEInt.lean](Ozaki/IEEEInt.lean), [OzakiTC/IEEEBounded.lean](OzakiTC/IEEEBounded.lean), [OzakiMC/IEEEBounded.lean](OzakiMC/IEEEBounded.lean) |
 
 ## Long dot products, FP64 and error bounds
@@ -168,6 +169,9 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | **Correctly rounded FP64 GEMM** on fp16, bf16 and tf32 Tensor Cores and AMD matrix cores, binary64 inputs of any length, the IEEE `rne64` on both vendors. | `Ozaki.TC.tcOzaki1CRD_eq`, `Ozaki.TC.tcOzaki2CRD_eq`, `Ozaki.TC.v100_fp64CR`, `Ozaki.TC.a100BF16_fp64CR`, `Ozaki.MC.mcOzaki1CRD_eq`, `Ozaki.MC.mcOzaki2CRD_eq`, `Ozaki.MC.cdna3F16_fp64CR`, `Ozaki.MC.cdna3BF16_fp64CR` | [OzakiTC/LongDot.lean](OzakiTC/LongDot.lean), [OzakiMC/LongDot.lean](OzakiMC/LongDot.lean) |
 | **Ozaki-I, entrywise.** Every slice and leftover part of an entry is at most twice the entry, so the slicing error is at most `(s + 1) Σᵢ min(2\|xᵢyᵢ\|, 2^(E+F−s(b+1)))`, never more than the normwise bound, and the slice terms sum to `x · y` exactly when every product is zero; in the shape of Abdelfattah et al.'s bound, `(s + 1) 2^(−s(b+1)) κₓ κ_y Σ\|xᵢyᵢ\|`. | `Ozaki.exactTerms_error_sharp`, `Ozaki.exactTerms_error_sharp_le`, `Ozaki.exactTerms_eq_of_products_zero`, `Ozaki.exactTerms_error_kappa`, `Ozaki.ozaki1_error_sharp` | [Ozaki/SharpBounds.lean](Ozaki/SharpBounds.lean) |
 | **Ozaki-II truncation, mixed.** For any shifts, `2^(−s)Σ\|yᵢ\| + 2^(−t)Σ\|xᵢ\|`: Uchino et al.'s bound without its cross term, since truncation is toward zero; `4k max\|x\| max\|y\| 2^(−P)` normwise, half the previous `8k`. | `Ozaki.truncProduct_error_mixed`, `Ozaki.truncProduct_error_mixed_max`, `Ozaki.truncProduct_error_normwise4`, `Ozaki.ozaki2_error_mixed` | [Ozaki/SharpBounds.lean](Ozaki/SharpBounds.lean) |
+| **Jeannerod–Rump in any order.** For any binary summation tree over any permutation of the terms, the error is at most `(n − 1) u Σ\|tᵢ\|`, and a dot product's at most `k u Σ\|xᵢyᵢ\|`, underflow allowed for the sums. | `Ozaki.sumTree_error_jr`, `Ozaki.dotTree_error_jr`, `Ozaki.sumTree_error_jr_rne`, `Ozaki.dotTree_error_jr_rne` | [Ozaki/SharpBounds2.lean](Ozaki/SharpBounds2.lean) |
+| **Different slice counts per matrix.** With `sx` slices of `x`, `sy` of `y` and the pairs `t + u < m`, an exact error identity and the bound `(sx + 1) k 2^(E+F−min(sx, sy, m)(b+1))`; with `sx = sy = m` it is Ozaki-I's triangle. | `Ozaki.dot_eq_exactTermsRect_add`, `Ozaki.exactTermsRect_error_uniform`, `Ozaki.exactTermsRect_triangle` | [Ozaki/SharpBounds2.lean](Ozaki/SharpBounds2.lean) |
+| **Ozaki-II with an inexact reconstruction.** If the CRT sum is accumulated within `ε` (for example left to right in FP64, `ε = n 2^-53 2^(b+1) Σ\|wⱼ\|`) and `2k 2^(2P) + 2ε < M`, the reduction still recovers the product within `ε`, and the scheme's error grows by `u ε 2^-s + ε 2^-s`. | `Ozaki.reduceApprox_eq`, `Ozaki.ozaki2Approx_error`, `Ozaki.crtAccFP64_error`, `Ozaki.ozaki2FP64_error` | [Ozaki/SharpBounds2.lean](Ozaki/SharpBounds2.lean) |
 | **Jeannerod–Rump.** With round to nearest, summing left to right loses at most `(n − 1) u Σ\|tᵢ\|`, underflow allowed, and a dot product at most `k u Σ\|xᵢyᵢ\|` when no product underflows (`ku + (k−1)u²` and an underflow term otherwise), with no condition on `k u`; IEEE round to nearest even has the properties the proof needs. Ozaki-I's recombination adds at most `(n − 1) u Σ\|tⱼ\|`. | `Ozaki.sumWith_error_jr`, `Ozaki.nativeDot_error_jr`, `Ozaki.nativeDot_error_jr_underflow`, `Ozaki.roundRNE_jrAdd`, `Ozaki.ozaki1_error_jr`, `Ozaki.TC.native32_error_jr`, `Ozaki.TC.nativeDot64_error_jr`, `Ozaki.TC.tcOzaki1_error_jr`, `Ozaki.MC.native32_error_jr`, `Ozaki.MC.mcOzaki1_error_jr` | [Ozaki/SharpBounds.lean](Ozaki/SharpBounds.lean), [OzakiTC/SharpBounds.lean](OzakiTC/SharpBounds.lean), [OzakiMC/SharpBounds.lean](OzakiMC/SharpBounds.lean) |
 
 ## On the NVIDIA Tensor Core model
@@ -199,6 +203,7 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | Ozaki-I on the INT8 engine: the slice products recombine exactly to the fixed-point product, so the result is one binary64 rounding of it. | `ADP:[E.3]`, `ADP:[R.1]` | `Ozaki.TC.int8Recombine_eq`, `Ozaki.TC.int8Ozaki_eq` | [OzakiTC/Int8.lean](OzakiTC/Int8.lean) |
 | **Exactness with cancellation.** A block of `b`-bit integers with `2b ≤ F` and an integer `\|c\| < 2^(F+1)` returns the exact sum whenever that sum is a binary32 value, with no bound on `Σ\|aᵢbᵢ\|`; the condition on the sum is necessary. Chains and the engine likewise, when the prefixes at group boundaries stay within `2^24`. Eight products `±2^22` on A100 and a full H100 group of sixteen return `0`. | | `Ozaki.TC.evalBlock_cancel`, `Ozaki.TC.evalBlock_exact_needs_binary32`, `Ozaki.TC.runBlocks_cancel`, `Ozaki.TC.tcEngine_exactWhen`, `Ozaki.TC.a100_cancel_zero`, `Ozaki.TC.h100_cancel_zero` | [OzakiTC/Cancellation.lean](OzakiTC/Cancellation.lean) |
 | **The choice of slices, chunks and passes.** Every candidate configuration on every path is exact for every length; the cost in engine blocks of Ozaki-I at a stated slice rule picks the cheapest. `10`-bit slices that fill the group win wherever a group holds more than four products (H100 fp16, FP64, `k = 1024`: 1344 blocks, against 3840 for `11`-bit chunks of four and 1920 for two passes); the chosen configurations are correctly rounded. | | `Ozaki.slicesFor`, `Ozaki.slicing_term_le_maxAbs`, `Ozaki.TC.candidates_exact`, `Ozaki.TC.h100F16_best`, `Ozaki.TC.v100F16_best`, `Ozaki.TC.h100F16_exactOn10`, `Ozaki.TC.h100F16_fp64CR10`, `Ozaki.TC.h100F16_exactPath` | [Ozaki/SliceRule.lean](Ozaki/SliceRule.lean), [OzakiTC/SplitChoice.lean](OzakiTC/SplitChoice.lean) |
+| **The choice for Ozaki-II and ADP.** The fewest pairwise-coprime moduli up to `2^(b+1)` that meet the same accuracy target, every candidate exact; for FP64, Ozaki-II needs `1.4×` to `2×` fewer engine blocks than Ozaki-I on every path (H100 fp16, `k = 1024`: 768 against 1344). For ADP-style slicing the remap encoding is never worse than naive signed bytes, but the floor encoding saves a slice when the width is `7` mod `8`. The chosen configurations are correctly rounded. | | `Ozaki.moduliList_pairwise`, `Ozaki.moduliFor_spec`, `Ozaki.TC.ozaki2Candidates_ok`, `Ozaki.TC.h100F16_best2`, `Ozaki.TC.h100F16_fp64CR2`, `Ozaki.TC.adpCandidate_exact`, `Ozaki.TC.adpCost_remap_le_naive`, `Ozaki.TC.adp_best`, `Ozaki.TC.adp_fp64CR_esc0` | [Ozaki/ModuliRule.lean](Ozaki/ModuliRule.lean), [OzakiTC/Ozaki2Choice.lean](OzakiTC/Ozaki2Choice.lean), [OzakiTC/ADPChoice.lean](OzakiTC/ADPChoice.lean) |
 
 ### The ADP pipeline on the INT8 engine
 
@@ -224,7 +229,7 @@ its ESC, one non-finite) it returns the same path and values ([tests](tests/READ
 | **Emergent overflow.** An emulated entry fails exactly when the rounded fixed-point product exceeds the largest finite binary64 value; where the Z3 model returns `±Inf`, `adp` returns no values and `adpIEEE` returns `±Inf`. | `ADP:[T.10]` | `Ozaki.TC.emulEntry_none_iff` |
 | **ADP with special values.** Words decode to IEEE data exactly as IEEE classifies them; `adpIEEE` takes `adp`'s path and returns its values wherever `adp` returns values, its non-finite path is native FP64 with IEEE operations, and on the Z3 model's cases with an infinity, a NaN and an emulated overflow it returns the Z3 model's words, class for class. | `ADP:[T.9]`, `ADP:[T.10]` | `Ozaki.TC.decodeF64_inf_iff`, `Ozaki.TC.decodeF64_nan_iff`, `Ozaki.TC.adpIEEE_agrees`, `Ozaki.TC.adpIEEE_nonfinite`, `Ozaki.TC.adpSafeIEEE_agrees` |
 | **A guardrail for subnormal inputs.** `adpSafe` sends inputs with a nonzero entry below `2^-1022` to the native path; whenever it emulates, every entry is normal or zero, and whenever it returns values, every entry meets Grade A on the emulated path and the `γₖ` bound on the native path, with no normality hypothesis. On the five recorded Z3 cases it returns what `adp` returns. | `ADP:[P.2]`, `ADP:[N.1]` | `Ozaki.TC.adpSafe_emulated_normal`, `Ozaki.TC.nativeGemm64_accuracy`, `Ozaki.TC.adpSafe_accuracy` |
-| **The routine with the Z3 model's zero policies.** With the `−∞` policy it is `adp`; without the model's `[X.4]` assertion, the "skip zeros" policy returns `0` for a nonzero entry on the model's own `field0_case` input, breaking Grade A, and the `−1022` policy fails on a constructed input (kernel-checked on recorded inputs). | `ADP:[X.4]`, `ADP:[T.12]` | `Ozaki.TC.adpPolicy_negInf` |
+| **The routine with the Z3 model's zero policies.** With the `−∞` policy it is `adp`. Without the model's `[X.4]` assertion, "skip zeros" fails for every block size of at least `2` and every `2 ≤ k < 2^17`: a row `(2^a, 1, 0, …)` against a column `(0, 2^d, 0, …)` emulates with an estimate below the exact ESC and returns `0` for the product `2^d`, breaking Grade A; with block size `1` skipping is safe. Giving zeros exponent `−1022` fails likewise for every block size, with `−1022 ≤ d ≤ −998`. Proved for one-row, one-column products; in larger matrices other rows can raise the matrix ESC. | `ADP:[X.4]`, `ADP:[T.12]` | `Ozaki.TC.adpPolicy_negInf`, `Ozaki.TC.adpPolicy_skip_wrong`, `Ozaki.TC.adpPolicy_field0_wrong`, `Ozaki.TC.escCoarsePolicy_skip_one` |
 | **The routine returns values** for finite inputs of matching shapes with `k · 2^14 < 2^31` and every `Σ\|xᵢyᵢ\| ≤ 2^1000` (a sufficient bound, not a sharp one); `adp` needs normal or zero entries, `adpSafe` does not. | | `Ozaki.TC.adp_isSome`, `Ozaki.TC.adpSafe_isSome` |
 | **Correctly rounded fixed-point Ozaki-I as in ADP**: with given `(s, W)` that fit and `k · 2^14 < 2^31`, `adpCR` returns the binary64 round to nearest of `x · y` for every input; it falls back to the exact rational product, and it is not the ESC-driven routine. | | `Ozaki.TC.adpCR_eq` |
 | **The same with every product on the INT8 engine, any length.** The INT8 engine with split-K is exact on `6`-bit slices for every length; the fixed-point enclosures run on it with split-K too; and the exact path is Ozaki-I with all slice products of `6`-bit slices on it, at most `smax` slices with `7 smax > 2098`. | | `Ozaki.TC.int8SplitK_exactOn`, `Ozaki.TC.int8DotK_exact`, `Ozaki.TC.adpEnclosureK_sound`, `Ozaki.TC.adpCRE_eq` |
@@ -232,7 +237,8 @@ its ESC, one non-finite) it returns the same path and values ([tests](tests/READ
 All of these are in [OzakiTC/ADP.lean](OzakiTC/ADP.lean), except `adpCR_eq` in
 [OzakiTC/Correct.lean](OzakiTC/Correct.lean), the guardrail, success and `adpCRE` results in
 [OzakiTC/ADPFix.lean](OzakiTC/ADPFix.lean), the zero policies in
-[OzakiTC/ADPZeroPolicy.lean](OzakiTC/ADPZeroPolicy.lean), and the test-level labels (`[T.1]`, `[T.4]`, `[T.7]`,
+[OzakiTC/ADPZeroPolicy.lean](OzakiTC/ADPZeroPolicy.lean) and
+[OzakiTC/ADPZeroPolicyGeneral.lean](OzakiTC/ADPZeroPolicyGeneral.lean), and the test-level labels (`[T.1]`, `[T.4]`, `[T.7]`,
 `[T.10]`, `[T.11]`) in [OzakiTC/ADPLabels.lean](OzakiTC/ADPLabels.lean). The Z3 model's inputs for
 `[T.1]`, `[T.4]`, `[T.7]`, `[T.8]`, `[T.10]`, `[T.11]` and `[T.12]` are also checked by kernel
 evaluation ([tests](tests/README.md)). `[T.13]` (fault injection) and `[T.14]` (label coverage)
@@ -259,6 +265,8 @@ theorem or a kernel-checked test.
 | bf16 holds `256` but not `2047`; a full CDNA 3 group of `11`-bit products can exceed the budget; the fp16 paths are exact where the SFMA is not. | | `Ozaki.MC.bfloat16_holds_256`, `Ozaki.MC.cdna3F16_full_group`, `Ozaki.MC.fp16_exact_where_sfma_is_not` | [OzakiMC/Limits.lean](OzakiMC/Limits.lean) |
 | **Exactness with cancellation**, per architecture: CDNA 1 and CDNA 3 return the exact sum whenever every product, `c` and the sum are within `2^24`; CDNA 2 also needs every node of its pairwise tree within `2^24` (implied by the old budget). | | `Ozaki.MC.accumulate_cancel`, `Ozaki.MC.evalBlock_cancel`, `Ozaki.MC.pairTree_cancel`, `Ozaki.MC.treeOK_of_budget`, `Ozaki.MC.cdna3_cancel_zero`, `Ozaki.MC.cdna12_cancel_c` | [OzakiMC/Cancellation.lean](OzakiMC/Cancellation.lean) |
 | **The choice of slices and chunks** on every AMD path, each candidate exact for every length; on CDNA 3 fp16, `10`-bit slices are cheapest (FP64, `k = 1024`: 2688 blocks against 3840). | | `Ozaki.MC.mcCandidates_exact`, `Ozaki.MC.cdna3F16_best`, `Ozaki.MC.cdna3F16_fp64CR10`, `Ozaki.MC.sfma_fp64CR12` | [OzakiMC/SplitChoice.lean](OzakiMC/SplitChoice.lean) |
+| **Two passes on AMD.** On the SFMA and CDNA 1 the second pass from `c = −D1` recovers the exact sum (on the SFMA it is TwoProdFMA); on CDNA 3 too, since global alignment is exact for larger `c`; the two-pass engine is exact for every length. On CDNA 2 it fails in general: the tree rounds before `c` is added. A second pass is needed only on CDNA 3 fp16 and the SFMA. | | `Ozaki.MC.sfma_twoProd`, `Ozaki.MC.mcTwoPass_exact_cr`, `Ozaki.MC.alignedAccumulation_wide`, `Ozaki.MC.mcTwoPass_exact_ga`, `Ozaki.MC.mcEngine2_exactOn`, `Ozaki.MC.cdna3F16_twoPass_full_group`, `Ozaki.MC.cdna2_twoPass_fails`, `Ozaki.MC.full_groups_fit` | [OzakiMC/TwoPass.lean](OzakiMC/TwoPass.lean) |
+| **Ozaki-I against Ozaki-II on AMD**: Ozaki-II is cheaper for FP64 on every path; two passes win only on the SFMA, for Ozaki-I. | | `Ozaki.MC.mcRunCandidates_exact`, `Ozaki.MC.cdna3F16_best12`, `Ozaki.MC.cdna3F16_fp64CR2`, `Ozaki.MC.sfma_fp64CR2pass` | [OzakiMC/Ozaki2Choice.lean](OzakiMC/Ozaki2Choice.lean) |
 
 ## Not proved
 
@@ -271,19 +279,21 @@ theorem or a kernel-checked test.
   models an INT8 instruction, and nothing is validated against INT8 hardware.
 - The Z3 models' measured comparisons (`I:[M.2]`, `I:[M.3]`, `II:[M.2]`, `II:[M.3]`) are checked
   on their test matrices ([tests](tests/README.md)), not proved: they are not true for every input.
-- ADP: the unsafe zero policies are checked on recorded and constructed inputs, not proved wrong
-  in general. Grade A fails for some subnormal inputs of `adp` as the paper describes it; the extra
+- ADP: the unsafe zero policies are proved wrong for one-row, one-column products of every size
+  in range, not for every matrix shape. Grade A fails for some subnormal inputs of `adp` as the paper describes it; the extra
   guardrail of `adpSafe` restores it. cuBLAS's own implementation is not modelled; it passes an
   independent underflow test (Demmel et al., 2026).
 - TensorCore's own binary32 and binary64 roundings fail above the largest finite value, where
   IEEE rounds values below `2^128 − 2^103` (binary64: `2^1024 − 2^970`) down to it. No result here
   depends on that: the schemes, the σ-trick and `int8Ozaki` all use IEEE's rounding.
-- The width theorems leave some values unguarded: comparisons, signs, absolute values, bit
-  lengths, list lengths and small counters; the CRT basis constants, which are read, not computed;
-  the powers inside shifts, of which only the shifted results are guarded; and the engines' internal
-  arithmetic, of which only the outputs are guarded. The widths are generous, not tight. The signed
-  variants have no checked copies, and the special-value wrapper detects specials on decoded data,
-  not by integer operations. ADP's integer pipeline exists on the Tensor Core side only.
+- The width theorems do not guard comparisons, signs, absolute values, bit lengths, list lengths,
+  or powers of two used as shift amounts, which create no new magnitude; one register of the
+  descent is bounded through the other requirements rather than guarded directly. The binary32
+  signed pipelines have no checked instances, and there is no word-level special-value instance on
+  the AMD side (MatrixCore has no binary64 decoding). ADP's integer pipeline exists on the Tensor
+  Core side only.
+- How often the fallback runs is measured by simulation
+  ([`scripts/fallback_sim.py`](scripts/fallback_sim.py)), not proved.
 - The binary32 σ-trick is proved only for grids in `[2^-149, 2^104]`; the integer slicing covers
   every grid.
 - The cancellation condition is the exact boundary, not a scheduling rule: the running sums are
@@ -553,6 +563,26 @@ open Ozaki Ozaki.TC Ozaki.ADP
 #check @h100F16_best
 #check @h100F16_fp64CR10
 #check @adpPolicy_negInf
+#check @ozaki1CRIC_binary64_tight
+#check @chunkedC_exactOn
+#check @int8DotC_eq
+#check @ozaki2CRJSC_eq
+#check @adpCRJSC_eq
+#check @dotSpecialI_eq
+#check @crIEEEWord_eq
+#check @decodeWord_classifyNat
+#check @moduliFor_spec
+#check @ozaki2Candidates_ok
+#check @h100F16_best2
+#check @adp_best
+#check @adpPolicy_skip_wrong
+#check @adpPolicy_field0_wrong
+#check @sumTree_error_jr
+#check @dotTree_error_jr
+#check @dot_eq_exactTermsRect_add
+#check @exactTermsRect_error_uniform
+#check @ozaki2Approx_error
+#check @ozaki2FP64_error
 ```
 
 ```lean
@@ -619,4 +649,8 @@ open Ozaki Ozaki.MC
 #check @cdna3F16_best
 #check @cdna3F16_fp64CR10
 #check @mcOzaki1_error_jr
+#check @mcEngine2_exactOn
+#check @cdna2_twoPass_fails
+#check @cdna3F16_twoPass_full_group
+#check @cdna3F16_best12
 ```

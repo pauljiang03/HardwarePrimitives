@@ -18,9 +18,11 @@ import Ozaki.BoundedOzaki2J
 * the exact path, by the checked jumping exact path of `Ozaki.BoundedChecked`
   (`ozaki1ExactPathIC`).
 
-As there, comparisons, signs, absolute values, bit lengths and list lengths are not guarded; nor are
-the CRT basis's constants (moduli, weights), which are read, not computed (their product `M` is
-guarded); nor the engine's internal arithmetic, only its outputs as read back.
+The CRT basis's constants are guarded as they are read: each modulus, the weights in use and their
+product `M`. As there, comparisons, signs, absolute values, bit lengths and list lengths produce no
+new magnitudes and are not guarded. The engine's own arithmetic is guarded when it runs through
+`Ozaki.CheckedEngines.chunkedC` (split-K with its chunk sums guarded); the matrix engine's block
+arithmetic is the hardware model's.
 
 `ozaki2CRJC_eq` proves that on binary entries with an exact engine, if `R` and `X` meet explicit
 requirements (`ozaki2R`, `ozaki2X` for each configuration; `exactR`, `exactX` for the exact path),
@@ -110,8 +112,10 @@ def dropsZC (s : ℤ) (xs : List (ℤ × ℤ)) : Option Bool := do
     dropsBitsC B a.1 j
   pure (ds.any id)
 
-/-- `residueProduct`: the residues, the engine output read back, and its residue. -/
+/-- `residueProduct`: the modulus as read, the residues, the engine output read back, and its
+residue. -/
 def residueProductC (eng : Engine) (m : ℕ) (a c : List ℤ) : Option (Option ℤ) := do
+  let _ ← B.gn m
   let ra ← a.mapM fun z => symModC B z m
   let rc ← c.mapM fun z => symModC B z m
   match eng ra rc with
@@ -124,9 +128,11 @@ def residueProductC (eng : Engine) (m : ℕ) (a c : List ℤ) : Option (Option �
       let r ← B.gv (z' % (m : ℤ))
       pure (some r)
 
-/-- `crt`: the modulus, the weighted sum, and its symmetric residue. -/
+/-- `crt`: the modulus, the weights in use (those paired with a modulus) as read, the weighted
+sum, and its symmetric residue. -/
 def crtC (Bs : CRTBasis) (rs : List ℤ) : Option ℤ := do
   let M ← B.gn Bs.modulus
+  let _ ← (List.zipWith (fun w _ => w) Bs.weights Bs.moduli).mapM B.gv
   let d ← dotZC B Bs.weights rs
   symModC B d M
 
@@ -363,9 +369,11 @@ theorem residueProductC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
   have hab : dotAbs (a.map fun z => symMod z m) (c.map fun z => symMod z m) ≤ budget :=
     Nat.le_trans (dotAbs_le _ _ _ _ hx hy) (by simpa using hbudget)
   unfold residueProductC
+  rw [Widths.gn_ok (by omega)]
+  simp only [Option.bind_eq_bind, Option.bind_some]
   rw [mapM_eq_some_map (g := fun z => symMod z m) fun _ _ => symModC_eq hm hm2,
     mapM_eq_some_map (g := fun z => symMod z m) fun _ _ => symModC_eq hm hm2]
-  simp only [Option.bind_eq_bind, Option.bind_some]
+  simp only [Option.bind_some]
   rw [heng _ _ (by simpa using hlen) hx hy hab]
   simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, toInt?_intCast]
   have hz := Nat.le_trans (natAbs_dotZ_le (a.map fun z => symMod z m) (c.map fun z => symMod z m))
@@ -404,6 +412,27 @@ theorem dotAbs_le_crtSize : ∀ (ws : List ℤ) (ms : List ℕ) (rs : List ℤ),
       rw [Int.natAbs_mul]; exact Nat.mul_le_mul_left _ (Nat.le_of_lt hr)
     omega
 
+/-- A weight paired with a modulus is at most `crtSize`: every modulus is positive (each residue is
+below its modulus). -/
+theorem weight_le_crtSize_aux : ∀ {ws : List ℤ} {ms : List ℕ} {rs : List ℤ}, ResBelow rs ms →
+    ∀ w ∈ List.zipWith (fun w _ => w) ws ms,
+      w.natAbs ≤ (List.zipWith (fun w m => w.natAbs * m) ws ms).sum
+  | [], _, _, _, w, hw => by simp at hw
+  | _ :: _, [], _, _, w, hw => by simp at hw
+  | v :: ws, m :: ms, [], h, _, _ => by simp [ResBelow] at h
+  | v :: ws, m :: ms, r :: rs, h, w, hw => by
+    obtain ⟨hr, h⟩ := h
+    simp only [List.zipWith_cons_cons, List.mem_cons, List.sum_cons] at hw ⊢
+    rcases hw with rfl | hw
+    · have : w.natAbs ≤ w.natAbs * m := Nat.le_mul_of_pos_right _ (by omega)
+      omega
+    · have := weight_le_crtSize_aux h w hw
+      omega
+
+theorem weight_le_crtSize {Bs : CRTBasis} {rs : List ℤ} (hrs : ResBelow rs Bs.moduli) {w : ℤ}
+    (hw : w ∈ List.zipWith (fun w _ => w) Bs.weights Bs.moduli) : w.natAbs ≤ crtSize Bs :=
+  weight_le_crtSize_aux hrs w hw
+
 theorem crtC_eq {B : Widths} {Bs : CRTBasis} {rs : List ℤ} (hM : 0 < Bs.modulus)
     (hrs : ResBelow rs Bs.moduli) (hsize : crtSize Bs < 2 ^ B.R)
     (hM2 : 2 * Bs.modulus < 2 ^ B.R) : crtC B Bs rs = some (crt Bs rs) := by
@@ -411,6 +440,8 @@ theorem crtC_eq {B : Widths} {Bs : CRTBasis} {rs : List ℤ} (hM : 0 < Bs.modulu
   unfold crtC crt
   rw [Widths.gn_ok (by omega)]
   simp only [Option.bind_eq_bind, Option.bind_some]
+  rw [mapM_gv_eq fun w hw => Nat.lt_of_le_of_lt (weight_le_crtSize hrs hw) hsize]
+  simp only [Option.bind_some]
   rw [dotZC_eq hd]
   simp only [Option.bind_some]
   exact symModC_eq hM hM2

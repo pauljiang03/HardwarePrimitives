@@ -15,3 +15,6 @@ import OzakiTCTests.BoundedSchemes
 import OzakiTCTests.FinalPipelines
 import OzakiTCTests.SharpBounds
 import OzakiTCTests.Zeros
+import OzakiTCTests.CheckedTight
+import OzakiTCTests.Ozaki2Choice
+import OzakiTCTests.ZeroPolicyGeneral

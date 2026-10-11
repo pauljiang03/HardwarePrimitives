@@ -37,8 +37,9 @@ Beyond the Z3 models:
 * **What the hardware semantics give.** The exact condition for a matrix-engine call, cancellation
   included, the two-pass recovery of full groups, and the cheapest exact choice of slices, chunks
   and passes on each GPU.
-* **Sharper error bounds**: an entrywise Ozaki-I bound, Ozaki-II's truncation bound without its
-  cross term, and Jeannerod–Rump's `k·u` for native dot products.
+* **Sharper error bounds**: an entrywise Ozaki-I bound, different slice counts per matrix,
+  Ozaki-II's truncation bound without its cross term and with an inexact (for example FP64)
+  reconstruction, and Jeannerod–Rump's `k·u` for native dot products in any summation order.
 
 [What is proven](THEOREMS.md) · [Tests](tests/README.md) · [Examples](examples/README.md)
 
@@ -188,14 +189,27 @@ returns exactly what the unchecked pipeline returns (`Ozaki.ozaki1CRIC_eq`,
 
 | Pipeline | `R` | `X` |
 | --- | --- | --- |
-| Ozaki-I, FP64 (`11`-bit slices, up to `175`, `k ≤ 2^20`) | 332 | 24 |
-| Ozaki-I, binary32 (up to `24` slices) | 303 | 17 |
-| Ozaki-II, FP64 (twelve moduli up to `4096`, `P ≤ 69`) | 264 | 24 |
-| Ozaki-II, binary32 (six moduli) | 161 | 17 |
-| ADP-style, FP64 (up to `11` slices of width up to `81`) | 264 | 25 |
+| Ozaki-I, FP64 (`11`-bit slices, up to `175`, `k ≤ 2^20`) | 263 | 17 |
+| Ozaki-I, binary32 (up to `24` slices) | 207 | 15 |
+| Ozaki-II, FP64 (twelve moduli up to `4096`, `P ≤ 69`) | 263 | 17 |
+| Ozaki-II, binary32 (six moduli) | 161 | 15 |
+| ADP-style, FP64 (up to `11` slices of width up to `81`) | 259 | 17 |
 
-Kernel tests show the guards fail at narrower widths. The widths are generous, not tight, and a
-few values are not guarded ([THEOREMS.md](THEOREMS.md#not-proved)).
+The guards cover the engines' internals too (split-K's partial sums, the INT8 engine's 32-bit
+register, proved never to wrap) and the signed-zero pipelines. Kernel tests show the guards fail
+at narrower widths. Comparisons, bit lengths and shift amounts are not guarded
+([THEOREMS.md](THEOREMS.md#not-proved)).
+
+**How often the fallback runs, measured.** A CPU simulation of the schemes with exact arithmetic
+([`scripts/fallback_sim.py`](scripts/fallback_sim.py), [`data/fallback-sim.json`](data/fallback-sim.json))
+at `k` up to `4096`: for binary64 output and uniform inputs, the check settles 98–99 % of entries
+(90–96 % with exponents spread over `2^±8`) and saves about 40 % of the engine products against
+always taking the exact path; the
+slice counts must grow with `k` (at `k ≥ 256` five `11`-bit slices almost never settle an entry);
+products with condition number `10^6` or more need a deeper list of slice counts (from 100 % to
+about 2 % fallback); entries with no shared nonzero settle at once with the zero-aware bound;
+and low-precision inputs are cheaper on the exact path directly. Ozaki-II settles almost every
+entry at twelve moduli. These are model costs on chosen distributions, not GPU time.
 
 **Exact zeros settle at once.** The slicing bound counts only the positions where both entries are
 nonzero, so an entry whose products are all zero, such as sparse rows and columns with no shared
@@ -281,6 +295,10 @@ What changes from the Z3 models:
   against 3840 for `11`-bit chunks of four and 1920 for two passes. The conservative rule allows
   this configuration too; what the model adds is the proof, and the evidence that two passes do
   not pay by this count. The count is of model instructions, not time.
+* **Ozaki-II against Ozaki-I.** The same choice for Ozaki-II (the fewest moduli that meet the same
+  accuracy target, `Ozaki.moduliFor_spec`) makes it `1.4×` to `2×` cheaper than Ozaki-I for FP64 on
+  every path, in engine blocks (`Ozaki.TC.h100F16_best2`); it leaves out Ozaki-II's reconstruction
+  with integers of about `130` bits.
 * **The σ-trick.** For a binary32 `a` with `|a| ≤ 2^(g+b)`, `b ≤ 21` and `−149 ≤ g ≤ 104`,
   `fl(fl(a + σ) − σ)` with IEEE binary32 addition is `a` rounded to the grid `2^g` and
   `fl(a − hi)` is exact
@@ -359,6 +377,10 @@ What the model shows:
   product, `c` and the sum are within `2^24`; CDNA 2 also needs every node of its pairwise tree
   within `2^24` (`Ozaki.MC.evalBlock_cancel`, `Ozaki.MC.pairTree_cancel`). On CDNA 3 fp16,
   `10`-bit slices are the cheapest exact configuration (`Ozaki.MC.cdna3F16_best`).
+* **Two passes on AMD.** The second pass from `c = −D1` recovers the exact sum on the SFMA (where
+  it is TwoProdFMA), CDNA 1 and CDNA 3 (`Ozaki.MC.mcEngine2_exactOn`,
+  `Ozaki.MC.cdna3F16_twoPass_full_group`), but not in general on CDNA 2, whose tree rounds before
+  `c` is added (`Ozaki.MC.cdna2_twoPass_fails`).
 
 ## Findings from formalizing
 
@@ -381,8 +403,10 @@ What the model shows:
   cuBLAS is not modelled, and it passes an independent underflow test (Demmel et al., 2026) by
   detecting the wide range and using its FP64 path, much as `adpSafe` does.
 * **ADP's zero policy matters for the result, not only the estimate.** Without the Z3 model's
-  `[X.4]` assertion, the "skip zeros" policy returns `0` for a nonzero entry on one of the model's
-  own inputs, breaking Grade A (`Ozaki.TC.adpPolicy_negInf` and kernel tests).
+  `[X.4]` assertion, "skip zeros" returns `0` for a nonzero product for every block size of at
+  least `2` and every length in range, and giving zeros exponent `−1022` fails likewise; with
+  block size `1` skipping is safe (`Ozaki.TC.adpPolicy_skip_wrong`,
+  `Ozaki.TC.adpPolicy_field0_wrong`).
 * Correct rounding is cheap where a scheme already carries margin: the Z3 configuration's fourth
   Ozaki-I slice, which adds nothing at binary32 output precision, lets the check settle every
   entry, and ADP's own ESC choice settles every entry of the random binary64 tests. Ozaki-II with

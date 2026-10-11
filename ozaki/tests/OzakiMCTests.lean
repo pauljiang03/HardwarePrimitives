@@ -10,3 +10,4 @@ import OzakiMCTests.SplitChoice
 import OzakiMCTests.BoundedSchemes
 import OzakiMCTests.FinalPipelines
 import OzakiMCTests.Zeros
+import OzakiMCTests.TwoPassChoice

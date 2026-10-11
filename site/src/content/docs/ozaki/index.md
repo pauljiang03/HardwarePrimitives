@@ -60,7 +60,12 @@ literature.
   assertion, returns `0` for a nonzero entry on one of the model's own inputs.
 - On A100 and H100, `10`-bit slices that fill a hardware group are the
   cheapest exact configuration; a second pass through `C` is exact but costs
-  more than the extra slice.
+  more than the extra slice. For FP64, Ozaki-II needs `1.4×` to `2×` fewer
+  engine blocks than Ozaki-I on every path.
+- At realistic sizes the correct-rounding check saves about 40 % of the
+  engine products on well-conditioned data; ill-conditioned products need a
+  deeper list of slice counts, and low-precision inputs are cheaper on the
+  exact path directly.
 - On the Z3 test matrices, Ozaki-I's configuration (`4` slices) is correctly
   rounded on every entry and Ozaki-II's (`P = 22`) on none.
 

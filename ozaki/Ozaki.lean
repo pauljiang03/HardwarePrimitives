@@ -37,6 +37,12 @@ import Ozaki.Descent
 import Ozaki.IEEEInt
 import Ozaki.SharpBounds
 import Ozaki.ZeroCheck
+import Ozaki.BoundedCheckedSigned
+import Ozaki.CheckedEngines
+import Ozaki.CheckedTight
+import Ozaki.IEEEWords
+import Ozaki.ModuliRule
+import Ozaki.SharpBounds2
 
 /-! # The Ozaki schemes, independent of the hardware
 

@@ -130,6 +130,13 @@ own kernel checks of the integer pieces: a register that wraps mid-sum, ties, bi
 subnormal and overflowing results, heavy cancellation, a tie after cancellation, and an end-to-end
 binary32 tie through the exact path.
 
+### Tighter widths
+
+[OzakiTCTests/CheckedTight.lean](OzakiTCTests/CheckedTight.lean) runs the checked pipelines at the
+tightened widths on the guarded engines, including exact-path-only runs, shows them failing with a
+`64`-bit data register or an `8`-bit exponent register, checks the signed checked copies, and shows
+the INT8 register refusing to wrap where TC-EFT's wraps.
+
 ## Exact zeros
 
 [OzakiTCTests/Zeros.lean](OzakiTCTests/Zeros.lean) (V100) and
@@ -162,6 +169,20 @@ products.
 `10`-bit slices filling the group, on H100 and A100 fp16 and CDNA 3 fp16: correctly rounded FP64
 returns the oracle's words.
 
+[OzakiTCTests/Ozaki2Choice.lean](OzakiTCTests/Ozaki2Choice.lean) and
+[OzakiMCTests/TwoPassChoice.lean](OzakiMCTests/TwoPassChoice.lean) run the chosen Ozaki-II and ADP
+configurations on oracle entries, the two-pass engine on CDNA 3 on over-budget `11`-bit vectors,
+and two-pass Ozaki-I on the SFMA.
+
+## How often the fallback runs
+
+[`scripts/fallback_sim.py`](../scripts/fallback_sim.py) is not a Lean test: it simulates the
+correctly rounded schemes in Python with exact arithmetic, following the Lean definitions, at
+`k` = 256, 1024 and 4096 on uniform, wide-exponent, ill-conditioned, sparse and low-precision
+inputs, checks every enclosure and settled result against the exact product, and records how
+often each step settles an entry and what it costs in
+[`data/fallback-sim.json`](../data/fallback-sim.json).
+
 ## IEEE special values
 
 [OzakiTCTests/Specials.lean](OzakiTCTests/Specials.lean) (V100) and
@@ -183,6 +204,10 @@ zero-policy inputs and outputs in [`data/z3-adp-zero-policies.json`](../data/z3-
 policy without the model's `[X.4]` assertion: the `−∞` policy returns the model's results, the
 "skip zeros" policy returns `0` for a nonzero entry on the model's `field0_case`, breaking Grade A,
 and the `−1022` policy fails on a constructed input.
+[OzakiTCTests/ZeroPolicyGeneral.lean](OzakiTCTests/ZeroPolicyGeneral.lean) runs the general
+counterexample family on explicit words with the default configuration: both unsafe policies
+emulate and return `0`, block size `1` with skipping goes native and returns the right value, and
+`adp` returns the right values.
 
 ## ADP's guardrail and the INT8 exact path
 

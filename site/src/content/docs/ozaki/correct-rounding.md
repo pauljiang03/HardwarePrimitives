@@ -64,16 +64,46 @@ nonzero, settles on the first check with `0` and its IEEE sign
 ([`supportOverlap_eq_zero_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L124), [`ozaki1CREZ_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L525),
 [`ozaki1CRWSZ_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L817)). The count costs one extra engine dot product per entry.
 
-On the test matrices:
+### Measured at realistic sizes
 
-- Ozaki-I settles every Z3 entry with four slices and all but two with three.
-- Ozaki-II with the Z3 models' four moduli (`P = 22`) settles none, five
-  moduli settle 21 of 32, six settle all; it carries no margin at `P = 22`.
-- ADP settles every entry of both binary64 cases at the configuration its own
-  exponent-span rule picks.
+A CPU simulation follows the Lean definitions with exact arithmetic and an
+exact engine, at `k` = 256, 1024 and 4096, on about 356,000 entries; every
+enclosure and every settled result was checked against the exact product
+([`scripts/fallback_sim.py`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/fallback_sim.py),
+[`data/fallback-sim.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/fallback-sim.json)).
+For binary64 output, Ozaki-I with `11`-bit slices tried at `5` and then `6`:
 
-These are small matrices. How often realistic sizes and ill-conditioned
-inputs reach the fallback has not been measured.
+| Inputs | Entries reaching the fallback (`k` = 256 / 1024 / 4096) | Engine products per entry vs the exact path alone (`k = 4096`) |
+| --- | --- | --- |
+| uniform in `(−1, 1)` | 0.6 / 1.2 / 1.9 % | 21 vs 36 |
+| exponents spread over `2^±8` | 3.6 / 6.1 / 10.5 % | 23 vs 36 |
+| exponents spread over `2^±40`, entrywise bound | 32 / 17 / 18 % | 61 vs 144 (23 with slices `4` to `7`) |
+| condition number `10^2` | 1.1 / 3.6 / 13.8 % | 23 vs 37 |
+| condition number `10^6` and beyond | 100 % (1.4–2.4 % with slices `4` to `7`) | 36 vs 36 |
+| 90 % sparse, zero-aware bound | 0.1 / 0.2 / 0.3 % | 22 vs 36 |
+| no shared nonzeros, normwise / zero-aware | 75 % / 0–0.2 % | 18 vs 36 (zero-aware) |
+| fp16 values, small integers | ≤ 0.3 %; integers up to `2^26`: 13–22 %, all ties | the exact path alone costs 1–9 |
+
+Ozaki-II settles almost every entry at twelve moduli, about `12` engine
+products against `34–36`, largely because its truncation is often lossless;
+on lossy inputs it still settles 75–98 %.
+
+What this shows:
+
+- **On well-conditioned data the check saves about 40 % of the engine
+  products**, and more when exponents vary widely.
+- **The slice counts must grow with `k`.** At `k ≥ 256` the five-slice check
+  almost never settles an entry, because the bound grows with `k`; correct
+  rounding needs about `log₂ k + 2` bits beyond the output precision.
+- **Ill-conditioned products need deeper refinement.** A longer list of slice
+  counts brings their fallback rate from 100 % to about 2 %.
+- **Low-precision inputs should skip the check.** Their exact path needs only
+  a few slices, so taking it directly is cheaper; the slice count is known
+  once the inputs are sliced.
+
+These are model costs, in engine dot products per entry, not GPU time, on
+distributions chosen for the simulation; the entries of one GEMM share rows
+and columns.
 
 ## Fixed-width integer arithmetic
 
@@ -104,20 +134,26 @@ depend on the inputs' exponents.
 every integer it computes: data against `2^R`, exponents and counters
 against `2^X`. Under explicit formulas for `R` and `X`, the checked copy
 returns exactly what the unchecked one returns, so no register ever
-overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked.lean#L2122), [`ozaki2CRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked2.lean#L634), [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L420)):
+overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked.lean#L2156), [`ozaki2CRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked2.lean#L665), [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434)):
 
 | Pipeline | Data bits `R` | Exponent and counter bits `X` |
 | --- | --- | --- |
-| Ozaki-I, FP64 (`11`-bit slices, up to `175`, `k ≤ 2^20`) | 332 | 24 |
-| Ozaki-I, binary32 (up to `24` slices) | 303 | 17 |
-| Ozaki-II, FP64 (twelve moduli up to `4096`, `P ≤ 69`) | 264 | 24 |
-| Ozaki-II, binary32 (six moduli) | 161 | 17 |
-| ADP-style, FP64 (up to `11` slices of width up to `81`) | 264 | 25 |
+| Ozaki-I, FP64 (`11`-bit slices, up to `175`, `k ≤ 2^20`) | 263 | 17 |
+| Ozaki-I, binary32 (up to `24` slices) | 207 | 15 |
+| Ozaki-II, FP64 (twelve moduli up to `4096`, `P ≤ 69`) | 263 | 17 |
+| Ozaki-II, binary32 (six moduli) | 161 | 15 |
+| ADP-style, FP64 (up to `11` slices of width up to `81`) | 259 | 17 |
 
-Kernel-checked tests show the guards are real: at narrower widths the checked
-copies fail. The widths are generous, not tight, and the theorems leave a few
-things unguarded: comparisons, signs, bit lengths and small counters, and the
-engines' internal arithmetic, of which only the outputs are guarded.
+The guards cover the engines' internal arithmetic too: every chunk result and
+partial sum of split-K, and every partial sum of the INT8 engine's 32-bit
+register, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedEngines.lean#L50),
+[`int8DotC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8Checked.lean#L59)). The signed-zero pipelines have checked copies as well
+([`ozaki2CRJSC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedCheckedSigned.lean#L138), [`adpCRJSC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPCheckedSigned.lean#L27)); the tightened widths are
+[`ozaki1CRIC_binary64_tight`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedTight.lean#L37) and its siblings. Kernel-checked tests show the
+guards are real: at narrower widths the checked copies fail. Comparisons,
+signs, bit lengths and powers of two used as shift amounts are not guarded,
+as they create no new magnitude; one register of the descent is bounded
+through the other requirements rather than guarded directly.
 
 ## IEEE special values
 
@@ -136,7 +172,10 @@ inputs and takes the sign of an overflowing sum from the exact path's integer
 terms; with it every correctly rounded variant, rational or integer, meets the
 specification for every input ([`crIEEE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEDot.lean#L148), [`crIEEEI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEInt.lean#L105),
 [`tcOzaki1CRDI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEESchemes.lean#L60), [`mcOzaki1CRDI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/IEEESchemes.lean#L43)). Kernel tests cover the table of
-cases on both vendors.
+cases on both vendors. On stored words, the decoding and the detection of
+infinities, NaN and zeros are themselves integer operations on the sign,
+exponent and significand fields, and agree with TensorCore's classification
+([`dotSpecialI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L177), [`crIEEEWord_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L212), [`decodeWord_classifyNat`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEEWords.lean#L52)).
 
 ## The same result on NVIDIA and AMD
 

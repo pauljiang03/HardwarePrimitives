@@ -97,6 +97,26 @@ multi-term truncating adder. It needs the precise semantics: from "FP32
 accumulation" alone it cannot be designed safely. By instruction count it is
 not the cheapest way to fill a group, as the next section shows.
 
+**On AMD it depends on the architecture.**
+
+- **SFMA and CDNA 1: it holds.** On the SFMA, whose block is one product, the
+  two passes are exactly TwoProdFMA: `(2^24 − 1)²` comes back exact where one
+  pass rounds it ([`sfma_twoProd`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L639), [`mcTwoPass_exact_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L425)).
+- **CDNA 3: it holds.** Global alignment is exact for larger `c` than the
+  budget assumed ([`alignedAccumulation_wide`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L83)), so the second pass recovers
+  what the final rounding lost: the full group that one pass returns as
+  `29331464` comes back as `29331463` ([`cdna3F16_twoPass_full_group`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L632),
+  [`mcTwoPass_exact_ga`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L438)). The two-pass engine is exact for every length
+  ([`mcEngine2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L510)).
+- **CDNA 2: it fails in general.** Its pairwise tree rounds before `c` is
+  added, so the second pass sees the same rounded node; products `2^22` and
+  `2^-14` return `2^22` on CDNA 2 and are recovered on CDNA 1
+  ([`cdna2_twoPass_fails`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L650)). For integer slices the tree never rounds, so
+  Ozaki is unaffected.
+
+A second pass is needed on AMD only on CDNA 3 fp16 and the SFMA: elsewhere
+full groups of the widest slices fit the budget ([`full_groups_fit`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L622)).
+
 ## Choosing slices, chunks and passes
 
 For each path, the model gives every exact configuration: a slice width `b`
@@ -126,7 +146,7 @@ Two findings:
 - **`10`-bit slices that fill the group are the cheapest exact
   configuration** wherever a group holds more than four products. One extra
   slice costs less than a second pass, so the two-pass engine never wins by
-  this count.
+  this count on the Tensor Core paths.
 - **The gain does not need the detailed semantics.** The conservative rule
   `k · 2^(2b) ≤ 2^24` with `k = 16` also allows `10`-bit slices in an H100
   group. The reduction, about `2.9×` on H100 and `1.4×` on A100 over chunks of
@@ -134,10 +154,27 @@ Two findings:
   semantics add is the proof, and the evidence that the alternatives,
   two passes included, do not pay.
 
+**Ozaki-II and ADP.** The same choice for Ozaki-II picks the fewest
+pairwise-coprime moduli up to `2^(b+1)` whose product covers `2k · 2^(2P)`,
+with `P` set so the truncation error meets the same target as Ozaki-I's slice
+rule ([`moduliFor_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ModuliRule.lean#L103)); every candidate is proved exact
+([`ozaki2Candidates_ok`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L60), [`mcRunCandidates_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L76)). In FP64 Ozaki-II is
+cheaper than Ozaki-I on every path, by `1.4×` to `2×` in engine blocks
+(H100 fp16 at `k = 1024`: 768 against 1344; CDNA 3 fp16: 1536 against 2688;
+[`h100F16_best2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L109), [`cdna3F16_best12`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L134)); in binary32 they mostly tie. Two
+passes win only on the SFMA, for Ozaki-I. For ADP-style slicing the remap
+encoding is never worse than naive signed bytes ([`adpCost_remap_le_naive`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChoice.lean#L70)),
+but when the fixed-point width is `7` mod `8` the floor encoding saves a slice
+([`adp_best`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChoice.lean#L82)). The chosen configurations are correctly rounded
+([`h100F16_fp64CR2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L146), [`cdna3F16_fp64CR2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L157), [`sfma_fp64CR2pass`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L171),
+[`adp_fp64CR_esc0`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChoice.lean#L96)).
+
 The cost counts model instructions, not time: it leaves out slicing,
-memory traffic and the off-engine integer work. On a GPU, where an extra
-slice costs memory traffic and a second pass reuses loaded operands, two
-passes might still pay; only benchmarks can say.
+Ozaki-II's reconstruction with integers of about `130` bits, memory traffic,
+and the extra moduli Ozaki-II's correct rounding may need. On a GPU, where an
+extra slice costs memory traffic and a second pass reuses loaded operands,
+two passes might still pay; only benchmarks can say. INT8 blocks are not
+comparable with fp16 blocks without throughput figures.
 
 ## What is not modelled
 

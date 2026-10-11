@@ -1,4 +1,5 @@
 import OzakiTC.ADPIntJ
+import OzakiTC.Int8Checked
 import Ozaki.BoundedChecked2
 
 /-! # One theorem bounding every integer of ADP's correctly rounded slicing
@@ -16,9 +17,10 @@ below `2^R`, exponent-like integers below `2^X`), as `Ozaki.BoundedChecked` does
 * the sums of the bound `K`, the enclosure's exponent, the enclosure test, and the exact path on
   the split-K INT8 engine (the checked jumping exact path of `Ozaki.BoundedChecked`).
 
-The INT8 engine's own arithmetic (the 32-bit registers of each chunk and the chunk sums of
-split-K) is the engine's, as the Tensor Core's is for Ozaki-I: only its outputs, as read back, are
-guarded.
+The INT8 engine's own arithmetic is guarded too (`OzakiTC.Int8Checked`): every byte product,
+every partial sum of each chunk's 32-bit register, checked against the register's own range so that
+it never wraps, and every chunk sum of split-K, both in the recombination (`int8DotKC`) and on the
+exact path (`int8SplitKC`).
 
 `adpCRJC_eq`: on binary entries, for configurations `(s, W)` that fit, if `R` and `X` meet
 `adpR`, `adpX` for each configuration and `exactR`, `exactX` for the exact path, the checked
@@ -26,6 +28,7 @@ function returns exactly what `adpCRJ` returns. `adpCRJC_binary64`: for binary64
 `k ≤ 2^20`, configurations with `s ≤ 11` and `W ≤ 81` (as `(8, 56)` and `(11, 81)`) and at most
 `300` slices on the exact path, every data integer fits `264` bits and every exponent and counter
 `25` bits; `adpCRJC_binary64_eq` adds that the result is the binary64 round to nearest of `x · y`.
+The tighter `259` and `17` bits are in `OzakiTC.CheckedTight`.
 
 The same on Tensor Core blocks for Ozaki-II (`v100_fp64CRJ_widths`, `v100_binary32CRJ_widths`). -/
 
@@ -93,7 +96,7 @@ def int8RecombineKC (B : Widths) (s : ℕ) (Na Nb : List ℤ) : Option ℤ := do
     let terms ← (List.range s).mapM fun u => do
       let sa ← sliceVecC B s t Na
       let sb ← sliceVecC B s u Nb
-      let d ← B.gv (int8DotK sa sb)
+      let d ← int8DotKC B sa sb
       let P ← B.gv (256 ^ (t + u))
       B.gv (P * d)
     sumC B terms
@@ -118,7 +121,7 @@ def adpEnclosureZC (B : Widths) (s W : ℕ) (xs ys : List (ℤ × ℤ)) :
 def adpCRJC (B : Widths) (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (Option ℚ) := do
   let es ← cfgs.mapM fun c => (adpEnclosureZC B c.1 c.2 xs ys).map some
-  let ex ← ozaki1ExactPathIC B int8SplitK 53 (-1022) 1023 6 smax xs ys
+  let ex ← ozaki1ExactPathIC B (int8SplitKC B) 53 (-1022) 1023 6 smax xs ys
   certifyBC B 53 (-1022) 1023 es ex
 
 /-! ## No guard fails -/
@@ -336,7 +339,18 @@ theorem int8RecombineKC_eq {B : Widths} {s W : ℕ} (hs : 0 < s) {Na Nb : List �
         256 ^ (t + u) * int8DotK (ADP.sliceVec s t Na) (ADP.sliceVec s u Nb)) fun u hu => by
       rw [sliceVecC_eq hWR s t hNa, sliceVecC_eq hWR s u hNb]
       simp only [Option.bind_eq_bind, Option.bind_some]
-      rw [Widths.gv_ok (Nat.lt_of_le_of_lt (hd t ht u hu) (by omega)), Widths.gv_ok (hPR t ht u hu)]
+      have hsl : (ADP.sliceVec s t Na).length = (ADP.sliceVec s u Nb).length := by
+        simp [ADP.sliceVec, hlen]
+      have hdot : dotAbs (ADP.sliceVec s t Na) (ADP.sliceVec s u Nb) < 2 ^ B.R := by
+        have h1 := dotAbs_le _ _ 128 128 (sliceVec_s8 hs hx t) (sliceVec_s8 hs hy u)
+        have hl : (ADP.sliceVec s t Na).length = Na.length := by simp [ADP.sliceVec]
+        rw [hl] at h1
+        have h2 : Na.length * (128 * 128) ≤ T := by
+          rw [hT]; exact Nat.le_mul_of_pos_left _ (Nat.pow_pos (by decide))
+        omega
+      have h31 : 31 ≤ B.R := by have := bitlen_pos (Nat.ne_of_gt hs); omega
+      rw [int8DotKC_eq h31 hsl (sliceVec_s8 hs hx t) (sliceVec_s8 hs hy u) hdot,
+        Widths.gv_ok (hPR t ht u hu)]
       simp only [Option.bind_some]
       exact Widths.gv_ok (Nat.lt_of_le_of_lt (hterm t ht u hu) (by omega))]
     simp only [Option.bind_eq_bind, Option.bind_some]
@@ -430,7 +444,12 @@ theorem adpCRJC_eq {B : Widths} {EM smax : ℕ} {cfgs : List (ℕ × ℕ)} {xs y
     rw [adpEnclosureZC_eq hs hfit hlen hx hy hR hX]
     rfl]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [ozaki1ExactPathIC_eq (int8SplitK_exactOn _) hlen (Nat.le_refl _) hx hy hRe hRb hXe]
+  have hD : xs.length * (2 ^ 6 * 2 ^ 6) < 2 ^ B.R := by
+    unfold exactR at hRe
+    exact Nat.lt_of_lt_of_le (lt_two_pow_bitlen _) (Nat.pow_le_pow_right (by decide) (by omega))
+  rw [ozaki1ExactPathIC_eq (int8SplitKC_exactOn (by omega) hD) hlen (Nat.le_refl _) hx hy hRe hRb
+    hXe, ozaki1ExactPathI_congr (int8SplitKC_exactOn (by omega) hD) (int8SplitK_exactOn _) _ _ _ _
+    hlen (Nat.le_refl _)]
   simp only [Option.bind_some]
   apply certifyBC_eq
   intro e he t het

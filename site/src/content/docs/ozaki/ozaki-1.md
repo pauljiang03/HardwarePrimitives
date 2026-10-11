@@ -130,7 +130,9 @@ most twice the entry, so the slicing error is at most
 `(s + 1) Σᵢ min(2|xᵢyᵢ|, 2^(E + F − s(b+1)))`, never more than the bound above
 and `0` when every product is zero ([`exactTerms_error_sharp`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds.lean#L315)). It has the
 shape of Abdelfattah et al.'s bound for their splitting
-([`exactTerms_error_kappa`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds.lean#L414)).
+([`exactTerms_error_kappa`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds.lean#L414)). With different
+slice counts for `x` and `y` the same identity and bound hold
+([`exactTermsRect_error_uniform`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds2.lean#L189)).
 
 ## Step 4: the additions
 
@@ -140,7 +142,8 @@ additions lose at most `((1 + u)^n − 1) Σ|tⱼ| + n (1 + u)^n η`
 ([`sumWith_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Summation.lean#L116)). With round to nearest the sharper Jeannerod–Rump bound
 `(n − 1) u Σ|tⱼ|` holds, with no condition on `n u` and no underflow term
 when the terms are representable ([`sumWith_error_jr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds.lean#L756),
-[`ozaki1_error_jr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds.lean#L1192)). Every scaled slice product is itself a binary32 value when
+[`ozaki1_error_jr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds.lean#L1192)). It holds for any
+summation order, not only left to right ([`sumTree_error_jr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds2.lean#L484)). Every scaled slice product is itself a binary32 value when
 its exponent is in range, so the scaling is exact
 ([`Ozaki.TC.scaled_slice_product_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Scaling.lean#L56)).
 

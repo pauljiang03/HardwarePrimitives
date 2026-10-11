@@ -21,6 +21,9 @@ import OzakiMC.Ozaki2Checked
 import OzakiMC.Ozaki2IntJ
 import OzakiMC.SharpBounds
 import OzakiMC.ZeroCheck
+import OzakiMC.CheckedTight
+import OzakiMC.Ozaki2Choice
+import OzakiMC.TwoPass
 
 /-! # The Ozaki schemes on the AMD matrix-core model
 
