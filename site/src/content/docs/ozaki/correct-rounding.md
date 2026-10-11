@@ -105,6 +105,29 @@ These are model costs, in engine dot products per entry, not GPU time, on
 distributions chosen for the simulation; the entries of one GEMM share rows
 and columns.
 
+### Two rules from the measurements, proved
+
+- **Slice counts that grow with `k`.** The first check uses the slice count
+  for the target precision plus `⌈log₂ k⌉` bits; its bound is then at most
+  `max|x| max|y| 2^-t`, with no factor `k` ([`slicesForCR`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L59),
+  [`ozaki1Bound_le_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L63)). The schemes using it stay correctly rounded
+  ([`ozaki1CRK_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L60), [`ozaki1CRIK_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L86), [`tcOzaki1CRDKA_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/CRRules.lean#L65)). Rerun with the
+  rule, the binary64 fallback rate drops to about `0 %` on uniform,
+  wide-exponent and mildly ill-conditioned data (from up to 18 %), and to
+  about 2 % at condition number `10^6` (from 100 %); at `10^10` a deeper list
+  is needed and saves nothing over the exact path. For binary32 the rule does
+  not pay: its exact path is already cheap.
+- **Go straight to the exact path when it is cheaper.** The exact path's
+  slice count is known once the inputs are sliced; when its `s²` products cost
+  no more than the first check's `s(s+1)/2`, the scheme takes it directly. It
+  stays correctly rounded, never costs more, and costs only the exact path when
+  the shortcut applies ([`ozaki1CRA_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L127), [`ozaki1CRA_cost_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L234),
+  [`ozaki1CRA_cost_shortcut`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L251)); on low-precision inputs that is 4–9 engine
+  products instead of 21.
+
+([`data/fallback-sim-rules.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/fallback-sim-rules.json)
+has the rerun.)
+
 ## Fixed-width integer arithmetic
 
 Everything after the engine can run in integer registers whose widths do not
@@ -134,7 +157,7 @@ depend on the inputs' exponents.
 every integer it computes: data against `2^R`, exponents and counters
 against `2^X`. Under explicit formulas for `R` and `X`, the checked copy
 returns exactly what the unchecked one returns, so no register ever
-overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked.lean#L2156), [`ozaki2CRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked2.lean#L665), [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434)):
+overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked.lean#L2178), [`ozaki2CRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked2.lean#L665), [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434)):
 
 | Pipeline | Data bits `R` | Exponent and counter bits `X` |
 | --- | --- | --- |
@@ -152,8 +175,7 @@ register, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com
 [`ozaki1CRIC_binary64_tight`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedTight.lean#L37) and its siblings. Kernel-checked tests show the
 guards are real: at narrower widths the checked copies fail. Comparisons,
 signs, bit lengths and powers of two used as shift amounts are not guarded,
-as they create no new magnitude; one register of the descent is bounded
-through the other requirements rather than guarded directly.
+as they create no new magnitude.
 
 ## IEEE special values
 
@@ -174,8 +196,9 @@ specification for every input ([`crIEEE_eq`](https://github.com/pauljiang03/TC-E
 [`tcOzaki1CRDI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEESchemes.lean#L60), [`mcOzaki1CRDI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/IEEESchemes.lean#L43)). Kernel tests cover the table of
 cases on both vendors. On stored words, the decoding and the detection of
 infinities, NaN and zeros are themselves integer operations on the sign,
-exponent and significand fields, and agree with TensorCore's classification
-([`dotSpecialI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L177), [`crIEEEWord_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L212), [`decodeWord_classifyNat`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEEWords.lean#L52)).
+exponent and significand fields, and agree with TensorCore's and
+MatrixCore's classifications ([`Ozaki.MC.decodeWord_decodeNat`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/IEEEWords.lean#L31),
+[`dotSpecialI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L177), [`crIEEEWord_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L212), [`decodeWord_classifyNat`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEEWords.lean#L52)).
 
 ## The same result on NVIDIA and AMD
 

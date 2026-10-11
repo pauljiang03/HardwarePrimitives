@@ -40,6 +40,9 @@ import OzakiTC.CheckedTight
 import OzakiTC.IEEEWords
 import OzakiTC.Int8Checked
 import OzakiTC.Ozaki2Choice
+import OzakiTC.ADPZeroPolicyShapes
+import OzakiTC.CRRules
+import OzakiTC.Ozaki2ChoiceCR
 
 /-! # The Ozaki schemes on the NVIDIA Tensor Core model
 

@@ -115,7 +115,10 @@ of 32, and six settle all of them.
 - **An exact reconstruction**, or one accumulated within a proved `ε`: with
   the CRT sum accumulated in FP64, the reduction still recovers the product
   when `2k 2^(2P) + 2ε < M`, and the error grows by about `ε 2^-s`
-  ([`ozaki2Approx_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds2.lean#L637), [`ozaki2FP64_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds2.lean#L813)).
+  ([`ozaki2Approx_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds2.lean#L637), [`ozaki2FP64_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SharpBounds2.lean#L813)). Uchino et al.'s binary64
+  reconstruction algorithm, with split weights, a rounded reciprocal and
+  fused multiply-adds, is proved to recover the quotient and meet an explicit
+  bound ([`uchinoRecon_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/UchinoCRT.lean#L275), [`ozaki2Uchino_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/UchinoCRT.lean#L472)).
 - **Exact arithmetic off the engine**: the scaling, the reconstruction and the
   rounding check are exact integer and rational arithmetic in the proofs. The
   integer form of the whole pipeline, from `(significand, exponent)`

@@ -40,6 +40,13 @@ The cost model counts engine products (one low-precision dot product of length `
 is not GPU time. Every entry is also checked: `|x . y - H| <= B` for every enclosure, and every
 settled result equals the rounding of the exact product (both must never fail).
 
+With `--rules`, each configuration also tries the slice counts of the rule for correct rounding
+(`Ozaki/SliceRuleCR.lean` `slicesForCR`, `Ozaki/Adaptive.lean` `crSlices`): from
+`s0 = slicesFor b (t + ceil(log2 k))`, the lists `[s0, s0+1]` and `[s0, s0+1, s0+2]`, with `t` the
+output precision; every list also reports the adaptive shortcut (`cost_mean_adaptive`,
+`ozaki1CRA`: straight to the exact path when `s_e^2` is at most the first check's cost). The results
+go to `data/fallback-sim-rules.json` unless `--out` is given; the plain run's file is untouched.
+
 Usage (numpy from the local uv cache, no network):
 
     uv run --offline --no-project --python 3.12 --with numpy \
@@ -528,6 +535,26 @@ def tri(s):
     return s * (s + 1) // 2
 
 
+def clog2(k):
+    """The least c with k <= 2^c (`clog2`)."""
+    return 0 if k <= 1 else (k - 1).bit_length()
+
+
+def slices_for_cr(b, t, k):
+    """`slicesForCR b t k = slicesFor b (t + clog2 k)`: the least s >= 1 (up to 199) with
+    (s + 1) 2^(t' + 2) <= 2^(s (b + 1)), t' = t + clog2 k; 0 if none."""
+    tp = t + clog2(k)
+    for s in range(1, 200):
+        if (s + 1) * 2 ** (tp + 2) <= 2 ** (s * (b + 1)):
+            return s
+    return 0
+
+
+def cr_lists(fmt_name, k):
+    s0 = slices_for_cr(SLICE_BITS, FORMATS[fmt_name][0], k)
+    return [[s0, s0 + 1], [s0, s0 + 1, s0 + 2]]
+
+
 def process_block(mode, Xv, Yv, fmt_name, cfg, rec, stats, nvalidate):
     """All entries of one GEMM (mode 'gemm': Xv rows of A, Yv columns of B) or of one chunk of pairs
     (mode 'pairs': entry e is Xv[e] . Yv[e]); appends per-entry records to `rec`."""
@@ -882,12 +909,17 @@ def new_rec(cfg):
 
 def run_dataset(name, k, fmt_name, args):
     st = SETTINGS[fmt_name]
-    s_check = sorted(set(s for ss in st['ss_lists'] for s in ss))
+    ss_lists = [list(ss) for ss in st['ss_lists']]
+    if getattr(args, 'rules', False):
+        for ss in cr_lists(fmt_name, k):
+            if ss not in ss_lists:
+                ss_lists.append(ss)
+    s_check = sorted(set(s for ss in ss_lists for s in ss))
     oz2_cfgs = []
     for cnt in st['oz2_counts']:
         ms = coprime_moduli(cnt)
         oz2_cfgs.append((ms, ozaki2_bits(k, math.prod(ms))))
-    cfg = {'s_check': s_check, 'ss_lists': st['ss_lists'], 'oz2_cfgs': oz2_cfgs}
+    cfg = {'s_check': s_check, 'ss_lists': ss_lists, 'oz2_cfgs': oz2_cfgs}
     rng = np.random.default_rng(stable_seed(name, k, fmt_name))
     f32 = fmt_name == 'binary32'
     rec = new_rec(cfg)
@@ -919,7 +951,7 @@ def run_dataset(name, k, fmt_name, args):
         process_block('gemm', A, Bt, fmt_name, cfg, rec, stats, args.validate)
         mode = 'gemm'
     res = {'dataset': name, 'description': DESCRIPTIONS[name], 'k': k, 'format': fmt_name,
-           'mode': mode,
+           'mode': mode, 'ss_lists': ss_lists,
            'ozaki2_configs': [{'moduli_count': len(ms), 'P': P2, 'log2_M': round(math.log2(math.prod(ms)), 2)}
                               for ms, P2 in oz2_cfgs]}
     res.update(summarize(rec, cfg))
@@ -942,7 +974,13 @@ def main():
     ap.add_argument('--validate', type=int, default=4,
                     help='entries per block checked against Fraction arithmetic and the CRT')
     ap.add_argument('--summary', metavar='JSON', help='print markdown tables from a results file')
+    ap.add_argument('--rules', action='store_true',
+                    help='also try the slice counts of the correct-rounding rule (slicesForCR); '
+                         'writes data/fallback-sim-rules.json unless --out is given')
     args = ap.parse_args()
+    if args.rules and args.out == 'data/fallback-sim.json':
+        args.out = 'data/fallback-sim-rules.json'
+
     if args.summary:
         print_summary(json.load(open(args.summary)))
         return

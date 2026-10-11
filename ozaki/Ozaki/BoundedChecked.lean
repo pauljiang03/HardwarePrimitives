@@ -20,8 +20,8 @@ Powers of two occur only as shifts (`x · 2^d`, `⌊x / 2^d⌋`, `x mod 2^d`): t
 guarded as an exponent and the shifted result as data; no power is formed as an intermediate.
 Comparisons, `min`, `max`, signs, absolute values, bit lengths of guarded integers (at most `R`)
 and parity tests produce no new magnitude and are not guarded; list lengths are the input's size.
-The descent's register width `W + bitlen n + 1` is a register parameter, at most `R + 1` by the
-requirements. The result value `±M · 2^g` that `finishRNE` assembles is the output, not an
+The descent's register width `W + bitlen n + 1` is guarded too: a register may be at most one bit
+wider than the data guard (`Widths.gw`). The result value `±M · 2^g` that `finishRNE` assembles is the output, not an
 intermediate. The engine's own arithmetic is guarded when it runs through the guarded split-K
 engine (`Ozaki.CheckedEngines.chunkedC`).
 
@@ -68,10 +68,15 @@ def ge (B : Widths) (e : ℤ) : Option ℤ := if e.natAbs < 2 ^ B.X then some e 
 /-- The exponent guard on a natural number. -/
 def gi (B : Widths) (n : ℕ) : Option ℕ := if n < 2 ^ B.X then some n else none
 
+/-- The register-width guard: a two's-complement register of `w` bits holds magnitudes up to
+`2^(w−1)`, so it may be at most one bit wider than the data guard. -/
+def gw (B : Widths) (w : ℕ) : Option ℕ := if w ≤ B.R + 1 then some w else none
+
 theorem gv_ok {B : Widths} {v : ℤ} (h : v.natAbs < 2 ^ B.R) : B.gv v = some v := if_pos h
 theorem gn_ok {B : Widths} {n : ℕ} (h : n < 2 ^ B.R) : B.gn n = some n := if_pos h
 theorem ge_ok {B : Widths} {e : ℤ} (h : e.natAbs < 2 ^ B.X) : B.ge e = some e := if_pos h
 theorem gi_ok {B : Widths} {n : ℕ} (h : n < 2 ^ B.X) : B.gi n = some n := if_pos h
+theorem gw_ok {B : Widths} {w : ℕ} (h : w ≤ B.R + 1) : B.gw w = some w := if_pos h
 
 end Widths
 
@@ -814,7 +819,8 @@ def descendJC (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option
     let q ← B.ge (top - W)
     let parts ← ((A, qa) :: rs).mapM (hiPartC B q)
     if parts.all (fun z => decide (z.natAbs < 2 ^ W)) then do
-      let N ← fixedSumC B (W + bitlen parts.length + 1) parts
+      let w ← B.gw (W + bitlen parts.length + 1)
+      let N ← fixedSumC B w parts
       let rs' ← winRestC B q ((A, qa) :: rs)
       if rs' = [] ∨ T < bitlen N.natAbs then pure (some (N, q, rs'))
       else match fuel with
@@ -1047,6 +1053,18 @@ theorem descendJ_guards {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (
     · have := maxTop_le_of hrs; omega
     · unfold topOf; simp only; omega
 
+/-- The descent's register-width guard passes: the register has `W + bitlen (n + 1) + 1` bits at
+most, and `W + bitlen (n + 1) ≤ R`. -/
+theorem descendJ_reg_guard {B : Widths} {W : ℕ} {A qa q : ℤ} {rs : List (ℤ × ℤ)} {n : ℕ}
+    (hn : rs.length ≤ n) (hRn : W + bitlen (n + 1) ≤ B.R) :
+    B.gw (W + bitlen (((A, qa) :: rs).map (hiPart q)).length + 1) =
+      some (W + bitlen (((A, qa) :: rs).map (hiPart q)).length + 1) := by
+  apply Widths.gw_ok
+  have hlen : (((A, qa) :: rs).map (hiPart q)).length = rs.length + 1 := by simp
+  rw [hlen]
+  have := bitlen_mono (Nat.add_le_add_right hn 1)
+  omega
+
 /-- **The descent never fails a guard**: on terms with significands below `2^Z` and grids in
 `[gL, gU]`, at most `n` of them, with `R ≥ Z + 1`, `R ≥ W + bitlen (n + 1)` and `X` above twice the
 exponent span plus `Z + T + W`, for any fuel. -/
@@ -1068,7 +1086,9 @@ theorem descendJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ 
     simp only [Option.bind_some]
     rw [h3]
     simp only [Option.bind_some]
-    rw [if_pos h4, if_pos h4, h5]
+    rw [if_pos h4, if_pos h4, descendJ_reg_guard hn hRn]
+    simp only [Option.bind_some]
+    rw [h5]
     simp only [Option.bind_some]
     rw [h6]
     simp only [Option.bind_some]
@@ -1083,7 +1103,9 @@ theorem descendJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ 
     simp only [Option.bind_some]
     rw [h3]
     simp only [Option.bind_some]
-    rw [if_pos h4, if_pos h4, h5]
+    rw [if_pos h4, if_pos h4, descendJ_reg_guard hn hRn]
+    simp only [Option.bind_some]
+    rw [h5]
     simp only [Option.bind_some]
     rw [h6]
     simp only [Option.bind_some]

@@ -176,6 +176,17 @@ extra slice costs memory traffic and a second pass reuses loaded operands,
 two passes might still pay; only benchmarks can say. INT8 blocks are not
 comparable with fp16 blocks without throughput figures.
 
+**With correct rounding's margin.** Correct rounding needs about
+`log₂ k + 2` more bits than the accuracy target: one more slice for Ozaki-I
+(`15` to `21` slice products) and one more modulus for Ozaki-II. With the
+margin included in both ([`moduliForCR_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L109), [`truncation_le_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L116)),
+Ozaki-II remains `1.75×` to `2.25×` cheaper than Ozaki-I for FP64 on every
+Tensor Core path and AMD fp16, bf16 and XF32 path (H100 fp16 at `k = 1024`: 832
+blocks against 1792; [`h100F16_bestCR`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2ChoiceCR.lean#L75)), and `1.25×` to `1.5×` for binary32,
+except on the SFMA, where two-pass Ozaki-I wins. Any positive, pairwise-coprime
+moduli give a valid CRT basis ([`crtBasis_valid`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CRTValid.lean#L148)), so the chosen bases need
+no case-by-case check.
+
 ## What is not modelled
 
 - **FP8 and FP4 engines**, deferred. FP8 accumulation keeps about `13`

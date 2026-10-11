@@ -174,6 +174,9 @@ returns the oracle's words.
 configurations on oracle entries, the two-pass engine on CDNA 3 on over-budget `11`-bit vectors,
 and two-pass Ozaki-I on the SFMA.
 
+[OzakiTCTests/CRRules.lean](OzakiTCTests/CRRules.lean) checks the slice-count rule's table, the
+shortcut on oracle entries and the correct-rounding-margin configuration costs.
+
 ## How often the fallback runs
 
 [`scripts/fallback_sim.py`](../scripts/fallback_sim.py) is not a Lean test: it simulates the
@@ -181,7 +184,9 @@ correctly rounded schemes in Python with exact arithmetic, following the Lean de
 `k` = 256, 1024 and 4096 on uniform, wide-exponent, ill-conditioned, sparse and low-precision
 inputs, checks every enclosure and settled result against the exact product, and records how
 often each step settles an entry and what it costs in
-[`data/fallback-sim.json`](../data/fallback-sim.json).
+[`data/fallback-sim.json`](../data/fallback-sim.json); with `--rules` it reruns the configurations
+with the slice-count rule and the exact-path shortcut, in
+[`data/fallback-sim-rules.json`](../data/fallback-sim-rules.json).
 
 ## IEEE special values
 

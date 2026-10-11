@@ -106,8 +106,11 @@ emulated path and the classical `γₖ` bound on the native path
   ([`adpPolicy_skip_wrong`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGeneral.lean#L465)); giving zeros exponent `−1022` fails likewise
   ([`adpPolicy_field0_wrong`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGeneral.lean#L486)). With block size `1` skipping is safe
   ([`escCoarsePolicy_skip_one`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGeneral.lean#L260)), and the `−∞` policy is `adp` itself
-  ([`adpPolicy_negInf`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicy.lean#L77)). These are proved for one-row, one-column products;
-  in larger matrices other rows can raise the matrix estimate.
+  ([`adpPolicy_negInf`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicy.lean#L77)). The failure holds for every matrix shape: zero
+  rows and columns never change the estimate, so padding the counterexample
+  keeps it ([`adpPolicy_skip_wrong_shape`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyShapes.lean#L260)). Other rows hide it only by raising
+  the matrix estimate: an unsafe run whose estimate is at least the safe one
+  meets Grade A ([`adpPolicy_masked_gradeA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyShapes.lean#L296)).
 
 ## Correctly rounded
 

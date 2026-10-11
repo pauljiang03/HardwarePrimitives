@@ -43,6 +43,12 @@ import Ozaki.CheckedTight
 import Ozaki.IEEEWords
 import Ozaki.ModuliRule
 import Ozaki.SharpBounds2
+import Ozaki.AbdelfattahAcc
+import Ozaki.Adaptive
+import Ozaki.CRTValid
+import Ozaki.CheckedSigned32
+import Ozaki.SliceRuleCR
+import Ozaki.UchinoCRT
 
 /-! # The Ozaki schemes, independent of the hardware
 

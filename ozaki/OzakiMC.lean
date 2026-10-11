@@ -24,6 +24,8 @@ import OzakiMC.ZeroCheck
 import OzakiMC.CheckedTight
 import OzakiMC.Ozaki2Choice
 import OzakiMC.TwoPass
+import OzakiMC.CRRules
+import OzakiMC.IEEEWords
 
 /-! # The Ozaki schemes on the AMD matrix-core model
 

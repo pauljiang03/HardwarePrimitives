@@ -18,3 +18,6 @@ import OzakiTCTests.Zeros
 import OzakiTCTests.CheckedTight
 import OzakiTCTests.Ozaki2Choice
 import OzakiTCTests.ZeroPolicyGeneral
+import OzakiTCTests.CRRules
+import OzakiTCTests.PublishedAccum
+import OzakiTCTests.ZeroPolicyShapes

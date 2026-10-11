@@ -38,8 +38,9 @@ Beyond the Z3 models:
   included, the two-pass recovery of full groups, and the cheapest exact choice of slices, chunks
   and passes on each GPU.
 * **Sharper error bounds**: an entrywise Ozaki-I bound, different slice counts per matrix,
-  Ozaki-II's truncation bound without its cross term and with an inexact (for example FP64)
-  reconstruction, and Jeannerod–Rump's `k·u` for native dot products in any summation order.
+  Abdelfattah et al.'s accumulation by levels, Ozaki-II's truncation bound without its cross term,
+  Uchino et al.'s binary64 CRT reconstruction, and Jeannerod–Rump's `k·u` for native dot products
+  in any summation order.
 
 [What is proven](THEOREMS.md) · [Tests](tests/README.md) · [Examples](examples/README.md)
 
@@ -209,7 +210,11 @@ slice counts must grow with `k` (at `k ≥ 256` five `11`-bit slices almost neve
 products with condition number `10^6` or more need a deeper list of slice counts (from 100 % to
 about 2 % fallback); entries with no shared nonzero settle at once with the zero-aware bound;
 and low-precision inputs are cheaper on the exact path directly. Ozaki-II settles almost every
-entry at twelve moduli. These are model costs on chosen distributions, not GPU time.
+entry at twelve moduli. These are model costs on chosen distributions, not GPU time. Both rules
+are proved: slice counts chosen for precision `t + ⌈log₂ k⌉` remove the factor `k` from the first
+check's bound (`Ozaki.ozaki1Bound_le_cr`), which brings binary64 fallbacks to about `0 %` on
+well-conditioned data in the rerun; and taking the exact path first when it is cheaper never
+costs more (`Ozaki.ozaki1CRA_cost_le`).
 
 **Exact zeros settle at once.** The slicing bound counts only the positions where both entries are
 nonzero, so an entry whose products are all zero, such as sparse rows and columns with no shared
@@ -297,8 +302,9 @@ What changes from the Z3 models:
   not pay by this count. The count is of model instructions, not time.
 * **Ozaki-II against Ozaki-I.** The same choice for Ozaki-II (the fewest moduli that meet the same
   accuracy target, `Ozaki.moduliFor_spec`) makes it `1.4×` to `2×` cheaper than Ozaki-I for FP64 on
-  every path, in engine blocks (`Ozaki.TC.h100F16_best2`); it leaves out Ozaki-II's reconstruction
-  with integers of about `130` bits.
+  every path, in engine blocks (`Ozaki.TC.h100F16_best2`), and `1.75×` to `2.25×` with correct
+  rounding's margin included in both (`Ozaki.TC.h100F16_bestCR`); it leaves out Ozaki-II's
+  reconstruction with integers of about `2P + log₂ k` bits.
 * **The σ-trick.** For a binary32 `a` with `|a| ≤ 2^(g+b)`, `b ≤ 21` and `−149 ≤ g ≤ 104`,
   `fl(fl(a + σ) − σ)` with IEEE binary32 addition is `a` rounded to the grid `2^g` and
   `fl(a − hi)` is exact
@@ -404,9 +410,10 @@ What the model shows:
   detecting the wide range and using its FP64 path, much as `adpSafe` does.
 * **ADP's zero policy matters for the result, not only the estimate.** Without the Z3 model's
   `[X.4]` assertion, "skip zeros" returns `0` for a nonzero product for every block size of at
-  least `2` and every length in range, and giving zeros exponent `−1022` fails likewise; with
-  block size `1` skipping is safe (`Ozaki.TC.adpPolicy_skip_wrong`,
-  `Ozaki.TC.adpPolicy_field0_wrong`).
+  least `2`, every length in range and every matrix shape, and giving zeros exponent `−1022` fails
+  likewise; with block size `1` skipping is safe (`Ozaki.TC.adpPolicy_skip_wrong_shape`,
+  `Ozaki.TC.adpPolicy_field0_wrong_shape`). Other rows hide the failure only by raising the matrix
+  estimate (`Ozaki.TC.adpPolicy_masked_gradeA`).
 * Correct rounding is cheap where a scheme already carries margin: the Z3 configuration's fourth
   Ozaki-I slice, which adds nothing at binary32 output precision, lets the check settle every
   entry, and ADP's own ESC choice settles every entry of the random binary64 tests. Ozaki-II with
