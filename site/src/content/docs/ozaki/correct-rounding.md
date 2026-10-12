@@ -30,12 +30,12 @@ Then for each entry:
 2. **Refine.** Otherwise try more slices, or more moduli, which shrinks `B`.
 3. **Fall back.** Otherwise compute `x · y` exactly, also on the engine. Ozaki-I
    with all `s²` slice products and enough slices that nothing is left over is
-   exact ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L470)). Floats lie on a finite grid, so this always
+   exact ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L472)). Floats lie on a finite grid, so this always
    ends: at most `24` slices of `11` bits for binary32 inputs and `175` for
-   binary64 ([`split_residual_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L415)).
+   binary64 ([`split_residual_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L417)).
 
 The result is correctly rounded whichever step settles it ([`certify_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L123),
-[`ozaki1CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L521), [`ozaki2CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L538), [`adpCRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L223)). The fallback is part of
+[`ozaki1CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L523), [`ozaki2CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L540), [`adpCRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L223)). The fallback is part of
 the method, not a failure: it is slower and never wrong.
 
 The test in step 1 is Ziv's rounding test, classical in correctly rounded
@@ -47,9 +47,11 @@ closest to it.
 
 ## How often the check settles an entry
 
-The check settles an entry whenever `x · y` lies at least `2B` from every
-rounding boundary ([`roundEnclosure_of_margin`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L319),
-[`ozaki1Enclosure_settles`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L340)). Each extra slice of `11` bits divides `B` by
+The check settles an entry whenever `x · y − 2B` and `x · y + 2B` round to
+the same value, in particular whenever `x · y` lies more than `2B` from every
+rounding boundary; at exactly `2B` an endpoint can be a tie that rounds the
+other way ([`roundEnclosure_of_margin`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L321),
+[`ozaki1Enclosure_settles`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L342)). Each extra slice of `11` bits divides `B` by
 about `2^12`. The fallback is needed for:
 
 - **exact ties**, results exactly halfway between two floats, which no

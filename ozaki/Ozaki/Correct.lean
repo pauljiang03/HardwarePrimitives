@@ -309,10 +309,12 @@ theorem ozaki2CR_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToN
 /-! ## When the check settles an entry
 
 The theorems above hold whatever the check does, because the last resort is exact. The check's own
-content: if the exact value `v` lies at least `2B` away from every rounding boundary, the enclosure
-`[H − B, H + B]` around any `H` within `B` of `v` settles the entry, with no exact path. With
-Ozaki-I's bound `B` this says the fast path settles every entry whose product is at least
-`2 (s + 1) k 2^(E + F − s(b+1))` away from a rounding boundary. -/
+content: if `v − 2B` and `v + 2B` round to the same value, in particular if the exact value `v` lies
+more than `2B` from every rounding boundary, the enclosure `[H − B, H + B]` around any `H` within
+`B` of `v` settles the entry, with no exact path. (At a distance of exactly `2B` an endpoint can be a
+tie that rounds the other way, so "at least `2B`" would not suffice.) With Ozaki-I's bound `B` this
+says the fast path settles every entry whose product is more than `2 (s + 1) k 2^(E + F − s(b+1))`
+from a rounding boundary. -/
 
 /-- **The check settles an entry with margin.** If `v − 2B` and `v + 2B` round to the same `w`, the
 enclosure of any `H` within `B` of `v` returns `w`. -/

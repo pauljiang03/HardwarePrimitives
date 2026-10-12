@@ -196,7 +196,7 @@ Ozaki-I as above guarantees an error bound, not correct rounding. Its
 correctly rounded variant keeps the slice products exact, checks whether both
 ends of `H ± B` round to the same float, tries more slices if not, and
 otherwise takes an exact path that also runs on the engine: Ozaki-I with all
-`s²` slice products once nothing is left over ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L470)).
+`s²` slice products once nothing is left over ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L472)).
 
 ```lean
 theorem tcOzaki1CRD_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))

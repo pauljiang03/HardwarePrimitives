@@ -232,7 +232,8 @@ nonzero, settles on the first check (`Ozaki.exactTerms_error_overlap`, `Ozaki.oz
 The count costs one extra engine dot product per entry.
 
 What the check itself achieves is a separate theorem: the engine's enclosure settles an entry
-whenever `x · y` lies at least `2B` from every rounding boundary (`Ozaki.roundEnclosure_of_margin`,
+whenever `x · y − 2B` and `x · y + 2B` round to the same value, in particular whenever `x · y` lies
+more than `2B` from every rounding boundary (`Ozaki.roundEnclosure_of_margin`,
 `Ozaki.ozaki1Enclosure_settles`). On the test matrices:
 
 * Ozaki-I settles every Z3 entry with four slices and all but two with three;

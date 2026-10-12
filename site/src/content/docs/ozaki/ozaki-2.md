@@ -89,7 +89,7 @@ rounding, Ozaki-II holds `H`, the reconstructed product, exactly, and the
 truncation bound gives `B ≥ |x · y − H|` ([`dot_approx_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L173)). If `H − B`
 and `H + B` round to the same value, so does `x · y`; otherwise more moduli
 are tried, and finally an exact path ([`ozaki2CR_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L296)). The exact path can run
-on the engine too, as Ozaki-I with all slice products ([`ozaki2CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L538)), so
+on the engine too, as Ozaki-I with all slice products ([`ozaki2CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L540)), so
 every engine product, residue or slice, runs on the hardware model:
 
 - binary32, any length: [`tcOzaki2CRL_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/LongDot.lean#L158), [`mcOzaki2CRL_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/LongDot.lean#L74);
