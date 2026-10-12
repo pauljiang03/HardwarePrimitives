@@ -6,7 +6,10 @@ matching check in the Z3 models where there is one
 Ozaki-I sections, `ozaki2/` in the Ozaki-II sections, and `ozaki-NVIDIA/` in the ADP section; in
 the hardware sections they carry a prefix `I:`, `II:` or `ADP:`. The linked file has the exact
 statement and every assumption. Every theorem depends only on Lean's standard axioms (`propext`,
-`Classical.choice`, `Quot.sound`); both test libraries audit this.
+`Classical.choice`, `Quot.sound`); both test libraries audit this. Every named declaration,
+with `TensorCore`, `MatrixCore` and the tests, is also re-checked by the external checker
+[con-leche](https://github.com/leanprover/con-leche) in `--verified` mode
+([`scripts/conleche.sh`](scripts/conleche.sh); the README has the counts).
 
 A Z3 runtime assertion checks one fact on the test matrices; the Lean theorem states it for every
 input. A Z3 lemma is proved for one format or exponent range; the Lean theorem is stated for the
@@ -171,10 +174,12 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | **Correctly rounded FP64 GEMM** on fp16, bf16 and tf32 Tensor Cores and AMD matrix cores, binary64 inputs of any length, the IEEE `rne64` on both vendors. | `Ozaki.TC.tcOzaki1CRD_eq`, `Ozaki.TC.tcOzaki2CRD_eq`, `Ozaki.TC.v100_fp64CR`, `Ozaki.TC.a100BF16_fp64CR`, `Ozaki.MC.mcOzaki1CRD_eq`, `Ozaki.MC.mcOzaki2CRD_eq`, `Ozaki.MC.cdna3F16_fp64CR`, `Ozaki.MC.cdna3BF16_fp64CR` | [OzakiTC/LongDot.lean](OzakiTC/LongDot.lean), [OzakiMC/LongDot.lean](OzakiMC/LongDot.lean) |
 | **Ozaki-I, entrywise.** Every slice and leftover part of an entry is at most twice the entry, so the slicing error is at most `(s + 1) Σᵢ min(2\|xᵢyᵢ\|, 2^(E+F−s(b+1)))`, never more than the normwise bound, and the slice terms sum to `x · y` exactly when every product is zero; in the shape of Abdelfattah et al.'s bound, `(s + 1) 2^(−s(b+1)) κₓ κ_y Σ\|xᵢyᵢ\|`. | `Ozaki.exactTerms_error_sharp`, `Ozaki.exactTerms_error_sharp_le`, `Ozaki.exactTerms_eq_of_products_zero`, `Ozaki.exactTerms_error_kappa`, `Ozaki.ozaki1_error_sharp` | [Ozaki/SharpBounds.lean](Ozaki/SharpBounds.lean) |
 | **Ozaki-II truncation, mixed.** For any shifts, `2^(−s)Σ\|yᵢ\| + 2^(−t)Σ\|xᵢ\|`: Uchino et al.'s bound without its cross term, since truncation is toward zero; `4k max\|x\| max\|y\| 2^(−P)` normwise, half the previous `8k`. | `Ozaki.truncProduct_error_mixed`, `Ozaki.truncProduct_error_mixed_max`, `Ozaki.truncProduct_error_normwise4`, `Ozaki.ozaki2_error_mixed` | [Ozaki/SharpBounds.lean](Ozaki/SharpBounds.lean) |
+| **Uchino et al.'s closed-form constant (R64) and scaling (Lemma 1).** R64 is proved in their setting, where the first fused multiply-add is exact, with an explicit underflow term; their `log2f`-based scaling satisfies their Lemma 1; end to end, Ozaki-II with their scaling and reconstruction is within the truncation bound plus R64, with their exhaustively checked scaling slack as a hypothesis. | `Ozaki.fma_exact_of_grid`, `Ozaki.uchinoRecon_error_fma`, `Ozaki.uchino_R64`, `Ozaki.uchino_shift_le`, `Ozaki.uchino_lemma1`, `Ozaki.uchino_lemma1_slack`, `Ozaki.ozaki2Uchino_R64`, `Ozaki.ozaki2Uchino_scaled_error` | [Ozaki/UchinoConst.lean](Ozaki/UchinoConst.lean), [Ozaki/UchinoScaling.lean](Ozaki/UchinoScaling.lean) |
 | **Jeannerod–Rump in any order.** For any binary summation tree over any permutation of the terms, the error is at most `(n − 1) u Σ\|tᵢ\|`, and a dot product's at most `k u Σ\|xᵢyᵢ\|`, underflow allowed for the sums. | `Ozaki.sumTree_error_jr`, `Ozaki.dotTree_error_jr`, `Ozaki.sumTree_error_jr_rne`, `Ozaki.dotTree_error_jr_rne` | [Ozaki/SharpBounds2.lean](Ozaki/SharpBounds2.lean) |
 | **Different slice counts per matrix.** With `sx` slices of `x`, `sy` of `y` and the pairs `t + u < m`, an exact error identity and the bound `(sx + 1) k 2^(E+F−min(sx, sy, m)(b+1))`; with `sx = sy = m` it is Ozaki-I's triangle. | `Ozaki.dot_eq_exactTermsRect_add`, `Ozaki.exactTermsRect_error_uniform`, `Ozaki.exactTermsRect_triangle` | [Ozaki/SharpBounds2.lean](Ozaki/SharpBounds2.lean) |
 | **Ozaki-II with an inexact reconstruction.** If the CRT sum is accumulated within `ε` (for example left to right in FP64, `ε = n 2^-53 2^(b+1) Σ\|wⱼ\|`) and `2k 2^(2P) + 2ε < M`, the reduction still recovers the product within `ε`, and the scheme's error grows by `u ε 2^-s + ε 2^-s`. | `Ozaki.reduceApprox_eq`, `Ozaki.ozaki2Approx_error`, `Ozaki.crtAccFP64_error`, `Ozaki.ozaki2FP64_error` | [Ozaki/SharpBounds2.lean](Ozaki/SharpBounds2.lean) |
 | **Accumulation by levels (Abdelfattah et al., §4.4).** Scaled slice products grouped into levels whose terms share a grid and fit the precision sum exactly in any order; the level sums added in floating point lose at most `(ψ − 1) u Σ\|Lⱼ\|`, so Ozaki-I with this accumulation is within that plus the slicing bound. For regular slicing, which blocks of diagonals form exact levels: three per level for their INT8 setting in binary64, two for `11`-bit fp16 slices. Their spare-carry recursion is replaced by a sum-of-magnitudes condition, with a run-time check where grids are irregular. | `Ozaki.sumTree_exact`, `Ozaki.levelAcc_error`, `Ozaki.ozaki1Levels_error`, `Ozaki.level_exact_of_diagonals`, `Ozaki.levelOKB_spec`, `Ozaki.fits_int8_binary64`, `Ozaki.not_fits_int8_binary64_four`, `Ozaki.fits_fp16_binary64` | [Ozaki/AbdelfattahAcc.lean](Ozaki/AbdelfattahAcc.lean) |
+| **Abdelfattah et al.'s spare-carry recursion (4.20)–(4.22).** Formalized with a level's size read as a count of diagonals: every level it accepts is exact, for every slice width; it never accepts more diagonals than the condition proved here, fewer at the first level and at late levels for slices of at least `2` bits, and the two can coincide in between. | `Ozaki.afAccept_diagFits_pos`, `Ozaki.afAccept_levelExact_pos`, `Ozaki.af_strict_zero`, `Ozaki.af_strict_late`, `Ozaki.af_int8_coincide`, `Ozaki.af_int8_vs_diagFits` | [Ozaki/AbdelfattahCarry.lean](Ozaki/AbdelfattahCarry.lean), [Ozaki/AbdelfattahCarry2.lean](Ozaki/AbdelfattahCarry2.lean) |
 | **Uchino et al.'s binary64 CRT reconstruction (Algorithm 3).** Split weights, the two partial sums in binary64 (the first exact), the quotient by a rounded reciprocal and two fused multiply-adds: when the margin holds, the quotient is the true one (their Lemma 4) and the result is within an explicit bound of the reconstructed product (their Lemmas 3 and 5); end to end, Ozaki-II with this reconstruction is within the truncation bound plus that bound, through one rounding. The nested roundings are bounded relative to their own arguments, so their closed-form constant is not checked; their approximate `log2f` scaling enters as arbitrary shifts with the CRT range as a hypothesis. | `Ozaki.sumWith_exact`, `Ozaki.split_acc_error`, `Ozaki.uchinoRecon_error`, `Ozaki.crt_dvd`, `Ozaki.ozaki2Uchino_error` | [Ozaki/UchinoCRT.lean](Ozaki/UchinoCRT.lean) |
 | **Jeannerod–Rump.** With round to nearest, summing left to right loses at most `(n − 1) u Σ\|tᵢ\|`, underflow allowed, and a dot product at most `k u Σ\|xᵢyᵢ\|` when no product underflows (`ku + (k−1)u²` and an underflow term otherwise), with no condition on `k u`; IEEE round to nearest even has the properties the proof needs. Ozaki-I's recombination adds at most `(n − 1) u Σ\|tⱼ\|`. | `Ozaki.sumWith_error_jr`, `Ozaki.nativeDot_error_jr`, `Ozaki.nativeDot_error_jr_underflow`, `Ozaki.roundRNE_jrAdd`, `Ozaki.ozaki1_error_jr`, `Ozaki.TC.native32_error_jr`, `Ozaki.TC.nativeDot64_error_jr`, `Ozaki.TC.tcOzaki1_error_jr`, `Ozaki.MC.native32_error_jr`, `Ozaki.MC.mcOzaki1_error_jr` | [Ozaki/SharpBounds.lean](Ozaki/SharpBounds.lean), [OzakiTC/SharpBounds.lean](OzakiTC/SharpBounds.lean), [OzakiMC/SharpBounds.lean](OzakiMC/SharpBounds.lean) |
 
@@ -234,7 +239,7 @@ its ESC, one non-finite) it returns the same path and values ([tests](tests/READ
 | **Emergent overflow.** An emulated entry fails exactly when the rounded fixed-point product exceeds the largest finite binary64 value; where the Z3 model returns `±Inf`, `adp` returns no values and `adpIEEE` returns `±Inf`. | `ADP:[T.10]` | `Ozaki.TC.emulEntry_none_iff` |
 | **ADP with special values.** Words decode to IEEE data exactly as IEEE classifies them; `adpIEEE` takes `adp`'s path and returns its values wherever `adp` returns values, its non-finite path is native FP64 with IEEE operations, and on the Z3 model's cases with an infinity, a NaN and an emulated overflow it returns the Z3 model's words, class for class. | `ADP:[T.9]`, `ADP:[T.10]` | `Ozaki.TC.decodeF64_inf_iff`, `Ozaki.TC.decodeF64_nan_iff`, `Ozaki.TC.adpIEEE_agrees`, `Ozaki.TC.adpIEEE_nonfinite`, `Ozaki.TC.adpSafeIEEE_agrees` |
 | **A guardrail for subnormal inputs.** `adpSafe` sends inputs with a nonzero entry below `2^-1022` to the native path; whenever it emulates, every entry is normal or zero, and whenever it returns values, every entry meets Grade A on the emulated path and the `γₖ` bound on the native path, with no normality hypothesis. On the five recorded Z3 cases it returns what `adp` returns. | `ADP:[P.2]`, `ADP:[N.1]` | `Ozaki.TC.adpSafe_emulated_normal`, `Ozaki.TC.nativeGemm64_accuracy`, `Ozaki.TC.adpSafe_accuracy` |
-| **The routine with the Z3 model's zero policies.** With the `−∞` policy it is `adp`. Without the model's `[X.4]` assertion, "skip zeros" fails for every block size of at least `2` and every `2 ≤ k < 2^17`: a row `(2^a, 1, 0, …)` against a column `(0, 2^d, 0, …)` emulates with an estimate below the exact ESC and returns `0` for the product `2^d`, breaking Grade A; with block size `1` skipping is safe. Giving zeros exponent `−1022` fails likewise for every block size, with `−1022 ≤ d ≤ −998`. The failure holds for every matrix shape: zero rows and columns never change the estimate, so padding the counterexample keeps it. Other rows mask it only by raising the matrix estimate: if an unsafe run's matrix ESC is at least the `−∞` policy's, every entry meets Grade A (a sufficient condition). | `ADP:[X.4]`, `ADP:[T.12]` | `Ozaki.TC.adpPolicy_negInf`, `Ozaki.TC.adpPolicy_skip_wrong`, `Ozaki.TC.adpPolicy_field0_wrong`, `Ozaki.TC.escCoarsePolicy_skip_one`, `Ozaki.TC.adpPolicy_skip_wrong_shape`, `Ozaki.TC.adpPolicy_field0_wrong_shape`, `Ozaki.TC.adpPolicy_masked_gradeA` |
+| **The routine with the Z3 model's zero policies.** With the `−∞` policy it is `adp`. Without the model's `[X.4]` assertion, "skip zeros" fails for every block size of at least `2` and every `2 ≤ k < 2^17`: a row `(2^a, 1, 0, …)` against a column `(0, 2^d, 0, …)` emulates with an estimate below the exact ESC and returns `0` for the product `2^d`, breaking Grade A; with block size `1` skipping is safe. Giving zeros exponent `−1022` fails likewise for every block size, with `−1022 ≤ d ≤ −998`. The failure holds for every matrix shape: zero rows and columns never change the estimate, so padding the counterexample keeps it. Other rows mask it only by raising the matrix estimate. Sufficient, per entry: an entry meets Grade A whenever the run's ESC is at least its own exact ESC. Necessary: if some factor of one of its products loses more than about `log₂((8k + 4)k)` bits in conversion, inputs with the same exponents, hence the same ESC, width and slice count, break Grade A. Sharper: Grade A holds for every input of a pattern when each factor's conversion loses at most `D` bits with about `2^(D+1) + 2 ≤ 4k`, and fails for some input when one factor loses `D` bits with about `2^(D+1) ≥ 4k + 4`; about one value of `D` is left between them. Where the necessary condition applies, the same pattern (same ESC, width and path) admits an input that meets Grade A and one that breaks it, so the pattern alone does not decide an input. | `ADP:[X.4]`, `ADP:[T.12]` | `Ozaki.TC.adpPolicy_negInf`, `Ozaki.TC.adpPolicy_skip_wrong`, `Ozaki.TC.adpPolicy_field0_wrong`, `Ozaki.TC.escCoarsePolicy_skip_one`, `Ozaki.TC.adpPolicy_skip_wrong_shape`, `Ozaki.TC.adpPolicy_field0_wrong_shape`, `Ozaki.TC.adpPolicy_masked_gradeA`, `Ozaki.TC.adpPolicy_entry_gradeA`, `Ozaki.TC.adpPolicy_unmasked_fails_left`, `Ozaki.TC.adpPolicy_unmasked_fails_right`, `Ozaki.TC.adpPolicy_entry_gradeA_loss`, `Ozaki.TC.adpPolicy_unmasked_fails_full_left`, `Ozaki.TC.adpPolicy_pattern_undecided_left`, `Ozaki.TC.adpPolicy_pow2_gradeA` |
 | **The routine returns values** for finite inputs of matching shapes with `k · 2^14 < 2^31` and every `Σ\|xᵢyᵢ\| ≤ 2^1000` (a sufficient bound, not a sharp one); `adp` needs normal or zero entries, `adpSafe` does not. | | `Ozaki.TC.adp_isSome`, `Ozaki.TC.adpSafe_isSome` |
 | **Correctly rounded fixed-point Ozaki-I as in ADP**: with given `(s, W)` that fit and `k · 2^14 < 2^31`, `adpCR` returns the binary64 round to nearest of `x · y` for every input; it falls back to the exact rational product, and it is not the ESC-driven routine. | | `Ozaki.TC.adpCR_eq` |
 | **The same with every product on the INT8 engine, any length.** The INT8 engine with split-K is exact on `6`-bit slices for every length; the fixed-point enclosures run on it with split-K too; and the exact path is Ozaki-I with all slice products of `6`-bit slices on it, at most `smax` slices with `7 smax > 2098`. | | `Ozaki.TC.int8SplitK_exactOn`, `Ozaki.TC.int8DotK_exact`, `Ozaki.TC.adpEnclosureK_sound`, `Ozaki.TC.adpCRE_eq` |
@@ -244,7 +249,9 @@ All of these are in [OzakiTC/ADP.lean](OzakiTC/ADP.lean), except `adpCR_eq` in
 [OzakiTC/ADPFix.lean](OzakiTC/ADPFix.lean), the zero policies in
 [OzakiTC/ADPZeroPolicy.lean](OzakiTC/ADPZeroPolicy.lean),
 [OzakiTC/ADPZeroPolicyGeneral.lean](OzakiTC/ADPZeroPolicyGeneral.lean) and
-[OzakiTC/ADPZeroPolicyShapes.lean](OzakiTC/ADPZeroPolicyShapes.lean), and the test-level labels (`[T.1]`, `[T.4]`, `[T.7]`,
+[OzakiTC/ADPZeroPolicyShapes.lean](OzakiTC/ADPZeroPolicyShapes.lean) and
+[OzakiTC/ADPZeroPolicyIff.lean](OzakiTC/ADPZeroPolicyIff.lean) and
+[OzakiTC/ADPZeroPolicyGap.lean](OzakiTC/ADPZeroPolicyGap.lean), and the test-level labels (`[T.1]`, `[T.4]`, `[T.7]`,
 `[T.10]`, `[T.11]`) in [OzakiTC/ADPLabels.lean](OzakiTC/ADPLabels.lean). The Z3 model's inputs for
 `[T.1]`, `[T.4]`, `[T.7]`, `[T.8]`, `[T.10]`, `[T.11]` and `[T.12]` are also checked by kernel
 evaluation ([tests](tests/README.md)). `[T.13]` (fault injection) and `[T.14]` (label coverage)
@@ -285,8 +292,10 @@ theorem or a kernel-checked test.
   models an INT8 instruction, and nothing is validated against INT8 hardware.
 - The Z3 models' measured comparisons (`I:[M.2]`, `I:[M.3]`, `II:[M.2]`, `II:[M.3]`) are checked
   on their test matrices ([tests](tests/README.md)), not proved: they are not true for every input.
-- ADP: when other rows mask an unsafe zero policy's failure is characterized by a sufficient
-  condition only. Grade A fails for some subnormal inputs of `adp` as the paper describes it; the extra
+- ADP: when other rows mask an unsafe zero policy's failure is characterized up to about one value
+  of the bit loss `D`; an exact characterization would need the worst error over all significands
+  of each pattern. Losses split across both factors of one product have no matching necessary
+  construction, and subnormal entries are excluded. Grade A fails for some subnormal inputs of `adp` as the paper describes it; the extra
   guardrail of `adpSafe` restores it. cuBLAS's own implementation is not modelled; it passes an
   independent underflow test (Demmel et al., 2026).
 - TensorCore's own binary32 and binary64 roundings fail above the largest finite value, where
@@ -584,6 +593,10 @@ open Ozaki Ozaki.TC Ozaki.ADP
 #check @adpPolicy_field0_wrong
 #check @adpPolicy_skip_wrong_shape
 #check @adpPolicy_masked_gradeA
+#check @adpPolicy_entry_gradeA
+#check @adpPolicy_unmasked_fails_left
+#check @adpPolicy_entry_gradeA_loss
+#check @adpPolicy_pattern_undecided_left
 #check @ozaki1CRISC_binary32_tight
 #check @ozaki1Bound_le_cr
 #check @ozaki1CRK_eq
@@ -603,7 +616,14 @@ open Ozaki Ozaki.TC Ozaki.ADP
 #check @ozaki1Levels_error
 #check @level_exact_of_diagonals
 #check @uchinoRecon_error
+#check @afAccept_levelExact
+#check @afAccept_levelExact_pos
+#check @af_strict_late
+#check @af_int8_vs_diagFits
 #check @ozaki2Uchino_error
+#check @uchino_R64
+#check @uchino_lemma1_slack
+#check @ozaki2Uchino_scaled_error
 ```
 
 ```lean

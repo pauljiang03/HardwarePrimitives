@@ -109,8 +109,15 @@ emulated path and the classical `γₖ` bound on the native path
   ([`adpPolicy_negInf`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicy.lean#L77)). The failure holds for every matrix shape: zero
   rows and columns never change the estimate, so padding the counterexample
   keeps it ([`adpPolicy_skip_wrong_shape`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyShapes.lean#L260)). Other rows hide it only by raising
-  the matrix estimate: an unsafe run whose estimate is at least the safe one
-  meets Grade A ([`adpPolicy_masked_gradeA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyShapes.lean#L296)).
+  the matrix estimate. An entry meets Grade A when the estimate covers its own
+  exponent span ([`adpPolicy_entry_gradeA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyIff.lean#L123)), and fails for some input with
+  the same exponents when a factor loses more than about `log₂((8k + 4)k)`
+  bits ([`adpPolicy_unmasked_fails_left`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyIff.lean#L810)); with sharper conditions,
+  every input of an exponent pattern meets Grade A when each factor loses at
+  most about `log₂(2k)` bits ([`adpPolicy_entry_gradeA_loss`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGap.lean#L297)), some input
+  breaks it from about `log₂(2k + 2)` bits ([`adpPolicy_unmasked_fails_full_left`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGap.lean#L638)),
+  and one pattern can admit both outcomes ([`adpPolicy_pattern_undecided_left`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyGap.lean#L703)). An unsafe run whose estimate is at least the
+  safe one meets Grade A ([`adpPolicy_masked_gradeA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPZeroPolicyShapes.lean#L296)).
 
 ## Correctly rounded
 

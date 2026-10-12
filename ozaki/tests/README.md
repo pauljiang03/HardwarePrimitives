@@ -213,6 +213,11 @@ and the `−1022` policy fails on a constructed input.
 counterexample family on explicit words with the default configuration: both unsafe policies
 emulate and return `0`, block size `1` with skipping goes native and returns the right value, and
 `adp` returns the right values.
+[OzakiTCTests/ZeroPolicyShapes.lean](OzakiTCTests/ZeroPolicyShapes.lean) runs it padded to a `2 × 4`
+by `4 × 3` product, and [OzakiTCTests/ZeroPolicyIff.lean](OzakiTCTests/ZeroPolicyIff.lean) and
+[OzakiTCTests/ZeroPolicyGap.lean](OzakiTCTests/ZeroPolicyGap.lean) check both directions of the
+masking conditions on explicit words, including one exponent pattern with an input that meets
+Grade A and one that breaks it.
 
 ## ADP's guardrail and the INT8 exact path
 
@@ -221,6 +226,19 @@ counterexample `adp` returns `−2^-1074` for a positive product, `adpSafe` take
 returns the correctly rounded `2^-1074`, and `adpCRE` returns `2^-1074` through its exact path on the
 INT8 engine after the enclosure of `8` slices fails to settle it; on the five recorded Z3 cases
 `adpSafe` returns what `adp` returns.
+
+## Published analyses
+
+[OzakiTCTests/PublishedAccum.lean](OzakiTCTests/PublishedAccum.lean),
+[OzakiTCTests/AbdelfattahCarry.lean](OzakiTCTests/AbdelfattahCarry.lean) and
+[OzakiTCTests/AbdelfattahCarry2.lean](OzakiTCTests/AbdelfattahCarry2.lean) check Abdelfattah et al.'s
+accumulation by levels and their spare-carry recursion on their INT8/binary64 setting and on `11`-bit
+fp16 slices: the level boundaries each rule accepts, where the two rules coincide and where they
+differ. [OzakiTCTests/UchinoConst.lean](OzakiTCTests/UchinoConst.lean) and
+[OzakiTCTests/UchinoScaling.lean](OzakiTCTests/UchinoScaling.lean) instantiate Uchino et al.'s binary64
+reconstruction on their first twelve moduli, check the constant R64 on concrete products, and run
+the end-to-end theorem with their scaling on a binary64 dot product, every hypothesis checked by the
+kernel.
 
 ## Axiom audits
 

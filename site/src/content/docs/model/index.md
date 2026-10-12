@@ -164,3 +164,6 @@ Each stage has its own page:
 8. [Independent specification](/TC-EFT/model/specification/): `IndependentSpec` (a transcription of *Accurate Models*) and the equality proof.
 9. [Bitvector datapath](/TC-EFT/model/datapath/): the model in fixed-width registers, proved to give the same output word.
 10. [Hardware validation](/TC-EFT/model/validation/): replay of GPU measurements.
+
+The AMD matrix cores have a model of their own, with round-to-nearest output
+and late addition of `c`: see [the AMD model at a glance](/TC-EFT/amd/).

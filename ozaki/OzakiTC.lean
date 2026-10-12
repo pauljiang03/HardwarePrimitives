@@ -43,6 +43,8 @@ import OzakiTC.Ozaki2Choice
 import OzakiTC.ADPZeroPolicyShapes
 import OzakiTC.CRRules
 import OzakiTC.Ozaki2ChoiceCR
+import OzakiTC.ADPZeroPolicyGap
+import OzakiTC.ADPZeroPolicyIff
 
 /-! # The Ozaki schemes on the NVIDIA Tensor Core model
 

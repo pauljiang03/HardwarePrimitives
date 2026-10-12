@@ -9,7 +9,10 @@ multiplies exactly, and combine the exact integer results. The
 [`ozaki/`](https://github.com/pauljiang03/TC-EFT/tree/main/ozaki) project
 formalizes three of them in Lean on this repository's NVIDIA Tensor Core model
 and on the AMD matrix-core model in `amd/`, following a set of bit-precise Z3
-models of the schemes. Every theorem uses only Lean's standard axioms.
+models of the schemes. Every theorem uses only Lean's standard axioms, and
+every named declaration is re-checked by
+[con-leche](https://github.com/leanprover/con-leche), an independent Lean
+checker proved never to accept a proof of `False`.
 
 | Scheme | Idea | Read |
 | --- | --- | --- |

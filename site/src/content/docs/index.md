@@ -30,6 +30,10 @@ The library has three layers:
    preconditions hold. There is a reference version and a bounded 576-bit
    workspace version, and they are proved to agree.
 
+The same repository also models **AMD matrix cores**, the MFMA instructions
+of CDNA 1, 2 and 3, in a separate library; see [the AMD model at a
+glance](/TC-EFT/amd/). The [Ozaki schemes](/TC-EFT/ozaki/) are proved on both.
+
 ## Why a Lean model?
 
 Floating-point behavior that a vendor does not document is usually studied by
@@ -103,6 +107,7 @@ limits](/TC-EFT/model/scope/) and [What is tested](/TC-EFT/proofs/tested/).
 ## Start exploring
 
 - [The model at a glance](/TC-EFT/model/): the whole pipeline on one page.
+- [The AMD model at a glance](/TC-EFT/amd/): the matrix-core model of CDNA 1, 2 and 3.
 - [Quick start](/TC-EFT/quick-start/): build the project and run the examples.
 - [What is proven](/TC-EFT/proofs/theorems/): the headline results and where they live.
 - [Source on GitHub](https://github.com/pauljiang03/TC-EFT).

@@ -58,7 +58,17 @@ python3 scripts/check.py
 
 `lake build` builds the three libraries and the two test libraries, which check the Z3 models'
 recorded outputs and an exact-arithmetic oracle by kernel evaluation, and audit the axioms.
-`scripts/check.py` also checks the examples and every Lean block in the documentation. The test
+`scripts/check.py` also checks the examples and every Lean block in the documentation.
+
+**Independent re-check.** [`scripts/conleche.sh`](scripts/conleche.sh) exports every module of
+`TensorCore`, `MatrixCore` and the Ozaki libraries, with their tests, and re-checks every
+declaration with [con-leche](https://github.com/leanprover/con-leche), an external Lean checker
+proved never to accept a proof of `False`. On 2026-10-12, con-leche at revision `3b37939`, in
+`--verified` mode, accepted every declaration: 168,717 for `TensorCore` and its tests, 166,049 for
+`MatrixCore` and its tests, 175,760 for the Ozaki core with the Tensor Core side and its tests,
+and 171,967 with the AMD side (each count includes Lean's own library). Lean does not record
+`example`s as declarations, so the kernel-checked regression examples are checked by Lean's kernel
+only; every named theorem, including the kernel-computed tables, is re-checked. The test
 modules evaluate large terms in the kernel, the largest for about two minutes each; a bare
 `lake build` runs them in parallel, which can exhaust memory (it did on a 24 GB machine), so
 `check.py` builds them one at a time.
@@ -413,7 +423,10 @@ What the model shows:
   least `2`, every length in range and every matrix shape, and giving zeros exponent `−1022` fails
   likewise; with block size `1` skipping is safe (`Ozaki.TC.adpPolicy_skip_wrong_shape`,
   `Ozaki.TC.adpPolicy_field0_wrong_shape`). Other rows hide the failure only by raising the matrix
-  estimate (`Ozaki.TC.adpPolicy_masked_gradeA`).
+  estimate: every input of an exponent pattern meets Grade A when each factor loses at most about
+  `log₂(2k)` bits, and some input breaks it when one factor loses about `log₂(2k + 2)` bits or more,
+  leaving about one value between (`Ozaki.TC.adpPolicy_entry_gradeA_loss`,
+  `Ozaki.TC.adpPolicy_unmasked_fails_full_left`); the pattern alone does not decide an input.
 * Correct rounding is cheap where a scheme already carries margin: the Z3 configuration's fourth
   Ozaki-I slice, which adds nothing at binary32 output precision, lets the check settle every
   entry, and ADP's own ESC choice settles every entry of the random binary64 tests. Ozaki-II with

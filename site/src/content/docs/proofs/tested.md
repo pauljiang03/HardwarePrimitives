@@ -16,6 +16,15 @@ custom axioms. `scripts/check_axioms.py` audits every public theorem under
 the `TensorCore` namespace and allows only `propext`, `Classical.choice`, and
 `Quot.sound`. The recorded run audited 1,375 theorem roots.
 
+Every named declaration is also re-checked outside Lean's kernel by
+[con-leche](https://github.com/leanprover/con-leche), an external checker
+proved never to accept a proof of `False`. On 2026-10-12, at revision
+`3b37939` in `--verified` mode, it accepted every declaration of `TensorCore`
+and its tests (168,717, including Lean's own library), of the AMD model
+`MatrixCore` and its tests (166,049), and of the Ozaki libraries with their
+tests (175,760 and 171,967). Lean does not record `example`s as declarations,
+so the kernel-evaluated regression examples are checked by Lean's kernel only.
+
 ## Tested, not proved
 
 - **Agreement with GPUs**: on the 35,000 recorded measurements only, with the

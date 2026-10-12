@@ -51,6 +51,19 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Modeling AMD matrix cores',
+          items: [
+            { label: 'The AMD model at a glance', slug: 'amd' },
+            { label: '1. Getting started', slug: 'amd/getting-started' },
+            { label: '2. Notation and formats', slug: 'amd/notation' },
+            { label: '3. The three architectures', slug: 'amd/architectures' },
+            { label: '4. Independent specification', slug: 'amd/specification' },
+            { label: '5. What is proved', slug: 'amd/theorems' },
+            { label: '6. Validation', slug: 'amd/validation' },
+            { label: 'Modeling scope and limits', slug: 'amd/scope' },
+          ],
+        },
+        {
           label: 'Properties & algorithms',
           items: [
             { label: 'Error bounds', slug: 'properties/error-bounds' },
