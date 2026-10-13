@@ -39,11 +39,30 @@ with accumulator input `t`, each slot a product index or `None` for a zero pair)
 
 From `mmalgebra/`, `python3 scripts/check.py --prototype` reruns the fast scripts and compares
 their output with the recorded files; `--slow` adds `terms4.py`, `classes.py`, `terms.py`,
-`divergence.py` and `blas_programs.py`, which take from a few seconds to a few minutes each and use
-up to twelve processes.
+`divergence.py`, `blas_programs.py`, `anchor_sim.py`, `pinned_sim.py`, `pinned_acc.py` and
+`pinned3.py`, which take from a few seconds to a few minutes each; the divergence and BLAS studies
+use up to twelve processes.
 
 The programs of `blas_programs.py` are modeled: the internals of cuBLAS and rocBLAS are not
 public, and which program a library runs for a given shape would have to be probed on GPUs.
+
+## Making every schedule agree: pinned and anchored accumulation
+
+These scripts use [`fastmodels.py`](fastmodels.py), an integer port of the same models (every value
+is an integer multiple of `2^-640`), which [`validate_fast.py`](validate_fast.py) checks bit for bit
+against `models.py` on 3,600 random blocks.
+
+| Script | What it checks | Recorded output |
+| --- | --- | --- |
+| [`validate_fast.py`](validate_fast.py) | The integer port against the validated port | [`results/validate_fast.txt`](results/validate_fast.txt) |
+| [`anchor_sim.py`](anchor_sim.py) | Anchored accumulation: distinct results over eleven schedules (sequential, split-K, random stream-K) natively and anchored, on every model, `k = 1024` | [`results/anchor_sim.txt`](results/anchor_sim.txt) |
+| [`pinned_sim.py`](pinned_sim.py) | Pinned accumulation: invariance over schedules on A100, H100 and CDNA 3 (anchored on V100), and the same bits across them, `k = 1680`, fp16 and bf16 | [`results/pinned_sim.txt`](results/pinned_sim.txt) |
+| [`pinned_acc.py`](pinned_acc.py) | Accuracy of pinned accumulation with and without the bias correction, against native H100 and A100, `k` from 256 to 16384, five kinds of data | [`results/pinned_acc.txt`](results/pinned_acc.txt) |
+| [`anchored_acc.py`](anchored_acc.py) | Accuracy of anchored accumulation | [`results/anchored_acc.txt`](results/anchored_acc.txt) |
+| [`portable_cmp.py`](portable_cmp.py) | Pinned accumulation of bf16 inputs against per-vector INT8 quantization with an exact integer dot product | [`results/portable_cmp.txt`](results/portable_cmp.txt) |
+| [`pinned3.py`](pinned3.py) | Two folds: three pinned GEMMs against one | [`results/pinned3.txt`](results/pinned3.txt) |
+| [`find_demo.py`](find_demo.py), [`amd_cex.py`](amd_cex.py) | Search for the 28-product demonstration and the AMD cases that the Lean files check | [`results/find_demo.txt`](results/find_demo.txt), [`results/amd_cex.txt`](results/amd_cex.txt) |
+| [`subnormal_gamma.py`](subnormal_gamma.py) | Search for blocks with a subnormal factor that exceed the classical `γ_n` bound | [`results/subnormal_gamma.txt`](results/subnormal_gamma.txt) |
 
 ## Variants and families
 

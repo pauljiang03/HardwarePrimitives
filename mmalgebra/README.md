@@ -28,6 +28,12 @@ A100 and CDNA 1–3) and incomplete (one `k = 16` instruction equals two `k = 8`
 those models); and a decision procedure returns either a proof of equivalence or a separating input
 checked on the model.
 
+On truncating hardware every schedule can also be made to agree: with a cancelling pair of
+products `±2^α` in every block FMA (pinned accumulation), or an accumulator started at `1.5·2^α`
+(anchored accumulation), a chain computes the sum of its products each truncated to a fixed grid,
+a function of the multiset of products; pinned accumulation gives the same bits on V100, A100,
+H100 and CDNA 3, at a fixed-point loss of accuracy.
+
 When two schedules are not equivalent, a structural error bound, built from the per-block error
 theorems of the models, bounds how far apart they can be, `|t₁ − t₂| ≤ E(t₁) + E(t₂)`, and work
 the two schedules share does not count. Inside the exact region (small integer operands, as in the
@@ -55,6 +61,8 @@ website.
 | How far apart two schedules can be: structural bound, divergence, shared work | Proved for any matrix multiplier with a binary32 addition; instantiated for SFMA and CDNA 1; the Tensor Core, CDNA 2 and CDNA 3 block constants derived on paper and checked numerically |
 | Inside the exact region (integer operands, `\|c\| + Σ\|aᵢbᵢ\| < 2^24`) every schedule returns the exact sum | Proved on every Tensor Core model and on CDNA 1, 2 and 3 |
 | How different modeled BLAS programs are (bounds, worst cases, typical differences) | Prototype study ([`blas_programs.py`](prototype/blas_programs.py)) |
+| Every schedule is exact when the positive and the negative products each total below `2^24` | Proved in Lean (Tensor Core models) |
+| Pinned accumulation (a cancelling pin pair `±2^α` in every block FMA) and anchored accumulation (start at `1.5·2^α`) make every schedule agree, on a fixed-point grid | Proved in Lean for the Tensor Core models (pinned also on CDNA 3, with the conditions on `c` derived); kernel-checked demonstration on V100, A100 and H100 and counterexamples on CDNA 1 and 2; simulated accuracy and cost; not yet run on a GPU |
 
 ## Build and run
 
@@ -99,8 +107,8 @@ example : blockOut (p := v100F16F32)
 | Import / directory | What belongs here |
 | --- | --- |
 | [`MMAlgebra`](MMAlgebra.lean) | Hardware-independent: reduction terms and their evaluation on any matrix multiplier ([`Term`](MMAlgebra/Term.lean)), the structural error bound, the divergence of two schedules and the shared-work bound ([`Divergence`](MMAlgebra/Divergence.lean)). |
-| [`MMAlgebraTC`](MMAlgebraTC.lean) | The Tensor Core side: the multiset and zero laws of one block FMA ([`Block`](MMAlgebraTC/Block.lean)), chains and restriction to a support ([`Chain`](MMAlgebraTC/Chain.lean)), two-product completeness ([`Completeness`](MMAlgebraTC/Completeness.lean)), the WMMA swap witnesses ([`OneRounding`](MMAlgebraTC/OneRounding.lean)), and the exact region ([`Exact`](MMAlgebraTC/Exact.lean)). |
-| [`MMAlgebraMC`](MMAlgebraMC.lean) | The matrix-core side: chains of MFMA blocks, base witnesses on CDNA 1, 2 and 3 ([`Witnesses`](MMAlgebraMC/Witnesses.lean)), the MFMA swap witnesses ([`OneRounding`](MMAlgebraMC/OneRounding.lean)), the exact region ([`Exact`](MMAlgebraMC/Exact.lean)), and the divergence bound of the correctly rounded models ([`Bound`](MMAlgebraMC/Bound.lean)). |
+| [`MMAlgebraTC`](MMAlgebraTC.lean) | The Tensor Core side: the multiset and zero laws of one block FMA ([`Block`](MMAlgebraTC/Block.lean)), chains and restriction to a support ([`Chain`](MMAlgebraTC/Chain.lean)), two-product completeness ([`Completeness`](MMAlgebraTC/Completeness.lean)), the WMMA swap witnesses ([`OneRounding`](MMAlgebraTC/OneRounding.lean)), the exact region ([`Exact`](MMAlgebraTC/Exact.lean), [`ScheduleFreeExact`](MMAlgebraTC/ScheduleFreeExact.lean)), pinned and anchored accumulation ([`Pinned`](MMAlgebraTC/Pinned.lean), [`Anchored`](MMAlgebraTC/Anchored.lean), [`PinnedDemo`](MMAlgebraTC/PinnedDemo.lean)), and the subnormal remark ([`SubnormalGamma`](MMAlgebraTC/SubnormalGamma.lean)). |
+| [`MMAlgebraMC`](MMAlgebraMC.lean) | The matrix-core side: chains of MFMA blocks, base witnesses on CDNA 1, 2 and 3 ([`Witnesses`](MMAlgebraMC/Witnesses.lean)), the MFMA swap witnesses ([`OneRounding`](MMAlgebraMC/OneRounding.lean)), the exact region ([`Exact`](MMAlgebraMC/Exact.lean)), the divergence bound of the correctly rounded models ([`Bound`](MMAlgebraMC/Bound.lean)), pinned accumulation on CDNA 3 ([`Pinned`](MMAlgebraMC/Pinned.lean)), and where pinning and anchoring fail ([`Counterexamples`](MMAlgebraMC/Counterexamples.lean)). |
 | [`tests/`](tests/) | Kernel-checked worked examples and the axiom audits. |
-| [`prototype/`](prototype/README.md) | The Python port of both models, the enumerations and random tests of the laws, the decision procedure, the configuration study, the divergence bounds and worst-case search, the study of modeled BLAS programs, and their recorded outputs. |
+| [`prototype/`](prototype/README.md) | The Python port of both models and a fast integer port, the enumerations and random tests of the laws, the decision procedure, the configuration study, the divergence bounds and worst-case search, the study of modeled BLAS programs, the simulations of pinned and anchored accumulation, and their recorded outputs. |
 | [`scripts/check.py`](scripts/check.py) | Validation. |

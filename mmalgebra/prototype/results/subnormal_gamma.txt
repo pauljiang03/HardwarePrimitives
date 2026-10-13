@@ -1,0 +1,3 @@
+V100 fp16  worst err/(gamma_5 sum|p|): with a subnormal factor   98.81 (eb, Eo) = (10, -13); same blocks without it 0.00
+A100 fp16  worst err/(gamma_9 sum|p|): with a subnormal factor   19.92 (eb, Eo) = (15, -8); same blocks without it 0.11
+H100 fp16  worst err/(gamma_17 sum|p|): with a subnormal factor    4.86 (eb, Eo) = (7, -16); same blocks without it 0.09

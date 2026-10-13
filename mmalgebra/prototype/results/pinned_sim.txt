@@ -1,0 +1,8 @@
+fp16 normal    k=1680: invariant V100 10/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -18.9 pinned -10.0 | bf16 wrong native 0 pinned 2
+fp16 llm       k=1680: invariant V100 10/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -19.1 pinned -11.3 | bf16 wrong native 0 pinned 1
+fp16 uniform+  k=1680: invariant V100 10/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -16.6 pinned -10.0 | bf16 wrong native 0 pinned 3
+fp16 lognormal k=1680: invariant V100 10/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -19.5 pinned -10.4 | bf16 wrong native 0 pinned 1
+bf16 normal    k=1680: invariant V100 0/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -19.7 pinned -10.3 | bf16 wrong native 0 pinned 2
+bf16 llm       k=1680: invariant V100 0/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -18.7 pinned -10.7 | bf16 wrong native 0 pinned 2
+bf16 uniform+  k=1680: invariant V100 0/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -18.0 pinned -10.1 | bf16 wrong native 0 pinned 3
+bf16 lognormal k=1680: invariant V100 0/10 A100 10 H100 10 CDNA3 10 | identical across archs 10 | = sum trunc_(E0-23) 10 | log2 med relerr native(H100) -19.7 pinned -10.3 | bf16 wrong native 0 pinned 2

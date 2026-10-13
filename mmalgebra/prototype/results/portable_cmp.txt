@@ -1,0 +1,12 @@
+k= 1024 normal    log2 median rel err: native  -19.6  pinned  -13.6  pinned+c  -15.3  int8   -6.6
+k= 1024 llm       log2 median rel err: native  -19.7  pinned  -13.3  pinned+c  -14.3  int8   -4.2
+k= 1024 uniform+  log2 median rel err: native  -19.1  pinned  -13.4  pinned+c  -14.9  int8  -11.7
+k= 1024 aligned   log2 median rel err: native  -19.3  pinned  -13.8  pinned+c  -15.0  int8  -12.1
+k= 4096 normal    log2 median rel err: native  -17.5  pinned  -11.2  pinned+c  -11.6  int8   -6.1
+k= 4096 llm       log2 median rel err: native  -17.8  pinned  -12.0  pinned+c  -13.2  int8   -4.8
+k= 4096 uniform+  log2 median rel err: native  -16.4  pinned  -11.1  pinned+c  -14.4  int8  -14.5
+k= 4096 aligned   log2 median rel err: native  -16.6  pinned  -11.5  pinned+c  -14.3  int8  -11.6
+k=16384 normal    log2 median rel err: native  -15.7  pinned   -9.0  pinned+c   -9.4  int8   -6.2
+k=16384 llm       log2 median rel err: native  -15.4  pinned   -9.1  pinned+c   -9.3  int8   -3.5
+k=16384 uniform+  log2 median rel err: native  -13.8  pinned   -9.1  pinned+c  -13.8  int8  -13.7
+k=16384 aligned   log2 median rel err: native  -14.1  pinned   -9.4  pinned+c  -13.9  int8  -12.6

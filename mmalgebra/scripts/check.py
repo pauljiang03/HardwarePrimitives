@@ -36,12 +36,22 @@ FAST = [('examples.py', [], 'examples.txt'),
         ('decide_equiv.py', [], 'decide_equiv.txt'),
         ('oneround.py', [], 'oneround.txt'),
         ('config_study.py', [], 'config_study.txt'),
-        ('laws.py', ['300'], 'laws.txt')]
+        ('laws.py', ['300'], 'laws.txt'),
+        ('validate_fast.py', [], 'validate_fast.txt'),
+        ('anchored_acc.py', [], 'anchored_acc.txt'),
+        ('portable_cmp.py', [], 'portable_cmp.txt'),
+        ('amd_cex.py', [], 'amd_cex.txt'),
+        ('find_demo.py', [], 'find_demo.txt'),
+        ('subnormal_gamma.py', [], 'subnormal_gamma.txt')]
 SLOW = [('terms4.py', [], 'terms4.txt'),
         ('classes.py', ['300'], 'classes.txt'),
         ('terms.py', ['300'], 'terms.txt'),
         ('divergence.py', [], 'divergence.txt'),
-        ('blas_programs.py', ['200', '800'], 'blas_programs.txt')]
+        ('blas_programs.py', ['200', '800'], 'blas_programs.txt'),
+        ('anchor_sim.py', [], 'anchor_sim.txt'),
+        ('pinned_sim.py', [], 'pinned_sim.txt'),
+        ('pinned_acc.py', [], 'pinned_acc.txt'),
+        ('pinned3.py', [], 'pinned3.txt')]
 
 
 def run(cmd, what, cwd=ROOT):
