@@ -5,9 +5,9 @@ import OzakiMC.Correct
 The correctly rounded schemes on the matrix-core model return the words that
 `scripts/correct_reference.py` computes with exact fractions (recorded in
 [`data/correct-reference.json`](../../data/correct-reference.json)), as on the
-Tensor Core model: binary32 is binary32, whatever the engine does inside. Ozaki-I tries three then
-four `11`-bit slices; Ozaki-II five then six moduli; both fall back to the exact product. Checked on
-the binary32 SFMA, CDNA 1, CDNA 2 and CDNA 3 fp16, and CDNA 3 XF32. -/
+Tensor Core model: binary32 is binary32, whatever the matrix multiplier does inside. Ozaki-I tries
+three then four `11`-bit slices; Ozaki-II five then six moduli; both fall back to the exact product.
+Checked on the binary32 SFMA, CDNA 1, CDNA 2 and CDNA 3 fp16, and CDNA 3 XF32. -/
 
 open MatrixCore Ozaki Ozaki.MC
 
@@ -91,7 +91,7 @@ def basis6 : CRTBasis := crtBasis [4096, 4095, 4093, 4091, 4087, 4079]
 /-- The configurations for Ozaki-II: `P = 28` and `P = 34` for `k = 4`. -/
 def cfgs2 : List (CRTBasis × ℕ) := [(basis5, 28), (basis6, 34)]
 
-/-- Ozaki-I and Ozaki-II, correctly rounded, on one path: both cases equal the oracle. -/
+/-- Ozaki-I and Ozaki-II, correctly rounded, on one variant: both cases equal the oracle. -/
 def agrees (P : Model) : Bool :=
   [(A_narrow, B_narrow, C_narrow), (A_wide, B_wide, C_wide), (A_cancel, B_cancel, C_cancel),
     (A_halfway, B_halfway, C_halfway)].all fun (A, B, C) =>
@@ -106,7 +106,7 @@ example : agrees cdna2F16 = true := by decide +kernel
 example : agrees cdna3F16 = true := by decide +kernel
 example : agrees cdna3XF32 = true := by decide +kernel
 
-/-- The exact path alone on CDNA 3 fp16 (no slice counts to try), and the hard cases with it. -/
+/-- The exact fallback alone on CDNA 3 fp16 (no slice counts to try), and the hard cases with it. -/
 example : [(A_narrow, B_narrow, C_narrow), (A_cancel, B_cancel, C_cancel),
     (A_halfway, B_halfway, C_halfway)].all (fun (A, B, C) =>
     (do let A ← decodeMatrix A; let B ← decodeMatrix B

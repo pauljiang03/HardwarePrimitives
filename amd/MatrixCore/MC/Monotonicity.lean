@@ -12,7 +12,7 @@ configuration of the paper the output is monotone in `c`: for the same `a` and `
 (`dotBits_c_monotone`).
 
 * SFMA and CDNA 1: `d = fl{Σ p_ℓ + c}`, and RNE is monotone.
-* CDNA 2: `c` is flushed (monotone), added to the pairwise tree of the products, and rounded.
+* CDNA 2: `c` is flushed (monotone), added to the pairwise sum of the products, and rounded.
 * CDNA 3: `c` is aligned *after* the products (late addition), so `e_max` and `S_{p_i,sum}` do
   not depend on `c`; each branch of the late addition is monotone, and so is the switch between
   them: when `e_c` passes `e_max`, the RD of `S_{p_i,sum}` to 32 and of `S_acc` to 31
@@ -50,7 +50,7 @@ theorem fl32_mono {ftz : Bool} {s s' : ℚ} {d d' : F32} (h : fl32 ftz s = some 
   · unfold flValue; rw [h]; exact fl32_value h
   · unfold flValue; rw [h']; exact fl32_value h'
 
-/-! ## RD and normalisation -/
+/-! ## RD and normalization -/
 
 theorem rdGrid_mono {x y : ℚ} (g : ℤ) (h : x ≤ y) : rdGrid x g ≤ rdGrid y g := by
   unfold rdGrid
@@ -73,45 +73,45 @@ theorem rdGrid_coarse (x : ℚ) {g g' : ℤ} (hg : g ≤ g') : rdGrid x g' ≤ r
 theorem onGrid_pow2 (e : ℤ) (k : ℕ) : OnGrid (pow2 e) (e - k) :=
   ⟨2 ^ k, by rw [pow2_split e k]; simp⟩
 
-theorem normaliseRD_le (k : ℕ) (x : ℚ) : normaliseRD k x ≤ x := by
-  unfold normaliseRD; split
+theorem normalizeRD_le (k : ℕ) (x : ℚ) : normalizeRD k x ≤ x := by
+  unfold normalizeRD; split
   · rename_i h; rw [h]; exact Rat.le_refl
   · exact (rdGrid_bounds x _).1
 
-theorem normaliseRD_gt (k : ℕ) {x : ℚ} (hx : x ≠ 0) :
-    x - pow2 (normExp (absQ x) - k) < normaliseRD k x := by
-  unfold normaliseRD; rw [if_neg hx]
+theorem normalizeRD_gt (k : ℕ) {x : ℚ} (hx : x ≠ 0) :
+    x - pow2 (normExp (absQ x) - k) < normalizeRD k x := by
+  unfold normalizeRD; rw [if_neg hx]
   have := (rdGrid_bounds x (normExp (absQ x) - k)).2
   grind
 
-theorem le_normaliseRD (k : ℕ) {x y : ℚ} (hx : x ≠ 0) (hy : OnGrid y (normExp (absQ x) - k))
-    (h : y ≤ x) : y ≤ normaliseRD k x := by
-  unfold normaliseRD; rw [if_neg hx]
+theorem le_normalizeRD (k : ℕ) {x y : ℚ} (hx : x ≠ 0) (hy : OnGrid y (normExp (absQ x) - k))
+    (h : y ≤ x) : y ≤ normalizeRD k x := by
+  unfold normalizeRD; rw [if_neg hx]
   exact le_rdGrid hy h
 
-theorem normaliseRD_onGrid (k : ℕ) {x : ℚ} (hx : x ≠ 0) :
-    OnGrid (normaliseRD k x) (normExp (absQ x) - k) := by
-  unfold normaliseRD; rw [if_neg hx]; exact rdGrid_onGrid _ _
+theorem normalizeRD_onGrid (k : ℕ) {x : ℚ} (hx : x ≠ 0) :
+    OnGrid (normalizeRD k x) (normExp (absQ x) - k) := by
+  unfold normalizeRD; rw [if_neg hx]; exact rdGrid_onGrid _ _
 
-/-- Subnormal-aware normalisation followed by RD is monotone: the grid of each binade contains
+/-- Subnormal-aware normalization followed by RD is monotone: the grid of each binade contains
 the grid of every larger binade, and the binade boundaries lie on both. -/
-theorem normaliseRD_mono (k : ℕ) {x y : ℚ} (h : x ≤ y) : normaliseRD k x ≤ normaliseRD k y := by
+theorem normalizeRD_mono (k : ℕ) {x y : ℚ} (h : x ≤ y) : normalizeRD k x ≤ normalizeRD k y := by
   by_cases hx : x = 0
   · subst hx
-    have h0 : normaliseRD k 0 = 0 := by unfold normaliseRD; simp
+    have h0 : normalizeRD k 0 = 0 := by unfold normalizeRD; simp
     rw [h0]
     by_cases hy : y = 0
     · subst hy; rw [h0]; exact Rat.le_refl
-    · exact le_normaliseRD k hy (OnGrid.zero _) h
+    · exact le_normalizeRD k hy (OnGrid.zero _) h
   by_cases hy : y = 0
   · subst hy
-    have h0 : normaliseRD k 0 = 0 := by unfold normaliseRD; simp
-    rw [h0]; exact Rat.le_trans (normaliseRD_le k x) h
+    have h0 : normalizeRD k 0 = 0 := by unfold normalizeRD; simp
+    rw [h0]; exact Rat.le_trans (normalizeRD_le k x) h
   have hax := absQ_pos hx
   have hay := absQ_pos hy
   by_cases hle : normExp (absQ y) ≤ normExp (absQ x)
-  · apply le_normaliseRD k hy _ (Rat.le_trans (normaliseRD_le k x) h)
-    exact (normaliseRD_onGrid k hx).mono (by omega)
+  · apply le_normalizeRD k hy _ (Rat.le_trans (normalizeRD_le k x) h)
+    exact (normalizeRD_onGrid k hx).mono (by omega)
   · obtain ⟨hx1, _, hx3⟩ := normExp_bounds hax
     obtain ⟨_, hy2, _⟩ := normExp_bounds hay
     have hy2 := hy2 (by omega)
@@ -128,8 +128,8 @@ theorem normaliseRD_mono (k : ℕ) {x y : ℚ} (h : x ≤ y) : normaliseRD k x �
       · grind
     have hya : absQ y = y := absQ_of_nonneg (Rat.le_of_lt hypos)
     rw [hya] at hy2
-    have hg := le_normaliseRD k hy (by rw [hya]; exact onGrid_pow2 _ k) hy2
-    have := normaliseRD_le k x
+    have hg := le_normalizeRD k hy (by rw [hya]; exact onGrid_pow2 _ k) hy2
+    have := normalizeRD_le k x
     grind
 
 /-! ## `c` as a binary32 value -/
@@ -304,7 +304,7 @@ theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.
 /-! ## The late addition of `c` -/
 
 /-- The CDNA 3 late-addition parameters: `n_eab = 1`, `e_{c=0} = −126`, `(24, 32, RD)` and 31
-fractional bits after normalisation, a cutoff (if any) beyond 24, and at most 16 products. -/
+fractional bits after normalization, a cutoff (if any) beyond 24, and at most 16 products. -/
 structure LateModel (P : Model) : Prop where
   neab : P.neab = 1
   cZero : P.cZeroExp = some (-126)
@@ -392,7 +392,7 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
   cases eMax with
   | none =>
     rw [hpn rfl, show rdFrac 0 eC 32 = 0 from rdGrid_zero _, show rdFrac 0 eC' 32 = 0 from rdGrid_zero _]
-    exact normaliseRD_mono 31 (by grind)
+    exact normalizeRD_mono 31 (by grind)
   | some e =>
     obtain ⟨hgrid, hbound⟩ := hps e rfl
     have hpb := (absQ_lt_iff pSum (pow2 (e + 7))).mp hbound
@@ -425,18 +425,18 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
       have hA := pow2_pos (eC' - ((32 : ℕ) : ℤ))
       have ⟨r1, r2⟩ := rdGrid_bounds pSum (eC' - ((32 : ℕ) : ℤ))
       show pSum + shiftedC P e eC c ≤
-        normaliseRD 31 (rdGrid pSum (eC' - ((32 : ℕ) : ℤ)) + c'.value)
+        normalizeRD 31 (rdGrid pSum (eC' - ((32 : ℕ) : ℤ)) + c'.value)
       have hYg : OnGrid (pSum + shiftedC P e eC c) (e - 24) := hgrid.add hsg
       generalize hT : rdGrid pSum (eC' - ((32 : ℕ) : ℤ)) + c'.value = T
       have hTY : pSum + shiftedC P e eC c < T := by grind
       by_cases hT0 : T = 0
       · subst hT0
-        have : normaliseRD 31 0 = 0 := by unfold normaliseRD; simp
+        have : normalizeRD 31 0 = 0 := by unfold normalizeRD; simp
         rw [this]
         exact Rat.le_of_lt hTY
       · have hTa := absQ_pos hT0
         by_cases hn : normExp (absQ T) ≤ e + 7
-        · exact le_normaliseRD 31 hT0 (hYg.mono (by omega)) (Rat.le_of_lt hTY)
+        · exact le_normalizeRD 31 hT0 (hYg.mono (by omega)) (Rat.le_of_lt hTY)
         · obtain ⟨_, hn2, hn3⟩ := normExp_bounds hTa
           have hn2 := hn2 (by have := h32.emin; omega)
           have hpn8 := pow2_le_of_le (show e + 8 ≤ normExp (absQ T) by omega)
@@ -447,7 +447,7 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
             · exfalso; have := absQ_of_neg hneg; grind
             · grind
           have hTabs := absQ_of_nonneg (Rat.le_of_lt hTpos)
-          have hgt := normaliseRD_gt 31 hT0
+          have hgt := normalizeRD_gt 31 hT0
           have eN : pow2 (normExp (absQ T)) =
               2147483648 * pow2 (normExp (absQ T) - ((31 : ℕ) : ℤ)) := by
             rw [pow2_split _ 31]; rfl
@@ -467,12 +467,12 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
           grind
         · grind
       rw [absQ_of_neg hvneg] at hge
-      have := normaliseRD_le 31 (rdFrac pSum eC 32 + c.value)
+      have := normalizeRD_le 31 (rdFrac pSum eC 32 + c.value)
       have := (rdGrid_bounds pSum (eC - ((32 : ℕ) : ℤ))).1
-      show normaliseRD 31 (rdGrid pSum (eC - ((32 : ℕ) : ℤ)) + c.value) ≤ _
+      show normalizeRD 31 (rdGrid pSum (eC - ((32 : ℕ) : ℤ)) + c.value) ≤ _
       grind
     · -- both after `e_max`
-      apply normaliseRD_mono 31
+      apply normalizeRD_mono 31
       show rdGrid pSum (eC - ((32 : ℕ) : ℤ)) + c.value ≤ rdGrid pSum (eC' - ((32 : ℕ) : ℤ)) + c'.value
       rcases Int.lt_trichotomy eC eC' with hlt | heq | hgt
       · have hneq : eC' ≠ -126 := by have := h32.emin; omega
@@ -568,7 +568,7 @@ theorem pairwiseSum_c {P : Model} {px px' : Prepared} {s s' : ℚ} (ha : px.a = 
       subst h; subst h'
       grind
 
-/-- A profile whose output is monotone in `c`: every configuration of the paper. -/
+/-- A model whose output is monotone in `c`: every configuration of the paper. -/
 def MonotoneModel (P : Model) : Prop :=
   P.accumulation = .correctRounding ∨ P.accumulation = .pairWiseSum ∨
     ((P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping) ∧ LateModel P)
@@ -663,7 +663,7 @@ theorem dotBits_c_monotone {P : Model} (hP : MonotoneModel P) {a : List P.a.Word
   rw [← hl, ← hl']
   exact runBlocks_c_monotone hP _ c c' ts ts' hr hr' hc
 
-/-! ## The profiles -/
+/-! ## The models -/
 
 theorem lateModel_cdna3F16 : LateModel cdna3F16 :=
   ⟨rfl, rfl, rfl, rfl, rfl, fun _ h => by simp [cdna3F16] at h, by decide⟩

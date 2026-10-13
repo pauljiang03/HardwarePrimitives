@@ -12,7 +12,7 @@ Raising a product `p_ℓ = a_ℓ b_ℓ` (with every other product and `c` unchan
   (`cdna2F16_nonmonotonic`, …, `cdna3E5M2_nonmonotonic`):
   - CDNA 2 flushes subnormal *operands*: a product with a subnormal operand counts as zero, and a
     slightly larger product with normal operands does not;
-  - CDNA 3 aligns to `e_max`, the largest *exponent sum* `e_a + e_b`. Products are denormalised, so a
+  - CDNA 3 aligns to `e_max`, the largest *exponent sum* `e_a + e_b`. Products are denormalized, so a
     product with a subnormal operand can have a tiny value and a large exponent: raising it by a
     tiny amount can raise `e_max`, coarsen the alignment grid, and truncate the other products (or
     RD `c`) by much more than it gains. Even with normal operands, equal products `1.5 · 1.5` and

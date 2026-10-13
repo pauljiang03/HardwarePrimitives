@@ -3,7 +3,7 @@ import Ozaki.CheckedTight
 
 /-! # Tighter widths on the matrix-core model, with split-K guarded
 
-Ozaki-I and Ozaki-II on CDNA 3 fp16 blocks through the guarded split-K engine
+Ozaki-I and Ozaki-II on CDNA 3 fp16 blocks through the guarded split-K matrix multiplier
 (`Ozaki.Checked.chunkedC`): every integer outside the matrix-core blocks' own arithmetic, split-K's
 chunk sums included, within `263` bits and every exponent and counter within `17` bits for FP64
 (`cdna3F16_fp64CRI_checked`, `cdna3F16_fp64CRJ_checked`), and `207` and `15` bits for binary32
@@ -15,7 +15,7 @@ namespace Ozaki.MC
 
 open Ozaki.Checked
 
-/-- The guarded split-K engine on CDNA 3 fp16 blocks. -/
+/-- The guarded split-K matrix multiplier on CDNA 3 fp16 blocks. -/
 def cdna3SplitKC (B : Widths) : MatrixMultiplier := chunkedC B (chunkLen 11) (mcMultiplier cdna3F16)
 
 theorem cdna3SplitKC_exactOn {B : Widths} (hR : 25 ≤ B.R) {D : ℕ} (hD : D < 2 ^ B.R) :

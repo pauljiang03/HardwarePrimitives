@@ -9,11 +9,11 @@ the schemes return `none` exactly when a rounding overflows, so the statement is
 
 * `sumWith_isSome`: `n` additions of relative error `u` and absolute error `η` succeed whenever
   `(1 + u)^n Σ|tⱼ| + n (1 + u)^n η` is within range, since no partial sum exceeds that;
-* `ozaki1_isSome`: with an exact engine, Ozaki-I returns a value when
+* `ozaki1_isSome`: with an exact matrix multiplier, Ozaki-I returns a value when
   `(1 + u)^n · n k 2^(E+F) + n (1 + u)^n η` is within range (`n = s(s+1)/2`, `E` and `F` the
   exponents of `x` and `y`);
-* `ozaki2_isSome`: with an exact engine and `2 k 2^(2P) < M`, Ozaki-II returns a value when
-  `k 2^((P − sₓ) + (P − s_y))` is within range;
+* `ozaki2_isSome`: with an exact matrix multiplier and `2 k 2^(2P) < M`, Ozaki-II returns a value
+  when `k 2^((P − sₓ) + (P − s_y))` is within range;
 * `splitExp_le`, `scaleExp_le`: those exponents are at most `e` when every entry is at most `2^e`
   in magnitude. -/
 
@@ -106,9 +106,10 @@ theorem sumWith_isSome {add : ℚ → ℚ → Option ℚ} {u η L : ℚ} (hu : 0
     (by rw [abs_zero]; grind)
     (by rw [show (0 : ℚ) + (ts.map Rat.abs).sum = (ts.map Rat.abs).sum by grind]; exact hL)
 
-/-- **Ozaki-I returns a value** (`[H.1]`). With an engine exact on `b`-bit slices and additions that
-fail only beyond `L`, the result exists when `(1 + u)^n · n k 2^(E+F) + n (1 + u)^n η ≤ L`, where
-`n = s(s+1)/2` is the number of slice products. -/
+/-- **Ozaki-I returns a value** (`[H.1]`). With a matrix multiplier exact on `b`-bit slices and
+additions that fail only beyond `L`, the result exists when
+`(1 + u)^n · n k 2^(E+F) + n (1 + u)^n η ≤ L`, where `n = s(s+1)/2` is the number of slice
+products. -/
 theorem ozaki1_isSome {mult : MatrixMultiplier} {add : ℚ → ℚ → Option ℚ} {b bound s : ℕ} {u η L : ℚ}
     (hmult : mult.ExactOn b bound) (hu : 0 ≤ u) (hη : 0 ≤ η) (hadd : AddWithin add u η)
     (hs : AddSucceeds add L) {x y : List ℚ} (hlen : x.length = y.length)
@@ -154,7 +155,7 @@ theorem abs_truncProduct_le (P : ℕ) (x y : List ℚ) :
   rw [Rat.mul_assoc, he]
   exact Rat.le_refl
 
-/-- **Ozaki-II returns a value** (`[H.1]`). With an engine exact on `b`-bit residues,
+/-- **Ozaki-II returns a value** (`[H.1]`). With a matrix multiplier exact on `b`-bit residues,
 `2 k 2^(2P) < M`, and a rounding that fails only beyond `L`, the result exists when
 `k 2^((P − sₓ) + (P − s_y)) ≤ L`. -/
 theorem ozaki2_isSome {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)

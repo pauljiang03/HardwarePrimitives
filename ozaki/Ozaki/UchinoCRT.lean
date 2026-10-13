@@ -34,14 +34,15 @@ adds `u` times a bound on its argument (`|D| + |Q||P2| + |C2|` and the earlier e
 
 * **End to end** (`ozaki2Uchino_error`). Ozaki-II scaled by any shifts `sₓ`, `s_y` (their scaling
   uses an approximate `log₂`, assumption (1); any shifts are allowed here, and the reconstruction
-  range is a hypothesis, their Lemma 1's conclusion), residues on the engine, the floating-point
-  reconstruction and one rounding of the scaled result: the error is the truncation bound plus
-  `2^(−sₓ−s_y)` times the reconstruction error, through one rounding. The reconstruction error is
-  supplied as a hypothesis for the residues the engine can produce, which `uchinoRecon_error`
-  discharges for given numbers (`tests/OzakiTCTests/UchinoCRT.lean` checks an instance).
+  range is a hypothesis, their Lemma 1's conclusion), residues on the matrix multiplier, the
+  floating-point reconstruction and one rounding of the scaled result: the error is the truncation
+  bound plus `2^(−sₓ−s_y)` times the reconstruction error, through one rounding. The reconstruction
+  error is supplied as a hypothesis for the residues the matrix multiplier can produce, which
+  `uchinoRecon_error` discharges for given numbers (`tests/OzakiTCTests/UchinoCRT.lean` checks an
+  instance).
 
-Not modelled: their single-precision computation of the shifts with `log2f` (assumption (1) and
-Lemma 1), their exact choice of `β_ℓ` bits, and the binary32 variant (`P2 = 0`, `s_ℓ2 = 0`). -/
+Not modeled: their single-precision computation of the shifts with `log2f` (assumption (1) and
+Lemma 1), their exact choice of `β_ℓ` bits, and the binary32 version (`P2 = 0`, `s_ℓ2 = 0`). -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -448,8 +449,8 @@ theorem crt_dvd {B : CRTBasis} (hB : B.Valid) {W : List ℤ} (hlen : W.length = 
   exact Int.dvd_add hsel hr
 
 /-- **Ozaki-II with Uchino, Ozaki and Imamura's reconstruction**: the inputs scaled by any shifts
-`sₓ`, `s_y` and truncated, one engine product per modulus, symmetric residues, the floating-point
-reconstruction `uchinoRecon`, and one rounding of the scaled result. -/
+`sₓ`, `s_y` and truncated, one dot product on the matrix multiplier per modulus, symmetric residues,
+the floating-point reconstruction `uchinoRecon`, and one rounding of the scaled result. -/
 def ozaki2Uchino (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (B : CRTBasis) (G1 : ℤ) (P1 P2 Pinv : ℚ)
     (s2 : List ℚ) (sx sy : ℤ) (x y : List ℚ) : Option ℚ := do
   let a := scaleTrunc sx x
@@ -464,11 +465,11 @@ theorem zipWith_map_self {α β γ : Type} (f : α → β) (g : β → α → γ
   | [] => rfl
   | a :: l => by simp only [List.map_cons, List.zipWith_cons_cons, zipWith_map_self f g l]
 
-/-- **The error of Ozaki-II with a floating-point reconstruction.** If the reconstruction is
-within `R` of the product `c` of the scaled integers for every residue vector the engine can
+/-- **The error of Ozaki-II with a floating-point reconstruction.** If the reconstruction is within
+`R` of the product `c` of the scaled integers for every residue vector the matrix multiplier can
 produce (symmetric residues congruent to `c`; `uchinoRecon_error` gives such an `R` for given
-numbers), the result is within the truncation bound plus `2^(−sₓ−s_y) R`, through one rounding,
-of `x · y`, for any shifts. -/
+numbers), the result is within the truncation bound plus `2^(−sₓ−s_y) R`, through one rounding, of
+`x · y`, for any shifts. -/
 theorem ozaki2Uchino_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {rnd : ℚ → Option ℚ} {u η : ℚ} (hu : 0 ≤ u) (hround : RoundWithin rnd u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))

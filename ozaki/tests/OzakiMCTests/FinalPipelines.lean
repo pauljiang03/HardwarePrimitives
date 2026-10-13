@@ -1,12 +1,12 @@
 import OzakiMC.Ozaki2Checked
 import OzakiMC.IEEEBounded
 
-/-! # Integer Ozaki-II on the matrix-core model: jumping descent, signed zeros, widths, specials
+/-! # Integer Ozaki-II on the matrix-core model: jumping top-down summation, signed zeros, widths, specials
 
 The cases of `tests/OzakiTCTests/FinalPipelines.lean` for Ozaki-II on CDNA 3 fp16 blocks with
-split-K, checked by kernel evaluation: the configuration and the jumping exact path alone against
-the binary64 round to nearest, signed zeros, the checked function at the proved widths and with
-too narrow registers, and IEEE special values on stored data. -/
+split-K, checked by kernel evaluation: the configuration and the jumping exact fallback alone
+against the binary64 round to nearest, signed zeros, the checked function at the proved widths and
+with too narrow registers, and IEEE special values on stored data. -/
 
 open MatrixCore Ozaki Ozaki.MC Ozaki.Checked
 

@@ -4,9 +4,9 @@ import OzakiMC.Ozaki2Bounded
 
 /-! # Ozaki-II with bounded registers, signed zeros, and as an integer pipeline, on CDNA 3
 
-* `mcOzaki2CRB`: correctly rounded FP64 by Ozaki-II on CDNA 3 fp16 blocks with split-K, the check on
-  integer enclosures and the bounded exact path (twelve moduli at most `4096`, `P = 69`), returns
-  the exact-fraction oracle's values on both binary64 cases.
+* `mcOzaki2CRB`: correctly rounded FP64 by Ozaki-II on CDNA 3 fp16 blocks with split-K, the rounding
+  test on integer enclosures and the bounded exact fallback (twelve moduli at most `4096`,
+  `P = 69`), returns the exact-fraction oracle's values on both binary64 cases.
 * `mcOzaki2CRZ`: the same as an integer pipeline, inputs as integer pairs `(m, e)` decoded from the
   binary64 words by bit operations (the pairs are the decoded values).
 * **Signed zeros** for Ozaki-II, rational and bounded: products that are all `−0` give `−0`,

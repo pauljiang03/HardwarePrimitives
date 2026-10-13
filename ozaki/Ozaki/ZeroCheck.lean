@@ -1,34 +1,36 @@
 import Ozaki.BoundedOzaki
 import Ozaki.SignedZero
 
-/-! # Exact-zero results without the exact path
+/-! # Exact-zero results without the exact fallback
 
-The check of correctly rounded Ozaki-I uses the slicing bound `B = (s + 1) k 2^(E + F − s(b+1))`
-(`ozaki1Bound`). When every product `xᵢ yᵢ` is zero but `x` and `y` are not, as for sparse rows and
-columns with disjoint supports, the slice products add up to `H = 0` while `B > 0`, so `H ± B` round
-to different values and the entry always takes the exact path.
+The rounding test of correctly rounded Ozaki-I uses the slicing bound
+`B = (s + 1) k 2^(E + F − s(b+1))` (`ozaki1Bound`). When every product `xᵢ yᵢ` is zero but `x` and
+`y` are not, as for sparse rows and columns with disjoint supports, the slice products add up to
+`H = 0` while `B > 0`, so `H ± B` round to different values and the entry always takes the exact
+fallback.
 
 The slicing error comes only from indices where both entries are nonzero: a slice coefficient or a
 residual of `x` vanishes wherever `x` does (`split_vanishes`), and likewise for `y`. So `k` in the
-bound can be replaced by the **overlap count** `N = #{i : xᵢ ≠ 0 ∧ yᵢ ≠ 0}`
+bound can be replaced by the **number of nonzero positions** `N = #{i : xᵢ ≠ 0 ∧ yᵢ ≠ 0}`
 (`exactTerms_error_overlap`):
 
   `|x · y − H| ≤ (s + 1) N 2^(E + F − s(b+1))`.
 
 `N` is the integer dot product of the `0`/`1` support indicators of `x` and `y`, which every exact
-engine computes exactly (`overlapMultiplier_eq`): one extra dot product per output entry (for a GEMM, one
-extra product of `0`/`1` matrices), whatever the slice count. The bound is never larger than the
-normwise one (`N ≤ k`, `supportOverlap_le_length`), equals it on dense data, and is `0` exactly when every
-product is zero (`supportOverlap_eq_zero_iff`). With a window accumulator the window's loss is charged only
-to the nonzero slice products (`truncatedSum_error_nonzero`).
+matrix multiplier computes exactly (`overlapMultiplier_eq`): one extra dot product per output entry
+(for a GEMM, one extra product of `0`/`1` matrices), whatever the slice count. The bound is never
+larger than the normwise one (`N ≤ k`, `supportOverlap_le_length`), equals it on dense data, and is
+`0` exactly when every product is zero (`supportOverlap_eq_zero_iff`). With a truncated sum, the
+truncation loss is charged only to the nonzero slice products (`truncatedSum_error_nonzero`).
 
-* `ozaki1CREZ`, `ozaki1CRWZ`: correctly rounded Ozaki-I with the overlap bound, with the exact sum
-  or a `W`-bit window, exact path on the engine (`ozaki1CREZ_eq`, `ozaki1CRWZ_eq`);
-* **exact zeros settle**: when every product is zero the first check returns `0`, whatever the
-  exact path would return (`ozaki1CREZ_zero`, `ozaki1CRWZ_zero`);
+* `ozaki1CREZ`, `ozaki1CRWZ`: correctly rounded Ozaki-I with the bound that counts only nonzero
+  positions, with the exact sum or a `W`-bit truncated sum, and the exact fallback on the matrix
+  multiplier (`ozaki1CREZ_eq`, `ozaki1CRWZ_eq`);
+* **the rounding test succeeds on exact zeros**: when every product is zero, the first test returns
+  `0`, whatever the exact fallback would return (`ozaki1CREZ_zero`, `ozaki1CRWZ_zero`);
 * `ozaki1CRBZ`: the same in bounded integer registers (`ozaki1TestBZ_eq`, `ozaki1CRBZ_eq`);
 * `ozaki1CRWSZ`: with IEEE signed zeros (`ozaki1CRWSZ_eq`); an entry whose products are all zero
-  gets the sign `crSigned` specifies without the exact path (`ozaki1CRWSZ_zero`). -/
+  gets the sign `crSigned` specifies without the exact fallback (`ozaki1CRWSZ_zero`). -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -84,12 +86,13 @@ theorem split_vanishes (b : ℕ) :
     · exact hcoef
     · exact (ih2 sl hsl).trans hrest
 
-/-! ## The overlap count -/
+/-! ## The number of nonzero positions -/
 
 /-- The support indicator: `1` where `xᵢ ≠ 0`, `0` where `xᵢ = 0`. -/
 def nzVec (x : List ℚ) : List ℤ := x.map fun a => if a = 0 then 0 else 1
 
-/-- **The overlap count** `#{i : xᵢ ≠ 0 ∧ yᵢ ≠ 0}`, the integer dot product of the indicators. -/
+/-- **The number of nonzero positions** `#{i : xᵢ ≠ 0 ∧ yᵢ ≠ 0}`, the integer dot product of the
+indicators. -/
 def supportOverlap (x y : List ℚ) : ℤ := dotZ (nzVec x) (nzVec y)
 
 theorem supportOverlap_cons (a c : ℚ) (x y : List ℚ) :
@@ -108,7 +111,7 @@ theorem supportOverlap_nonneg : ∀ x y : List ℚ, 0 ≤ supportOverlap x y
     have := supportOverlap_nonneg x y
     split <;> split <;> omega
 
-/-- The overlap count is at most the length. -/
+/-- The number of nonzero positions is at most the length. -/
 theorem supportOverlap_le_length : ∀ x y : List ℚ, supportOverlap x y ≤ x.length
   | [], y => by rw [supportOverlap_nil_left]; simp
   | _ :: _, [] => by rw [supportOverlap_nil_right, List.length_cons]; omega
@@ -120,7 +123,7 @@ theorem supportOverlap_le_length : ∀ x y : List ℚ, supportOverlap x y ≤ x.
 /-- Every product `xᵢ yᵢ` is zero. -/
 def ProductsZero (x y : List ℚ) : Prop := ∀ p ∈ List.zipWith (· * ·) x y, p = 0
 
-/-- **The overlap count is zero exactly when every product is zero.** -/
+/-- **The number of nonzero positions is zero exactly when every product is zero.** -/
 theorem supportOverlap_eq_zero_iff : ∀ x y : List ℚ, supportOverlap x y = 0 ↔ ProductsZero x y
   | [], y => by simp [supportOverlap_nil_left, ProductsZero]
   | _ :: _, [] => by simp [supportOverlap_nil_right, ProductsZero]
@@ -147,8 +150,8 @@ theorem supportOverlap_eq_zero_iff : ∀ x y : List ℚ, supportOverlap x y = 0 
         · exact Or.inr h
       rcases this with h | h <;> simp [h]
 
-/-- **A dot product of vectors supported where `x` and `y` are**, with entries at most `A` and `B`, is
-at most `N A B` for the overlap count `N`. -/
+/-- **A dot product of vectors supported where `x` and `y` are**, with entries at most `A` and `B`,
+is at most `N A B` for the number `N` of nonzero positions. -/
 theorem abs_dot_le_overlap {A B : ℚ} (hA : 0 ≤ A) (hB : 0 ≤ B) {a x : List ℚ}
     (hax : VanishesWith a x) : ∀ {b y : List ℚ}, VanishesWith b y → (∀ c ∈ a, Rat.abs c ≤ A) →
       (∀ c ∈ b, Rat.abs c ≤ B) → Rat.abs (dot a b) ≤ (supportOverlap x y : ℚ) * (A * B) := by
@@ -188,9 +191,10 @@ theorem dot_eq_zero_of_overlap {a x b y : List ℚ} (hax : VanishesWith a x) (hb
   simp only [Rat.intCast_zero, Rat.zero_mul] at this
   exact abs_eq_zero.mp (Rat.le_antisymm this (abs_nonneg _))
 
-/-! ## The slicing error with the overlap count -/
+/-! ## The slicing error with the number of nonzero positions -/
 
-/-- **Slicing error with the overlap count.** `|x · y − Σ terms| ≤ (s + 1) N 2^(E + F − s(b+1))`, with
+/-- **Slicing error with the number of nonzero positions.**
+`|x · y − Σ terms| ≤ (s + 1) N 2^(E + F − s(b+1))`, with
 `N` the number of indices where both `xᵢ` and `yᵢ` are nonzero. -/
 theorem exactTerms_error_overlap (b s : ℕ) (x y : List ℚ) :
     Rat.abs (dot x y - (exactTerms b s x y).sum) ≤
@@ -290,10 +294,10 @@ theorem exactTerms_zero_of_overlap {b s : ℕ} {x y : List ℚ} (hz : supportOve
   simp
 
 
-/-! ## The overlap count on the engine -/
+/-! ## The number of nonzero positions on the matrix multiplier -/
 
-/-- The overlap count from the engine: the product of the `0`/`1` support indicators, read back as
-an integer. -/
+/-- The number of nonzero positions from the matrix multiplier: the product of the `0`/`1` support
+indicators, read back as an integer. -/
 def overlapMultiplier (mult : MatrixMultiplier) (x y : List ℚ) : Option ℤ :=
   (mult (nzVec x) (nzVec y)).bind fun v => if v.den = 1 then some v.num else none
 
@@ -304,8 +308,8 @@ theorem nzVec_natAbs_le (x : List ℚ) : ∀ z ∈ nzVec x, z.natAbs ≤ 1 := by
   obtain ⟨a, _, rfl⟩ := List.mem_map.mp hz
   split <;> simp
 
-/-- **Every exact engine computes the overlap count exactly**: the indicators are `0` or `1`, so
-their products total at most `k`. -/
+/-- **Every exact matrix multiplier computes the number of nonzero positions exactly**: the
+indicators are `0` or `1`, so their products total at most `k`. -/
 theorem overlapMultiplier_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) {x y : List ℚ}
     (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
     overlapMultiplier mult x y = some (supportOverlap x y) := by
@@ -323,13 +327,13 @@ theorem overlapMultiplier_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : 
   unfold overlapMultiplier
   rw [he, Option.bind_some, if_pos (Rat.den_intCast _), Rat.num_intCast]
 
-/-! ## The check with the overlap count -/
+/-! ## The rounding test with the number of nonzero positions -/
 
-/-- The slicing bound with the overlap count `N` in place of `k`. -/
+/-- The slicing bound with the number `N` of nonzero positions in place of `k`. -/
 def ozaki1BoundZ (b s : ℕ) (N : ℤ) (x y : List ℚ) : ℚ :=
   ((s + 1 : ℕ) : ℚ) * (N : ℚ) * 2 ^ (splitExp b x + splitExp b y - s * (b + 1))
 
-/-- The bound with the overlap count is never larger than the normwise one. -/
+/-- The bound that counts only nonzero positions is never larger than the normwise one. -/
 theorem ozaki1BoundZ_le (b s : ℕ) (x y : List ℚ) :
     ozaki1BoundZ b s (supportOverlap x y) x y ≤ ozaki1Bound b s x y := by
   unfold ozaki1BoundZ ozaki1Bound
@@ -342,15 +346,16 @@ theorem ozaki1BoundZ_le (b s : ℕ) (x y : List ℚ) :
   have := Rat.mul_le_mul_of_nonneg_left hq hs
   exact Rat.mul_le_mul_of_nonneg_right this (Rat.le_of_lt hp)
 
-/-- The enclosure from `s` slices with the overlap count `N`: the slice products added exactly. -/
+/-- The enclosure from `s` slices with the number `N` of nonzero positions: the slice products
+added exactly. -/
 def ozaki1EnclosureZ (mult : MatrixMultiplier) (b s : ℕ) (N : ℤ) (x y : List ℚ) : Option (ℚ × ℚ) :=
   (ozaki1 mult exactAdd b s x y).map fun H => (H, ozaki1BoundZ b s N x y)
 
 /-- The number of nonzero terms. -/
 def nonzeroCount (ts : List ℚ) : ℕ := ts.countP fun t => t ≠ 0
 
-/-- The enclosure from `s` slices with a `W`-bit window and the overlap count: the window's loss is
-charged to the nonzero slice products only. -/
+/-- The enclosure from `s` slices with a `W`-bit truncated sum and the number of nonzero positions:
+the truncation loss is charged to the nonzero slice products only. -/
 def ozaki1TruncatedEnclosureZ (mult : MatrixMultiplier) (b s W : ℕ) (N : ℤ) (x y : List ℚ) :
     Option (ℚ × ℚ) :=
   (ozaki1Terms mult b s x y).map fun ts =>
@@ -363,7 +368,8 @@ theorem floorGrid_zero (q : ℤ) : floorGrid q 0 = 0 := by
   have : (0 : ℚ).floor = 0 := rfl
   rw [this, Rat.intCast_zero, Rat.zero_mul]
 
-/-- **The window loses nothing on zero terms**: `|Σ tᵢ − window sum| ≤ (number of nonzero tᵢ) 2^q`. -/
+/-- **The truncation loses nothing on zero terms**:
+`|Σ tᵢ − truncated sum| ≤ (number of nonzero tᵢ) 2^q`. -/
 theorem truncatedSum_error_nonzero (q : ℤ) : ∀ ts : List ℚ,
     Rat.abs (ts.sum - truncatedSum q ts) ≤ (nonzeroCount ts : ℚ) * 2 ^ q
   | [] => by
@@ -385,7 +391,8 @@ theorem truncatedSum_error_nonzero (q : ℤ) : ∀ ts : List ℚ,
       have : nonzeroCount (t :: ts) = nonzeroCount ts + 1 := by simp [nonzeroCount, ht]
       rw [this, natCast_succ, abs_of_nonneg h1]; grind
 
-/-- On an exact engine, the enclosure with the overlap count contains `x · y`. -/
+/-- On an exact matrix multiplier, the enclosure with the number of nonzero positions contains
+`x · y`. -/
 theorem ozaki1EnclosureZ_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {H B : ℚ}
@@ -397,7 +404,8 @@ theorem ozaki1EnclosureZ_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult 
   rw [show (0 : ℚ) + (exactTerms b s x y).sum = (exactTerms b s x y).sum by grind]
   exact exactTerms_error_overlap b s x y
 
-/-- On an exact engine, the window enclosure with the overlap count contains `x · y`. -/
+/-- On an exact matrix multiplier, the truncated enclosure with the number of nonzero positions
+contains `x · y`. -/
 theorem ozaki1TruncatedEnclosureZ_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {H B : ℚ}
@@ -420,8 +428,8 @@ theorem ozaki1TruncatedEnclosureZ_sound {mult : MatrixMultiplier} {b bound : ℕ
 
 /-! ## The schemes -/
 
-/-- The enclosures for the slice counts `ss`, all with the overlap count, which the engine computes
-once. -/
+/-- The enclosures for the slice counts `ss`, all with the number of nonzero positions, which the
+matrix multiplier computes once. -/
 def overlapTests (mult : MatrixMultiplier) (enc : ℕ → ℤ → Option (ℚ × ℚ)) (ss : List ℕ) (x y : List ℚ) :
     List (Option (ℚ × ℚ)) :=
   match overlapMultiplier mult x y with
@@ -435,14 +443,16 @@ theorem overlapTests_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.
   unfold overlapTests
   rw [overlapMultiplier_eq hmult hlen hbound]
 
-/-- **Correctly rounded Ozaki-I with the overlap bound**, the slice products added exactly: slice
-counts `ss` in turn, then the exact path on the engine. -/
+/-- **Correctly rounded Ozaki-I with the bound that counts only nonzero positions**, the slice
+products added exactly: slice counts `ss` in turn, then the exact fallback on the matrix
+multiplier. -/
 def ozaki1CREZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   roundingTest rnd (overlapTests mult (fun s N => ozaki1EnclosureZ mult b s N x y) ss x y)
     (ozaki1ExactFallback mult b smax x y)
 
-/-- **Correctly rounded Ozaki-I with the overlap bound and a `W`-bit window.** -/
+/-- **Correctly rounded Ozaki-I with the bound that counts only nonzero positions and a `W`-bit
+truncated sum.** -/
 def ozaki1CRWZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   roundingTest rnd (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult b s W N x y) ss x y)
@@ -474,7 +484,7 @@ theorem ozaki1CRWZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsT
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
   exact ozaki1TruncatedEnclosureZ_sound hmult s W hlen hbound hcB
 
-/-! ## Exact zeros settle -/
+/-! ## The rounding test succeeds on exact zeros -/
 
 theorem sum_eq_zero_of_all {ts : List ℚ} (h : ∀ t ∈ ts, t = 0) : ts.sum = 0 := by
   induction ts with
@@ -492,8 +502,8 @@ theorem ozaki1EnclosureZ_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult :
     sum_eq_zero_of_all (exactTerms_zero_of_overlap hz), hz]
   simp <;> grind
 
-/-- With disjoint supports the window enclosure is `(0, 0)`: every slice product is zero, so the
-window loses nothing. -/
+/-- With disjoint supports the truncated enclosure is `(0, 0)`: every slice product is zero, so
+the truncation loses nothing. -/
 theorem ozaki1TruncatedEnclosureZ_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) (hz : supportOverlap x y = 0) :
@@ -519,8 +529,8 @@ theorem roundEnclosure_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) :
   rw [show (0 : ℚ) - 0 = 0 by grind, show (0 : ℚ) + 0 = 0 by grind, h0]
   simp
 
-/-- **Exact zeros settle on the first check**: when every product `xᵢ yᵢ` is zero, `ozaki1CREZ`
-returns `0` from its first slice count, whatever the remaining checks and the exact path would
+/-- **The first test succeeds on exact zeros**: when every product `xᵢ yᵢ` is zero, `ozaki1CREZ`
+returns `0` from its first slice count, whatever the remaining tests and the exact fallback would
 return. -/
 theorem ozaki1CREZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {mult : MatrixMultiplier}
     {b bound : ℕ} (hmult : mult.ExactOn b bound) (s : ℕ) (ss : List ℕ) {x y : List ℚ}
@@ -545,7 +555,7 @@ theorem ozaki1CRWZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {mult :
   rw [ozaki1TruncatedEnclosureZ_zero hmult s W hlen hbound hz', Option.bind_some,
     roundEnclosure_zero h0]
 
-/-! ## The check in bounded integers -/
+/-! ## The rounding test in bounded integers -/
 
 theorem tval_ne_zero_iff (t : ℤ × ℤ) : tval t ≠ 0 ↔ t.1 ≠ 0 := by
   unfold tval
@@ -570,7 +580,8 @@ theorem nonzeroCount_map_tval : ∀ ts : List (ℤ × ℤ),
     · have : tval t ≠ 0 := (tval_ne_zero_iff t).mpr h
       simp [h, this]
 
-/-- **The bounded check with the overlap count**: the window sum in the register of `ozaki1TestB`,
+/-- **The bounded test with the number of nonzero positions**: the truncated sum in the register of
+`ozaki1TestB`,
 the bound `(s + 1) N 2^c + n' 2^q` with `n'` the number of nonzero slice products, both as integers,
 and the integer enclosure test. -/
 def ozaki1TestBZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (N : ℤ) (x y : List ℚ) :
@@ -584,7 +595,8 @@ def ozaki1TestBZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : 
       (truncationGrid b W x y) (((s + 1 : ℕ) : ℤ) * N)
       (splitExp b x + splitExp b y - s * (b + 1)) (ts.countP fun t => t.1 ≠ 0)
 
-/-- **The bounded check is the enclosure test** on the window enclosure with the overlap count. -/
+/-- **The bounded test is the enclosure test** on the truncated enclosure with the number of nonzero
+positions. -/
 theorem ozaki1TestBZ_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (s W : ℕ) (N : ℤ) {x y : List ℚ} (hlen : x.length = y.length)
     (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
@@ -604,8 +616,8 @@ theorem ozaki1TestBZ_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.
   rw [Rat.intCast_mul, Rat.intCast_natCast]
   all_goals simp only [List.length_map]
 
-/-- The bounded checks for the slice counts in turn, with the overlap count `N`, then the bounded
-exact path. -/
+/-- The bounded tests for the slice counts in turn, with the number `N` of nonzero positions, then
+the bounded exact fallback. -/
 def ozaki1CRBZFrom (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (N : ℤ) (smax : ℕ)
     (x y : List ℚ) : List ℕ → Option ℚ
   | [] => ozaki1ExactFallbackB mult p emin emax b smax x y
@@ -614,9 +626,9 @@ def ozaki1CRBZFrom (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : 
     | some w => some w
     | none => ozaki1CRBZFrom mult p emin emax b W N smax x y ss
 
-/-- **Correctly rounded Ozaki-I with the overlap bound in bounded registers**: the overlap count
-from the engine once, the bounded checks for the slice counts `ss` in turn, then the bounded exact
-path. -/
+/-- **Correctly rounded Ozaki-I with the bound that counts only nonzero positions, in bounded
+registers**: the number of nonzero positions from the matrix multiplier once, the bounded tests for
+the slice counts `ss` in turn, then the bounded exact fallback. -/
 def ozaki1CRBZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   match overlapMultiplier mult x y with
@@ -653,8 +665,8 @@ theorem ozaki1CRBZ_eq_CRWZ {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mu
   rw [overlapMultiplier_eq hmult hlen hbound, overlapTests_eq hmult _ ss hlen hbound]
   exact ozaki1CRBZFrom_eq hmult p emin emax W smax hlen hbound ss
 
-/-- **Correctly rounded in bounded registers**: on an exact engine, for every input whose exact path
-ends within `smax` slices. -/
+/-- **Correctly rounded in bounded registers**: on an exact matrix multiplier, for every input whose
+exact fallback ends within `smax` slices. -/
 theorem ozaki1CRBZ_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
     {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -680,8 +692,9 @@ theorem ozaki1CRBZ32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.
     ozaki1CRBZ mult 24 (-126) 127 b W ss smax x y = rne32Q (dot x y) :=
   ozaki1CRBZ_eq (by decide) (by decide) hmult W ss hlen hbound (vanish32Q hb hsmax hx hy)
 
-/-- **Exact zeros settle in bounded registers too**: when every product is zero, the first bounded
-check returns `0`, whatever the remaining checks and the exact path would return. -/
+/-- **The first test succeeds on exact zeros in bounded registers too**: when every product is zero,
+the first bounded test returns `0`, whatever the remaining tests and the exact fallback would
+return. -/
 theorem ozaki1CRBZFrom_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (W smax s : ℕ) (ss : List ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -699,7 +712,7 @@ theorem ozaki1CRBZFrom_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult : m
 
 /-! ## Signed zeros -/
 
-/-- The sign bit an enclosure settles for its rounding `r`. An enclosure of radius `0` is the exact
+/-- The sign bit an enclosure decides for its rounding `r`. An enclosure of radius `0` is the exact
 value, so its sign bit is `sumNeg`'s, including for an exact zero; otherwise as
 `signFromEnclosure`. -/
 def signFromEnclosureZ (H B r : ℚ) (z : Bool) : Option Bool :=
@@ -743,8 +756,8 @@ theorem signFromEnclosureZ_sound {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (
     rw [this]
   · exact signFromEnclosure_sound h h0 z hv hr hs
 
-/-- The signed check with `signFromEnclosureZ`: try the enclosures in order, accepting one whose
-ends round alike and whose sign is settled; after the last, the exact value. -/
+/-- The signed rounding test with `signFromEnclosureZ`: try the enclosures in order, accepting one
+whose ends round alike and whose sign is decided; after the last, the exact value. -/
 def roundingTestSignedZ (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Bool → Option Signed
   | [], exact, z => exact.bind fun v => (rnd v).map fun r => ⟨r, sumNeg v z⟩
   | c :: cs, exact, z =>
@@ -753,7 +766,7 @@ def roundingTestSignedZ (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) 
     | some w => some w
     | none => roundingTestSignedZ rnd cs exact z
 
-/-- **The signed check returns the correctly rounded value with the IEEE sign.** -/
+/-- **The signed rounding test returns the correctly rounded value with the IEEE sign.** -/
 theorem roundingTestSignedZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {v : ℚ} (z : Bool) :
     ∀ (cs : List (Option (ℚ × ℚ))) (exact : Option ℚ),
@@ -785,7 +798,8 @@ theorem roundingTestSignedZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h 
     · exact roundingTestSignedZ_eq h hI h0 z cs exact
         (fun c' hc' => hcs c' (List.mem_cons_of_mem _ hc')) hex
 
-/-- **Correctly rounded Ozaki-I with the overlap bound, a `W`-bit window and signed zeros.** -/
+/-- **Correctly rounded Ozaki-I with the bound that counts only nonzero positions, a `W`-bit
+truncated sum and signed zeros.** -/
 def ozaki1CRWSZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
   roundingTestSignedZ rnd
@@ -793,8 +807,8 @@ def ozaki1CRWSZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ)
       (vals xs) (vals ys))
     (ozaki1ExactFallback mult b smax (vals xs) (vals ys)) (allNegZero xs ys)
 
-/-- **Signed correct rounding.** On an exact engine, `ozaki1CRWSZ` returns the correctly rounded
-dot product with IEEE's sign for zero results. -/
+/-- **Signed correct rounding.** On an exact matrix multiplier, `ozaki1CRWSZ` returns the correctly
+rounded dot product with IEEE's sign for zero results. -/
 theorem ozaki1CRWSZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {mult : MatrixMultiplier} {b bound : ℕ}
     (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ} {xs ys : List Signed}
@@ -811,9 +825,9 @@ theorem ozaki1CRWSZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : Rounds
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
   exact ozaki1TruncatedEnclosureZ_sound hmult s W hl hb hcB
 
-/-- **Signed exact zeros settle on the first check**: when every product is zero, `ozaki1CRWSZ`
+/-- **The first test succeeds on signed exact zeros**: when every product is zero, `ozaki1CRWSZ`
 returns `0` with the sign `crSigned` specifies (`−0` exactly when every product is `−0`), whatever
-the exact path would return. -/
+the exact fallback would return. -/
 theorem ozaki1CRWSZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {mult : MatrixMultiplier}
     {b bound : ℕ} (hmult : mult.ExactOn b bound) (s W : ℕ) (ss : List ℕ) {xs ys : List Signed}
     (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)

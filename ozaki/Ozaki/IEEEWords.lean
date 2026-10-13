@@ -206,7 +206,7 @@ def crIEEEWord (F : WordFormat) (scheme : List (ℤ × ℤ) → List (ℤ × ℤ
   crIEEEIW scheme sgn (ws.map (decodeWord F)) (vs.map (decodeWord F))
 
 /-- **On stored words, an integer correctly rounded scheme with special values meets the IEEE
-specification**, with the integer exact path as the sign oracle: the format is `mb + 1` bits of
+specification**, with the integer exact fallback as the sign oracle: the format is `mb + 1` bits of
 precision with exponents from `1 − bias` to `2^eb − 2 − bias`, and the scheme is correctly rounded
 on its values. -/
 theorem crIEEEWord_eq (F : WordFormat) (hb : 1 < F.eb) {emin emax : ℤ}

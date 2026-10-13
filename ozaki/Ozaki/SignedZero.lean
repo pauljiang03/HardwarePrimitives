@@ -11,10 +11,11 @@ to nearest:
   exclusive or of its factors' signs, zeros included; otherwise it is `+0`.
 
 `Signed` pairs a value with its sign bit, and `crSigned` is this specification: the round to
-nearest of the exact sum, with the sign above. The enclosure check settles the sign as well when
-the enclosure lies on one side of zero (`signFromEnclosure`), and the exact path knows it outright;
-`roundingTestSigned_eq` proves the signed check returns `crSigned`. `ozaki1CRWS` is the correctly
-rounded Ozaki-I with a window accumulator and signed zeros (`ozaki1CRWS_eq`). -/
+nearest of the exact sum, with the sign above. The rounding test on an enclosure decides the sign
+as well when the enclosure lies on one side of zero (`signFromEnclosure`), and the exact fallback
+knows it outright; `roundingTestSigned_eq` proves that the signed rounding test returns
+`crSigned`. `ozaki1CRWS` is the correctly rounded Ozaki-I with a truncated sum and signed zeros
+(`ozaki1CRWS_eq`). -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -51,7 +52,7 @@ def crSigned (rnd : ℚ → Option ℚ) (xs ys : List Signed) : Option Signed :=
   (rnd (dot (vals xs) (vals ys))).map fun r =>
     ⟨r, sumNeg (dot (vals xs) (vals ys)) (allNegZero xs ys)⟩
 
-/-- The sign bit an enclosure `[H − B, H + B]` settles for its rounding `r`: the sign of a nonzero
+/-- The sign bit an enclosure `[H − B, H + B]` decides for its rounding `r`: the sign of a nonzero
 `r`; for `r = 0`, the side of zero the enclosure lies on; none if it contains zero. -/
 def signFromEnclosure (H B r : ℚ) : Option Bool :=
   if r ≠ 0 then some (decide (r < 0))
@@ -59,8 +60,8 @@ def signFromEnclosure (H B r : ℚ) : Option Bool :=
   else if H + B < 0 then some true
   else none
 
-/-- The signed check: try the enclosures in order, accepting one whose ends round alike and whose
-sign is settled; after the last, the exact value. `z` is `allNegZero` of the inputs. -/
+/-- The signed rounding test: try the enclosures in order, accepting one whose ends round alike and
+whose sign is decided; after the last, the exact value. `z` is `allNegZero` of the inputs. -/
 def roundingTestSigned (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Bool → Option Signed
   | [], exact, z => exact.bind fun v => (rnd v).map fun r => ⟨r, sumNeg v z⟩
   | c :: cs, exact, z =>
@@ -85,7 +86,7 @@ theorem sign_of_round {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsT
     have hvg : ¬ v < 0 := by grind
     simp [hrg, hvg]
 
-/-- **The signed check returns the correctly rounded value with the IEEE sign.** -/
+/-- **The signed rounding test returns the correctly rounded value with the IEEE sign.** -/
 theorem roundingTestSigned_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {v : ℚ} (z : Bool) :
     ∀ (cs : List (Option (ℚ × ℚ))) (exact : Option ℚ),
@@ -138,14 +139,14 @@ theorem roundingTestSigned_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h :
                 · cases hs
     · exact roundingTestSigned_eq h hI h0 z cs exact (fun c' hc' => hcs c' (List.mem_cons_of_mem _ hc')) hex
 
-/-- **Correctly rounded Ozaki-I with a window accumulator and signed zeros.** -/
+/-- **Correctly rounded Ozaki-I with a truncated sum and signed zeros.** -/
 def ozaki1CRWS (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
   roundingTestSigned rnd (ss.map fun s => ozaki1TruncatedEnclosure mult b s W (vals xs) (vals ys))
     (ozaki1ExactFallback mult b smax (vals xs) (vals ys)) (allNegZero xs ys)
 
-/-- **Signed correct rounding.** On an exact engine, `ozaki1CRWS` returns the correctly rounded
-dot product with IEEE's sign for zero results. -/
+/-- **Signed correct rounding.** On an exact matrix multiplier, `ozaki1CRWS` returns the correctly
+rounded dot product with IEEE's sign for zero results. -/
 theorem ozaki1CRWS_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {mult : MatrixMultiplier} {b bound : ℕ}
     (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ} {xs ys : List Signed}

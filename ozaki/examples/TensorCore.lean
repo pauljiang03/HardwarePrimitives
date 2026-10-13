@@ -39,8 +39,9 @@ example : (do
 
 /-! ## 3. One slice product on a V100 block
 
-The engine encodes integers as fp16 words, pads to groups of four, and runs `runBlocks` from
-`c = +0`. On `11`-bit integers with `Σ|aᵢbᵢ| ≤ 2^24` it is exact (`v100_exactOn`). -/
+The matrix multiplier encodes integers as fp16 words, pads to blocks of four products, and runs
+`runBlocks` from `c = +0`. On `11`-bit integers with `Σ|aᵢbᵢ| ≤ 2^24` it is exact (`v100_exactOn`).
+-/
 
 example : tcMultiplier v100F16F32 [2047, -2048, 5, 7] [2048, 1, 3, -9] =
     some (dotZ [2047, -2048, 5, 7] [2048, 1, 3, -9]) := by decide +kernel
@@ -74,7 +75,7 @@ example : crt z3Basis (z3Moduli.map fun m : ℕ => (123456789012 : ℤ) % (m : �
 #check @z3_bits
 #check @crt_fails_at_23
 
-/-! ## 6. ADP: Ozaki-I on an INT8 engine
+/-! ## 6. ADP: Ozaki-I on an INT8 matrix multiplier
 
 A `53`-bit integer in seven remapped signed bytes, an INT32 dot product of bytes in TC-EFT's
 fixed-width register, and binary64 emulation of `x · y` with `55`-bit fixed point. -/
@@ -93,9 +94,10 @@ def v : List ℚ := [3/5, -1/11]
 
 /-! ## 7. Correct rounding
 
-`tcOzaki1CR` keeps the slice products exact and checks whether both ends of `H ± B` round to the same
-binary32 word; it tries three, then four slices, and otherwise rounds the exact product. Whichever
-path settles it, the result is the binary32 round to nearest of `x · y`. -/
+`tcOzaki1CR` keeps the slice products exact and checks whether both ends of `H ± B` round to the
+same binary32 word; it tries three, then four slices, and otherwise rounds the exact product.
+Whether the rounding test or the exact fallback decides it, the result is the binary32 round to
+nearest of `x · y`. -/
 
 #eval tcOzaki1CR v100F16F32 11 [3, 4] x y
 #eval round32Value (dot x y)
@@ -103,8 +105,8 @@ path settles it, the result is the binary32 round to nearest of `x · y`. -/
 example : tcOzaki1CR v100F16F32 11 [3, 4] x y = round32Value (dot x y) :=
   tcOzaki1CR_eq v100_intExact v100_holdsInts (by decide) [3, 4] rfl (by decide)
 
-/-- `1 + 2^-24` lies exactly halfway between `1` and `1 + 2^-23`: no bound settles it, the exact
-path on V100 blocks does, and the tie goes to the even word `1`. -/
+/-- `1 + 2^-24` lies exactly halfway between `1` and `1 + 2^-23`: the rounding test fails with every
+bound, the exact fallback on V100 blocks decides it, and the tie goes to the even word `1`. -/
 example : tcOzaki1CRE v100F16F32 11 [3, 4] 24 [1, 1 / 16777216] [1, 1] = some 1 := by
   decide +kernel
 

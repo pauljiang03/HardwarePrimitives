@@ -2,18 +2,19 @@ import Ozaki.Ozaki1
 
 /-! # Long dot products: split-K
 
-An engine is exact only while the products of one call total at most its budget (`2^24` for a
-binary32 output), which limits a dot product of `b`-bit slices to `k · 2^(2b) ≤ 2^24` terms: four
-with `11`-bit slices. Real GEMMs have `k` in the thousands. Split-K removes the limit: cut both
-vectors into chunks of `m` terms with `m · 2^(2b)` within the budget, run the engine on every chunk,
-and add the chunk results, which are integers, exactly.
+A matrix multiplier is exact only while the products of one call total at most its exactness bound
+(`2^24` for a binary32 output), which limits a dot product of `b`-bit slices to `k · 2^(2b) ≤ 2^24`
+terms: four with `11`-bit slices. Real GEMMs have `k` in the thousands. Split-K removes the limit:
+cut both vectors into chunks of `m` terms with `m · 2^(2b)` within the exactness bound, run the
+matrix multiplier on every chunk, and add the chunk results, which are integers, exactly.
 
 * `chunksOf m l`: `l` cut into chunks of `m` (the last may be shorter);
-* `chunked m eng`: the split-K engine;
-* `chunked_exactOn`: if `mult` is exact on `b`-bit vectors within its budget and `m · 2^(2b)` fits
-  the budget, the split-K engine is exact on `b`-bit vectors of every length, whatever their total.
+* `chunked m mult`: the split-K matrix multiplier;
+* `chunked_exactOn`: if `mult` is exact on `b`-bit vectors within its exactness bound and
+  `m · 2^(2b)` fits the exactness bound, the split-K matrix multiplier is exact on `b`-bit vectors
+  of every length, whatever their total.
 
-With it every theorem of the schemes holds for dot products of any length: take the budget
+With it every theorem of the schemes holds for dot products of any length: take the exactness bound
 `k · 2^(2b)`. -/
 
 local notation "ℕ" => Nat
@@ -113,8 +114,8 @@ theorem chunksAux_dotAbs {m : ℕ} (hm : 0 < m) :
     rw [chunksAux_dotAbs hm n _ _ hdl hdn, ← dotAbs_append _ _ htl, List.take_append_drop,
       List.take_append_drop]
 
-/-- **Split-K.** Cut both vectors into chunks of `m`, run the engine on every chunk pair, and add
-the chunk results exactly. -/
+/-- **Split-K.** Cut both vectors into chunks of `m`, run the matrix multiplier on every chunk pair,
+and add the chunk results exactly. -/
 def chunked (m : ℕ) (mult : MatrixMultiplier) : MatrixMultiplier := fun x y =>
   (((chunksOf m x).zip (chunksOf m y)).mapM fun p => mult p.1 p.2).map List.sum
 
@@ -125,8 +126,8 @@ theorem intCast_sum_map (l : List α) (f : α → ℤ) :
   | cons a l ih => simp only [List.map_cons, List.sum_cons, Rat.intCast_add, ih]
 
 /-- **Split-K is exact for every length.** If `mult` is exact on `b`-bit vectors whose products
-total at most `bound`, and `m · 2^(2b) ≤ budget`, the split-K engine with chunks of `m` is exact
-on `b`-bit vectors of any length, with no budget at all. -/
+total at most `bound`, and `m · 2^(2b) ≤ bound`, the split-K matrix multiplier with chunks of `m`
+is exact on `b`-bit vectors of any length, with no exactness bound at all. -/
 theorem chunked_exactOn {mult : MatrixMultiplier} {b bound m : ℕ} (hmult : mult.ExactOn b bound)
     (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ bound) (B : ℕ) : (chunked m mult).ExactOn b B := by
   intro x y hlen hx hy _
@@ -144,14 +145,15 @@ theorem chunked_exactOn {mult : MatrixMultiplier} {b bound m : ℕ} (hmult : mul
       (fun a ha => hy a (h4 a ha))) ?_
     exact Nat.le_trans (Nat.mul_le_mul_right _ h2) hmb
 
-/-- The budget the scheme theorems ask for is met by any split-K engine: take `k · 2^(2b)`. -/
+/-- The exactness bound that the scheme theorems ask for is met by any split-K matrix multiplier:
+take `k · 2^(2b)`. -/
 theorem chunked_exactOn_self {mult : MatrixMultiplier} {b bound m : ℕ} (hmult : mult.ExactOn b bound)
     (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ bound) (x : List ℚ) :
     (chunked m mult).ExactOn b (x.length * (2 ^ b * 2 ^ b)) :=
   chunked_exactOn hmult hm hmb _
 
-/-- Chunk length for `b`-bit slices on an engine with budget `2^24`: `2^(24 − 2b)` products total at
-most `2^24` (four for `11`-bit slices, `256` for `8`-bit). -/
+/-- Chunk length for `b`-bit slices on a matrix multiplier with exactness bound `2^24`:
+`2^(24 − 2b)` products total at most `2^24` (four for `11`-bit slices, `256` for `8`-bit). -/
 def chunkLen (b : ℕ) : ℕ := 2 ^ (24 - 2 * b)
 
 theorem chunkLen_pos (b : ℕ) : 0 < chunkLen b := Nat.two_pow_pos _

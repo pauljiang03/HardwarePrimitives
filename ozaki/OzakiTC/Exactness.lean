@@ -16,8 +16,9 @@ nothing is lost:
 
 The conditions are those of the Z3 models' `2b + log₂ k ≤ 24`, made precise for this hardware:
 alignment needs `2b ≤ F` (`F = 23` on V100, `24` on A100, `25` on H100) and the final binary32
-truncation needs the sum within `2^24`. Unlike the Z3 models' engine, the model accumulates with
-`F + 3` or more bits, so only the final sum, not every partial sum, must fit binary32. -/
+truncation needs the sum within `2^24`. Unlike the Z3 models' matrix multiplier, the model
+accumulates with `F + 3` or more bits, so only the final sum, not every partial sum, must fit
+binary32. -/
 
 open TensorCore
 
@@ -37,8 +38,8 @@ theorem sumQ_eq (xs : List ℚ) : sumQ xs = xs.sum := by
 
 /-! ## Alignment on a grid -/
 
-/-- If every nonzero term is a multiple of `2^g` with exponent at most `g + F`, and the floor is at
-most `g + F`, alignment loses nothing. -/
+/-- If every nonzero term is a multiple of `2^g` with exponent at most `g + F`, and the minimum
+alignment exponent is at most `g + F`, alignment loses nothing. -/
 theorem accumulator_eq_exactDot_of_grid (b : PreparedBlock) (g : ℤ)
     (hfloor : ∀ f ∈ b.model.eAlignMin, f ≤ g + b.model.alignFracBits)
     (hterm : ∀ t ∈ b.terms, t.significand ≠ 0 →
@@ -132,7 +133,7 @@ theorem wordProducts_append (p : Model) (xs ys : List (p.Word × p.Word)) :
     wordProducts p (xs ++ ys) = wordProducts p xs + wordProducts p ys := by
   unfold wordProducts; rw [sum_map_append]
 
-/-- Products of integer words add up to an integer within their budget. -/
+/-- Products of integer words add up to an integer within the sum of their magnitudes. -/
 theorem wordProducts_int {p : Model} {b : ℕ} :
     ∀ ps : List (p.Word × p.Word), (∀ q ∈ ps, IntWord p b q.1 ∧ IntWord p b q.2) →
       ∃ z : ℤ, wordProducts p ps = z ∧ Rat.abs (z : ℚ) ≤ wordDotAbs p ps
@@ -171,8 +172,8 @@ theorem decode32_isSome_of_value32 {c : F32} {v : ℚ} (h : value32 c = some v) 
 
 /-! ## One block -/
 
-/-- Profile conditions for exact `b`-bit integer blocks: `2b ≤ F`, `F ≥ 23`, a floor at most `F`,
-and a minimum normal exponent at most `b` (every format in use). -/
+/-- Model conditions for exact `b`-bit integer blocks: `2b ≤ F`, `F ≥ 23`, a minimum alignment
+exponent at most `F`, and a minimum normal exponent at most `b` (every format in use). -/
 structure IntExact (p : Model) (b : ℕ) : Prop where
   align : 2 * (b : ℤ) ≤ p.alignFracBits
   wide : 23 ≤ p.alignFracBits
@@ -257,7 +258,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
           rw [hprof]
           obtain ⟨h1, h2⟩ := hprod q hq hnz
           exact ⟨by omega, h2⟩
-    · -- `|c| = 2^24`: the budget leaves every product zero
+    · -- `|c| = 2^24`: the exactness bound leaves every product zero
       have hceq : zc.natAbs = 2 ^ 24 := by
         have : ((zc.natAbs : ℕ) : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := by rw [← two_pow_natCast]; exact hzc
         have := Rat.natCast_le_natCast.mp this; omega
@@ -333,11 +334,11 @@ theorem runValue_cons (c : F32) (t : BlockTrace) (ts : List BlockTrace) :
 /-- **Exact chain.** Blocks of `b`-bit integer operands, chained through their binary32 outputs
 from an integer `c`, return `c + Σ aᵢbᵢ` exactly when `|c| + Σ|aᵢbᵢ| ≤ 2^24`. -/
 theorem runBlocks_int {p : Model} {b : ℕ} (hp : IntExact p b) :
-    ∀ (groups : List (List (p.Word × p.Word))) (c : F32) (zc : ℤ), value32 c = some (zc : ℚ) →
-      (∀ g ∈ groups, g.length = p.nfma ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
-      Rat.abs (zc : ℚ) + wordDotAbs p groups.flatten ≤ 2 ^ (24 : ℤ) →
-      ∃ ts, runBlocks p c groups = .ok ts ∧
-        runValue c ts = zc + wordProducts p groups.flatten
+    ∀ (blocks : List (List (p.Word × p.Word))) (c : F32) (zc : ℤ), value32 c = some (zc : ℚ) →
+      (∀ g ∈ blocks, g.length = p.nfma ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
+      Rat.abs (zc : ℚ) + wordDotAbs p blocks.flatten ≤ 2 ^ (24 : ℤ) →
+      ∃ ts, runBlocks p c blocks = .ok ts ∧
+        runValue c ts = zc + wordProducts p blocks.flatten
   | [], c, zc, hc, _, _ => ⟨[], rfl, by simp [runValue, value32D, hc, wordProducts]; grind⟩
   | g :: rest, c, zc, hc, hg, hbound => by
     obtain ⟨hlen, hops⟩ := hg g (by simp)

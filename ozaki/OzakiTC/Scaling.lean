@@ -51,8 +51,8 @@ theorem int_mul_pow2_finiteValue32 (z : ℤ) {g : ℤ} (hz : z.natAbs ≤ 2 ^ 24
       rw [this]; grind
     rwa [e] at this
 
-/-- **Rescaling a slice product is exact** (Ozaki-I `[S3.2]`). An engine result `z` with
-`|z| ≤ 2^24` times `2^g`, rounded to binary32, is `z · 2^g` for `−149 ≤ g ≤ 103`. -/
+/-- **Rescaling a slice product is exact** (Ozaki-I `[S3.2]`). A result `z` of the matrix multiplier
+with `|z| ≤ 2^24` times `2^g`, rounded to binary32, is `z · 2^g` for `−149 ≤ g ≤ 103`. -/
 theorem scaled_slice_product_exact (z : ℤ) {g : ℤ} (hz : z.natAbs ≤ 2 ^ 24) (hg1 : -149 ≤ g)
     (hg2 : g ≤ 103) : round32Value ((z : ℚ) * 2 ^ g) = some ((z : ℚ) * 2 ^ g) :=
   round32Value_of_finite (int_mul_pow2_finiteValue32 z hz hg1 hg2)

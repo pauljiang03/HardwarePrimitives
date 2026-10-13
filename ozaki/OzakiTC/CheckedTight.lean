@@ -3,10 +3,10 @@ import Ozaki.CheckedTight
 
 /-! # Tighter widths on the Tensor Core model, with split-K guarded
 
-* ADP-style slicing in integers, now on the guarded INT8 engines (`OzakiTC.Int8Checked`): every
-  data integer within `259` bits and every exponent and counter within `17` bits, signed and
+* ADP-style slicing in integers, now on the guarded INT8 matrix multipliers (`OzakiTC.Int8Checked`):
+  every data integer within `259` bits and every exponent and counter within `17` bits, signed and
   unsigned (`adpCRJC_binary64_tight`, `adpCRJSC_binary64_tight`; earlier `264`/`25`).
-* Ozaki-I and Ozaki-II on V100 fp16 blocks through the guarded split-K engine
+* Ozaki-I and Ozaki-II on V100 fp16 blocks through the guarded split-K matrix multiplier
   (`Ozaki.Checked.chunkedC`): every integer outside the Tensor Core blocks' own arithmetic,
   split-K's chunk sums included, within `263` bits and `17` bits for FP64
   (`v100_fp64CRI_checked`, `v100_fp64CRJ_checked`, `v100_fp64CRIS_checked`). -/
@@ -17,7 +17,7 @@ namespace Ozaki.TC
 
 open Ozaki.Checked
 
-/-- **ADP-style slicing, FP64: 259 bits and 17 bits**, on the guarded INT8 engines. -/
+/-- **ADP-style slicing, FP64: 259 bits and 17 bits**, on the guarded INT8 matrix multipliers. -/
 theorem adpCRJC_binary64_tight {cfgs : List (ℕ × ℕ)} {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hk : xs.length ≤ 2 ^ 20)
     (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a) (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a)
@@ -73,7 +73,7 @@ theorem adpCRJSC_binary64_tight {cfgs : List (ℕ × ℕ)} {xs ys : List SEntry}
     adpCRJS_eq (fun c hc => ⟨(hcfgs c hc).1, (hcfgs c hc).2.2.2⟩) (by decide)
       (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue) hlen]
 
-/-- The guarded split-K engine on V100 fp16 blocks. -/
+/-- The guarded split-K matrix multiplier on V100 fp16 blocks. -/
 def v100SplitKC (B : Widths) : MatrixMultiplier := chunkedC B (chunkLen 11) (tcMultiplier v100F16F32)
 
 theorem v100SplitKC_exactOn {B : Widths} (hR : 25 ≤ B.R) {D : ℕ} (hD : D < 2 ^ B.R) :

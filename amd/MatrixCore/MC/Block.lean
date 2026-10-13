@@ -30,7 +30,7 @@ def prepare {P : Model} (x : BlockInput P) : Option Prepared := do
 
 namespace Prepared
 
-/-- Full-precision, denormalised products `p_ℓ = a_ℓ b_ℓ`. -/
+/-- Full-precision, denormalized products `p_ℓ = a_ℓ b_ℓ`. -/
 def p (x : Prepared) : List Unpacked := List.zipWith Unpacked.mul x.a x.b
 
 /-- The exact value of Eq. (1), `Σ p_ℓ + c`. -/

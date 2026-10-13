@@ -5,14 +5,15 @@ import Ozaki.SharpBounds
 
 /-! # Slice and moduli rules for correct rounding
 
-The rules of `Ozaki.SliceRule` and `Ozaki.ModuliRule` target an error of `2^-t · k · max|x| · max|y|`:
-the factor `k` makes the bound grow with the inner dimension. That is enough for an error bound,
-but the correct-rounding check settles an entry only when its bound is small against the spacing
-of the result, and a simulation at realistic sizes (`scripts/fallback_sim.py`) found that the first
-check almost never settles once `k ≥ 256` under the plain rule. The rules here add `⌈log₂ k⌉` bits:
+The rules of `Ozaki.SliceRule` and `Ozaki.ModuliRule` target an error of
+`2^-t · k · max|x| · max|y|`: the factor `k` makes the bound grow with the inner dimension. That is
+enough for an error bound, but the rounding test of correct rounding decides an entry only when its
+bound is small against the spacing of the result, and a simulation at realistic sizes
+(`scripts/fallback_sim.py`) found that the first test almost never succeeds once `k ≥ 256` under the
+plain rule. The rules here add `⌈log₂ k⌉` bits:
 
 * `clog2 k`, the least `c` with `k ≤ 2^c` (`le_two_pow_clog2`);
-* `slicesForCR b t k = slicesFor b (t + clog2 k)`: then the slicing bound of the first check is at
+* `slicesForCR b t k = slicesFor b (t + clog2 k)`: then the slicing bound of the first test is at
   most `2^-t · max|x| · max|y|`, with no factor `k` (`ozaki1Bound_le_cr`), and at most
   `2^(c−t) |x · y|` whenever cancellation loses at most `c` bits, `max|x| max|y| ≤ 2^c |x · y|`
   (`ozaki1Bound_le_cr_rel`). With `t` the output precision `p` plus a few bits the bound is a small
@@ -58,8 +59,8 @@ theorem slicesFor_spec {b t : ℕ} (hs : 0 < slicesFor b t) :
 /-- **The slice count for correct rounding**: `⌈log₂ k⌉` more bits than the plain rule. -/
 def slicesForCR (b t k : ℕ) : ℕ := slicesFor b (t + clog2 k)
 
-/-- **The first check's bound, without the factor `k`.** With `s = slicesForCR b t k` slices and at
-most `k` entries, Ozaki-I's slicing bound is at most `2^-t · max|x| · max|y|`. -/
+/-- **The bound of the first test, without the factor `k`.** With `s = slicesForCR b t k` slices and
+at most `k` entries, Ozaki-I's slicing bound is at most `2^-t · max|x| · max|y|`. -/
 theorem ozaki1Bound_le_cr {b t k : ℕ} (hs : 0 < slicesForCR b t k) {x y : List ℚ}
     (hk : x.length ≤ k) (hx : maxAbs x ≠ 0) (hy : maxAbs y ≠ 0) :
     ozaki1Bound b (slicesForCR b t k) x y ≤ maxAbs x * maxAbs y * 2 ^ (-(t : ℤ)) := by
@@ -86,7 +87,7 @@ theorem ozaki1Bound_le_cr {b t k : ℕ} (hs : 0 < slicesForCR b t k) {x y : List
     _ = maxAbs x * maxAbs y * 2 ^ (-(t : ℤ)) := by rw [e2]; grind
 
 /-- **Relative to the product.** If cancellation loses at most `c` bits,
-`max|x| max|y| ≤ 2^c |x · y|`, the first check's bound is at most `2^(c−t) |x · y|`. -/
+`max|x| max|y| ≤ 2^c |x · y|`, the bound of the first test is at most `2^(c−t) |x · y|`. -/
 theorem ozaki1Bound_le_cr_rel {b t k : ℕ} (hs : 0 < slicesForCR b t k) {x y : List ℚ}
     (hk : x.length ≤ k) (hx : maxAbs x ≠ 0) (hy : maxAbs y ≠ 0) {c : ℤ}
     (hcanc : maxAbs x * maxAbs y ≤ 2 ^ c * Rat.abs (dot x y)) :

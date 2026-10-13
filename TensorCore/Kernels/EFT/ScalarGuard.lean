@@ -116,7 +116,7 @@ theorem mapM_round32 (xs : List Word) (hx : ∀ x ∈ xs, FiniteValue32 x.value)
     · simp [List.mapM_cons, hb, hbs]
     · simp [hv, hvs]
 
-/-- FP32 summation of words lying on one grid, within a 24-bit budget, is exact. -/
+/-- FP32 summation of words lying on one grid, within a 24-bit coefficient bound, is exact. -/
 theorem scalarSum_exact (xs : List Word) (ℓ : ℤ) (zs : List ℤ) (h1 : -149 ≤ ℓ) (h2 : ℓ ≤ 104)
     (hv : xs.map Word.value = zs.map fun (z : ℤ) => (z : ℚ) * pow2 ℓ) (hb : magnitudeSum zs < 2 ^ 24) :
     ∃ b, scalarSum xs = some b ∧ TensorCore.value32 b = some (sumQ (xs.map Word.value)) := by

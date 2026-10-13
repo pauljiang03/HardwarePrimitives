@@ -1,8 +1,8 @@
 import OzakiMC.Exactness
 
-/-! # The matrix core as an Ozaki engine
+/-! # The matrix core as a matrix multiplier for the Ozaki schemes
 
-`mcMultiplier P` evaluates an integer dot product on the matrix-core model of profile `P`: it writes
+`mcMultiplier P` evaluates an integer dot product on the matrix-core model `P`: it writes
 each integer with `MatrixCore`'s exact encoder `encodeExact`, and runs `dotBits` (zero padding to
 whole blocks of `N_FMA`, each block's `d` the next block's `c`) from `c = +0`.
 
@@ -10,8 +10,8 @@ whole blocks of `N_FMA`, each block's `d` the next block's `c`) from `c = +0`.
   encodes every integer of magnitude at most `2^(p+1)`; XF32 operands, read by truncating a
   binary32 word to ten fraction bits, keep every integer of magnitude at most `2^11`
   (`xf32_encodesInts`).
-* `mcMultiplier_exactOn`: on an exact configuration (`ExactConfig`), the engine is exact on `b`-bit
-  vectors whose products total at most `2^24` in magnitude. -/
+* `mcMultiplier_exactOn`: on an exact configuration (`ExactConfig`), the matrix multiplier is exact
+  on `b`-bit vectors whose products total at most `2^24` in magnitude. -/
 
 open MatrixCore
 
@@ -286,10 +286,10 @@ theorem xf32_encodesInts : EncodesInts .xf32 11 := by
       rw [← Rat.mul_assoc, hm]
   exact ⟨w, hw, ⟨_, hr, z, by rw [hval, hv]⟩, by rw [wordValue_of_read hr, hval, hv]⟩
 
-/-! ## The engine -/
+/-! ## The matrix multiplier -/
 
-/-- **The matrix core as an Ozaki engine.** Encode the integers exactly, and evaluate the inner
-product with `dotBits` from `c = +0`. -/
+/-- **The matrix core as a matrix multiplier for the Ozaki schemes.** Encode the integers exactly,
+and evaluate the inner product with `dotBits` from `c = +0`. -/
 def mcMultiplier (P : Model) : MatrixMultiplier := fun x y => do
   let a ← x.mapM fun z : ℤ => P.a.encodeExact (z : ℚ)
   let b ← y.mapM fun z : ℤ => P.b.encodeExact (z : ℚ)
@@ -305,7 +305,7 @@ theorem intWord_zero {i : InputFormat} {b : ℕ} (h : EncodesInts i b) : IntWord
   rw [encodeExact_zero] at hw
   cases hw; exact hint
 
-/-- Products and budget of encoded integer vectors. -/
+/-- Products and product magnitudes of encoded integer vectors. -/
 theorem encoded_products {P : Model} (Ea : ℤ → P.a.Word) (Eb : ℤ → P.b.Word) :
     ∀ (x y : List ℤ), (∀ z ∈ x, P.a.wordValue (Ea z) = z) → (∀ z ∈ y, P.b.wordValue (Eb z) = z) →
       exactProducts P (x.map Ea) (y.map Eb) = (dotZ x y : ℚ) ∧
@@ -320,8 +320,8 @@ theorem encoded_products {P : Model} (Ea : ℤ → P.a.Word) (Eb : ℤ → P.b.W
       hy c (by simp), dotZ_cons, dotAbs_cons, Rat.intCast_add, Rat.intCast_mul, Rat.natCast_add]
     simp [← Rat.intCast_mul, absQ_intCast]
 
-/-- **Exact engine.** On an exact configuration whose operand formats hold every `b`-bit integer,
-the matrix-core engine is exact on `b`-bit integer vectors whose products total at most `2^24`
+/-- **Exact matrix multiplier.** On an exact configuration whose operand formats hold every `b`-bit
+integer, the matrix core is exact on `b`-bit integer vectors whose products total at most `2^24`
 in magnitude. -/
 theorem mcMultiplier_exactOn {P : Model} {b : ℕ} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) (hn : 0 < P.nfma) (hea : EncodesInts P.a b)

@@ -1,13 +1,14 @@
 import OzakiMCTests.LongFP64
 import OzakiMC.ZeroCheck
 
-/-! # Exact-zero results without the exact path on CDNA 3
+/-! # Exact-zero results without the exact fallback on CDNA 3
 
 The same disjoint-support row and column as on the Tensor Core (`x = [3, 0, 2^-30, 0]`,
-`y = [0, 5, 0, −7 · 2^40]`), on CDNA 3 fp16 blocks with split-K: the normwise check falls back to the
-exact path (a sentinel exact path is returned), the check with the overlap count returns `0` from
-the first slice count, in rational and bounded integer form, and with signed zeros `−0` exactly when
-every product is `−0`. The binary64 oracle cases still come out as the oracle's values. -/
+`y = [0, 5, 0, −7 · 2^40]`), on CDNA 3 fp16 blocks with split-K: the rounding test with the normwise
+bound falls back to the exact fallback (a sentinel is returned in its place), the rounding test with
+the bound that counts only nonzero positions returns `0` from the first slice count, in rational and
+bounded integer form, and with signed zeros `−0` exactly when every product is `−0`. The binary64
+oracle cases still come out as the oracle's values. -/
 
 open MatrixCore Ozaki Ozaki.MC OzakiMCTests.LongFP64
 
@@ -35,8 +36,8 @@ def sx' : List Signed := [⟨3, false⟩, ⟨0, false⟩]
 example : mcOzaki1CRDSZ cdna3F16 11 96 [5, 6] 175 sx sy = some ⟨0, true⟩ ∧
     mcOzaki1CRDSZ cdna3F16 11 96 [5, 6] 175 sx' sy = some ⟨0, false⟩ := by decide +kernel
 
-/-- Correctly rounded FP64 with the overlap bound equals the oracle on both cases, with the window
-check and in bounded registers. -/
+/-- Correctly rounded FP64 with the bound that counts only nonzero positions equals the oracle on
+both cases, with the rounding test on the truncated sum and in bounded registers. -/
 def agreesZ (P : Model) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Aq := A.map (·.map val64)

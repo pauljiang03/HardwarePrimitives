@@ -1,10 +1,10 @@
 import TensorCore.Numerics.FormatProperties
 
-/-! Exact products with unnormalized exponents. -/
+/-! Exact products kept in denormalized form, with unnormalized exponents. -/
 
 namespace TensorCore
 
-/-- An exact product, not renormalized: `value = significand · 2^(unnormalizedExp − mantissaBits)`. -/
+/-- An exact product kept in denormalized form: `value = significand · 2^(unnormalizedExp − mantissaBits)`. -/
 structure UnnormalizedProduct where
   /-- Product of the two integer significands (may be ≥ 2 after the binary point is placed). -/
   significand : ℤ
@@ -29,7 +29,7 @@ theorem unnormalizedProduct_value (a b : Decoded) :
   rw [h, pow2_add]
   grind
 
-/-- A common bound for c (significand below two) and unnormalized products (below four). -/
+/-- A common bound for c (significand below two) and denormalized products (below four). -/
 def UnnormalizedProduct.Bounded (t : UnnormalizedProduct) : Prop := absQ t.value < 4 * pow2 t.unnormalizedExp
 
 theorem unnormalizedMul_bounded (a b : Decoded) (ha : a.Bounded) (hb : b.Bounded) :

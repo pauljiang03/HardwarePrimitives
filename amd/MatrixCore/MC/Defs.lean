@@ -12,22 +12,22 @@ feature comparison table:
 * product alignment `(2, 23 + n_eab)`: integer and fractional bits kept after alignment;
 * `e_{c=0}`: the exponent given to `c = 0`;
 * late addition of `c`, and `align(c, S_{p_i,sum}) = (24, 32, RD)`;
-* output rounding (RNE on every CDNA path);
+* the final rounding (RNE on every CDNA variant);
 * `|p_i|` overflow at `2^128`;
 * subnormal support in input and output.
 
 The accumulation itself is one of the four architectural configurations of the paper's
-generalised model. -/
+generalized model. -/
 
 namespace MatrixCore
 
-/-- The four configurations of the generalised matrix-multiplier model. -/
+/-- The four configurations of the generalized matrix-multiplier model. -/
 inductive Accumulation where
   /-- `correct_rounding`: products in full precision, the exact sum `Σ p_ℓ + c`, and one final
   RNE (Kulisch accumulator; CDNA 1, and every SFMA step). -/
   | correctRounding
   /-- `pair_wise_sum`: products converted to binary32, then
-  `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` with a balanced pairwise tree over `N_FMA` products
+  `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}`, a balanced pairwise sum over `N_FMA` products
   (CDNA 2). -/
   | pairWiseSum
   /-- `global_alignment` with late `c` (CDNA 3 fp16, bf16, tf19; Algorithm 1). -/
@@ -43,7 +43,7 @@ structure LateAlignment where
   cFracBits : ℕ := 24
   /-- `S_{p_i,sum}` shifted right by `e_c − e_max` and RD to this many fractional bits. -/
   sumFracBits : ℕ := 32
-  /-- `S_acc` normalised (subnormal-aware) and RD to this many fractional bits; applied only
+  /-- `S_acc` normalized (subnormal-aware) and RD to this many fractional bits; applied only
   when `S_{p_i,sum}` was shifted. -/
   accFracBits : ℕ := 31
   /-- binary8: once `e_max − e_c` exceeds this shift, `s'_c = 0` (truncation instead of RD). -/

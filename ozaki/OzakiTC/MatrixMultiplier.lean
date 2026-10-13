@@ -1,14 +1,15 @@
 import OzakiTC.Exactness
 
-/-! # The Tensor Core as an Ozaki engine
+/-! # The Tensor Core as a matrix multiplier for the Ozaki schemes
 
-`tcMultiplier p` evaluates an integer dot product on the Tensor Core model of profile `p`: it encodes
-each integer exactly as an operand word (fp16, bf16, or tf32 by profile), pads the product list
-with zero words to whole groups of `K`, and chains the groups through `runBlocks` from `c = +0`.
+`tcMultiplier p` evaluates an integer dot product on the Tensor Core model `p`: it encodes each
+integer exactly as an operand word (fp16, bf16, or tf32, depending on the model), pads the product
+list with zero words to whole blocks of `K`, and chains the block FMAs through `runBlocks` from
+`c = +0`.
 
 `tcMultiplier_exactOn`: under the conditions of `IntExact` and when the operand format holds every
-`b`-bit integer, the engine is exact on `b`-bit vectors whose products total at most `2^24` in
-magnitude. The concrete instances for the eight GPU paths of `TensorCore` are in
+`b`-bit integer, the matrix multiplier is exact on `b`-bit vectors whose products total at most
+`2^24` in magnitude. The concrete instances for the eight GPU variants of `TensorCore` are in
 `OzakiTC.Models`. -/
 
 open TensorCore
@@ -113,7 +114,7 @@ theorem chunks_length_mem (n : ℕ) : ∀ (m : ℕ) (xs : List α), xs.length = 
     · rw [List.length_take]; rw [Nat.succ_mul] at h; omega
     · exact chunks_length_mem n m (xs.drop n) (by rw [List.length_drop, h, Nat.succ_mul]; omega) g hg
 
-/-- Number of groups of `K` that hold `L` products. -/
+/-- Number of blocks of `K` that hold `L` products. -/
 def groupCount (K L : ℕ) : ℕ := (L + K - 1) / K
 
 theorem groupCount_spec {K : ℕ} (hK : 0 < K) (L : ℕ) : L ≤ groupCount K L * K := by
@@ -138,10 +139,11 @@ theorem groupsOf_spec {K : ℕ} (hK : 0 < K) (pad : α) (ps : List α) :
     simp only [List.length_append, List.length_replicate]; omega
   exact ⟨chunks_length_mem K _ _ hlen, chunks_flatten K _ _ hlen⟩
 
-/-! ## The engine -/
+/-! ## The matrix multiplier -/
 
-/-- **The Tensor Core as an Ozaki engine.** Encode the integers exactly, pad with zero words to
-whole groups of `K` products, run the chained blocks from `c = +0`, and return the value. -/
+/-- **The Tensor Core as a matrix multiplier for the Ozaki schemes.** Encode the integers exactly,
+pad with zero words to whole blocks of `K` products, run the chained blocks from `c = +0`, and
+return the value. -/
 def tcMultiplier (p : Model) : MatrixMultiplier := fun x y => do
   let ax ← x.mapM (encodeInt p.input)
   let ay ← y.mapM (encodeInt p.input)
@@ -188,8 +190,8 @@ theorem wordDotAbs_replicate_zero (p : Model) (hf : p.input.WellFormed) (n : ℕ
     rw [ih.1, ih.2, hz, Rat.zero_mul, abs_zero]
     grind
 
-/-- **Exact engine.** Under `IntExact` and `HoldsInts`, the Tensor Core engine is exact on `b`-bit
-integer vectors whose products total at most `2^24` in magnitude. -/
+/-- **Exact matrix multiplier.** Under `IntExact` and `HoldsInts`, the Tensor Core matrix multiplier
+is exact on `b`-bit integer vectors whose products total at most `2^24` in magnitude. -/
 theorem tcMultiplier_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (hK : 0 < p.nfma) : (tcMultiplier p).ExactOn b (2 ^ 24) := by
   intro x y hlen hx hy hbound
@@ -222,7 +224,7 @@ theorem tcMultiplier_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : Hol
   generalize hpad : groupCount p.nfma ((List.zip x y).map (Prod.map E E)).length * p.nfma -
     ((List.zip x y).map (Prod.map E E)).length = n at hflat
   have hzw := wordDotAbs_replicate_zero p hh.wellFormed n
-  -- values and budget of the encoded pairs
+  -- values and product magnitudes of the encoded pairs
   have hvals : ∀ q ∈ List.zip x y, wordValue p (E q.1) * wordValue p (E q.2) = (q.1 : ℚ) * q.2 := by
     intro q hq
     have := List.of_mem_zip hq

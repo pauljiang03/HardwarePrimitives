@@ -1,21 +1,21 @@
 import Ozaki.SignOracle
 
-/-! # A descent whose number of windows does not depend on the exponents
+/-! # A top-down summation whose number of ranges does not depend on the exponents
 
-`topDownSum` (in `Ozaki.SignOracle`) moves its window down from the accumulator's top. When a
-cancellation leaves the accumulator exactly zero, the next window starts at the old grid, however
-far below it the remaining terms lie, so the number of windows grows with the exponent span
-(`topDownSumAll_fuel_le`). `topDownSumJ` jumps instead: with a zero accumulator the next window starts at
-the top of the largest remaining term (`rangeTop`). Everything else is unchanged.
+`topDownSum` (in `Ozaki.SignOracle`) moves its range down from the top of the accumulator. When a
+cancellation leaves the accumulator exactly zero, the next range starts at the old grid, however
+far below it the remaining terms lie, so the number of ranges grows with the exponent span
+(`topDownSumAll_fuel_le`). `topDownSumJ` jumps instead: with a zero accumulator the next range
+starts at the top of the largest remaining term (`rangeTop`). Everything else is unchanged.
 
 * `topDownSumJ_sound`: what it returns is exact, as for `topDownSum`.
 * `topDownSumJ_spec`: it ends with fuel `potential rs`, the total bit length of the terms'
-  coefficients: every window that does not stop removes at least one bit from some remaining term
-  (`potential_rangeRest_lt`). So it evaluates at most `potential + 1` windows (`topDownSumJRanges_le`),
-  at most `n · bitlen M + 1` for `n` terms of magnitude at most `M` (`rangesJ_le`), whatever the
-  exponents.
+  coefficients: every range that does not stop removes at least one bit from some remaining term
+  (`potential_rangeRest_lt`). So it evaluates at most `potential + 1` ranges
+  (`topDownSumJRanges_le`), at most `n · bitlen M + 1` for `n` terms of magnitude at most `M`
+  (`rangesJ_le`), whatever the exponents.
 * `signSumJ`, `roundSumJ`: the sign and the round to nearest even of a sum of terms, as
-  `signSum` and `roundSum`, with this descent (`signSumJ_eq`, `roundSumJ_eq`). -/
+  `signSum` and `roundSum`, with this top-down summation (`signSumJ_eq`, `roundSumJ_eq`). -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -44,8 +44,8 @@ theorem potential_nonzero (ts : List (ℤ × ℤ)) : potential (nonzero ts) = po
     · have : (t.1 != 0) = true := by simp [h]
       rw [if_pos this, potential_cons, potential_cons, ih]
 
-/-- **The potential bounds the window count**: at most `n · bitlen M` for `n` terms of magnitude at
-most `M`. -/
+/-- **The potential bounds the number of ranges**: at most `n · bitlen M` for `n` terms of
+magnitude at most `M`. -/
 theorem potential_le {M : ℕ} : ∀ {ts : List (ℤ × ℤ)}, (∀ t ∈ ts, t.1.natAbs ≤ M) →
     potential ts ≤ ts.length * bitlen M
   | [], _ => by simp [potential]
@@ -190,14 +190,14 @@ theorem exists_maxTop {ts : List (ℤ × ℤ)} (h : ts ≠ []) : ∃ t ∈ ts, t
   · exact ⟨u, List.mem_cons_self, h.symm⟩
   · exact ⟨t, List.mem_cons_of_mem _ ht, h⟩
 
-/-! ## The descent -/
+/-! ## The top-down summation -/
 
-/-- The top of the next window: the accumulator's, or the largest remaining term's when the
+/-- The top of the next range: the accumulator's, or the largest remaining term's when the
 accumulator is zero. -/
 def rangeTop (A qa : ℤ) (rs : List (ℤ × ℤ)) : ℤ := if A = 0 then maxTop rs else topOf (A, qa)
 
-/-- **Windows from the top down, jumping over empty gaps.** As `topDownSum`, except that a zero
-accumulator does not hold the window up: the next window starts at the top of the largest
+/-- **Ranges from the top down, jumping over empty gaps.** As `topDownSum`, except that a zero
+accumulator does not hold the range up: the next range starts at the top of the largest
 remaining term. -/
 def topDownSumJ (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (ℤ × ℤ × List (ℤ × ℤ))
   | fuel, A, qa, rs =>
@@ -213,7 +213,7 @@ def topDownSumJ (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Opti
         | k + 1 => topDownSumJ W T k N q rs'
     else none
 
-/-- The number of windows `topDownSumJ` evaluates. -/
+/-- The number of ranges `topDownSumJ` evaluates. -/
 def topDownSumJRanges (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → ℕ
   | fuel, A, qa, rs =>
     let ts := (A, qa) :: rs
@@ -228,7 +228,7 @@ def topDownSumJRanges (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) �
         | k + 1 => topDownSumJRanges W T k N q rs' + 1
     else 1
 
-/-- A run with fuel `f` evaluates at most `f + 1` windows. -/
+/-- A run with fuel `f` evaluates at most `f + 1` ranges. -/
 theorem topDownSumJRanges_le (W T : ℕ) : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)),
     topDownSumJRanges W T fuel A qa rs ≤ fuel + 1
   | 0, A, qa, rs => by
@@ -300,7 +300,8 @@ theorem topDownSumJ_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List
         unfold tval; rfl
     · simp at h
 
-/-- The window parts are `W`-bit integers on every state the descent reaches. -/
+/-- The parts in the current range are `W`-bit integers on every state the top-down summation
+reaches. -/
 theorem topDownSumJ_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)} (hA : bitlen A.natAbs ≤ W)
     (hrs : ∀ t ∈ rs, topOf t ≤ qa) :
     ∀ z ∈ ((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W)), z.natAbs < 2 ^ W := by
@@ -376,7 +377,7 @@ theorem topDownSumJ_spec {W T : ℕ} (hTW : T < W) : ∀ (fuel : ℕ) (A qa : �
     · rename_i hstop
       have hN := Nat.le_of_not_lt (fun h => hstop (Or.inr h))
       have hrsne : rangeRest (rangeTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
-      -- some remaining term reaches above the window's grid
+      -- some remaining term reaches above the grid of the range
       have hwit : ∃ t ∈ rs, rangeTop A qa rs - W < topOf t := by
         by_cases hA0 : A = 0
         · have hne : rs ≠ [] := by
@@ -426,12 +427,12 @@ def topDownSumAllJ (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (ℤ × ℤ × 
   let rs := nonzero ts
   topDownSumJ W T (potential rs) 0 (maxTop rs) rs
 
-/-- The number of windows of `topDownSumAllJ`. -/
+/-- The number of ranges of `topDownSumAllJ`. -/
 def rangesJ (W T : ℕ) (ts : List (ℤ × ℤ)) : ℕ :=
   let rs := nonzero ts
   topDownSumJRanges W T (potential rs) 0 (maxTop rs) rs
 
-/-- **The number of windows does not depend on the exponents**: at most `n · bitlen M + 1` for
+/-- **The number of ranges does not depend on the exponents**: at most `n · bitlen M + 1` for
 `n` terms of magnitude at most `M`. -/
 theorem rangesJ_le (W T : ℕ) {ts : List (ℤ × ℤ)} {M : ℕ} (h : ∀ t ∈ ts, t.1.natAbs ≤ M) :
     rangesJ W T ts ≤ ts.length * bitlen M + 1 := by
@@ -459,13 +460,13 @@ theorem topDownSumAllJ_spec {W T : ℕ} (hTW : T < W) (ts : List (ℤ × ℤ)) :
 
 /-! ## The sign and the round to nearest even of a sum -/
 
-/-- **The sign of a sum of terms**, from windows of `W` bits, with the jumping descent. -/
+/-- **The sign of a sum of terms**, from ranges of `W` bits, with the jumping top-down summation. -/
 def signSumJ (W : ℕ) (ts : List (ℤ × ℤ)) : ℤ :=
   match topDownSumAllJ W (bitlen (nonzero ts).length) ts with
   | some (N, _, _) => N.sign
   | none => 0
 
-/-- **The sign oracle is exact** for windows wider than `bitlen n`. -/
+/-- **The sign oracle is exact** for ranges wider than `bitlen n`. -/
 theorem signSumJ_eq {W : ℕ} {ts : List (ℤ × ℤ)} (hW : bitlen ts.length < W) :
     signSumJ W ts = sgnQ (tsum ts) := by
   have hbl : bitlen (nonzero ts).length ≤ bitlen ts.length :=
@@ -482,11 +483,12 @@ theorem signSumJ_eq {W : ℕ} {ts : List (ℤ × ℤ)} (hW : bitlen ts.length < 
   · obtain ⟨h1, h2⟩ := abs_tsum_lt_of_bitlen (fun t ht => (htop t ht).2) hlen (Nat.le_refl _) hT
     rw [sgnQ_add_of_abs_lt (lt_le_trans' h1 h2), sgnQ_mul_two_pow, sgnQ_intCast]
 
-/-- **Round to nearest even of a sum of terms** with bounded registers and the jumping descent. One descent with
-threshold `2^(bitlen n + p + 3)`; if nothing is left over, round `N 2^q` exactly; if the sum is below
-half the smallest subnormal, return `0`; otherwise answer the comparisons of `roundByCmp` with the
-sign oracle on the residuals and one query term, refusing any query outside the ranges proved to
-suffice (so every query term is below `2^(bitlen |N| + p + 6)`). -/
+/-- **Round to nearest even of a sum of terms** with bounded registers and the jumping top-down
+summation. One top-down summation with threshold `2^(bitlen n + p + 3)`; if nothing is left over,
+round `N 2^q` exactly; if the sum is below half the smallest subnormal, return `0`; otherwise answer
+the comparisons of `roundByCmp` with the sign oracle on the residuals and one query term, refusing
+any query outside the bounds proved to suffice (so every query term is below
+`2^(bitlen |N| + p + 6)`). -/
 def roundSumJ (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : Option ℚ :=
   match topDownSumAllJ W (bitlen (nonzero ts).length + p + 3) ts with
   | none => none
@@ -503,7 +505,7 @@ def roundSumJ (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : O
               s * signSumJ W (queryTerm N q s K h :: rs') else 0)
           eH (shiftFloor N.natAbs q))
 
-/-- **The bounded rounding of a sum is round to nearest even**, for windows of
+/-- **The bounded rounding of a sum is round to nearest even**, for ranges of
 `W > bitlen (n + 1) + p + 3` bits, whatever the exponents. -/
 theorem roundSumJ_eq {p : ℕ} (emin emax : ℤ) {W : ℕ} {ts : List (ℤ × ℤ)}
     (hW : bitlen (ts.length + 1) + p + 3 < W) :
@@ -633,9 +635,9 @@ example : roundSumJ 24 (-126) 127 34 cancelTerms = roundRNE 24 (-126) 127 (tsum 
 
 example : roundSumJ 24 (-126) 127 34 tieTerms = some 1 := by decide +kernel
 
-/-- An exact cancellation `2^1000 − 2^1000` far above `3 · 2^-1000`: the window after the cancellation
-jumps straight to the last term: `topDownSumJ` needs two windows, where `topDownSum` walks down the 2000 bits
-in between `W` bits at a time. -/
+/-- An exact cancellation `2^1000 − 2^1000` far above `3 · 2^-1000`: the range after the
+cancellation jumps straight to the last term: `topDownSumJ` needs two ranges, where `topDownSum`
+walks down the 2000 bits in between `W` bits at a time. -/
 def gapTerms : List (ℤ × ℤ) := [(1, 1000), (-1, 1000), (3, -1000)]
 
 example : rangesJ 34 31 gapTerms = 2 := by decide +kernel

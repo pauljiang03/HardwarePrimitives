@@ -2,7 +2,7 @@ import MatrixCore.Numerics.Format
 
 /-! # Rounding to binary32
 
-`fl{·}` of the paper: normalisation followed by round-to-nearest, ties-to-even (RNE) into
+`fl{·}` of the paper: normalization followed by round-to-nearest, ties-to-even (RNE) into
 binary32, with gradual underflow. A result that rounds beyond the largest finite value is an
 overflow (`none`); the special-value layer reports it as an infinity. -/
 
@@ -15,7 +15,7 @@ def rneInt (t : ℚ) : ℤ :=
 
 /-- Exponent of the binade in which a nonzero magnitude is rounded: `⌊log₂ a⌋`, but not below
 binary32's minimum normal exponent `−126` (gradual underflow). Also the paper's
-*subnormal-aware normalisation*. -/
+*subnormal-aware normalization*. -/
 def normExp (a : ℚ) : ℤ := max (log2Floor a) (-126)
 
 /-- binary32 word from a sign, an exponent `−126 ≤ e ≤ 127`, and an integer significand

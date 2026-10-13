@@ -1,11 +1,11 @@
 import TensorCore.Kernels.EFT.Correctness
 import TensorCore.Kernels.EFT.Grid
 
-/-! Operation budgets of the 576-bit TC-EFT. -/
+/-! Operation counts of the 576-bit TC-EFT. -/
 
 namespace TensorCore.EFMachine
 
-/-! Source-level operation budgets, not processor cycles. -/
+/-! Source-level operation counts, not processor cycles. -/
 
 structure OperationCount where
   inputDecodes : ℕ
@@ -25,7 +25,7 @@ def operationCount (K : ℕ) : OperationCount :=
   ⟨2 * K + 2, K, N, N, 2 * N + 3, N + 2,
     2 * N + 7, N, N, 2 * (N + 2)⟩
 
-/-- Concrete maxima for every supported normalization group, including failed scalar attempts. -/
+/-- Concrete maxima for the block FMA of every supported variant, including failed scalar attempts. -/
 theorem operationCount_bounds (variant : Variant) :
     let b := operationCount variant.model.nfma
     b.inputDecodes ≤ 34 ∧ b.products ≤ 16 ∧ b.exponentScan ≤ 17 ∧ b.splits ≤ 17 ∧
@@ -39,7 +39,7 @@ theorem bitScan_total_bound (variant : Variant) :
       (operationCount variant.model.nfma).residualBitScans) ≤ 580 := by
   cases variant <;> decide
 
-/-- The actual decoded and extracted list lengths discharge the loop budgets. -/
+/-- The actual decoded and extracted list lengths discharge the loop bounds. -/
 theorem extraction_loop_bounds {variant : Variant} {x : BlockInput variant.model} {D : F32}
     {p : Prepared} {c : Components} (hp : prepare variant x D = .ok p) (hc : extract p = some c) :
     p.terms.length ≤ 17 ∧ c.coarse.length = variant.model.nfma + 1 ∧

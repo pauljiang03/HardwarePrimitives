@@ -5,18 +5,18 @@ import Ozaki.SignedZero
 
 /-! # Correctly rounded Ozaki-I, entirely in integers
 
-`ozaki1CRB` (in `Ozaki.BoundedOzaki`) runs the check, the exact path and the final rounding in
-bounded integer registers, but it slices with the rational `split`. `ozaki1CRI` takes its inputs as
-a binary format stores them, integer pairs `(m, e)` worth `m · 2^e`, and every step is an integer
-operation:
+`ozaki1CRB` (in `Ozaki.BoundedOzaki`) runs the rounding test, the exact fallback and the final
+rounding in bounded integer registers, but it slices with the rational `split`. `ozaki1CRI` takes
+its inputs as a binary format stores them, integer pairs `(m, e)` worth `m · 2^e`, and every step is
+an integer operation:
 
 * the slicing is `splitInt` (integer shifts and a round-half-even division), with the exponent
   `⌈log₂ max|xᵢ|⌉` from bit lengths (`splitExpInt`);
-* the engine's slice products are read back as integer terms;
-* the check is `ozaki1TestB`'s: window parts by shifts, a two's-complement register, the
-  enclosure test by `roundExact` (`ozaki1TestI`);
-* the exact path asks whether the rests vanish by testing integers, and rounds the `s²` slice
-  products with the jumping descent `roundSumJ` (`ozaki1ExactFallbackI`).
+* the slice products of the matrix multiplier are read back as integer terms;
+* the rounding test is that of `ozaki1TestB`: truncated parts of terms by shifts, a
+  two's-complement register, the enclosure test by `roundExact` (`ozaki1TestI`);
+* the exact fallback asks whether the rests vanish by testing integers, and rounds the `s²` slice
+  products with the jumping top-down summation `roundSumJ` (`ozaki1ExactFallbackI`).
 
 `ozaki1CRI_eq_CRB` proves it is `ozaki1CRB` on the values `m · 2^e`, so it is correctly rounded
 (`ozaki1CRI_eq`), for binary64 and binary32 inputs in particular (`ozaki1CRI64_eq`,
@@ -24,7 +24,7 @@ operation:
 
 `ozaki1CRIS` adds IEEE's signed zeros (`ozaki1CRIS_eq`): inputs carry their sign bits; a nonzero
 result keeps its sign; a zero result takes the sign of the exact sum, decided by the integer sign
-oracle on the exact path (`exactSignI`), and an exact zero is `−0` only when every product is
+oracle on the exact fallback (`exactSignI`), and an exact zero is `−0` only when every product is
 `−0` (`allNegZeroI`). -/
 
 local notation "ℕ" => Nat
@@ -79,16 +79,16 @@ theorem splitExpInt_eq (b : ℕ) (xs : List (ℤ × ℤ)) :
     splitExpInt b xs = splitExp b (entryVals xs) := by
   unfold splitExpInt splitExp; rw [gridInt_eq]
 
-/-- The window grid with integer operations. -/
+/-- The truncation grid with integer operations. -/
 def truncationGridInt (b W : ℕ) (xs ys : List (ℤ × ℤ)) : ℤ := splitExpInt b xs + splitExpInt b ys - W
 
 theorem truncationGridInt_eq (b W : ℕ) (xs ys : List (ℤ × ℤ)) :
     truncationGridInt b W xs ys = truncationGrid b W (entryVals xs) (entryVals ys) := by
   unfold truncationGridInt truncationGrid; rw [splitExpInt_eq, splitExpInt_eq]
 
-/-! ## The check -/
+/-! ## The rounding test -/
 
-/-- **The check for `s` slices, in integers**: `ozaki1TestB` with the integer slicing. -/
+/-- **The rounding test for `s` slices, in integers**: `ozaki1TestB` with the integer slicing. -/
 def ozaki1TestI (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   match (trianglePairs s).mapM (pairInt mult (splitInt b s xs).1 (splitInt b s ys).1) with
@@ -110,7 +110,7 @@ theorem ozaki1TestI_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b 
   cases (trianglePairs s).mapM (pairInt mult (split b s (entryVals xs)).1
     (split b s (entryVals ys)).1) <;> rfl
 
-/-! ## The exact path -/
+/-! ## The exact fallback -/
 
 /-- Nothing is left over after `s` slices, by testing the rests' significands. -/
 def vanishInt (b s : ℕ) (xs ys : List (ℤ × ℤ)) : Bool :=
@@ -121,8 +121,9 @@ theorem vanishInt_eq (b s : ℕ) (xs ys : List (ℤ × ℤ)) :
   unfold vanishInt residualsVanish
   rw [← (splitInt_eq b s xs).2, ← (splitInt_eq b s ys).2, all_entryVals_zero, all_entryVals_zero]
 
-/-- **The exact path in integers**: the first slice count up to `smax` that leaves nothing over,
-all `s²` slice products from the engine as integer terms, rounded by the jumping descent. -/
+/-- **The exact fallback in integers**: the first slice count up to `smax` that leaves nothing over,
+all `s²` slice products from the matrix multiplier as integer terms, rounded by the jumping
+top-down summation. -/
 def ozaki1ExactFallbackI (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   match (List.range' 1 smax).find? fun s => vanishInt b s xs ys with
@@ -156,8 +157,8 @@ theorem ozaki1ExactFallbackI_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax :
 
 /-! ## The scheme -/
 
-/-- **Correctly rounded Ozaki-I in integers**: the integer checks for the slice counts `ss` in
-turn, then the integer exact path. -/
+/-- **Correctly rounded Ozaki-I in integers**: the integer rounding tests for the slice counts `ss`
+in turn, then the integer exact fallback. -/
 def ozaki1CRI (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   match ss with
@@ -180,8 +181,8 @@ theorem ozaki1CRI_eq_CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (
     rw [ozaki1TestI_eq, ozaki1CRI_eq_CRB mult p emin emax b W smax xs ys ss]
     cases ozaki1TestB mult p emin emax b s W (entryVals xs) (entryVals ys) <;> rfl
 
-/-- **Correctly rounded Ozaki-I in integers is correctly rounded**: on an exact engine, for every
-input whose exact path ends within `smax` slices. -/
+/-- **Correctly rounded Ozaki-I in integers is correctly rounded**: on an exact matrix multiplier,
+for every input whose exact fallback ends within `smax` slices. -/
 theorem ozaki1CRI_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
     {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
@@ -278,7 +279,8 @@ theorem tsum_exactFallback {b s : ℕ} {x y : List ℚ} (hv : residualsVanish b 
   show (dotZ pr.1.coeffs pr.2.coeffs : ℚ) * 2 ^ (pr.1.grid + pr.2.grid) = _
   rw [Rat.mul_comm]
 
-/-- **The sign of the exact sum**, by the integer sign oracle on the exact path's slice products. -/
+/-- **The sign of the exact sum**, by the integer sign oracle on the slice products of the exact
+fallback. -/
 def exactSignI (mult : MatrixMultiplier) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ :=
   match (List.range' 1 smax).find? fun s => vanishInt b s xs ys with
   | some s =>

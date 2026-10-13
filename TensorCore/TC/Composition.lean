@@ -1,6 +1,6 @@
 import TensorCore.TC.StageResiduals
 
-/-! Chained groups and their loss accounting. -/
+/-! Chained block FMAs and their loss accounting. -/
 
 namespace TensorCore
 
@@ -56,7 +56,7 @@ theorem encoded_trace_ledger (initial : Finite32) (ts : List BlockTrace)
     change t.output.value + _ = _ at h'
     grind
 
-/-- Runnable schedule under one profile. -/
+/-- Runnable schedule under one model. -/
 def runBlocks (p : Model) :
     F32 → List (List (p.Word × p.Word)) → Except ModelError (List BlockTrace)
   | _, [] => .ok []

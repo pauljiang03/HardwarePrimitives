@@ -1,24 +1,25 @@
 import OzakiTC.LongDot
 
-/-! # Two passes through `c`: full Tensor Core groups of integer products, exactly
+/-! # Two passes through `c`: full Tensor Core block FMAs of integer products, exactly
 
-A Tensor Core group of `b`-bit integer products is added exactly when `2b ≤ F`, and only the final
-truncation to binary32 can lose bits, when the sum `S` exceeds `2^24`. TC-EFT's analysis of how
-`c` takes part in alignment gives a way to recover those bits on the Tensor Core itself:
+A Tensor Core block FMA of `b`-bit integer products is added exactly when `2b ≤ F`, and only the
+final truncation to binary32 can lose bits, when the sum `S` exceeds `2^24`. TC-EFT's analysis of
+how `c` takes part in alignment gives a way to recover those bits on the Tensor Core itself:
 
-* pass 1 runs the group from `c = +0` and returns `D1`, the binary32 truncation of `S`;
-* pass 2 runs the same group from `c = −D1`. While `|D1| < 2^(F+1)`, `c`'s exponent is at most `F`,
-  so alignment is still exact and the accumulator holds `S − D1`, which is below `4` in magnitude
-  and therefore returned exactly.
+* pass 1 runs the block FMA from `c = +0` and returns `D1`, the binary32 truncation of `S`;
+* pass 2 runs the same block FMA from `c = −D1`. While `|D1| < 2^(F+1)`, `c`'s exponent is at most
+  `F`, so alignment is still exact and the accumulator holds `S − D1`, which is below `4` in
+  magnitude and therefore returned exactly.
 
-So `D1 + D2 = S` (`twoPass_exact`). The `F` of each path grows with its group size, so a full group
-of `11`-bit products fits: `4 · 2^22 = 2^24` on V100 (`F = 23`), `8 · 2^22 = 2^25` on A100
+So `D1 + D2 = S` (`twoPass_exact`). The `F` of each variant grows with its FMA size, so a full block
+FMA of `11`-bit products fits: `4 · 2^22 = 2^24` on V100 (`F = 23`), `8 · 2^22 = 2^25` on A100
 (`F = 24`), `16 · 2^22 = 2^26` on H100 (`F = 25`). When the sum reaches `2^(F+1)` exactly, every
 product is `±2^(2b)` and pass 2 aligns on the grid `2`, still exactly.
 
-`tcMultiplier2` runs every group of a dot product twice and adds the results exactly; it is exact on
-`b`-bit vectors of every length whenever `K · 2^(2b) ≤ 2^(F+1)` (`tcMultiplier2_exactOn`), so A100 and
-H100 can use their full groups with `11`-bit slices (`a100F16_exactOn2`, `h100F16_exactOn2`). -/
+`tcMultiplier2` runs every block FMA of a dot product twice and adds the results exactly; it is
+exact on `b`-bit vectors of every length whenever `K · 2^(2b) ≤ 2^(F+1)` (`tcMultiplier2_exactOn`),
+so A100 and H100 can use their full block FMAs with `11`-bit slices (`a100F16_exactOn2`,
+`h100F16_exactOn2`). -/
 
 open TensorCore
 
@@ -201,7 +202,7 @@ theorem trunc_int {S : ℤ} (hS : S.natAbs ≤ 2 ^ 26)
     have : ((S - D).natAbs : ℚ) < ((4 : ℕ) : ℚ) := by simpa using hdiff
     exact_mod_cast this
 
-/-! ## Two passes of one group -/
+/-! ## Two passes of one block FMA -/
 
 /-- The binary32 word of a binary32 value (round to nearest returns it unchanged). -/
 def word32 (v : ℚ) : F32 := (round32 .nearestEven v).getD 0
@@ -210,8 +211,8 @@ theorem value32_word32 {v : ℚ} (h : FiniteValue32 v) : value32 (word32 v) = so
   obtain ⟨w, hw, hv⟩ := round32_exact_of_finite h
   simp [word32, hw, hv]
 
-/-- **Two passes of one group**: from `c = +0`, giving `D1`, then from `c = −D1`, giving `D2`; the
-result is `D1 + D2`. -/
+/-- **Two passes of one block FMA**: from `c = +0`, giving `D1`, then from `c = −D1`, giving `D2`;
+the result is `D1 + D2`. -/
 def twoPass (p : Model) (ps : List (p.Word × p.Word)) : Option ℚ :=
   match evalBlock (p := p) ⟨ps, 0⟩ with
   | .ok t1 =>
@@ -249,8 +250,9 @@ theorem eq_of_sum_ge {l : List α} {f : α → ℚ} {M : ℚ} (hle : ∀ a ∈ l
 
 theorem maxFinite32_ge : (2 : ℚ) ^ (27 : ℤ) ≤ maxFinite32 := by decide +kernel
 
-/-- **Two passes recover a full group exactly.** For `b`-bit integer operands (`1 ≤ b`), on a path
-with `2b ≤ F ≤ 25` and `K · 2^(2b) ≤ 2^(F+1)`, the two passes succeed and `D1 + D2 = Σ aᵢbᵢ`. -/
+/-- **Two passes recover a full block FMA exactly.** For `b`-bit integer operands (`1 ≤ b`), on a
+variant with `2b ≤ F ≤ 25` and `K · 2^(2b) ≤ 2^(F+1)`, the two passes succeed and
+`D1 + D2 = Σ aᵢbᵢ`. -/
 theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
     (hF : p.alignFracBits ≤ 25)
     (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignFracBits + 1))
@@ -377,10 +379,11 @@ theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
   rw [hv1, hv2, hS, Rat.intCast_sub]
   grind
 
-/-! ## The two-pass engine -/
+/-! ## The two-pass matrix multiplier -/
 
-/-- **The two-pass Tensor Core engine.** Encode the integers exactly, pad with zero words to whole
-groups of `K` products, run every group twice (`twoPass`), and add the group results exactly. -/
+/-- **The two-pass Tensor Core matrix multiplier.** Encode the integers exactly, pad with zero words
+to whole block FMAs of `K` products, run every block FMA twice (`twoPass`), and add their results
+exactly. -/
 def tcMultiplier2 (p : Model) : MatrixMultiplier := fun x y => do
   let ax ← x.mapM (encodeInt p.input)
   let ay ← y.mapM (encodeInt p.input)
@@ -395,9 +398,9 @@ theorem wordProducts_flatten (p : Model) :
     rw [List.map_cons, List.sum_cons, List.flatten_cons, wordProducts_append,
       wordProducts_flatten p gs]
 
-/-- **The two-pass engine is exact on vectors of every length.** On a path with `2b ≤ F ≤ 25` and
-`K · 2^(2b) ≤ 2^(F+1)`, whose input format holds `b`-bit integers (`1 ≤ b`), it returns `Σ xᵢyᵢ`
-exactly for `b`-bit vectors of any length, whatever their total. -/
+/-- **The two-pass matrix multiplier is exact on vectors of every length.** On a variant with
+`2b ≤ F ≤ 25` and `K · 2^(2b) ≤ 2^(F+1)`, whose input format holds `b`-bit integers (`1 ≤ b`), it
+returns `Σ xᵢyᵢ` exactly for `b`-bit vectors of any length, whatever their total. -/
 theorem tcMultiplier2_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (hb1 : 1 ≤ b) (hF : p.alignFracBits ≤ 25) (hK0 : 0 < p.nfma)
     (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignFracBits + 1))
@@ -438,7 +441,7 @@ theorem tcMultiplier2_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : Ho
   have hprod : wordProducts p ((List.zip x y).map (Prod.map E E)) = (dotZ x y : ℚ) := by
     unfold wordProducts; rw [List.map_map, dotZ_eq_zip_sum]
     exact congrArg List.sum (List.map_congr_left hvals)
-  have hgroups : ∀ g ∈ groupsOf p.nfma (0, 0) ((List.zip x y).map (Prod.map E E)),
+  have hblocks : ∀ g ∈ groupsOf p.nfma (0, 0) ((List.zip x y).map (Prod.map E E)),
       twoPass p g = some (wordProducts p g) := by
     intro g hg
     refine twoPass_exact hp hb1 hF hK (hglen g hg) fun q hq => ?_
@@ -452,21 +455,21 @@ theorem tcMultiplier2_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : Ho
     · rw [(List.mem_replicate.mp hq').2]; exact ⟨hz0, hz0⟩
   unfold tcMultiplier2
   simp only [hmx, hmy, Option.bind_eq_bind, Option.bind_some, hzip]
-  rw [mapM_eq_some_map hgroups]
+  rw [mapM_eq_some_map hblocks]
   simp only [Option.bind_some, Option.pure_def]
   rw [wordProducts_flatten, hflat, wordProducts_append, hzw.2, hprod]
   congr 1; grind
 
-/-! ## Full A100 and H100 groups of `11`-bit slices -/
+/-! ## Full A100 and H100 block FMAs of `11`-bit slices -/
 
-/-- **A100 fp16 with full groups**: eight products of `11`-bit slices (`8 · 2^22 = 2^25 = 2^(F+1)`),
-two passes each, exact for every length. -/
+/-- **A100 fp16 with full block FMAs**: eight products of `11`-bit slices
+(`8 · 2^22 = 2^25 = 2^(F+1)`), two passes each, exact for every length. -/
 theorem a100F16_exactOn2 (B : ℕ) : (tcMultiplier2 ampereF16F32).ExactOn 11 B :=
   tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
-/-- **H100 fp16 with full groups**: sixteen products of `11`-bit slices
+/-- **H100 fp16 with full block FMAs**: sixteen products of `11`-bit slices
 (`16 · 2^22 = 2^26 = 2^(F+1)`), two passes each, exact for every length. -/
 theorem h100F16_exactOn2 (B : ℕ) : (tcMultiplier2 hopperF16F32).ExactOn 11 B :=
   tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
@@ -509,12 +512,13 @@ theorem h100TF32Mma_exactOn2 (B : ℕ) : (tcMultiplier2 hopperTF32MmaF32).ExactO
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
-/-- Ozaki-I on the two-pass engine, binary32 recombination. -/
+/-- Ozaki-I on the two-pass matrix multiplier, binary32 recombination. -/
 def tcOzaki1TP (p : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (tcMultiplier2 p) add32 b s x y
 
-/-- **Ozaki-I on full A100 or H100 groups, for every inner dimension**: the bound of
-`tcOzaki1_error` with no condition on `k`, on any path where the two-pass engine is exact. -/
+/-- **Ozaki-I on full A100 or H100 block FMAs, for every inner dimension**: the bound of
+`tcOzaki1_error` with no condition on `k`, on any variant where the two-pass matrix multiplier is
+exact. -/
 theorem tcOzaki1TP_error {p : Model} {b : ℕ} (hmult : ∀ B, (tcMultiplier2 p).ExactOn b B) (s : ℕ)
     {x y : List ℚ} (hlen : x.length = y.length) {v : ℚ} (hv : tcOzaki1TP p b s x y = some v) :
     Rat.abs (v - dot x y) ≤
@@ -565,8 +569,8 @@ example : (evalBlock (p := hopperF16F32)
 example : twoPass hopperF16F32 (List.replicate 15 (0x67FF, 0x67FF) ++ [(0x67FF, 0x67FE)]) =
     some 67041297 := by decide +kernel
 
-/-- The two-pass engine on a dot product of twenty `2047²` terms on H100: two groups of sixteen
-(the second padded), each run twice. -/
+/-- The two-pass matrix multiplier on a dot product of twenty `2047²` terms on H100: two block FMAs
+of sixteen (the second padded), each run twice. -/
 example : tcMultiplier2 hopperF16F32 (List.replicate 20 2047) (List.replicate 20 2047) =
     some (20 * 2047 * 2047) := by decide +kernel
 

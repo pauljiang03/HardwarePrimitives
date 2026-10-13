@@ -1,6 +1,6 @@
 import TensorCore.TC.Canonical
 
-/-! When the alignment floor is inactive on FP16 profiles. -/
+/-! When the minimum alignment exponent is inactive on FP16 models. -/
 
 namespace TensorCore
 
@@ -88,7 +88,7 @@ theorem maxTermExp_lower (ts : List UnnormalizedProduct) (lower e : ℤ)
   have hl := h t ht hnz
   omega
 
-/-- Any floor at most -126 is inactive on a prepared canonical invocation. -/
+/-- Any minimum alignment exponent of at most -126 is inactive on a prepared canonical invocation. -/
 theorem canonical_alignExp_eAlignMin_inactive (K neab : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ -126)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)

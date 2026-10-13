@@ -44,9 +44,9 @@ theorem decode_zeros :
       ADP.expOf 0 = none := by
   refine ⟨by decide +kernel, by decide +kernel, by simp [ADP.expOf]⟩
 
-/-! ## Slices of any encoding on the INT8 engine (`[T.4]`) -/
+/-! ## Slices of any encoding on the INT8 matrix multiplier (`[T.4]`) -/
 
-/-- The weighted slice products of an encoding on the INT8 engine. -/
+/-- The weighted slice products of an encoding on the INT8 matrix multiplier. -/
 def int8RecombineWith (enc : ADP.SliceEncoding) (s : ℕ) (Na Nb : List ℤ) : ℤ :=
   ((List.range s).map fun t => ((List.range s).map fun u =>
     enc.base ^ (t + u) *
@@ -64,8 +64,9 @@ theorem getD_natAbs_le {l : List ℤ} {B : ℕ} (h : ∀ d ∈ l, d.natAbs ≤ B
     obtain ⟨hi, rfl⟩ := List.getElem?_eq_some_iff.mp hl
     simpa using h _ (List.getElem_mem hi)
 
-/-- **Any encoding's slice products recombine to the fixed-point product** on the INT8 engine, for
-integers in `[−2^W, 2^W)`, a slice count that holds `W` bits, and `k · 2^16 < 2^31`. -/
+/-- **Any encoding's slice products recombine to the fixed-point product** on the INT8 matrix
+multiplier, for integers in `[−2^W, 2^W)`, a slice count that holds `W` bits, and `k · 2^16 < 2^31`.
+-/
 theorem int8RecombineWith_eq {enc : ADP.SliceEncoding} {W s : ℕ} (hs : 0 < s)
     (hfit : enc.fits W s = true) {Na Nb : List ℤ}
     (ha : ∀ z ∈ Na, -(2 ^ W : ℤ) ≤ z ∧ z < 2 ^ W) (hb : ∀ z ∈ Nb, -(2 ^ W : ℤ) ≤ z ∧ z < 2 ^ W)

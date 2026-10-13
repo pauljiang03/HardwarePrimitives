@@ -3,9 +3,9 @@ import Ozaki.BoundedOzaki2Int
 
 /-! # ADP's correctly rounded slicing as an integer pipeline
 
-`adpCRB` takes rational inputs: its fixed point (`fixedShift`, `toFixed`) and its exact path's
-slicing are rational definitions. Here the inputs are integer pairs `(m, e)` worth `m 2^e`, and every
-step is integer arithmetic:
+`adpCRB` takes rational inputs: its fixed point (`fixedShift`, `toFixed`) and its exact fallback's
+slicing are rational definitions. Here the inputs are integer pairs `(m, e)` worth `m 2^e`, and
+every step is integer arithmetic:
 
 * **the fixed-point shift from bit lengths**: `fixedShiftZ W xs = W − 1 − ⌊log₂ max|xᵢ|⌋` with the
   floor exponent from `maxFloorExp` (`fixedShiftZ_eq`);
@@ -14,7 +14,8 @@ step is integer arithmetic:
 * **ADP's integer enclosure** from them (`adpEnclosureZ`, equal to `adpEnclosureB` on the values,
   `adpEnclosureZ_eq`): the remapped byte slices, the split-K INT8 products, the recombination, and
   the bound `K`;
-* the exact path with integer slicing on the split-K INT8 engine (`Ozaki.ozaki1ExactFallbackZ`).
+* the exact fallback with integer slicing on the split-K INT8 matrix multiplier
+  (`Ozaki.ozaki1ExactFallbackZ`).
 
 `adpCRZ` is the binary64 round to nearest of `x · y` for binary64 inputs of any length given as
 integer pairs (`adpCRZ_eq`).
@@ -74,8 +75,8 @@ theorem adpEnclosureZ_eq (s W : ℕ) (xs ys : List (ℤ × ℤ)) :
     entryVals_length]
 
 /-- **ADP's slicing, correctly rounded, as an integer pipeline**: integer pairs in, the integer
-enclosures of the configurations in turn, then the exact path with integer slicing on the split-K
-INT8 engine. -/
+enclosures of the configurations in turn, then the exact fallback with integer slicing on the
+split-K INT8 matrix multiplier. -/
 def adpCRZ (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   roundingTestB 53 (-1022) 1023 (cfgs.map fun c => some (adpEnclosureZ c.1 c.2 xs ys))
     (ozaki1ExactFallbackZ int8SplitK 53 (-1022) 1023 6 smax xs ys)

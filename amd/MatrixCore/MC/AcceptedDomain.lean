@@ -55,7 +55,7 @@ theorem evalBlock_success_iff {P : Model} (x : BlockInput P) :
     rw [if_neg (by omega), hp]
     simp only [hs, hd]
 
-/-- The output of an accepted block on a profile with subnormals is the nearest binary32 value to
+/-- The output of an accepted block on a model with subnormals is the nearest binary32 value to
 `S_acc`, ties to even. -/
 theorem evalBlock_nearestEven {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) (hs : P.subnormals = true) : NearestEven32 t.sAcc t.d := by

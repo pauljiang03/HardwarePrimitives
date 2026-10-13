@@ -13,8 +13,8 @@ data's tags, signs and zero tests, through `dotSpecial` on the read data), other
 scheme on the finite entries' pairs, signed with an integer sign oracle where its own sign does not
 decide. `crIEEEI_eq`: whenever the scheme is correctly rounded and the oracle exact on the finite
 entries, `crIEEEI` meets the IEEE specification `dotIEEE` on the read data, for every input.
-`crIEEEI_exactSign` takes the oracle from the integer exact path (`exactSignI`, the jumping sign
-oracle on the exact path's integer slice products) and needs only the scheme's correctness on
+`crIEEEI_exactSign` takes the oracle from the integer exact fallback (`exactSignI`, the jumping sign
+oracle on the exact fallback's integer slice products) and needs only the scheme's correctness on
 entries of the format. -/
 
 local notation "ℕ" => Nat
@@ -127,9 +127,9 @@ theorem crIEEEI_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax
         obtain ⟨h1, h2⟩ := h sx sy hx hy
         rw [h1, h2, crFinite_eq hp hle, vals_toSigned, vals_toSigned, allNegZeroI_eq]
 
-/-- **With the integer exact path as the sign oracle**: an integer scheme correctly rounded on
-entries of the format, wrapped by `crIEEEI` with the sign from `exactSignI` on the same engine,
-meets the IEEE specification for every input of the format. -/
+/-- **With the integer exact fallback as the sign oracle**: an integer scheme correctly rounded on
+entries of the format, wrapped by `crIEEEI` with the sign from `exactSignI` on the same matrix
+multiplier, meets the IEEE specification for every input of the format. -/
 theorem crIEEEI_exactSign {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax)
     {scheme : List (ℤ × ℤ) → List (ℤ × ℤ) → Option ℚ} {mult : MatrixMultiplier} {b smax : ℕ}
     (hmult : ∀ B, mult.ExactOn b B) {xs ys : List IDatum}

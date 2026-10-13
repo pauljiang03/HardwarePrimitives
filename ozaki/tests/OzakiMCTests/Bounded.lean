@@ -4,10 +4,10 @@ import OzakiMC.Bounded
 /-! # Correctly rounded FP64 with bounded registers
 
 `mcOzaki1CRBD` on CDNA 3 fp16 blocks with split-K returns the exact-fraction oracle's words on both
-binary64 cases, with the check settling entries (five, then six slices, `96`-bit window) and with
-every entry through the bounded exact path (`ss = []`). `mcOzaki1CRID`, from the stored entries
-`(m, e)` with the slicing in integers too, does the same, and `mcOzaki1CRIDS` gives zero results
-IEEE's sign. -/
+binary64 cases, with the rounding test succeeding on entries (five, then six slices, a `96`-bit
+truncated sum) and with every entry through the bounded exact fallback (`ss = []`). `mcOzaki1CRID`,
+from the stored entries `(m, e)` with the slicing in integers too, does the same, and
+`mcOzaki1CRIDS` gives zero results IEEE's sign. -/
 
 open MatrixCore Ozaki Ozaki.MC OzakiMCTests.LongFP64
 

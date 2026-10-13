@@ -1,6 +1,6 @@
 import TensorCore.Numerics.RoundOp
 
-/-! Arithmetic characterisation of finite FP32 encodings, and correctness of `encode32`. -/
+/-! Arithmetic characterization of finite FP32 encodings, and correctness of `encode32`. -/
 
 namespace TensorCore
 

@@ -23,7 +23,7 @@ def BlockTrace.retainedSum (t : BlockTrace) : ℚ := sumQ t.coarse
 /-- Signed overlap correction `ε_o = D − H` (Lemma IV.4). -/
 def BlockTrace.overlap (t : BlockTrace) : ℚ := t.output.value - t.retainedSum
 
-/-- Retained parts of the low components on the alignment grid, `φ(εᵢ) = trunc_qA(εᵢ)`. -/
+/-- The overlapping bits of the low components, `φ(εᵢ) = trunc_qA(εᵢ)`: the parts of `εᵢ` that the alignment grid retains. -/
 def BlockTrace.retainedLowParts (t : BlockTrace) : List ℚ :=
   t.lowParts.map fun e => truncGrid e t.block.alignGridExponent
 

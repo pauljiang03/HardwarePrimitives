@@ -71,7 +71,7 @@ private def parseModelPairs (p : Model) : List ℕ → Option (List (p.Word × p
     else return (BitVec.ofNat _ a, BitVec.ofNat _ b) :: (← parseModelPairs p rest)
   | _ => none
 
-/-- Evaluate one block through a proved profile rather than through a descriptor. -/
+/-- Evaluate one block through a proved model rather than through a descriptor. -/
 private def modelJson (p : Model) (ps : List (p.Word × p.Word)) (c : ℕ) : Json :=
   let x : BlockInput p := ⟨ps, BitVec.ofNat 32 c⟩
   match evalBlock x with

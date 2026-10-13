@@ -170,7 +170,7 @@ theorem accumulateMachine_eq (w : ℕ) (P : Model) (x : Prepared)
   · rfl
   · cases P.accumulation <;> rfl
 
-/-- **Fixed-width refinement.** For every profile and every input, accumulating the products in
+/-- **Fixed-width refinement.** For every model and every input, accumulating the products in
 `w`-bit registers gives the model's result, whenever `N_FMA ≤ 2^carryBits` and
 `23 + n_eab + 2 + carryBits + 1 ≤ w`. -/
 theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)

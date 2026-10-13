@@ -5,7 +5,7 @@ import Ozaki.Bounded
 
 The schemes compute rationals and report overflow as `none`. An IEEE binary format also has two
 zeros, two infinities and NaN. `FVal` is such a datum: a finite value with its sign bit (`Signed`,
-so `+0` and `−0` differ), `±Inf`, or NaN (payloads are not modelled).
+so `+0` and `−0` differ), `±Inf`, or NaN (payloads are not modeled).
 
 For a binary format with `p` significand bits and exponents `emin … emax`:
 

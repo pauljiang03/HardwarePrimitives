@@ -6,12 +6,12 @@ import Ozaki.BoundedChecked
 /-! # Correctly rounded Ozaki-I with bounded registers on the Tensor Core model
 
 `Ozaki.ozaki1CRB` is the correctly rounded Ozaki-I of `Ozaki.ozaki1CRW` with every step after the
-engine in integer registers whose width depends on the format, the slice width and the number of
-slice products, never on the inputs' exponents: the check on a window sum, the exact path by a
-top-down descent over windows with a sign oracle, and the final round to nearest even by a few
-integer comparisons. Here its engine is Tensor Core blocks with split-K, so every slice product
-runs on the hardware model and the rest in bounded integer arithmetic, for binary32 and FP64
-inputs of any length.
+matrix multiplier in integer registers whose width depends on the format, the slice width and the
+number of slice products, never on the inputs' exponents: the rounding test on a truncated sum, the
+exact fallback by a top-down summation over ranges with a sign oracle, and the final round to
+nearest even by a few integer comparisons. Here its matrix multiplier is Tensor Core blocks with
+split-K, so every slice product runs on the hardware model and the rest in bounded integer
+arithmetic, for binary32 and FP64 inputs of any length.
 
 `tcOzaki1CRID` and `tcOzaki1CRIL` go further: their inputs are the entries `(m, e)` a binary format
 stores, and the slicing is integer too (`Ozaki.ozaki1CRI`), so every step off the Tensor Core is an
@@ -19,7 +19,7 @@ integer operation. `tcOzaki1CRIDS` and `tcOzaki1CRILS` give zero results IEEE's 
 (`Ozaki.ozaki1CRIS`).
 
 `v100_fp64CRI_widths` and `v100_binary32CRI_widths` bound every integer of the whole computation
-off the Tensor Core at once: with every data integer guarded by `|v| < 2^332` and every exponent,
+off the Tensor Core together: with every data integer guarded by `|v| < 2^332` and every exponent,
 shift amount and counter by `|e| < 2^24` (binary32: `2^303`, `2^17`), the checked function
 (`Ozaki.Checked.ozaki1CRIC`) never fails a guard and returns the correctly rounded result. -/
 
@@ -28,12 +28,12 @@ open TensorCore
 namespace Ozaki.TC
 
 /-- Correctly rounded binary32 Ozaki-I of any inner dimension: slice products on Tensor Core
-blocks, the check and the exact path in bounded integer registers. -/
+blocks, the rounding test and the exact fallback in bounded integer registers. -/
 def tcOzaki1CRBL (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRB (tcSplitK p b) 24 (-126) 127 b W ss smax x y
 
-/-- Correctly rounded FP64 by Ozaki-I: slice products on Tensor Core blocks, the check and the
-exact path in bounded integer registers. -/
+/-- Correctly rounded FP64 by Ozaki-I: slice products on Tensor Core blocks, the rounding test and
+the exact fallback in bounded integer registers. -/
 def tcOzaki1CRBD (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRB (tcSplitK p b) 53 (-1022) 1023 b W ss smax x y
 
@@ -121,7 +121,7 @@ theorem v100_fp64CRI (W : ℕ) (ss : List ℕ) {xs ys : List (ℤ × ℤ)}
   tcOzaki1CRID_eq v100_exactOn (by decide) W ss (by decide) hx hy hlen
 
 /-- **FP64 on V100 fp16, every integer bounded**: for binary64 entries with `k ≤ 2^20` and at most
-`8` slices in each check, every data integer off the Tensor Core fits `332` bits and every exponent
+`8` slices in each test, every data integer off the Tensor Core fits `332` bits and every exponent
 and counter `24` bits, and the result is the binary64 round to nearest of `x · y`. -/
 theorem v100_fp64CRI_widths {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)

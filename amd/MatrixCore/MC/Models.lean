@@ -2,7 +2,7 @@ import MatrixCore.MC.Defs
 
 /-! # CDNA 1, CDNA 2 and CDNA 3 matrix cores
 
-Profiles for every input format characterised in the paper (Section 4). The architectures are
+Models for every input format characterized in the paper (Section 4). The architectures are
 CDNA 1 (MI100), CDNA 2 (MI210, MI250) and CDNA 3 (MI300A, MI300X). `c` and `d` are binary32
 throughout. -/
 
@@ -43,7 +43,7 @@ def cdna2BF16_1k : Model :=
 
 /-! ## CDNA 3 (MI300A, MI300X): global alignment with late `c` -/
 
-/-- CDNA 3 fp16 (Algorithm 1): `N_FMA = 8`, products denormalised and aligned with `(2, 24)`,
+/-- CDNA 3 fp16 (Algorithm 1): `N_FMA = 8`, products denormalized and aligned with `(2, 24)`,
 `c` added late with `(24, 32, RD)` alignment, `e_{c=0} = −126`, `|p_ℓ| ≥ 2^128` overflows. -/
 def cdna3F16 : Model :=
   { a := .packed binary16, b := .packed binary16, nfma := 8, accumulation := .globalAlignment,
@@ -90,7 +90,7 @@ def Architecture.ofDevice : String → Option Architecture
   | "MI300" | "MI300A" | "MI300X" => some .cdna3
   | _ => none
 
-/-- The profile of an architecture and input format, where the architecture supports it. -/
+/-- The model of an architecture and input format, where the architecture supports it. -/
 def Architecture.model : Architecture → InputKind → Option Model
   | _, .fp32 => some sfmaF32
   | .cdna1, .fp16 => some cdna1F16

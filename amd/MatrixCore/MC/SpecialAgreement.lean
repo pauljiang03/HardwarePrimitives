@@ -7,7 +7,7 @@ import MatrixCore.MC.Prepared
 
 `blockOutcome` reports a finite output exactly when `evalBlock` accepts, with the same word; in
 every other case it reports an infinity or NaN. For CDNA 2 this includes binary32 special-value
-arithmetic inside the pairwise tree. -/
+arithmetic inside the pairwise sum. -/
 
 namespace MatrixCore
 
@@ -31,7 +31,7 @@ theorem mul_fin {a b : XVal} {q : ℚ} (h : mul a b = .fin q) :
 
 end XVal
 
-/-- The extended pairwise tree is finite exactly when every leaf is, and then agrees with
+/-- The extended pairwise sum is finite exactly when every summand is, and then agrees with
 `pairwiseGroupSum`. -/
 theorem pairwiseGroupSumX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
     (pairwiseGroupSumX ftz n xs).toFin = (xs.mapM XVal.toFin).bind (pairwiseGroupSum ftz n)

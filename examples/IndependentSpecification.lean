@@ -2,7 +2,7 @@ import TensorCore.TC.Specification.Composition
 
 open TensorCore
 
-/-- Every encoded input of every named supported path, with rejection preserved. -/
+/-- Every encoded input of every named supported variant, with rejection preserved. -/
 example (variant : IndependentSpec.Variant) (x : BlockInput (IndependentSpec.implementationModel variant)) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       IndependentSpec.bits (IndependentSpec.parameters variant) (IndependentSpec.supportedInput variant x) :=
@@ -16,7 +16,7 @@ example (x : BlockInput a100BF16F32)
   IndependentSpec.valid_success x h
 
 /-- Every intermediate encoding in an explicitly ordered schedule. -/
-example (p : Model) (c : F32) (groups : List (List (p.Word × p.Word))) :
-    (runBlocks p c groups).toOption.map (fun ts => ts.map fun t => t.output.bits) =
-      IndependentSpec.runGroups (IndependentSpec.parametersOf p) c groups :=
-  IndependentSpec.runBlocks_eq_spec p c groups
+example (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word))) :
+    (runBlocks p c blocks).toOption.map (fun ts => ts.map fun t => t.output.bits) =
+      IndependentSpec.runChain (IndependentSpec.parametersOf p) c blocks :=
+  IndependentSpec.runBlocks_eq_spec p c blocks

@@ -4,20 +4,21 @@ import Ozaki.CheckedMultipliers
 /-! # Tighter widths
 
 The checked pipelines bound every integer they compute by a data width `R` and every exponent and
-counter by `X`. After three changes (the check's integers bounded by `max(W, s(b+1))` bits rather
-than `W + s(b+1)`, the descent's fuel guarded as data rather than as an exponent, and the
-exponent width set by the exponents alone), the concrete widths are:
+counter by `X`. After three changes (the integers of the rounding test bounded by `max(W, s(b+1))`
+bits rather than `W + s(b+1)`, the fuel of the top-down summation guarded as data rather than as an
+exponent, and the exponent width set by the exponents alone), the concrete widths are:
 
 | Pipeline | `R` | `X` |
 | --- | --- | --- |
-| Ozaki-I, FP64 (`11`-bit slices, at most `8` per check, `175` on the exact path, `k ≤ 2^20`) | 263 | 17 |
-| Ozaki-I, binary32 (at most `24` slices on the exact path) | 207 | 15 |
+| Ozaki-I, FP64 (`11`-bit slices, at most `8` per test, `175` in the exact fallback, `k ≤ 2^20`) | 263 | 17 |
+| Ozaki-I, binary32 (at most `24` slices in the exact fallback) | 207 | 15 |
 | Ozaki-II, FP64 (twelve moduli at most `4096`, `P ≤ 69`) | 263 | 17 |
 | Ozaki-II, binary32 (six moduli, `P ≤ 34`) | 161 | 15 |
 
-(earlier `332`/`24`, `303`/`17`, `264`/`24`, `161`/`17`; ADP-style slicing is in `OzakiTC.CheckedTight`:
-`259`/`17`, earlier `264`/`25`). The signed variants need `R ≥ 2p`, which these meet. The FP64 data
-width is set by the exact path (`exactR`), the binary32 Ozaki-I one by the check. -/
+(earlier `332`/`24`, `303`/`17`, `264`/`24`, `161`/`17`; ADP-style slicing is in
+`OzakiTC.CheckedTight`: `259`/`17`, earlier `264`/`25`). The signed versions need `R ≥ 2p`, which
+these meet. The FP64 data width is set by the exact fallback (`exactR`), the binary32 Ozaki-I one by
+the rounding test. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int

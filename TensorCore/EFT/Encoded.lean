@@ -1,6 +1,6 @@
 import TensorCore.EFT.TcEft
 
-/-! TC-EFT Algorithm 1 with its paper interface: encoded operands, an explicit profile, and a supplied finite FP32 output D. -/
+/-! TC-EFT Algorithm 1 with its paper interface: encoded operands, an explicit model, and a supplied finite FP32 output D. -/
 
 namespace TensorCore
 

@@ -96,7 +96,7 @@ theorem lowParts_on_grid (g : ExtractionGrid t) (ℓ : ℤ) (hℓ : ℓ ≤ g.ex
   dsimp only [Function.comp_def]
   rw [hr, Rat.mul_div_cancel (Rat.ne_of_gt (pow2_pos ℓ)), Rat.floor_intCast]
 
-/-- The input-grid budget bounds residual coefficients using component count (including C) and extraction exponent. -/
+/-- A common input grid bounds the residual coefficients, using the component count (including C) and the extraction exponent. -/
 theorem inputGrid_coefficient_bound (g : ExtractionGrid t) (ℓ : ℤ) (P : ℕ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)
     (hbound : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ P) :
@@ -170,7 +170,7 @@ theorem scalarCorrected_isSome_iff (g : ExtractionGrid t) (f : Format) (ℓ : �
     obtain ⟨bits, hb, _⟩ := g.scalarCorrected_correct f ℓ h
     simp [hb]
 
-/-- The input-grid budget and range/representability conditions imply the scalar predicate. -/
+/-- A common input grid and the range and representability conditions imply the scalar predicate. -/
 theorem inputGrid_scalarPredicate (g : ExtractionGrid t) (f : Format) (hf : f.WellFormed)
     (ℓ : ℤ) (hmin : f.emin - f.mantissaBits ≤ ℓ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)

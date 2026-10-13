@@ -33,7 +33,7 @@ Two generalizations of the bounds of `Ozaki.SharpBounds`.
   `ε 2^(−s)` twice (before and through the final rounding). For the plain left-to-right binary64
   accumulation `ε = n 2^-53 2^(b+1) Σ|wⱼ|` by Jeannerod and Rump (`crtAccFP64_error`). Their
   implementation splits the large weights to keep products exact; any accumulator with a proved `ε`
-  plugs into `ozaki2Approx_error`, but theirs is not modelled here. -/
+  plugs into `ozaki2Approx_error`, but theirs is not modeled here. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -569,8 +569,8 @@ theorem reduceApprox_eq {M : ℕ} (hM : 0 < M) {q c : ℤ} {S ε : ℚ}
   rw [hq, show S - (M : ℚ) * q - c = S - ((q : ℚ) * M + c) by grind]
   exact hS
 
-/-- **Ozaki-II with an approximate CRT accumulation**: the residue products are exact on the
-engine, `Σ wⱼ rⱼ` is computed by `acc` (for instance in floating point, `none` on overflow), and
+/-- **Ozaki-II with an approximate CRT accumulation**: the residue products are exact on the matrix
+multiplier, `Σ wⱼ rⱼ` is computed by `acc` (for instance in floating point, `none` on overflow), and
 the reduction is `reduceApprox`. -/
 def ozaki2Approx (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (acc : List ℤ → List ℤ → Option ℚ)
     (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ := do

@@ -1,11 +1,11 @@
 import TensorCore.TC.Models
 import TensorCore.TC.CanonicalDefs
 
-/-! BF16 and TF32 products with FP32 accumulation as profiles of the block semantics, with the parameters of Accurate Models Table 3. -/
+/-! BF16 and TF32 products with FP32 accumulation as models of the block semantics, with the numerical features of Accurate Models Table 3. -/
 
 namespace TensorCore
 
-/-- BF16 products, FP32 c and output, `F = 23 + extraBits`. -/
+/-- BF16 products, FP32 c and output, and `F = 23 + neab` fractional bits after alignment. -/
 @[implicit_reducible] def bf16Fp32Model (K neab : ℕ) (eAlignMin : Option ℤ := none) :
     Model := ⟨bf16, K, 23 + neab, eAlignMin⟩
 
@@ -29,7 +29,7 @@ def tf32UnpackPairs (ps : List (tf32Register.Word × tf32Register.Word)) :
     List (BitVec 19 × BitVec 19) :=
   ps.map fun (a, b) => (tf32Unpack a, tf32Unpack b)
 
-/-- The register-word input of a TF32 descriptor as a value-word input of the profile. -/
+/-- The register-word input of a TF32 descriptor as a value-word input of the model. -/
 def tf32Input {K F : ℕ} {eAlignMin : Option ℤ}
     (x : InvocationInput (alignedInvocation tf32Register K F eAlignMin)) (neab : ℕ) :
     BlockInput (tf19Fp32Model K neab eAlignMin) :=

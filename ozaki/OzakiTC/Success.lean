@@ -6,12 +6,12 @@ import Ozaki.Success
 The Z3 models check that no NaN or infinity ever appears (`[H.1]` of both models). On the Tensor
 Core model the schemes return `none` only when a binary32 rounding overflows, and TC-EFT's
 binary32 converter succeeds on every value of magnitude at most `maxFinite32`
-(`round32Value_succeeds`). With an exact engine:
+(`round32Value_succeeds`). With an exact matrix multiplier:
 
 * `tcOzaki1_isSome`: Ozaki-I returns a value when
   `(1 + 2^-24)^n · n k 2^(E+F) + n (1 + 2^-24)^n 2^-150 ≤ maxFinite32`;
 * `tcOzaki2_isSome`: Ozaki-II returns a value when `k 2^((P − sₓ) + (P − s_y)) ≤ maxFinite32`;
-* `ozaki1_z3_isSome`, `ozaki2_z3_isSome`: in the Z3 configuration (`k = 4`), on any path exact on
+* `ozaki1_z3_isSome`, `ozaki2_z3_isSome`: in the Z3 configuration (`k = 4`), on any variant exact on
   `11`-bit slices, both return a value whenever every entry of `x` and `y` is at most `2^60` in
   magnitude; `v100_ozaki1_z3_isSome` and `v100_ozaki2_z3_isSome` are the V100 instances. -/
 
@@ -60,7 +60,7 @@ theorem z3_ozaki1_range : (1 + (2 : ℚ) ^ (-24 : ℤ)) ^ 10 * (10 * (4 * 2 ^ (1
 /-- The overflow condition of `tcOzaki2_isSome` for `k = 4` and exponents summing to `120`. -/
 theorem z3_ozaki2_range : 4 * (2 : ℚ) ^ (120 : ℤ) ≤ maxFinite32 := by decide +kernel
 
-/-- **The Z3 Ozaki-I model returns a value** on any path exact on `11`-bit slices, whenever every
+/-- **The Z3 Ozaki-I model returns a value** on any variant exact on `11`-bit slices, whenever every
 entry of `x` and `y` is at most `2^60` in magnitude. -/
 theorem ozaki1_z3_isSome {p : Model} (hmult : (tcMultiplier p).ExactOn z3SliceBits (2 ^ 24))
     {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K)
@@ -83,8 +83,8 @@ theorem ozaki1_z3_isSome {p : Model} (hmult : (tcMultiplier p).ExactOn z3SliceBi
   have := z3_ozaki1_range
   grind
 
-/-- **The Z3 Ozaki-II model returns a value** on any path exact on `11`-bit slices, whenever every
-entry of `x` and `y` is at most `2^60` in magnitude. -/
+/-- **The Z3 Ozaki-II model returns a value** on any variant exact on `11`-bit slices, whenever
+every entry of `x` and `y` is at most `2^60` in magnitude. -/
 theorem ozaki2_z3_isSome {p : Model} (hmult : (tcMultiplier p).ExactOn z3SliceBits (2 ^ 24))
     {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :

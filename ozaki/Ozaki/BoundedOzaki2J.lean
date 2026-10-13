@@ -1,23 +1,24 @@
 import Ozaki.BoundedOzaki2Int
 import Ozaki.BoundedInt
 
-/-! # Integer Ozaki-II with the jumping descent, and with signed zeros
+/-! # Integer Ozaki-II with the jumping top-down summation, and with signed zeros
 
-`ozaki2CRZ` (in `Ozaki.BoundedOzaki2Int`) takes its exact path through `ozaki1ExactFallbackZ`, whose
-descent (`roundSum`) visits one window per binade between the largest and the smallest term: a
-number that grows with the inputs' exponent range. `ozaki2CRJ` takes the exact path through
-`ozaki1ExactFallbackI` (in `Ozaki.BoundedInt`), whose descent (`roundSumJ`) jumps over empty gaps and
-visits at most `n · bitlen M + 1` windows for `n` terms of magnitude at most `M`, whatever their
-exponents (`rangesJ_le`; for the exact path's terms `exactFallback_ranges`). The two pipelines return
-the same results (`ozaki2CRJ_eq_CRZ`), so `ozaki2CRJ` is correctly rounded (`ozaki2CRJ_eq`,
-`ozaki2CRJ64_eq`, `ozaki2CRJ32_eq`); it is the canonical integer Ozaki-II.
+`ozaki2CRZ` (in `Ozaki.BoundedOzaki2Int`) takes its exact fallback through `ozaki1ExactFallbackZ`,
+whose top-down summation (`roundSum`) visits one range per binade between the largest and the
+smallest term: a number that grows with the inputs' exponent range. `ozaki2CRJ` takes the exact
+fallback through `ozaki1ExactFallbackI` (in `Ozaki.BoundedInt`), whose top-down summation
+(`roundSumJ`) jumps over empty gaps and visits at most `n · bitlen M + 1` ranges for `n` terms of
+magnitude at most `M`, whatever their exponents (`rangesJ_le`; for the terms of the exact fallback,
+`exactFallback_ranges`). The two pipelines return the same results (`ozaki2CRJ_eq_CRZ`), so
+`ozaki2CRJ` is correctly rounded (`ozaki2CRJ_eq`, `ozaki2CRJ64_eq`, `ozaki2CRJ32_eq`); it is the
+canonical integer Ozaki-II.
 
 `ozaki2CRJS` adds IEEE's signed zeros on inputs with sign bits (`SEntry`): the integer enclosures
-settle the sign when they lie on one side of zero (`roundingTestSignedB`), and otherwise the exact path
-returns the rounded value with the sign of the exact sum from the jumping sign oracle
-(`ozaki1ExactFallbackIS`, `ozaki1ExactFallbackIS_eq`); an exact zero is `−0` only when every product is
-`−0` (`allNegZeroI`). It is `ozaki2CRBS` on the entries' signed values (`ozaki2CRJS_eq_CRBS`), hence
-`crSigned` (`ozaki2CRJS_eq`, `ozaki2CRJS64_eq`, `ozaki2CRJS32_eq`). -/
+decide the sign when they lie on one side of zero (`roundingTestSignedB`), and otherwise the exact
+fallback returns the rounded value with the sign of the exact sum from the jumping sign oracle
+(`ozaki1ExactFallbackIS`, `ozaki1ExactFallbackIS_eq`); an exact zero is `−0` only when every product
+is `−0` (`allNegZeroI`). It is `ozaki2CRBS` on the entries' signed values (`ozaki2CRJS_eq_CRBS`),
+hence `crSigned` (`ozaki2CRJS_eq`, `ozaki2CRJS64_eq`, `ozaki2CRJS32_eq`). -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -25,10 +26,10 @@ local notation "ℚ" => Rat
 
 namespace Ozaki
 
-/-! ## The exact path with the jumping descent and the sign of the exact sum -/
+/-! ## The exact fallback with the jumping top-down summation and the sign of the exact sum -/
 
-/-- The integer exact path with the jumping descent, returning the rounded value together with the
-sign of the exact sum (`signSumJ` on the same integer terms and windows). -/
+/-- The integer exact fallback with the jumping top-down summation, returning the rounded value
+together with the sign of the exact sum (`signSumJ` on the same integer terms and ranges). -/
 def ozaki1ExactFallbackIS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option (ℚ × ℤ) :=
   match (List.range' 1 smax).find? fun s => vanishInt b s xs ys with
@@ -40,7 +41,7 @@ def ozaki1ExactFallbackIS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) 
     | none => none
   | none => none
 
-/-- **The jumping exact path with its sign is the bounded one** on the entries' values. -/
+/-- **The jumping exact fallback with its sign is the bounded one** on the entries' values. -/
 theorem ozaki1ExactFallbackIS_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) :
     ozaki1ExactFallbackIS mult p emin emax b smax xs ys =
@@ -64,9 +65,9 @@ theorem ozaki1ExactFallbackIS_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax 
       rw [roundSumJ_eq _ _ (by omega), roundSum_eq _ _ (by omega), signSumJ_eq (by omega),
         signSum_eq (by omega)]
 
-/-- **The exact path's descent visits few windows**: for its `s²` integer terms, each at most the
-engine's budget, the jumping descent visits at most `s² · bitlen budget + 1` windows, whatever the
-inputs' exponents. -/
+/-- **The top-down summation of the exact fallback visits few ranges**: for its `s²` integer terms,
+each at most the exactness bound of the matrix multiplier, the jumping top-down summation visits at
+most `s² · bitlen bound + 1` ranges, whatever the inputs' exponents. -/
 theorem exactFallback_ranges {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (s W T : ℕ)
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
     rangesJ W T ((slicePairs (split b s x).1 (split b s y).1).map
@@ -91,10 +92,10 @@ theorem exactFallback_ranges {mult : MatrixMultiplier} {b bound : ℕ} (hmult : 
   rw [List.length_map, hplen] at h
   exact h
 
-/-! ## Correctly rounded Ozaki-II in integers with the jumping descent -/
+/-! ## Correctly rounded Ozaki-II in integers with the jumping top-down summation -/
 
 /-- **Correctly rounded Ozaki-II as an integer pipeline**: the integer enclosures of the
-configurations in turn, then the integer exact path with the jumping descent. -/
+configurations in turn, then the integer exact fallback with the jumping top-down summation. -/
 def ozaki2CRJ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   roundingTestB p emin emax (cfgs.map fun c => ozaki2EnclosureZ mult c.1 c.2 xs ys)
@@ -148,8 +149,8 @@ theorem ozaki2CRJ32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.E
 /-! ## Signed zeros -/
 
 /-- **Correctly rounded Ozaki-II in integers with signed zeros**: entries with their sign bits, the
-signed integer check on the integer enclosures, then the jumping exact path with the exact sum's
-sign. -/
+signed integer rounding test on the integer enclosures, then the jumping exact fallback with the
+sign of the exact sum. -/
 def ozaki2CRJS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List SEntry) : Option Signed :=
   roundingTestSignedB p emin emax

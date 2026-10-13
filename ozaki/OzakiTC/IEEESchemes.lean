@@ -7,13 +7,13 @@ Every correctly rounded scheme of the Tensor Core instantiation, on vectors of I
 signed zeros, `±Inf`, NaN), meets the IEEE specification `dotIEEE` for every input: NaN for NaN
 inputs, `Inf · 0` and `+Inf − Inf`, `±Inf` for infinite products and for overflow, and the IEEE
 sign of a zero result. Each is the finite scheme wrapped by `crIEEE`, with the sign of `x · y`, when
-a zero result or an overflow needs it, from the exact path's slice products on the same engine
-(`exactSignB`):
+a zero result or an overflow needs it, from the exact fallback's slice products on the same matrix
+multiplier (`exactSignB`):
 
-* Ozaki-I in FP64 and binary32, with the exact sum or a window accumulator (`tcOzaki1CRDI_eq`,
+* Ozaki-I in FP64 and binary32, with the exact sum or a truncated sum (`tcOzaki1CRDI_eq`,
   `tcOzaki1CRLI_eq`, `tcOzaki1CRDWI_eq`, `tcOzaki1CRLWI_eq`);
 * Ozaki-II in FP64 and binary32 (`tcOzaki2CRDI_eq`, `tcOzaki2CRLI_eq`);
-* ADP-style slicing on the INT8 engine (`adpCREI_eq`).
+* ADP-style slicing on the INT8 matrix multiplier (`adpCREI_eq`).
 
 The plain schemes with special values (`tcOzaki1I`, `tcOzaki2I`, `tcOzaki1DI`) return the rational
 schemes' results whenever those are finite (`tcOzaki1I_fin`, `tcOzaki2I_fin`, `tcOzaki1DI_fin`). -/
@@ -32,7 +32,7 @@ def tcOzaki1CRDI (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) : List FVal 
 def tcOzaki1CRLI (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) : List FVal → List FVal → FVal :=
   crIEEE (tcOzaki1CRL p b ss smax) (exactSignB (tcSplitK p b) b smax)
 
-/-- The same with a `W`-bit window accumulator for the check. -/
+/-- The same with a `W`-bit truncated sum for the rounding test. -/
 def tcOzaki1CRDWI (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (tcOzaki1CRDW p b W ss smax) (exactSignB (tcSplitK p b) b smax)
@@ -51,7 +51,7 @@ def tcOzaki2CRLI (p : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (tcOzaki2CRL p cfgs b smax) (exactSignB (tcSplitK p b) b smax)
 
-/-- Correctly rounded ADP-style slicing on the INT8 engine, with IEEE special values. -/
+/-- Correctly rounded ADP-style slicing on the INT8 matrix multiplier, with IEEE special values. -/
 def adpCREI (cfgs : List (ℕ × ℕ)) (smax : ℕ) : List FVal → List FVal → FVal :=
   crIEEE (adpCRE cfgs smax) (exactSignB int8SplitK 6 smax)
 
@@ -127,7 +127,7 @@ theorem tcOzaki2CRLI_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn 
     hx hy hlen
 
 /-- **ADP-style correctly rounded slicing with IEEE special values**, every product on the INT8
-engine, for binary64 data of any length. -/
+matrix multiplier, for binary64 data of any length. -/
 theorem adpCREI_eq {cfgs : List (ℕ × ℕ)} (hcfg : ∀ c ∈ cfgs, 0 < c.1 ∧ ADP.remapFits c.2 c.1 = true)
     {smax : ℕ} (hsmax : 2098 < smax * 7) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 53 (-1022) 1023) (hy : ∀ a ∈ ys, a.InFormat 53 (-1022) 1023)
@@ -146,11 +146,11 @@ theorem v100_fp64CRIEEE (ss : List ℕ) {xs ys : List FVal}
 
 /-! ## The plain schemes -/
 
-/-- Ozaki-I on a Tensor Core path with IEEE special values: binary32 IEEE additions. -/
+/-- Ozaki-I on a Tensor Core variant with IEEE special values: binary32 IEEE additions. -/
 def tcOzaki1I (p : Model) (b s : ℕ) : List FVal → List FVal → FVal :=
   ozaki1IEEE (tcMultiplier p) 24 (-126) 127 b s
 
-/-- Ozaki-II on a Tensor Core path with IEEE special values: one binary32 IEEE rounding. -/
+/-- Ozaki-II on a Tensor Core variant with IEEE special values: one binary32 IEEE rounding. -/
 def tcOzaki2I (p : Model) (B : CRTBasis) (P : ℕ) : List FVal → List FVal → FVal :=
   ozaki2IEEE (tcMultiplier p) 24 (-126) 127 B P
 

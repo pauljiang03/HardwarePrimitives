@@ -46,7 +46,7 @@ example : (List.range 10).all (fun (i : ℕ) =>
     observeP cdna3F16 [1, q] (0 : ℚ) == some (.v 1) &&
     observeP cdna3F16 [-1, -q] (0 : ℚ) == some (.v (-1))) = true := by decide +kernel
 
-/-- Products are denormalised: `a₁ = b₁ = 1.5` (`p₁ = 2.25` with exponent `0`), `p₂ = 2^-23`,
+/-- Products are denormalized: `a₁ = b₁ = 1.5` (`p₁ = 2.25` with exponent `0`), `p₂ = 2^-23`,
 `p₃ = p₄ = 2^-24` gives `2.25 + 2^-22`; with `a₁ = 2.25, b₁ = 1` it gives `2.25`. -/
 example : observe cdna3F16 [((3 / 2 : ℚ), (3 / 2 : ℚ)), splitProduct (p2 (-23)),
     splitProduct (p2 (-24)), splitProduct (p2 (-24))] (0 : ℚ) = some (.v (9 / 4 + p2 (-22))) := by
@@ -95,7 +95,7 @@ example : ((List.range 11).map fun (j : ℕ) => observeP cdna3F16 (sumRD j) (1 :
 example : observeP cdna3F16 [-p2 (-24), -bits 26 31, p2 (-33)] (1 : ℚ) =
     some (.v (1 - p2 (-24))) := by decide +kernel
 
-/-- RD of the normalised `S_acc`: `c = 2 − 2^-22, p₁ = 2^-22, p₂ = 2^-23 + 2^-j` gives
+/-- RD of the normalized `S_acc`: `c = 2 − 2^-22, p₁ = 2^-22, p₂ = 2^-23 + 2^-j` gives
 `2 + 2^-22` for `j ≤ 30` and `2` for `j > 30` (`j = 24 … 32`). -/
 example : ((List.range 9).map fun (i : ℕ) =>
     observeP cdna3F16 [p2 (-22), p2 (-23) + p2 (-24 - (i : ℤ))] (2 - p2 (-22) : ℚ)) =
@@ -114,7 +114,7 @@ example : observeP cdna3F16 [p2 (-24), p2 (-31)] (1 : ℚ) = some (.v (1 + p2 (-
   decide +kernel
 example : observeP cdna3F16 [p2 (-24), p2 (-32)] (1 : ℚ) = some (.v 1) := by decide +kernel
 
-/-- `S_acc` is normalised before its RD: `c = 1, p₁ + ⋯ = −(2^-24 + Σ_{ℓ=26}^{32} 2^-ℓ)` gives
+/-- `S_acc` is normalized before its RD: `c = 1, p₁ + ⋯ = −(2^-24 + Σ_{ℓ=26}^{32} 2^-ℓ)` gives
 `1 − 2^-24`. -/
 example : observeP cdna3F16 [-p2 (-24), -bits 26 32] (1 : ℚ) = some (.v (1 - p2 (-24))) := by
   decide +kernel
@@ -169,7 +169,7 @@ example : ((List.range 24).map fun (i : ℕ) =>
     observeP cdna3BF16 [p2 (-150), 0, p2 (-152 - (i : ℤ))] (0 : ℚ)) =
     (List.range 24).map fun (i : ℕ) => some (.v (if i < 6 then p2 (-149) else 0)) := by decide +kernel
 
-/-- Subnormal-aware normalisation before RD of `S_acc`: `c = 2^-127 − 2^-140`,
+/-- Subnormal-aware normalization before RD of `S_acc`: `c = 2^-127 − 2^-140`,
 `p₁ + ⋯ = 2^-140 + 2^-150 + 2^(-154-j)` gives `2^-127 + 2^-149` for `j ≤ 3` and `2^-127` for
 `j > 3`. -/
 example : ((List.range 11).map fun (j : ℕ) =>

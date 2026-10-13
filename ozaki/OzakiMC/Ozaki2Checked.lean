@@ -4,8 +4,8 @@ import Ozaki.BoundedChecked2
 /-! # Ozaki-II on matrix-core blocks, every integer bounded
 
 `Ozaki.ozaki2CRJC_binary64_eq` and `Ozaki.ozaki2CRJC_binary32_eq` with CDNA 3 fp16 blocks and
-split-K as the engine: every data integer of correctly rounded Ozaki-II within `264` bits (FP64)
-or `161` bits (binary32), every exponent and counter within `24` or `17` bits. -/
+split-K as the matrix multiplier: every data integer of correctly rounded Ozaki-II within `264` bits
+(FP64) or `161` bits (binary32), every exponent and counter within `24` or `17` bits. -/
 
 open MatrixCore
 

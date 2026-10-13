@@ -15,7 +15,7 @@ Every integer of `ozaki2CRZ` (and of `Ozaki.TC.adpCRZ`) has a width set by the f
 | right shift divisor `2^k` | `≤ |m|` | `truncShiftZ_divisor_le` |
 | remainder test `|m| mod 2^k` | `< 2^k ≤ |m|` | `dropsBits_divisor_le` |
 | symmetric residue | `≤ m/2` | `natAbs_symMod_le` |
-| residue product on the engine | `≤ k ⌊m/2⌋²`, within the budget | `natAbs_residueProduct_le` |
+| residue product on the matrix multiplier | `≤ k ⌊m/2⌋²`, within the exactness bound | `natAbs_residueProduct_le` |
 | reduced residue `z mod m` | `< m` | `residue_natAbs_lt` |
 | CRT sum `Σ wⱼ rⱼ` | `≤ (Σ |wⱼ|) R` for residues `≤ R` | `crtSum_natAbs_le` |
 | reconstructed `N` | `2|N| ≤ M` | `ozaki2EnclosureB_width` |
@@ -25,14 +25,14 @@ Every integer of `ozaki2CRZ` (and of `Ozaki.TC.adpCRZ`) has a width set by the f
 | split-K INT8 product, chunk register | `≤ k 2^14`; chunks `< 2^31` | `Ozaki.TC.int8DotK_natAbs_le` |
 | recombination term `256^(t+u) dᵗᵘ` | `≤ 256^(2(s−1)) k 2^14` | `Ozaki.TC.int8RecombineK_term_le` |
 | recombined `R`, bound `K`, ends `R ± K` (ADP) | `≤ k 2^(2W)`, `≤ k (2^(W+1) + 1)` | `Ozaki.TC.adpEnclosureB_width` |
-| exact path: coefficients, significands | `≤ 2^b`, `< 2^p` | `splitInt_width` |
-| exact path: slice products | within the engine's budget | `ozaki1ExactFallbackZ_terms` |
-| exact path: windows, sums, queries | `roundSum`'s bounds | `topDownSum_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt` |
+| exact fallback: coefficients, significands | `≤ 2^b`, `< 2^p` | `splitInt_width` |
+| exact fallback: slice products | within the exactness bound of the matrix multiplier | `ozaki1ExactFallbackZ_terms` |
+| exact fallback: range parts, sums, queries | the bounds of `roundSum` | `topDownSum_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt` |
 
 What depends on the exponents is exponent arithmetic only: the scaling and fixed-point exponents,
-the shift amounts `e + s`, the slice grids, and the number of windows the exact path's descent
-visits. There is no single theorem bounding every intermediate value; the widths are proved
-register by register. -/
+the shift amounts `e + s`, the slice grids, and the number of ranges that the top-down summation of
+the exact fallback visits. There is no single theorem bounding every intermediate value; the widths
+are proved register by register. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -53,7 +53,8 @@ theorem floorShift_left_le {W : ℕ} {m j : ℤ} (hm : m ≠ 0) (hj : 0 ≤ j)
     exact Nat.le_trans this h
   exact (Nat.pow_le_pow_iff_right (by decide)).mp h2
 
-/-- **The exact path's integer terms are within the engine's budget**, with integer slicing. -/
+/-- **The integer terms of the exact fallback are within the exactness bound of the matrix
+multiplier**, with integer slicing. -/
 theorem ozaki1ExactFallbackZ_terms {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {s : ℕ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
     (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) :

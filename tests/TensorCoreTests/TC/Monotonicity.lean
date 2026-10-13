@@ -1,7 +1,7 @@
 import TensorCore.TC.MonotonicityRange
 import TensorCoreTests.TC.Cases
 
-/-! TC-EFT Theorems III.4 and III.5 on the three source FP16 paths, the Table III witnesses, and the witness ranges. -/
+/-! TC-EFT Theorems III.4 and III.5 on the three source FP16 variants, the Table III witnesses, and the witness ranges. -/
 
 namespace TensorCore
 
@@ -20,7 +20,7 @@ theorem nonmonotone_v100_family (K : ℕ) (hK : K < 2 ^ 24) :
     (by show (classify fp16 0x0c00).finite = some _; decide +kernel)
     (by decide +kernel) (by decide +kernel) hK
 
-/-- Ampere family: one extra alignment bit, floor `−132`, products `2^-12 · 2^-13`. -/
+/-- Ampere family: one extra alignment bit, minimum alignment exponent `−132`, products `2^-12 · 2^-13`. -/
 theorem nonmonotone_ampere_family (K : ℕ) (hK : K < 2 ^ 25) :
     ∃ t t' : BlockTrace,
       evalBlock (⟨List.replicate K (0x0c00, 0x0800), 0x3f800000⟩ :
@@ -33,7 +33,7 @@ theorem nonmonotone_ampere_family (K : ℕ) (hK : K < 2 ^ 25) :
     (by show (classify fp16 0x0800).finite = some _; decide +kernel)
     (by decide +kernel) (by decide +kernel) hK
 
-/-- Hopper family: two extra alignment bits, floor `−133`, products `2^-12 · 2^-14`. -/
+/-- Hopper family: two extra alignment bits, minimum alignment exponent `−133`, products `2^-12 · 2^-14`. -/
 theorem nonmonotone_hopper_family (K : ℕ) (hK : K < 2 ^ 26) :
     ∃ t t' : BlockTrace,
       evalBlock (⟨List.replicate K (0x0c00, 0x0400), 0x3f800000⟩ :
@@ -98,7 +98,7 @@ namespace Regression
 set_option maxRecDepth 16384
 set_option maxHeartbeats 4000000
 
-/-- TC-EFT Table III: the source block widths `K = 4, 8, 16` all exceed `3·2^p`, and decreasing the accumulator from `3f800000` to `3f7fffff` raises the output to `3f800001`. -/
+/-- TC-EFT Table III: the source FMA sizes `K = 4, 8, 16` all exceed `3·2^p`, and decreasing the accumulator from `3f800000` to `3f7fffff` raises the output to `3f800001`. -/
 theorem nonmonotone_ampere_hopper_witnesses :
     outputBits (⟨List.replicate 8 (0x0c00, 0x0800), 0x3f800000⟩ : BlockInput ampereF16F32) =
       .ok 0x3f800000 ∧
@@ -116,7 +116,7 @@ theorem below_threshold_monotone :
     outputBits (⟨List.replicate 11 (0x0c00, 0x0400), 0x3f7fffff⟩ :
       BlockInput (fp16Fp32Model 11 2 (some (-133)))) = .ok 0x3f800000 := by decide +kernel
 
-/-- Theorem III.5 witness ranges on the source widths: `J = min(2^23, ⌊K/2^p⌋ − 2) = 2` for V100 (`K = 4`), Ampere (`K = 8`), and Hopper (`K = 16`). -/
+/-- Theorem III.5 witness ranges on the source FMA sizes: `J = min(2^23, ⌊K/2^p⌋ − 2) = 2` for V100 (`K = 4`), Ampere (`K = 8`), and Hopper (`K = 16`). -/
 theorem range_witnesses :
     outputBits (⟨List.replicate 4 (0x0c00, 0x0c00), 0x3f7ffffe⟩ : BlockInput v100F16F32) =
       .ok 0x3f800001 ∧

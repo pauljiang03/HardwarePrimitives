@@ -5,9 +5,9 @@ import OzakiMC.LongDot
 The binary64 cases of [`data/correct-reference.json`](../../data/correct-reference.json) (random
 `4 × 8` by `8 × 4` binary64 products), against the exact-fraction oracle. `MatrixCore` has no
 binary64 decoding, so `val64` below decodes the words (sign, 11-bit exponent, 52-bit fraction,
-subnormals included). With `k = 8` and `11`-bit slices the engine needs split-K (chunks of four).
-`mcOzaki1CRD` on CDNA 3 fp16 returns exactly the oracle's values (CDNA 2 fp16 does too, but
-takes another fifty seconds of kernel time), the same as on the
+subnormals included). With `k = 8` and `11`-bit slices the matrix multiplier needs split-K (chunks
+of four). `mcOzaki1CRD` on CDNA 3 fp16 returns exactly the oracle's values (CDNA 2 fp16 does too,
+but takes another fifty seconds of kernel time), the same as on the
 Tensor Core model (`tests/OzakiTCTests/LongFP64.lean`). -/
 
 open MatrixCore Ozaki Ozaki.MC
@@ -72,7 +72,7 @@ def val64 (w : ℕ) : ℚ :=
     else ((2 ^ 52 + m : ℕ) : ℚ) * 2 ^ ((e : ℤ) - 1075)
   if w / 2 ^ 63 = 1 then -mag else mag
 
-/-- Correctly rounded FP64 by Ozaki-I on a path equals the oracle on both cases. -/
+/-- Correctly rounded FP64 by Ozaki-I on a variant equals the oracle on both cases. -/
 def agrees64 (P : Model) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Aq := A.map (·.map val64)

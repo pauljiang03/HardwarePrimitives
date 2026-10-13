@@ -112,7 +112,7 @@ theorem evalBlock_c {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : decode32 x.c = some t.block.c :=
   prepare_c (evalBlock_prepared h)
 
-/-- Preparation retains the encoded input's profile, even if later evaluation rejects it. -/
+/-- Preparation retains the encoded input's model, even if later evaluation rejects it. -/
 theorem prepare_model {p : Model} {x : BlockInput p} {b : PreparedBlock}
     (hp : prepare x = some b) : b.model = p := by
   unfold prepare at hp
@@ -125,7 +125,7 @@ theorem prepare_model {p : Model} {x : BlockInput p} {b : PreparedBlock}
       simp [hc, hps] at hp
       rw [← hp]
 
-/-- The profile of a successful trace is the profile of its input. -/
+/-- The model of a successful trace is the model of its input. -/
 theorem evalBlock_model {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : t.block.model = p :=
   prepare_model (evalBlock_prepared h)

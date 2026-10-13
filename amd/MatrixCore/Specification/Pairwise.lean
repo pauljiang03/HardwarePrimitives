@@ -2,7 +2,7 @@ import MatrixCore.Specification.Equivalence
 
 /-! # CDNA 2 meets the independent specification
 
-For the CDNA 2 profiles and every input, the model returns `w` exactly when `w` satisfies the
+For the CDNA 2 models and every input, the model returns `w` exactly when `w` satisfies the
 specification's transcription of Fig. 2 (`Spec.PairwiseResult`). -/
 
 namespace MatrixCore.Spec
@@ -127,7 +127,7 @@ theorem pairwise_products (as bs : List Unpacked) :
   rw [ha, hb, zipWith_mul_map, List.map_map]
   congr 1; funext p; exact val_numOf p
 
-/-- A profile and its CDNA 2 transcription. -/
+/-- A model and its CDNA 2 transcription. -/
 structure SupportedPairwise (P : Model) (S : PairwiseParams) : Prop where
   a : S.a = operandOf P.a
   b : S.b = operandOf P.b
@@ -156,7 +156,7 @@ theorem blockBits_ok_iff {P : Model} (x : BlockInput P) (w : F32) :
     rw [if_neg (by omega), hp]
     simp only [hs, hd]; rfl
 
-/-- **Equivalence for CDNA 2.** On the CDNA 2 profiles and for every input, the model returns `w`
+/-- **Equivalence for CDNA 2.** On the CDNA 2 models and for every input, the model returns `w`
 exactly when `w` is the specification's result. -/
 theorem pairwise_eq_spec {P : Model} {S : PairwiseParams} (hS : SupportedPairwise P S)
     (x : BlockInput P) (w : F32) :

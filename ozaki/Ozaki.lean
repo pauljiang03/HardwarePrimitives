@@ -56,8 +56,8 @@ import Ozaki.UchinoScaling
 
 /-! # The Ozaki schemes, independent of the hardware
 
-Ozaki-I (error-free slicing) and Ozaki-II (modular integers and CRT reconstruction) for one
-output entry `x · y` of `C = AB`, parameterised by a low-precision engine and a working-precision
-rounding, and ADP's fixed-point slicing and exponent span capacity for INT8 engines. `OzakiTC`
-instantiates the engine with the NVIDIA Tensor Core model of `TensorCore`, and `OzakiMC` with the
-AMD matrix-core model of `MatrixCore`. -/
+Ozaki-I (error-free slicing) and Ozaki-II (modular integers and CRT reconstruction) for one output
+entry `x · y` of `C = AB`, parameterized by a low-precision matrix multiplier and a
+working-precision rounding, and ADP's fixed-point slicing and exponent span capacity for INT8 matrix
+multipliers. `OzakiTC` instantiates the matrix multiplier with the NVIDIA Tensor Core model of
+`TensorCore`, and `OzakiMC` with the AMD matrix-core model of `MatrixCore`. -/

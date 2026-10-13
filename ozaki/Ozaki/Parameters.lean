@@ -2,7 +2,8 @@ import Ozaki.Ozaki2
 
 /-! # The parameters of the Z3 models
 
-The Z3 models emulate a binary32 `4 × 4` GEMM (inner dimension `k = 4`) on an fp16-input engine.
+The Z3 models emulate a binary32 `4 × 4` GEMM (inner dimension `k = 4`) on an fp16-input matrix
+multiplier.
 
 * Ozaki-I: slices of `b = 11` bits. A product of two `b`-bit integers needs `2b` bits and a sum of
   four needs `2b + 2 = 24`: the slice products total at most `4 · 2^22 = 2^24` (`z3_slice_exactnessBound`).
@@ -12,7 +13,8 @@ The Z3 models emulate a binary32 `4 × 4` GEMM (inner dimension `k = 4`) on an f
 
 The Z3 models' sanity queries have exact counterparts: at `P = 23` the reconstruction range is
 exceeded (`crt_fails_at_23`), and with `b = 12` the slice products exceed `2^24`
-(`slice_exactnessBound_12`); the hardware libraries show the resulting inexact engine outputs. -/
+(`slice_exactnessBound_12`); the hardware libraries show the resulting inexact outputs of the matrix
+multiplier. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -36,7 +38,7 @@ def z3Bits : ℕ := 22
 /-- `k · 2^b · 2^b = 2^24`: four products of `11`-bit integers fit binary32's significand. -/
 theorem z3_slice_exactnessBound : z3K * (2 ^ z3SliceBits * 2 ^ z3SliceBits) = 2 ^ 24 := by decide
 
-/-- One more bit per slice doubles twice the budget. -/
+/-- One more bit per slice multiplies the exactness bound that the slice products need by four. -/
 theorem slice_exactnessBound_12 : z3K * (2 ^ 12 * 2 ^ 12) = 2 ^ 26 := by decide
 
 /-- Ten slice products for four slices. -/
@@ -65,10 +67,10 @@ theorem crt_fails_at_23 :
       crt z3Basis (z3Moduli.map fun m : ℕ => (z3Basis.modulus : ℤ) % (m : ℤ)) = 0 := by
   decide +kernel
 
-/-! ## The Z3 models with an exact engine -/
+/-! ## The Z3 models with an exact matrix multiplier -/
 
-/-- Ozaki-I with the Z3 parameters and an engine exact on `11`-bit slices within `2^24`: the slicing
-error is at most `5 · 4 · 2^(E + F − 48)`. -/
+/-- Ozaki-I with the Z3 parameters and a matrix multiplier exact on `11`-bit slices within `2^24`:
+the slicing error is at most `5 · 4 · 2^(E + F − 48)`. -/
 theorem z3_ozaki1_slicing_error {mult : MatrixMultiplier} (hmult : mult.ExactOn z3SliceBits (2 ^ 24))
     {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K) :
     ozaki1 mult exactAdd z3SliceBits z3Slices x y = some (exactTerms z3SliceBits z3Slices x y).sum ∧
@@ -76,8 +78,8 @@ theorem z3_ozaki1_slicing_error {mult : MatrixMultiplier} (hmult : mult.ExactOn 
         ((5 : ℕ) : ℚ) * x.length * 2 ^ (splitExp z3SliceBits x + splitExp z3SliceBits y - 48) :=
   ⟨ozaki1_exactAdd hmult hlen (by rw [hk]; decide), exactTerms_error z3SliceBits z3Slices x y⟩
 
-/-- Ozaki-II with the Z3 parameters and an engine exact on `11`-bit residues within `2^24`:
-reconstruction is exact, so the result is one rounding of `2^(−sₓ−s_y) (a · c)`. -/
+/-- Ozaki-II with the Z3 parameters and a matrix multiplier exact on `11`-bit residues within
+`2^24`: reconstruction is exact, so the result is one rounding of `2^(−sₓ−s_y) (a · c)`. -/
 theorem z3_ozaki2_eq {mult : MatrixMultiplier} (hmult : mult.ExactOn z3SliceBits (2 ^ 24))
     (round : ℚ → Option ℚ) {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K) :
     ozaki2 mult round z3Basis z3Bits x y =

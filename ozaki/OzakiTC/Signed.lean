@@ -3,7 +3,7 @@ import Ozaki.SignedZero
 
 /-! # Signed zeros on the TensorCore model
 
-Correctly rounded Ozaki-I of any inner dimension, with a `W`-bit window accumulator, returning the
+Correctly rounded Ozaki-I of any inner dimension, with a `W`-bit truncated sum, returning the
 IEEE sign of a zero result (`Ozaki.crSigned`): binary64 (`tcOzaki1CRDS_eq`) and binary32
 (`tcOzaki1CRLS_eq`). -/
 

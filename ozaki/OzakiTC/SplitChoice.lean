@@ -3,39 +3,39 @@ import OzakiTC.LongDot
 import OzakiTC.Cancellation
 import Ozaki.SliceRule
 
-/-! # Choosing the slice width, chunk length and passes per Tensor Core path
+/-! # Choosing the slice width, chunk length and passes per Tensor Core variant
 
-Ozaki-I on a Tensor Core path has three knobs, each exact by a theorem of this development:
+Ozaki-I on a Tensor Core variant has three knobs, each exact by a theorem of this development:
 
 * the **slice width** `b`: at most what the operand format holds (`11` for fp16 and tf32, `8` for
   bf16) and `2b ≤ F`;
 * the **chunk length** of split-K, `m = 2^(24 − 2b)` products per exact call (`tcSplitK`,
   `tcSplitK_exactOn`): four for `11`-bit slices, sixteen for `10`-bit, `256` for `8`-bit; a chunk
-  longer than the group `K` runs as chained groups;
-* **one or two passes**: the two-pass engine runs every group twice (`c = 0`, then `c = −D1`) and
-  is exact on full groups when `K · 2^(2b) ≤ 2^(F+1)` (`tcMultiplier2_exactOn`).
+  longer than the FMA size `K` runs as chained block FMAs;
+* **one or two passes**: the two-pass matrix multiplier runs every block FMA twice (`c = 0`, then
+  `c = −D1`) and is exact on full block FMAs when `K · 2^(2b) ≤ 2^(F+1)` (`tcMultiplier2_exactOn`).
 
-`candidates p bmax` lists every configuration these theorems make exact on path `p`
-(`candidates_exact`). `SliceRun.blocks K k` counts the Tensor Core blocks (one group of `K`
+`candidates p bmax` lists every configuration these theorems make exact on variant `p`
+(`candidates_exact`). `SliceRun.blocks K k` counts the Tensor Core blocks (one block FMA of `K`
 products, one evaluation of the block model) a slice product of inner dimension `k` takes:
-`⌈m / K⌉` per chunk of split-K, two per group for two passes. A partly filled group costs a whole
-block, as a matrix instruction computes `K` products whatever their values.
+`⌈m / K⌉` per chunk of split-K, two per block FMA for two passes. A partly filled block FMA costs a
+whole block FMA, as a matrix instruction computes `K` products whatever their values.
 
 **The slice rule.** For a target of `t` bits, `slicesFor b t` is the least `s` with
 `(s + 1) 2^(t+2) ≤ 2^(s(b+1))`. This makes the slicing term of Ozaki-I's error bound,
 `(s + 1) k 2^(E+F−s(b+1))` (`tcOzaki1L_error`), at most `2^-t · k · max|x| · max|y|`
 (`slicing_term_le_maxAbs`): `t = 24` for a binary32-level result, `t = 53` for FP64. The Ozaki-I
 triangle then has `s(s+1)/2` slice products, and the cost of a configuration is
-`s(s+1)/2 · blocks`. For the exact path of correctly rounded FP64 (`smax (b+1) > 2098`, all `s²`
+`s(s+1)/2 · blocks`. For the exact fallback of correctly rounded FP64 (`smax (b+1) > 2098`, all `s²`
 products) the worst case is `exactFallbackCost`.
 
-**The cost is in model blocks, not measured time.** It counts matrix-instruction groups; it ignores
-the integer work off the engine (slicing, adding chunk results), memory traffic, and the fact that
-a real kernel runs many output entries per instruction.
+**The cost is in model blocks, not measured time.** It counts block FMAs; it ignores
+the integer work off the matrix multiplier (slicing, adding chunk results), memory traffic, and the
+fact that a real kernel runs many output entries per instruction.
 
 ## Results (inner dimension `k = 1024`)
 
-| path | `K` | `F` | FP64 (`t = 53`): best | blocks | `b = 11`, split-K | `b = 11`, two passes | binary32 (`t = 24`): best | blocks |
+| variant | `K` | `F` | FP64 (`t = 53`): best | blocks | `b = 11`, split-K | `b = 11`, two passes | binary32 (`t = 24`): best | blocks |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | V100 fp16 | 4 | 23 | `b = 11`, split-K | 3840 | 3840 | 7680 | `b = 11`, split-K | 1536 |
 | A100 fp16 | 8 | 24 | `b = 10`, split-K | 2688 | 3840 | 3840 | `b = 10`, split-K | 768 |
@@ -48,14 +48,14 @@ a real kernel runs many output entries per instruction.
 
 FP64 needs `5` slices of `11` bits (`15` products) or `6` of `10` bits (`21` products); binary32
 needs `3` of either (`6` products). Where `K > 4`, narrower slices with longer chunks win: `10`-bit
-slices fill a whole A100 or H100 group (`16 · 2^20 = 2^24`), so one block carries `16` products
+slices fill a whole A100 or H100 block FMA (`16 · 2^20 = 2^24`), so one block carries `16` products
 instead of `4`. On H100 fp16 this costs `1344` blocks for FP64, against `3840` for `11`-bit slices
 with chunks of four and `1920` with two passes; for binary32, `384` against `1536` and `768`. Under
-this cost the two-pass engine never wins: whenever two passes make a full group of `11`-bit
-products exact, `10`-bit slices make it exact in one pass, and the extra slice costs less than the
-second pass. Where `K = 4` (V100 fp16, the tf32 `wmma` paths) a group holds only four products
-whatever the width, so `11`-bit slices are best. The worst-case exact path follows the same pattern
-(`h100F16_exactFallback`). -/
+this cost the two-pass matrix multiplier never wins: whenever two passes make a full block FMA of
+`11`-bit products exact, `10`-bit slices make it exact in one pass, and the extra slice costs less
+than the second pass. Where `K = 4` (V100 fp16, the tf32 `wmma` variants) a block FMA holds only
+four products whatever the width, so `11`-bit slices are best. The worst-case exact fallback follows
+the same pattern (`h100F16_exactFallback`). -/
 
 open TensorCore
 
@@ -63,9 +63,9 @@ namespace Ozaki.TC
 
 /-! ## Configurations -/
 
-/-- How a slice product runs on a Tensor Core path: split-K with `b`-bit slices (chunks of
-`chunkLen b` products, each on chained groups from `c = 0`), or the two-pass engine (every group of
-`K` twice). -/
+/-- How a slice product runs on a Tensor Core variant: split-K with `b`-bit slices (chunks of
+`chunkLen b` products, each on chained block FMAs from `c = 0`), or the two-pass matrix multiplier
+(every block FMA of `K` twice). -/
 inductive SliceRun where
   | splitK (b : ℕ)
   | twoPass (b : ℕ)
@@ -76,13 +76,14 @@ def SliceRun.width : SliceRun → ℕ
   | .splitK b => b
   | .twoPass b => b
 
-/-- The engine of a configuration. -/
+/-- The matrix multiplier of a configuration. -/
 def SliceRun.multiplier (p : Model) : SliceRun → MatrixMultiplier
   | .splitK b => tcSplitK p b
   | .twoPass _ => tcMultiplier2 p
 
-/-- **Blocks per slice product** of inner dimension `k` on a path with groups of `K`: split-K runs
-`⌈length / K⌉` groups per chunk (`groupsOf_count`), two passes run every group twice. -/
+/-- **Blocks per slice product** of inner dimension `k` on a variant with an FMA size of `K`:
+split-K runs `⌈length / K⌉` block FMAs per chunk (`groupsOf_count`), two passes run every block FMA
+twice. -/
 def SliceRun.blocks (K k : ℕ) : SliceRun → ℕ
   | .splitK b => chunkBlocks K (chunkLen b) (List.replicate k ())
   | .twoPass _ => 2 * groupCount K k
@@ -92,23 +93,23 @@ taking `blocks` Tensor Core blocks. -/
 def SliceRun.cost (K t k : ℕ) (r : SliceRun) : ℕ :=
   (trianglePairs (slicesFor r.width t)).length * r.blocks K k
 
-/-- The worst-case exact path of correctly rounded FP64: all `s²` slice products. -/
+/-- The worst-case exact fallback of correctly rounded FP64: all `s²` slice products. -/
 def SliceRun.exactFallbackCost (K k : ℕ) (r : SliceRun) : ℕ :=
   exactSlices r.width * exactSlices r.width * r.blocks K k
 
-/-- Split-K with `b`-bit slices is exact on path `p`: `1 ≤ b`, `2b ≤ 24`, `2b ≤ F`. -/
+/-- Split-K with `b`-bit slices is exact on variant `p`: `1 ≤ b`, `2b ≤ 24`, `2b ≤ F`. -/
 def splitOK (p : Model) (b : ℕ) : Bool :=
   decide (1 ≤ b) && decide (2 * b ≤ 24) && decide (2 * (b : ℤ) ≤ p.alignFracBits)
 
-/-- Two passes with `b`-bit slices are exact on path `p`: `1 ≤ b`, `2b ≤ F ≤ 25`, and
+/-- Two passes with `b`-bit slices are exact on variant `p`: `1 ≤ b`, `2b ≤ F ≤ 25`, and
 `K · 2^(2b) ≤ 2^(F+1)`. -/
 def twoPassOK (p : Model) (b : ℕ) : Bool :=
   decide (1 ≤ b) && decide (2 * (b : ℤ) ≤ p.alignFracBits) &&
     decide (p.alignFracBits ≤ 25) &&
     decide (p.nfma * 2 ^ (2 * b) ≤ 2 ^ (p.alignFracBits.toNat + 1))
 
-/-- **Every configuration the exactness theorems allow** on path `p` with slices of at most `bmax`
-bits, widest first: split-K, then two passes. -/
+/-- **Every configuration the exactness theorems allow** on variant `p` with slices of at most
+`bmax` bits, widest first: split-K, then two passes. -/
 def candidates (p : Model) (bmax : ℕ) : List SliceRun :=
   ((List.range (bmax + 1)).reverse.filter (splitOK p)).map .splitK ++
     ((List.range (bmax + 1)).reverse.filter (twoPassOK p)).map .twoPass
@@ -152,7 +153,7 @@ def best (p : Model) (bmax t k : ℕ) : Option SliceRun :=
     | none => some r
     | some a => if r.cost p.nfma t k < a.cost p.nfma t k then some r else some a) none
 
-/-! ## The best configuration per path (`k = 1024`)
+/-! ## The best configuration per variant (`k = 1024`)
 
 Each statement is checked by evaluation: `best` scans every candidate. `t = 53` is FP64, `t = 24`
 binary32. -/
@@ -180,8 +181,8 @@ theorem a100TF32_best :
     best a100TF32F32 11 24 1024 = some (.splitK 11) ∧ (SliceRun.splitK 11).cost 4 24 1024 = 1536 := by
   decide +kernel
 
-/-- **H100 fp16**: `10`-bit slices in full groups of sixteen cost `1344` blocks for FP64, against
-`3840` for `11`-bit slices in chunks of four and `1920` with two passes. -/
+/-- **H100 fp16**: `10`-bit slices in full block FMAs of sixteen cost `1344` blocks for FP64,
+against `3840` for `11`-bit slices in chunks of four and `1920` with two passes. -/
 theorem h100F16_best :
     best hopperF16F32 11 53 1024 = some (.splitK 10) ∧ (SliceRun.splitK 10).cost 16 53 1024 = 1344 ∧
       (SliceRun.splitK 11).cost 16 53 1024 = 3840 ∧ (SliceRun.twoPass 11).cost 16 53 1024 = 1920 ∧
@@ -209,9 +210,9 @@ theorem h100TF32Mma_best :
       (SliceRun.splitK 10).cost 8 24 1024 = 768 := by
   decide +kernel
 
-/-- **The worst-case exact path on H100 fp16** (all `s²` products, `s(b+1) > 2098`): `191²` products
-of `10`-bit slices in full groups cost `2334784` blocks, `175²` products of `11`-bit slices `7840000`
-in chunks of four and `3920000` with two passes. -/
+/-- **The worst-case exact fallback on H100 fp16** (all `s²` products, `s(b+1) > 2098`): `191²`
+products of `10`-bit slices in full block FMAs cost `2334784` blocks, `175²` products of `11`-bit
+slices `7840000` in chunks of four and `3920000` with two passes. -/
 theorem h100F16_exactFallback :
     (SliceRun.splitK 10).exactFallbackCost 16 1024 = 2334784 ∧
       (SliceRun.splitK 11).exactFallbackCost 16 1024 = 7840000 ∧
@@ -220,9 +221,9 @@ theorem h100F16_exactFallback :
 
 /-! ## The chosen configurations are exact, and the schemes' theorems apply
 
-`10`-bit slices on the A100 and H100 fp16 paths and the H100 tf32 `mma` path; the other choices
-(`11`-bit slices on V100, A100 tf32 and the H100 tf32 `wmma` path, `8`-bit on bf16) are the
-instances of `OzakiTC.Models` and `OzakiTC.LongDot`. -/
+`10`-bit slices on the A100 and H100 fp16 variants and the H100 tf32 `mma` variant; the other
+choices (`11`-bit slices on V100, A100 tf32 and the H100 tf32 `wmma` variant, `8`-bit on bf16) are
+the instances of `OzakiTC.Models` and `OzakiTC.LongDot`. -/
 
 theorem a100F16_exactOn10 : (tcMultiplier ampereF16F32).ExactOn 10 (2 ^ 24) :=
   tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
@@ -236,13 +237,13 @@ theorem h100TF32Mma_exactOn10 : (tcMultiplier hopperTF32MmaF32).ExactOn 10 (2 ^ 
   tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
-/-- Split-K with `10`-bit slices on H100 fp16 (chunks of sixteen, one full group each) is exact
+/-- Split-K with `10`-bit slices on H100 fp16 (chunks of sixteen, one full block FMA each) is exact
 for every length. -/
 theorem h100F16_splitK10_exactOn (B : ℕ) : (tcSplitK hopperF16F32 10).ExactOn 10 B :=
   tcSplitK_exactOn h100F16_exactOn10 (by decide) B
 
 /-- **Correctly rounded FP64 on H100 fp16 with the cheapest configuration**: `10`-bit slices, the
-exact path at up to `191` slices (`191 · 11 > 2098`). -/
+exact fallback at up to `191` slices (`191 · 11 > 2098`). -/
 theorem h100F16_fp64CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     tcOzaki1CRD hopperF16F32 10 ss 191 x y = rne64 (dot x y) :=
@@ -258,8 +259,8 @@ theorem h100TF32Mma_fp64CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x,
     tcOzaki1CRD hopperTF32MmaF32 10 ss 191 x y = rne64 (dot x y) :=
   tcOzaki1CRD_eq h100TF32Mma_exactOn10 (by decide) ss (by decide) hx hy hlen
 
-/-- **Correctly rounded binary32 on H100 fp16 with `10`-bit slices**: the exact path at up to `26`
-slices (`26 · 11 > 277`). -/
+/-- **Correctly rounded binary32 on H100 fp16 with `10`-bit slices**: the exact fallback at up to
+`26` slices (`26 · 11 > 277`). -/
 theorem h100F16_fp32CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary32Value a)
     (hy : ∀ a ∈ y, Binary32Value a) (hlen : x.length = y.length) :
     tcOzaki1CRL hopperF16F32 10 ss 26 x y = rne32Q (dot x y) :=

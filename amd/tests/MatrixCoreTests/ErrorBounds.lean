@@ -20,7 +20,7 @@ example : (evalBlock cdna1Tie).toOption.map (fun t =>
     some (-pow2 (-23), pow2 (-23)) := by decide +kernel
 
 /-- CDNA 2, `c = 0`: `fl{fl{1 + s} + fl{s + 0}} = 1 + 2^-21` is `2^-23` above the exact sum; the
-bound is the tree's two roundings, the final `fl{·}`, and `2^-126` per flushing `fl{·}`. -/
+bound is the two roundings of the pairwise sum, the final `fl{·}`, and `2^-126` per flushing `fl{·}`. -/
 def cdna2Pairwise : BlockInput cdna2F16 :=
   ⟨[0x3C00, 0x0E00, 0x0E00, 0], [0x3C00, 0x1000, 0x1000, 0], 0⟩
 

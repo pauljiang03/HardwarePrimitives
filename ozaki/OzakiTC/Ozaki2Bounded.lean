@@ -3,11 +3,11 @@ import Ozaki.BoundedOzaki2Int
 
 /-! # Ozaki-II with bounded registers and signed zeros on the Tensor Core model
 
-`Ozaki.ozaki2CRB` (the check on integer enclosures, then Ozaki-I's bounded exact path) and
-`Ozaki.ozaki2CRS`, `Ozaki.ozaki2CRBS` (signed zeros) with Tensor Core blocks and split-K as the engine:
-every residue and slice product on the hardware model, for binary64 and binary32 inputs of any
-length; and `Ozaki.ozaki2CRZ`, the same from integer-pair inputs with every step integer
-arithmetic. -/
+`Ozaki.ozaki2CRB` (the rounding test on integer enclosures, then Ozaki-I's bounded exact fallback)
+and `Ozaki.ozaki2CRS`, `Ozaki.ozaki2CRBS` (signed zeros) with Tensor Core blocks and split-K as the
+matrix multiplier: every residue and slice product on the hardware model, for binary64 and binary32
+inputs of any length; and `Ozaki.ozaki2CRZ`, the same from integer-pair inputs with every step
+integer arithmetic. -/
 
 open TensorCore
 

@@ -1,26 +1,27 @@
 import OzakiTC.ADPFix
 import Ozaki.BoundedOzaki2
 
-/-! # ADP's check in bounded integer arithmetic, and signed zeros for ADP
+/-! # ADP's rounding test in bounded integer arithmetic, and signed zeros for ADP
 
-`adpCRE` checks a rational enclosure: the recombined INT8 slice products `H` and the fixed-point
-bound `adpBound`, a rational computed from the inputs. Here the check is integer arithmetic:
+`adpCRE` applies the rounding test to a rational enclosure: the recombined INT8 slice products `H`
+and the fixed-point bound `adpBound`, a rational computed from the inputs. Here the rounding test is
+integer arithmetic:
 
 * **ADP's integer enclosure** (`adpEnclosureB`): `H = R 2^q` with `R` the recombined split-K INT8
   slice products and `q = −(fₓ + f_y)` the fixed-point shifts, and `B = K 2^q` with `K` of the
   fixed-point integers (`adpK`, `Ozaki.boundK`): every entry loses less than one unit of the fixed
   grid, nothing when no bits are dropped, so `adpBound ≤ B` (`adpBound_le`) and the enclosure
   contains `x · y` (`adpEnclosureB_sound`);
-* `adpCRB`: the integer checks for the configurations `(s, W)` in turn, then Ozaki-I's bounded exact
-  path on the split-K INT8 engine with `6`-bit slices. It is the binary64 round to nearest of `x · y`
-  for binary64 inputs of any length (`adpCRB_eq`).
+* `adpCRB`: the integer rounding tests for the configurations `(s, W)` in turn, then Ozaki-I's
+  bounded exact fallback on the split-K INT8 matrix multiplier with `6`-bit slices. It is the
+  binary64 round to nearest of `x · y` for binary64 inputs of any length (`adpCRB_eq`).
 
 **Widths** (`adpEnclosureB_width`): `|R| ≤ k 2^(2W)` and `0 ≤ K ≤ k (2^(W+1) + 1)`, both on the grid
 `2^q`, so the integers `R ± K` the test rounds depend on the configuration's width `W` and on `k`,
 not on the inputs' exponents.
 
 **Signed zeros**: `adpCRES` (rational enclosures, `fp64Round`) and `adpCRBS` (integer enclosures
-and the bounded exact path) return the IEEE-signed correctly rounded product `crSigned`
+and the bounded exact fallback) return the IEEE-signed correctly rounded product `crSigned`
 (`adpCRES_eq`, `adpCRBS_eq`). -/
 
 open TensorCore
@@ -99,9 +100,9 @@ theorem adpEnclosureB_width {s W : ℕ} (hs : 0 < s) (hfit : ADP.remapFits W s =
 
 /-! ## Correctly rounded ADP-style slicing in bounded integer arithmetic -/
 
-/-- **ADP's slicing, correctly rounded, with bounded registers**: the integer checks for the
-configurations `(s, W)` in turn, then Ozaki-I's bounded exact path on the split-K INT8 engine with
-`6`-bit slices. -/
+/-- **ADP's slicing, correctly rounded, with bounded registers**: the integer rounding tests for the
+configurations `(s, W)` in turn, then Ozaki-I's bounded exact fallback on the split-K INT8 matrix
+multiplier with `6`-bit slices. -/
 def adpCRB (cfgs : List (ℕ × ℕ)) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   roundingTestB 53 (-1022) 1023 (cfgs.map fun c => some (adpEnclosureB c.1 c.2 x y))
     (ozaki1ExactFallbackB int8SplitK 53 (-1022) 1023 6 smax x y)
@@ -128,7 +129,8 @@ theorem adpCRB_eq {cfgs : List (ℕ × ℕ)} (hcfg : ∀ c ∈ cfgs, 0 < c.1 ∧
 theorem fp64Round_zero : fp64Round 0 = some 0 := by decide +kernel
 
 /-- **ADP's slicing, correctly rounded, with signed zeros**: the enclosures of `adpCRE`, then its
-exact path on the INT8 engine, the sign of a zero result from the enclosure or the exact value. -/
+exact fallback on the INT8 matrix multiplier, the sign of a zero result from the enclosure or the
+exact value. -/
 def adpCRES (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List Signed) : Option Signed :=
   roundingTestSigned fp64Round (cfgs.map fun c => some (adpEnclosureK c.1 c.2 (vals xs) (vals ys)))
     (ozaki1ExactFallback int8SplitK 6 smax (vals xs) (vals ys)) (allNegZero xs ys)

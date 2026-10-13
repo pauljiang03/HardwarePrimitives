@@ -3,15 +3,15 @@ import OzakiTC.Split32
 
 /-! # Ozaki-I and Ozaki-II on the Tensor Core model
 
-The schemes of the `Ozaki` library with the Tensor Core engine of a `TensorCore` profile and
-binary32 round-to-nearest in the recombination:
+The schemes of the `Ozaki` library with the Tensor Core of a `TensorCore` model as the matrix
+multiplier and binary32 round-to-nearest in the recombination:
 
-* `tcOzaki1 p b s x y`: Ozaki-I with `s` slices of `b` bits, slice products on the profile's
+* `tcOzaki1 p b s x y`: Ozaki-I with `s` slices of `b` bits, slice products on the model's
   blocks, scaled products added with `add32` (IEEE binary32 addition);
-* `tcOzaki2 p B P x y`: Ozaki-II with CRT basis `B` and precision `P`, one engine product per
-  modulus, one final binary32 rounding.
+* `tcOzaki2 p B P x y`: Ozaki-II with CRT basis `B` and precision `P`, one product on the matrix
+  multiplier per modulus, one final binary32 rounding.
 
-Main results, for any profile and slice width that satisfy `IntExact` and `HoldsInts`, and inner
+Main results, for any model and slice width that satisfy `IntExact` and `HoldsInts`, and inner
 dimension `k` with `k · 2^(2b) ≤ 2^24`:
 
 * `tcOzaki1_eq`: every Tensor Core call returns its slice product exactly, so the result is the
@@ -27,19 +27,19 @@ open TensorCore
 
 namespace Ozaki.TC
 
-/-- Ozaki-I on a Tensor Core path, with binary32 recombination. -/
+/-- Ozaki-I on a Tensor Core variant, with binary32 recombination. -/
 def tcOzaki1 (p : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (tcMultiplier p) add32 b s x y
 
-/-- Ozaki-II on a Tensor Core path, with one binary32 rounding. -/
+/-- Ozaki-II on a Tensor Core variant, with one binary32 rounding. -/
 def tcOzaki2 (p : Model) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki2 (tcMultiplier p) round32Value B P x y
 
-/-- `C = AB` with Ozaki-I on a Tensor Core path; `A` and `B` by rows. -/
+/-- `C = AB` with Ozaki-I on a Tensor Core variant; `A` and `B` by rows. -/
 def tcOzaki1Gemm (p : Model) (b s : ℕ) (A B : List (List ℚ)) : Option (List (List ℚ)) :=
   ozaki1Gemm (tcMultiplier p) add32 b s A B
 
-/-- `C = AB` with Ozaki-II on a Tensor Core path; `A` and `B` by rows. -/
+/-- `C = AB` with Ozaki-II on a Tensor Core variant; `A` and `B` by rows. -/
 def tcOzaki2Gemm (p : Model) (B : CRTBasis) (P : ℕ) (A Bm : List (List ℚ)) :
     Option (List (List ℚ)) :=
   ozaki2Gemm (tcMultiplier p) round32Value B P A Bm

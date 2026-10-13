@@ -1,6 +1,6 @@
 import TensorCore.TC.Invocation
 
-/-! Invocation descriptors of the supported GPU paths. -/
+/-! Invocation descriptors of the supported GPU variants. -/
 
 namespace TensorCore
 

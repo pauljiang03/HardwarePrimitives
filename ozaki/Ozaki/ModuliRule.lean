@@ -1,11 +1,11 @@
 import Ozaki.Ozaki2
 
-/-! # The moduli rule of Ozaki-II, for any matrix engine
+/-! # The moduli rule of Ozaki-II, for any matrix multiplier
 
-Ozaki-II on an engine exact on `b`-bit vectors takes moduli at most `2^(b+1)`, so that symmetric
-residues are `b`-bit integers (`natAbs_symMod_le`). Two hardware-independent pieces of the per-path
-choice of `b`, the moduli and the engine configuration (`OzakiTC.Ozaki2Choice`,
-`OzakiMC.Ozaki2Choice`):
+Ozaki-II on a matrix multiplier exact on `b`-bit vectors takes moduli at most `2^(b+1)`, so that
+symmetric residues are `b`-bit integers (`natAbs_symMod_le`). Two hardware-independent pieces of the
+per-variant choice of `b`, the moduli and the matrix multiplier configuration
+(`OzakiTC.Ozaki2Choice`, `OzakiMC.Ozaki2Choice`):
 
 * **the moduli** `moduliList top n`: the first `n` pairwise coprime integers at most `top`,
   largest first, chosen greedily (`moduliList_le`, `moduliList_pairwise`);
@@ -15,7 +15,8 @@ choice of `b`, the moduli and the engine configuration (`OzakiTC.Ozaki2Choice`,
   `2^-t · k · max|x| · max|y|`, the same target as Ozaki-I's slice rule (`slicesFor`); and
   `2 k 2^(2P) < M` is the reconstruction condition of `crt_eq` (`moduliFor_spec`).
 
-Ozaki-II then makes one engine product per modulus, against `s(s+1)/2` slice products for Ozaki-I. -/
+Ozaki-II then makes one dot product on the matrix multiplier per modulus, against `s(s+1)/2` slice
+products for Ozaki-I. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int

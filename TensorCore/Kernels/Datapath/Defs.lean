@@ -1,21 +1,21 @@
 import TensorCore.Kernels.EFT.DecodeDefs
 
-/-! A fixed-width bitvector datapath for one Tensor Core normalization group. -/
+/-! A fixed-width bitvector datapath for one Tensor Core block FMA. -/
 
 namespace TensorCore.Datapath
 
 open EFMachine
 
-/-- Exponent registers: 9 bits, enough for the alignment exponent from the floor −133 up to 254. -/
+/-- Exponent registers: 9 bits, enough for the alignment exponent from the minimum alignment exponent −133 up to 254. -/
 abbrev Exp := BitVec 9
 
-/-- F = 23 + p: the mantissa bits each term keeps after alignment. -/
+/-- F = 23 + p: the fractional bits each term keeps after alignment. -/
 def alignBits : Variant → BitVec 5
   | .v100F16 => 23
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 24
   | _ => 25
 
-/-- The alignment floor, biased by 256; 0 on V100, which has none. -/
+/-- The minimum alignment exponent, biased by 256; 0 on V100, which has none. -/
 def eAlignMin : Variant → Exp
   | .v100F16 => 0
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 124
@@ -24,7 +24,7 @@ def eAlignMin : Variant → Exp
 /-- Carry bits for summing the K products and c: `K + 1 ≤ 2 ^ carryBits`. -/
 def carryBits (variant : Variant) : ℕ := variant.model.nfma.log2 + 1
 
-/-- An aligned term: the implicit bit, one implicit padding bit for a product's carry, and F bits after the binary point. -/
+/-- An aligned term: two integer bits, the second for a product kept in denormalized form (whose significand can reach 2 or more), and F fractional bits. -/
 def termWidth (variant : Variant) : ℕ := (alignBits variant).toNat + 2
 
 /-- The two's complement accumulator: an aligned term's width, the carry bits and a sign bit. -/
@@ -83,7 +83,7 @@ def decodeTerm (variant : Variant) (pair : variant.model.Word × variant.model.W
   let b ← decodeInput variant.kind (pair.2.zeroExtend 32)
   return product a b
 
-/-- Largest unnormalized exponent of a nonzero term, raised to the profile floor. -/
+/-- Largest unnormalized exponent of a nonzero term, raised to the minimum alignment exponent of the variant. -/
 def alignExp (variant : Variant) (ts : List Term) : Exp :=
   ts.foldl (fun e t => if t.significand == 0 then e
     else if e ≤ t.biasedExp then t.biasedExp else e) (eAlignMin variant)
@@ -125,7 +125,7 @@ def normalize (s : BitVec w) (e : Exp) (F : BitVec 5) : Option F32 :=
       let payload := if k < 0x800000 then k else (biased.setWidth 32 <<< 23) + (k - 0x800000)
       some ((if negative then 0x80000000 else 0) + payload)
 
-/-- One normalization group, computed with bitvector operations only. -/
+/-- One block FMA, computed with bitvector operations only. -/
 def evalBlock (variant : Variant) (x : BlockInput variant.model) : Except ModelError F32 := do
   if x.products.length != variant.model.nfma then throw .wrongProductCount
   let some c := decodeC x.c | throw .nonfiniteInput

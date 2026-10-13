@@ -1,26 +1,26 @@
 import TensorCore.Numerics.Encoding
 
-/-! Tensor Core profiles. -/
+/-! Models of Tensor Cores: the numerical features of one block FMA. -/
 
 namespace TensorCore
 
 
-/-- Parameters of one Tensor Core normalization group. -/
+/-- Numerical features of one Tensor Core block FMA. -/
 structure Model where
-  /-- Operand format (FP16, BF16, or packed TF32). -/
+  /-- Input format of `a` and `b` (FP16, BF16, or packed TF32). -/
   input : Format
-  /-- K, the number of products per group. -/
+  /-- K, the FMA size N_FMA: the number of products added in a single multi-term addition. -/
   nfma : ℕ
-  /-- F = 23 + p: mantissa bits each term keeps after alignment. -/
+  /-- F = 23 + p: the fractional bits each term keeps after alignment, with p extra alignment bits. -/
   alignFracBits : ℤ
-  /-- Lower bound on the alignment exponent, if the architecture has one. -/
+  /-- The minimum alignment exponent e_align^min, if the architecture has one. -/
   eAlignMin : Option ℤ
   deriving Repr, DecidableEq
 
-/-- V100 FP16 -> FP32: `K = 4`, `(2, 23, 0)` alignment, no relevant floor. -/
+/-- V100 FP16 -> FP32: `K = 4`, `(2, 23, 0)` alignment, and no relevant minimum alignment exponent. -/
 def v100F16F32 : Model := ⟨fp16, 4, 23, none⟩
 
-/-- The floor only raises a nonempty maximum; an all-zero block stays `none`. -/
+/-- The minimum alignment exponent only raises a nonempty maximum; an all-zero block stays `none`. -/
 def Model.applyEAlignMin (p : Model) : Option ℤ → Option ℤ
   | none => none
   | some e => some (match p.eAlignMin with | none => e | some f => max e f)

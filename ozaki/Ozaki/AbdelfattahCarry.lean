@@ -14,7 +14,7 @@ locations":
 * (4.22) `Q_j := ⌊(p − T′ − 1 − ⌈log₂ max{1, −η(K_j, K_j + Q_j)}⌉) / t⌋`, the diagonals of level `j`
   (`afRHS`, `afFix`).
 
-This file formalizes the recursion as printed and settles what it means.
+This file formalizes the recursion as printed and determines what it means.
 
 * **Two readings.** The derivation before (4.22) ("`C₀ + C₁` requires `p ≥ T′ + t + 1`",
   "`C₀ + C₁ + C₂` requires `p ≥ T′ + 2t + 1`", "until `p < T′ + Kt + 1`") counts *shifts*, so a level
@@ -267,7 +267,7 @@ theorem afM_ge {t K Q : ℕ} (hK : 2 ^ t ≤ K) (hQ : 1 ≤ Q) :
 
 /-! ## Soundness of the count reading -/
 
-/-- The level's magnitude against the recursion's budget, with `c = d + 1 ≥ 4`:
+/-- The level's magnitude against the recursion's bound, with `c = d + 1 ≥ 4`:
 `S(K, Q) < 2 c^Q m`. -/
 theorem afS_lt (d K Q m : ℕ) (hd : 3 ≤ d) (hm : 1 ≤ m)
     (hK : K + 1 ≤ d + 1 ∨ K + 1 - (d + 1) ≤ m) :

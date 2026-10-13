@@ -9,7 +9,7 @@ namespace MatrixCore.Spec
 
 open MatrixCore
 
-/-- The specification's late-addition parameters of a profile. -/
+/-- The specification's late-addition parameters of a model. -/
 def lateOf (P : Model) : Late :=
   ⟨P.neab, P.late.cFracBits, P.late.sumFracBits, P.late.accFracBits, P.late.cCutoff, P.cZeroExp⟩
 
@@ -36,7 +36,7 @@ theorem c_onGrid (c : Unpacked) (ec : ℤ) (k : ℕ) (hc : c.t ≤ k)
 theorem shiftedBranch_eq (P : Model) (S : ℤ) (g : ℤ) (c : Unpacked) (ec : ℤ)
     (hc : c.t ≤ P.late.sumFracBits) (hec : c.m ≠ 0 → ec = c.e) :
     shiftedBranch (lateOf P) S g (numOf c) ec = shiftedSum P ec ((S : ℚ) * pow2 g) c := by
-  unfold shiftedBranch shiftedSum normaliseRD
+  unfold shiftedBranch shiftedSum normalizeRD
   simp only [lateOf]
   obtain ⟨A, hA⟩ : ∃ A, shiftRD S g (ec - P.late.sumFracBits) +
       shiftRD (numOf c).int ((numOf c).e - (numOf c).f) (ec - P.late.sumFracBits) = A := ⟨_, rfl⟩

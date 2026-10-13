@@ -4,7 +4,7 @@ import MatrixCore.Numerics.Uniqueness
 
 /-! # Bridges between the specification and the implementation
 
-Decoding, products, fixed-point alignment, normalisation, and rounding of the specification
+Decoding, products, fixed-point alignment, normalization, and rounding of the specification
 agree with the implementation's grid operations. -/
 
 namespace MatrixCore.Spec

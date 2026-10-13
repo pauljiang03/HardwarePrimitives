@@ -3,7 +3,7 @@ import Ozaki.SignedZero
 
 /-! # Signed zeros on the MatrixCore model
 
-Correctly rounded Ozaki-I of any inner dimension, with a `W`-bit window accumulator, returning the
+Correctly rounded Ozaki-I of any inner dimension, with a `W`-bit truncated sum, returning the
 IEEE sign of a zero result (`Ozaki.crSigned`): binary64 (`mcOzaki1CRDS_eq`) and binary32
 (`mcOzaki1CRLS_eq`). -/
 

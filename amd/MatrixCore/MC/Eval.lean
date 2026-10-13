@@ -13,7 +13,7 @@ inductive ModelError where
   | wrongLength
   /-- An operand is an infinity or NaN. -/
   | nonfiniteInput
-  /-- A product reached `2^128` on a profile that detects product overflow (CDNA 3). -/
+  /-- A product reached `2^128` on a model that detects product overflow (CDNA 3). -/
   | productOverflow
   /-- An intermediate `fl{·}` overflowed (CDNA 2 product conversion or pairwise sum). -/
   | intermediateOverflow

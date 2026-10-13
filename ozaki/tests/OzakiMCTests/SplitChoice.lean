@@ -5,7 +5,7 @@ import OzakiMC.SplitChoice
 
 Correctly rounded FP64 Ozaki-I on CDNA 3 fp16 with the configuration `OzakiMC.SplitChoice` picks:
 `10`-bit slices in chunks of sixteen (two chained blocks of eight), five then six slices, then the
-exact path at up to `191` slices. It returns the exact-fraction oracle's words on both binary64
+exact fallback at up to `191` slices. It returns the exact-fraction oracle's words on both binary64
 cases. -/
 
 open MatrixCore Ozaki Ozaki.MC OzakiMCTests.LongFP64

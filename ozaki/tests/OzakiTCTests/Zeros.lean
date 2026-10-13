@@ -1,20 +1,22 @@
 import OzakiTCTests.LongFP64
 import OzakiTC.ZeroCheck
 
-/-! # Exact-zero results without the exact path
+/-! # Exact-zero results without the exact fallback
 
 A row and a column with disjoint supports (`x = [3, 0, 2^-30, 0]`, `y = [0, 5, 0, −7 · 2^40]`, binary64
 values): every product is zero, but `x` and `y` are not. On V100 fp16 blocks with split-K:
 
-* the normwise check never settles it, so the entry goes to the exact path: with a sentinel in
-  place of the exact path, the normwise scheme returns the sentinel;
-* the check with the overlap count settles it on the first slice count: with the same sentinel,
-  the scheme returns `0`; the bounded integer check does too;
-* with signed zeros, the result is `−0` when every product is `−0` and `+0` otherwise, again from the
-  first check.
+* the rounding test with the normwise bound never succeeds on it, so the entry goes to the exact
+  fallback: with a sentinel in place of the exact fallback, the normwise scheme returns the
+  sentinel;
+* the rounding test with the bound that counts only nonzero positions succeeds on it at the first
+  slice count: with the same sentinel, the scheme returns `0`; the bounded integer rounding test
+  does too;
+* with signed zeros, the result is `−0` when every product is `−0` and `+0` otherwise, again from
+  the first test.
 
-The binary64 oracle cases still come out as the oracle's words, with the window check and in
-bounded registers. -/
+The binary64 oracle cases still come out as the oracle's words, with the rounding test on the
+truncated sum and in bounded registers. -/
 
 open TensorCore Ozaki Ozaki.TC OzakiTCTests.Correct OzakiTCTests.LongFP64
 
@@ -27,15 +29,15 @@ def mult : MatrixMultiplier := tcSplitK v100F16F32 11
 
 example : supportOverlap xs ys = 0 := by decide +kernel
 
-/-- The normwise check does not settle the entry, so the scheme falls back: with the sentinel
-`12345` as its exact path it returns the sentinel. -/
+/-- The rounding test with the normwise bound does not decide the entry, so the scheme falls back:
+with the sentinel `12345` as its exact fallback it returns the sentinel. -/
 example : (ozaki1TruncatedEnclosure mult 11 5 96 xs ys).bind
     (fun e => roundEnclosure rne64 e.1 e.2) = none := by decide +kernel
 example : roundingTest rne64 ([5, 6].map fun s => ozaki1TruncatedEnclosure mult 11 s 96 xs ys)
     (some 12345) = some 12345 := by decide +kernel
 
-/-- The check with the overlap count settles it on the first slice count: enclosure `(0, 0)`, and
-the sentinel is never used. -/
+/-- The rounding test with the bound that counts only nonzero positions decides it at the first
+slice count: enclosure `(0, 0)`, and the sentinel is never used. -/
 example : ozaki1TruncatedEnclosureZ mult 11 5 96 (supportOverlap xs ys) xs ys = some (0, 0) := by
   decide +kernel
 example : roundingTest rne64
@@ -47,8 +49,8 @@ example : tcOzaki1CRDZ v100F16F32 11 96 [5, 6] 175 xs ys = some 0 ∧
     tcOzaki1CRBDZ v100F16F32 11 96 [5, 6] 175 xs ys = some 0 := by decide +kernel
 
 /-! Signed zeros: `3 · (−0)` and `(−0) · 5` are both `−0`, so the sum is `−0`; with `+0` in place of
-the second `−0` one product is `+0`, and the sum is `+0`. Both from the first check, with a sentinel
-exact path. -/
+the second `−0` one product is `+0`, and the sum is `+0`. Both from the first test, with a sentinel
+in place of the exact fallback. -/
 
 def sx : List Signed := [⟨3, false⟩, ⟨0, true⟩]
 def sy : List Signed := [⟨0, true⟩, ⟨5, false⟩]

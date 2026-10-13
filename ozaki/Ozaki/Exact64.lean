@@ -2,12 +2,12 @@ import Ozaki.Binary
 import Ozaki.Success
 import Ozaki.Width
 
-/-! # Binary64 inputs: the exact path and the register
+/-! # Binary64 inputs: the exact fallback and the register
 
 Binary64 values are multiples of `2^-1074` with magnitude below `2^1024`. So:
 
 * `vanish64`: `smax` slices of `b` bits with `smax (b + 1) > 2098` leave nothing over (`175` slices
-  of `11` bits, `234` of `8`), and the exact path of the correctly rounded schemes ends;
+  of `11` bits, `234` of `8`), and the exact fallback of the correctly rounded schemes ends;
 * `vanish32Q`: binary32 values (multiples of `2^-149`, magnitude below `2^128`) need
   `smax (b + 1) > 277`;
 * `exactTerms_sum_register32`: for binary32 inputs the exact slice sum is `N · 2^(−298−2b)` with

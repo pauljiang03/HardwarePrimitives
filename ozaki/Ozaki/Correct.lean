@@ -12,16 +12,16 @@ tie rule plays no part. If the two ends disagree, the next enclosure (more slice
 tried, and after the last one the exact product is rounded (`roundingTest`, `roundingTest_eq`).
 
 This is the structure of TC-EFT: an exact identity (here the error identity of the scheme), a cheap
-check that proves the fast result, and an exact fallback. The check itself is Ziv's rounding test.
-The schemes supply the enclosures:
+test that proves the fast result, and an exact fallback. The test is Ziv's rounding test. The
+schemes supply the enclosures:
 
 * Ozaki-I: `H` the exact sum of the `s (s+1)/2` slice products, `B` the slicing bound
   (`exactTerms_error`); `ozaki1CR_eq`.
 * Ozaki-II: `H` the CRT-reconstructed product of the truncated inputs, `B` the truncation bound
   (`dot_approx_error`); `ozaki2CR_eq`.
 
-Both return the correctly rounded `x · y` for every input, on any engine that is exact on the slices
-or residues. Everything the check adds is integer arithmetic on `H` and `B`. -/
+Both return the correctly rounded `x · y` for every input, on any matrix multiplier that is exact on
+the slices or residues. Everything the rounding test adds is integer arithmetic on `H` and `B`. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -83,7 +83,7 @@ theorem round_eq_of_enclosure {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h :
   congr 1
   grind
 
-/-! ## Certifying a rounding -/
+/-! ## Ziv's rounding test -/
 
 /-- The rounding both ends of `[H − B, H + B]` agree on, if they agree. -/
 def roundEnclosure (rnd : ℚ → Option ℚ) (H B : ℚ) : Option ℚ :=
@@ -110,7 +110,7 @@ theorem roundEnclosure_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : Rou
       · cases he
 
 /-- Try the enclosures in order (`none` for one that could not be computed) and return the rounding
-the first one certifies; after the last, round the exact value. -/
+of the first one on which the rounding test succeeds; after the last, round the exact value. -/
 def roundingTest (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Option ℚ
   | [], exact => exact.bind rnd
   | c :: cs, exact =>
@@ -118,8 +118,9 @@ def roundingTest (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Opt
     | some w => some w
     | none => roundingTest rnd cs exact
 
-/-- **Certified rounding is correct rounding.** If every enclosure contains `v` and the fallback is
-`v` itself, `roundingTest` returns the rounding of `v`, whichever enclosure, if any, certifies it. -/
+/-- **The rounding test returns the correct rounding.** If every enclosure contains `v` and the
+fallback is `v` itself, `roundingTest` returns the rounding of `v`, whichever enclosure, if any, the
+test succeeds on. -/
 theorem roundingTest_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {v : ℚ} :
     ∀ (cs : List (Option (ℚ × ℚ))) (exact : Option ℚ),
@@ -194,18 +195,18 @@ theorem dot_approx_error (x x' y y' : List ℚ) (hx : x.length = x'.length)
 def ozaki1Bound (b s : ℕ) (x y : List ℚ) : ℚ :=
   ((s + 1 : ℕ) : ℚ) * x.length * 2 ^ (splitExp b x + splitExp b y - s * (b + 1))
 
-/-- The enclosure from `s` slices: the slice products from the engine, added exactly, and the
-slicing bound. -/
+/-- The enclosure from `s` slices: the slice products from the matrix multiplier, added exactly,
+and the slicing bound. -/
 def ozaki1Enclosure (mult : MatrixMultiplier) (b s : ℕ) (x y : List ℚ) : Option (ℚ × ℚ) :=
   (ozaki1 mult exactAdd b s x y).map fun H => (H, ozaki1Bound b s x y)
 
-/-- **Correctly rounded Ozaki-I** for one output entry: the slice counts `ss` in turn, each checked
+/-- **Correctly rounded Ozaki-I** for one output entry: the slice counts `ss` in turn, each tested
 by the enclosure test, then the exact product. -/
 def ozaki1CR (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (x y : List ℚ) :
     Option ℚ :=
   roundingTest rnd (ss.map fun s => ozaki1Enclosure mult b s x y) (some (dot x y))
 
-/-- On an exact engine, the enclosure from `s` slices contains `x · y`. -/
+/-- On an exact matrix multiplier, the enclosure from `s` slices contains `x · y`. -/
 theorem ozaki1Enclosure_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {H B : ℚ}
@@ -218,8 +219,8 @@ theorem ozaki1Enclosure_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult :
   rw [show (0 : ℚ) + (exactTerms b s x y).sum = (exactTerms b s x y).sum by grind]
   exact this
 
-/-- **Ozaki-I, correctly rounded.** On an engine exact on `b`-bit slices, `ozaki1CR` returns the
-correctly rounded `x · y` for every input and every list of slice counts. -/
+/-- **Ozaki-I, correctly rounded.** On a matrix multiplier exact on `b`-bit slices, `ozaki1CR`
+returns the correctly rounded `x · y` for every input and every list of slice counts. -/
 theorem ozaki1CR_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
@@ -251,7 +252,7 @@ def ozaki2Enclosure (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (x y : Li
   (ozaki2 mult some B P x y).map fun H => (H, ozaki2Bound P x y)
 
 /-- **Correctly rounded Ozaki-II** for one output entry: the configurations `(basis, P)` in turn,
-each checked by the enclosure test, then the exact product. -/
+each tested by the enclosure test, then the exact product. -/
 def ozaki2CR (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (cfgs : List (CRTBasis × ℕ)) (x y : List ℚ) :
     Option ℚ :=
   roundingTest rnd (cfgs.map fun c => ozaki2Enclosure mult c.1 c.2 x y) (some (dot x y))
@@ -276,7 +277,7 @@ theorem dot_truncVals (P : ℕ) (x y : List ℚ) :
         2 ^ (-(scaleShift P x + scaleShift P y)) :=
   dot_scaledInts _ _ _ _
 
-/-- On an exact engine, the enclosure from a valid basis contains `x · y`. -/
+/-- On an exact matrix multiplier, the enclosure from a valid basis contains `x · y`. -/
 theorem ozaki2Enclosure_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (P : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -290,9 +291,9 @@ theorem ozaki2Enclosure_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult :
   exact dot_approx_error x (truncVals P x) y (truncVals P y) (truncVals_length P x).symm
     (truncVals_length P y).symm
 
-/-- **Ozaki-II, correctly rounded.** On an engine exact on `b`-bit residues, with configurations
-whose bases are valid, whose moduli are at most `2^(b+1)`, and whose products stay within CRT
-range, `ozaki2CR` returns the correctly rounded `x · y` for every input. -/
+/-- **Ozaki-II, correctly rounded.** On a matrix multiplier exact on `b`-bit residues, with
+configurations whose bases are valid, whose moduli are at most `2^(b+1)`, and whose products stay
+within CRT range, `ozaki2CR` returns the correctly rounded `x · y` for every input. -/
 theorem ozaki2CR_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {cfgs : List (CRTBasis × ℕ)} {x y : List ℚ}
@@ -306,17 +307,17 @@ theorem ozaki2CR_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToN
   obtain ⟨hB, hmb, hrange⟩ := hcfg cfg hmem
   exact ozaki2Enclosure_sound hmult hB hmb cfg.2 hlen hbound hrange hcB
 
-/-! ## When the check settles an entry
+/-! ## When the rounding test succeeds
 
-The theorems above hold whatever the check does, because the last resort is exact. The check's own
-content: if `v − 2B` and `v + 2B` round to the same value, in particular if the exact value `v` lies
-more than `2B` from every rounding boundary, the enclosure `[H − B, H + B]` around any `H` within
-`B` of `v` settles the entry, with no exact path. (At a distance of exactly `2B` an endpoint can be a
-tie that rounds the other way, so "at least `2B`" would not suffice.) With Ozaki-I's bound `B` this
-says the fast path settles every entry whose product is more than `2 (s + 1) k 2^(E + F − s(b+1))`
-from a rounding boundary. -/
+The theorems above hold whatever the rounding test does, because the last resort is exact. The
+content of the test itself: if `v − 2B` and `v + 2B` round to the same value, in particular if the
+exact value `v` lies more than `2B` from every rounding boundary, the enclosure `[H − B, H + B]`
+around any `H` within `B` of `v` decides the entry, with no exact fallback. (At a distance of
+exactly `2B` an endpoint can be a tie that rounds the other way, so "at least `2B`" would not
+suffice.) With Ozaki-I's bound `B` this says that the fast path decides every entry whose product
+is more than `2 (s + 1) k 2^(E + F − s(b+1))` from a rounding boundary. -/
 
-/-- **The check settles an entry with margin.** If `v − 2B` and `v + 2B` round to the same `w`, the
+/-- **The rounding test succeeds with margin.** If `v − 2B` and `v + 2B` round to the same `w`, the
 enclosure of any `H` within `B` of `v` returns `w`. -/
 theorem roundEnclosure_of_margin {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {H B v w : ℚ} (hv : Rat.abs (v - H) ≤ B)
@@ -336,9 +337,9 @@ theorem roundEnclosure_of_margin {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (
   rw [hl, hu]
   simp
 
-/-- **Ozaki-I's fast path settles an entry** whenever `x · y` is `2B` away from every rounding
-boundary, `B` the slicing bound of `s` slices: the enclosure from the engine's slice products
-returns the correct rounding, and the exact path is not needed. -/
+/-- **Ozaki-I's fast path decides an entry** whenever `x · y` is `2B` away from every rounding
+boundary, `B` the slicing bound of `s` slices: the enclosure from the slice products of the matrix
+multiplier returns the correct rounding, and the exact fallback is not needed. -/
 theorem ozaki1Enclosure_succeeds {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
@@ -355,14 +356,14 @@ theorem ozaki1Enclosure_succeeds {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (
   rw [he, Option.bind_some]
   exact roundEnclosure_of_margin h hI (ozaki1Enclosure_sound hmult s hlen hbound he) hlo hhi
 
-/-! ## The exact path on the engine
+/-! ## The exact fallback on the matrix multiplier
 
-When the check fails, the exact product can itself come from the engine: with all `s²` slice
-products (not only `t + u < s`) and enough slices that nothing is left over, Ozaki-I is exact
-(`ozaki1Full_eq`). Inputs on a grid `2^m`, such as binary32 values (`m = −149`), leave nothing over
-once the slicing bound drops below `2^m` (`split_residual_zero`). `ozaki1CRE` uses the smallest
-such slice count as its fallback, so the whole correctly rounded scheme runs on the engine plus
-integer additions (`ozaki1CRE_eq`). -/
+When the rounding test fails, the exact product can itself come from the matrix multiplier: with
+all `s²` slice products (not only `t + u < s`) and enough slices that nothing is left over, Ozaki-I
+is exact (`ozaki1Full_eq`). Inputs on a grid `2^m`, such as binary32 values (`m = −149`), leave
+nothing over once the slicing bound drops below `2^m` (`split_residual_zero`). `ozaki1CRE` uses the
+smallest such slice count as its fallback, so the whole correctly rounded scheme runs on the matrix
+multiplier plus integer additions (`ozaki1CRE_eq`). -/
 
 /-- `a` is an integer multiple of `2^m`. -/
 def GridMultiple (m : ℤ) (a : ℚ) : Prop := ∃ z : ℤ, a = (z : ℚ) * 2 ^ m
@@ -423,7 +424,7 @@ theorem split_residual_zero {b s : ℕ} {m : ℤ} {x : List ℚ} (hx : ∀ a ∈
 def slicePairs (sx sy : List Slice) : List (Slice × Slice) :=
   sx.flatMap fun sl => sy.map fun sl' => (sl, sl')
 
-/-- The engine's product of two slices, scaled by `2^(g + h)`. -/
+/-- The product of two slices on the matrix multiplier, scaled by `2^(g + h)`. -/
 def fullTerm (mult : MatrixMultiplier) (sl sl' : Slice) : Option ℚ :=
   (mult sl.coeffs sl'.coeffs).map fun v => 2 ^ (sl.grid + sl'.grid) * v
 
@@ -467,8 +468,8 @@ theorem dot_eq_full {b s : ℕ} {x y : List ℚ} (hx0 : ∀ r ∈ (split b s x).
   rw [dot_ofInts, dotZ_comm, two_pow_add]
   grind
 
-/-- **The exact path.** On an exact engine, with nothing left over after `s` slices, Ozaki-I with
-all `s²` slice products is `x · y`. -/
+/-- **The exact fallback.** On an exact matrix multiplier, with nothing left over after `s` slices,
+Ozaki-I with all `s²` slice products is `x · y`. -/
 theorem ozaki1Full_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) {s : ℕ}
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx0 : ∀ r ∈ (split b s x).2, r = 0) (hy0 : ∀ r ∈ (split b s y).2, r = 0) :
@@ -496,8 +497,8 @@ theorem ozaki1Full_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.Ex
 def residualsVanish (b s : ℕ) (x y : List ℚ) : Bool :=
   (split b s x).2.all (· == 0) && (split b s y).2.all (· == 0)
 
-/-- The exact path: Ozaki-I with all slice products, at the smallest slice count up to `smax` that
-leaves nothing over. -/
+/-- The exact fallback: Ozaki-I with all slice products, at the smallest slice count up to `smax`
+that leaves nothing over. -/
 def ozaki1ExactFallback (mult : MatrixMultiplier) (b smax : ℕ) (x y : List ℚ) : Option ℚ :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | some s => ozaki1Full mult b s x y
@@ -514,8 +515,8 @@ theorem ozaki1ExactFallback_eq {mult : MatrixMultiplier} {b bound smax : ℕ} (h
   simp only [residualsVanish, Bool.and_eq_true, List.all_eq_true, beq_iff_eq] at hv
   exact ozaki1Full_eq hmult hlen hbound hv.1 hv.2
 
-/-- **Correctly rounded Ozaki-I with its exact path on the engine**: slice counts `ss` in turn, each checked
-by the enclosure test, then the exact path. -/
+/-- **Correctly rounded Ozaki-I with its exact fallback on the matrix multiplier**: slice counts
+`ss` in turn, each tested by the enclosure test, then the exact fallback. -/
 def ozaki1CRE (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   roundingTest rnd (ss.map fun s => ozaki1Enclosure mult b s x y) (ozaki1ExactFallback mult b smax x y)
@@ -531,8 +532,9 @@ theorem ozaki1CRE_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsTo
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
   exact ozaki1Enclosure_sound hmult s hlen hbound hcB
 
-/-- **Correctly rounded Ozaki-II with its exact path on the engine**: the configurations `(basis, P)` in turn,
-each checked by the enclosure test, then Ozaki-I's exact path on the same engine. -/
+/-- **Correctly rounded Ozaki-II with its exact fallback on the matrix multiplier**: the
+configurations `(basis, P)` in turn, each tested by the enclosure test, then Ozaki-I's exact
+fallback on the same matrix multiplier. -/
 def ozaki2CRE (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   roundingTest rnd (cfgs.map fun c => ozaki2Enclosure mult c.1 c.2 x y) (ozaki1ExactFallback mult b smax x y)

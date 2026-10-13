@@ -9,10 +9,10 @@ open MatrixCore Ozaki Ozaki.MC
 
 /-! ## 1. One slice product on each architecture
 
-The engine writes each integer as an exact fp16 word, pads to whole blocks of `N_FMA`, and runs
-`dotBits` from `c = +0`. CDNA 1 sums exactly and rounds once, CDNA 2 rounds a pairwise tree, and
-CDNA 3 aligns the products to `24` fractional bits; on `11`-bit integers with `Σ|aᵢbᵢ| ≤ 2^24`
-all three are exact. -/
+The matrix multiplier writes each integer as an exact fp16 word, pads to whole blocks of `N_FMA`,
+and runs `dotBits` from `c = +0`. CDNA 1 sums exactly and rounds once, CDNA 2 rounds every pairwise
+sum, and CDNA 3 aligns the products to `24` fractional bits; on `11`-bit integers with
+`Σ|aᵢbᵢ| ≤ 2^24` all three are exact. -/
 
 def xs : List ℤ := [2047, -2048, 5, 7, 1024, -3]
 def ys : List ℤ := [2048, 1, 3, -9, -1000, 2047]
@@ -41,12 +41,12 @@ example : mcOzaki1 cdna3F16 11 4 x y = sumWith fp32Add 0 (exactTerms 11 4 x y) :
 
 /-! ## 3. Where the conditions bind
 
-bf16 holds `256` but not `2047`, so bf16 paths take `8`-bit slices; seven products `2047²` in one
-CDNA 3 group exceed `2^24`; and the fp16 paths keep a group exact where the binary32 SFMA, which
-rounds after every product, does not. -/
+bf16 holds `256` but not `2047`, so bf16 variants take `8`-bit slices; seven products `2047²` in one
+CDNA 3 block FMA exceed `2^24`; and the fp16 variants keep a block FMA exact where the binary32
+SFMA, which rounds after every product, does not. -/
 
 #check @bfloat16_holds_256
-#check @cdna3F16_full_group
+#check @cdna3F16_full_blockFMA
 #check @fp16_exact_where_sfma_is_not
 
 /-! ## 4. Correct rounding

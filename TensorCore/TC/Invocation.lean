@@ -6,13 +6,14 @@ import TensorCore.TC.Block
 namespace TensorCore
 
 inductive CPlacement where
+  /-- Early accumulation: c is aligned and added together with the products. -/
   | early
-  /-- Convert the product accumulator through these stages, then add c exactly. -/
+  /-- Late accumulation: convert the product accumulator through these stages, then add c exactly. -/
   | late (stages : List RoundingStage)
   deriving Repr, DecidableEq
 
 inductive AccumulationKind where
-  | aligned (alignMantissaBits : ℕ) (eAlignMin : Option ℤ) (cPlacement : CPlacement)
+  | aligned (alignFracBits : ℕ) (eAlignMin : Option ℤ) (cPlacement : CPlacement)
   /-- An exact single-product FMA, with no lossy alignment stage. -/
   | fused
   deriving Repr, DecidableEq
@@ -132,7 +133,7 @@ def evalInvocation {p : InvocationSpec} (x : InvocationInput p) :
     | none => .error .nonfiniteOrInvalidEncoding
     | some b => evalInvocationPrepared b
 
-/-- Embed a block profile as an aligned invocation with FP32 truncated output. -/
+/-- Embed a model as an aligned invocation with FP32 truncated output. -/
 @[implicit_reducible] def Model.toInvocation (p : Model) (F : ℕ) : InvocationSpec :=
   ⟨packedIEEE p.input, fp32, p.nfma, .aligned F p.eAlignMin .early,
     [], ⟨fp32, .truncate⟩⟩

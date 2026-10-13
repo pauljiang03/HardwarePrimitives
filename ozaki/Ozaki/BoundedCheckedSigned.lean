@@ -8,8 +8,8 @@ IEEE signed zeros. This file gives the same for Ozaki-II, through one sign step 
 signed integer pipelines:
 
 * `signStep`: a nonzero rounded value carries its own sign; a zero takes the sign of the exact sum
-  from the integer exact path (`exactSignI`), and an exact zero is `−0` only when every product is
-  `−0` (`allNegZeroI`). Given a correctly rounded value, it is the specification `crSigned`
+  from the integer exact fallback (`exactSignI`), and an exact zero is `−0` only when every product
+  is `−0` (`allNegZeroI`). Given a correctly rounded value, it is the specification `crSigned`
   (`signStep_eq`).
 * `signStepC`: the same with every integer guarded (the checked sign oracle `exactSignIC` and the
   checked products of `allNegZeroIC`); it returns what `signStep` returns (`signStepC_eq`).
@@ -167,7 +167,7 @@ theorem ozaki2CRJSC_eq {B : Widths} {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hl
 
 /-- **Signed FP64 by Ozaki-II, every integer within 264 bits and every exponent and counter within
 24 bits**: on binary64 entries, `k ≤ 2^20`, the twelve moduli at most `4096` with `P ≤ 69`,
-`11`-bit slices and at most `175` slices on the exact path, the IEEE binary64 result with IEEE's
+`11`-bit slices and at most `175` slices on the exact fallback, the IEEE binary64 result with IEEE's
 sign of zero. -/
 theorem ozaki2CRJSC_binary64_eq {mult : MatrixMultiplier} {xs ys : List SEntry} {cfgs : List (CRTBasis × ℕ)}
     (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)

@@ -64,7 +64,7 @@ theorem evalInvocationPrepared_spec {p : InvocationSpec} {b : PreparedInvocation
         subst t
         exact ⟨rfl, rfl, hr, hd⟩
 
-/-- Successful encoded evaluation certifies its parameters, shape, decoding, and stages. -/
+/-- Successful encoded evaluation establishes its parameters, shape, decoding, and stages. -/
 theorem evalInvocation_spec {p : InvocationSpec} {x : InvocationInput p} {t : InvocationTrace p}
     (h : evalInvocation x = .ok t) :
     p.Valid ∧ x.products.length = p.nfma ∧ prepareInvocation x = some t.prepared ∧

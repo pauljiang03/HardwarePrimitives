@@ -2,7 +2,7 @@ import TensorCore.TC.CanonicalDefs
 import TensorCore.TC.Compatibility
 import TensorCore.TC.ErrorBounds
 
-/-! Contracts of the FP16 profiles. -/
+/-! Contracts of the FP16 models. -/
 
 namespace TensorCore
 
@@ -12,7 +12,7 @@ theorem fp16Fp32_invocation_compatible (K neab : ℕ) (eAlignMin : Option ℤ)
       (evalBlock x).toOption.map (fun t => t.output.bits) :=
   legacy_invocation_bits x (23 + neab) (by change fp16.WellFormed; decide) rfl
 
-/-- One public contract for arbitrary canonical block size and extra alignment bits. -/
+/-- One public contract for any FMA size and any number of extra alignment bits. -/
 theorem fp16Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (t : BlockTrace)
     (h : evalBlock x = .ok t) (hc : K + 1 ≤ 2 ^ carryBits) :

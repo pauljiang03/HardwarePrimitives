@@ -23,7 +23,7 @@ theorem exact_alignment_accumulator (b : PreparedBlock) (h : b.AlignmentExact) :
   · exact truncGrid_exact_of_grid t.significand (t.unnormalizedExp - t.mantissaBits)
       b.alignGridExponent (h t ht hz)
 
-/-- If padding makes every member exactly alignable, the canonical output is a single FP32 RTZ conversion of the independently decoded ideal sum. -/
+/-- If the extra alignment bits make every term exactly alignable, the canonical output is a single FP32 RTZ conversion of the independently decoded ideal sum. -/
 theorem evalBlock_exact_alignment {p : Model} {x : BlockInput p} {t : BlockTrace}
     (he : evalBlock x = .ok t) (ha : t.block.AlignmentExact) :
     exactDot x = some t.block.exactDot ∧

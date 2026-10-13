@@ -6,31 +6,31 @@ import MatrixCore.MC.MachineRefinement
 import MatrixCore.MC.ErrorBounds
 import MatrixCore.MC.AprioriBounds
 
-/-! # Per-profile contracts
+/-! # Per-model contracts
 
 Everything proved about one accepted block, bundled so that downstream proofs take one
 hypothesis and use named fields:
 
-* `BlockContract`: every profile — shape, decoded operands, `S_acc`, `d = fl{S_acc}` within
+* `BlockContract`: every model — shape, decoded operands, `S_acc`, `d = fl{S_acc}` within
   `flBound` of `S_acc`, a finite output, and nearest-even rounding of `S_acc` where subnormals are
   supported;
 * `CorrectRoundingContract` (SFMA, CDNA 1): `S_acc` is the exact sum and `d` its nearest-even
   rounding, within half an ulp;
-* `PairwiseContract` (CDNA 2): `S_acc` is the pairwise tree, and `d` is within `pairwiseBound`
-  plus the final `flBound` of the exact sum;
+* `PairwiseContract` (CDNA 2): `S_acc` is `c` plus the pairwise sum of the products, and `d` is
+  within `pairwiseBound` plus the final `flBound` of the exact sum;
 * `AlignedContract` (CDNA 3): `S_acc` is Algorithm 1 or 2 with its error bounds, `d` is within
   `alignedBound` plus half an ulp of the exact sum, and the register width at which fixed-width
   accumulation gives the same block.
 
-Each profile has a theorem `<profile>_contract`. `runBlocks_all` and `dotBits_blocks` carry any
+Each model has a theorem `<model>_contract`. `runBlocks_all` and `dotBits_blocks` carry any
 of them to every block of an inner product, and `dotBits_error_bound` sums the blocks' error
 bounds into one for the inner product. -/
 
 namespace MatrixCore
 
-/-! ## Every profile -/
+/-! ## Every model -/
 
-/-- Guarantees of one accepted block on any profile. -/
+/-- Guarantees of one accepted block on any model. -/
 structure BlockContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop where
   lengths : x.a.length = P.nfma ∧ x.b.length = P.nfma
   prepared : prepare x = some t.prepared
@@ -84,10 +84,10 @@ theorem correctRounding_contract {P : Model} (hacc : P.accumulation = .correctRo
 
 structure PairwiseContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop
     extends BlockContract x t where
-  /-- `S_acc = c + tree`, the pairwise tree of the rounded products (`pairwiseSum_four`,
+  /-- `S_acc` is `c` plus the pairwise sum of the rounded products (`pairwiseSum_four`,
   `pairwiseSum_two`). -/
   tree : pairwiseSum P t.prepared = some t.sAcc
-  /-- Input flushing, product conversion, the tree and the final `fl{·}`. -/
+  /-- Input flushing, product conversion, the pairwise sum and the final `fl{·}`. -/
   error : absQ (t.prepared.exact - wordValue t.d) ≤
     pairwiseBound P t.prepared + flBound (!P.subnormals) t.sAcc
   /-- From the inputs alone (`x'` the inputs after flushing):
@@ -152,7 +152,7 @@ theorem aligned_contract {P : Model}
   · exact alignedAccumulation_error P t.prepared hcut (prepare_cExp_bound hb.prepared)
   · rw [evalBlockMachine_eq x w carryBits hcount hw]; exact h
 
-/-! ## The profiles -/
+/-! ## The models -/
 
 theorem sfmaF32_contract {x : BlockInput sfmaF32} {t : BlockTrace sfmaF32}
     (h : evalBlock x = .ok t) : CorrectRoundingContract x t :=
@@ -198,7 +198,7 @@ theorem cdna3FP8_contract (fa fb : Format) {x : BlockInput (cdna3FP8 fa fb)}
 /-! ## Inner products -/
 
 /-- **Chaining.** An accepted inner product is a run of linked blocks, each satisfying any
-property `Q` that accepted blocks have (for example a profile's contract), and its output
+property `Q` that accepted blocks have (for example a model's contract), and its output
 accounts for the exact products and `c` up to the blocks' residuals. -/
 theorem dotBits_blocks (P : Model) {Q : BlockInput P → BlockTrace P → Prop}
     (hQ : ∀ x t, evalBlock x = .ok t → Q x t)
@@ -211,7 +211,7 @@ theorem dotBits_blocks (P : Model) {Q : BlockInput P → BlockTrace P → Prop}
   obtain ⟨ts, hr, hd, hc, _, hl⟩ := dotBits_residual_ledger P hlen h
   exact ⟨ts, hr, hd, hc, runBlocks_all hQ hr, hl⟩
 
-/-- Every block of an accepted inner product satisfies the contract of every profile. -/
+/-- Every block of an accepted inner product satisfies the contract of every model. -/
 theorem dotBits_contract (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
     ∃ ts, runBlocks P c (blocks P a b) = .ok ts ∧ lastOutput c ts = d ∧ Chain c ts ∧

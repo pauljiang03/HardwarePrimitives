@@ -8,9 +8,9 @@ import Ozaki.IEEEInt
 As on the Tensor Core side (`OzakiTC.IEEEBounded`), on matrix-core blocks with split-K, each meeting
 the IEEE specification `dotIEEE` for every input:
 
-* on rational data (`FVal`) with the sign oracle `exactSignB`: Ozaki-II with integer checks
-  (`mcOzaki2CRBI_eq`, `mcOzaki2CRBLI_eq`) and the zero-aware bounded Ozaki-I (`mcOzaki1CRBDZI_eq`,
-  `mcOzaki1CRBLZI_eq`);
+* on rational data (`FVal`) with the sign oracle `exactSignB`: Ozaki-II with integer rounding tests
+  (`mcOzaki2CRBI_eq`, `mcOzaki2CRBLI_eq`) and the bounded Ozaki-I with the bound that counts only
+  nonzero positions (`mcOzaki1CRBDZI_eq`, `mcOzaki1CRBLZI_eq`);
 * on stored data (`IDatum`) with the integer sign oracle `exactSignI`: Ozaki-I in integers
   (`mcOzaki1CRIDI_eq`, `mcOzaki1CRILI_eq`) and Ozaki-II in integers (`mcOzaki2CRJI_eq`,
   `mcOzaki2CRJLI_eq`). -/

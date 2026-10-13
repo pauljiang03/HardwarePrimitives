@@ -3,9 +3,9 @@ import Ozaki.SliceInt
 
 /-! # Ozaki-II as an integer pipeline
 
-`ozaki2CRB` takes rational inputs: its scaling and truncation (`scaleShift`, `scaleTrunc`) and its
-exact path's slicing are rational definitions. Here the inputs are integer pairs `(m, e)` worth
-`m 2^e` (`Ozaki.entryVal`), and every step is integer arithmetic:
+`ozaki2CRB` takes rational inputs: its scaling and truncation (`scaleShift`, `scaleTrunc`) and the
+slicing of its exact fallback are rational definitions. Here the inputs are integer pairs `(m, e)`
+worth `m 2^e` (`Ozaki.entryVal`), and every step is integer arithmetic:
 
 * **scaling exponents from bit lengths**: `scaleShiftZ` from `maxEntryExp` (`⌈log₂ max|xᵢ|⌉` from
   the significands' bit lengths), equal to `scaleShift` (`scaleShiftZ_eq`); `maxFloorExp`,
@@ -18,8 +18,9 @@ exact path's slicing are rational definitions. Here the inputs are integer pairs
   (`dropsBits_eq`);
 * **Ozaki-II's integer enclosure** from these integers (`ozaki2EnclosureZ`), equal to
   `ozaki2EnclosureB` on the values (`ozaki2EnclosureZ_eq`);
-* **the exact path with integer slicing** (`ozaki1ExactFallbackZ`): `splitInt` for the slices and the
-  test that nothing is left over, equal to `ozaki1ExactFallbackB` on the values (`ozaki1ExactFallbackZ_eq`);
+* **the exact fallback with integer slicing** (`ozaki1ExactFallbackZ`): `splitInt` for the slices
+  and the test that nothing is left over, equal to `ozaki1ExactFallbackB` on the values
+  (`ozaki1ExactFallbackZ_eq`);
 * `ozaki2CRZ`: correctly rounded Ozaki-II from integer pairs to the IEEE round to nearest, every step
   integer (`ozaki2CRZ_eq`; binary64 and binary32 instances `ozaki2CRZ64_eq`, `ozaki2CRZ32_eq`).
 
@@ -29,13 +30,14 @@ exact path's slicing are rational definitions. Here the inputs are integer pairs
 * a shifted significand: at most `2^P` (`scaleTruncZ_natAbs_le`); a left shift's result is that
   value; a right shift divides `|m|` by `2^k ≤ |m| < 2^p` (`truncShiftZ_divisor_le`), and a
   remainder test likewise (`dropsBits_divisor_le`);
-* the symmetric residues: at most `m/2`; the engine's residue products: within its budget; the
-  reduced residues: below `m`;
+* the symmetric residues: at most `m/2`; the residue products on the matrix multiplier: within
+  its exactness bound; the reduced residues: below `m`;
 * the CRT sum `Σ wⱼ rⱼ`: at most `Σ |wⱼ| mⱼ` (`crtSum_natAbs_le`), and its symmetric reduction
   `N`: `2|N| ≤ M`;
 * the bound `K ≤ k (2^(P+1) + 1)` and `N ± K` (`ozaki2EnclosureB_width`);
-* the exact path: coefficients at most `2^b`, significands below `2^p` (`splitInt_width`), slice
-  products within the engine's budget, and `roundSum`'s windows (`Ozaki.BoundedOzaki`).
+* the exact fallback: coefficients at most `2^b`, significands below `2^p` (`splitInt_width`), slice
+  products within the exactness bound of the matrix multiplier, and the ranges of `roundSum`
+  (`Ozaki.BoundedOzaki`).
 
 What depends on the exponents is only exponent arithmetic: the scaling exponents, the shift
 amounts `e + s`, and the slice grids. -/
@@ -441,7 +443,7 @@ theorem dropsZ_trunc_eq (s : ℤ) (xs : List (ℤ × ℤ)) :
   rw [dropsBits_eq truncInt_intCast, entryVal_mul_two_pow]
 
 /-- **Ozaki-II's reconstructed product from integer inputs**: scaling exponents from bit lengths,
-truncation by shifts, the residue products on the engine, and the CRT. -/
+truncation by shifts, the residue products on the matrix multiplier, and the CRT. -/
 def ozaki2IntZ (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ :=
   (B.moduli.mapM fun m =>
     residueProduct mult m (scaleTruncZ (scaleShiftZ P xs) xs) (scaleTruncZ (scaleShiftZ P ys) ys)).map
@@ -466,7 +468,7 @@ theorem ozaki2EnclosureZ_eq (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (
   rw [scaleShiftZ_eq, scaleShiftZ_eq, scaleTruncZ_eq, scaleTruncZ_eq, dropsZ_trunc_eq,
     dropsZ_trunc_eq, entryVals_length]
 
-/-! ## The exact path with integer slicing -/
+/-! ## The exact fallback with integer slicing -/
 
 /-- Nothing is left over after `s` integer slices of both vectors. -/
 def residualsVanishZ (b s : ℕ) (xs ys : List (ℤ × ℤ)) : Bool :=
@@ -497,8 +499,9 @@ theorem residualsVanishZ_eq (b s : ℕ) (xs ys : List (ℤ × ℤ)) :
   unfold residualsVanishZ residualsVanish
   rw [h xs, h ys]
 
-/-- **The bounded exact path with integer slicing**: `splitInt` for the test that nothing is left
-over and for the slices, the slice products from the engine as integer terms, `roundSum`. -/
+/-- **The bounded exact fallback with integer slicing**: `splitInt` for the test that nothing is
+left over and for the slices, the slice products from the matrix multiplier as integer terms,
+`roundSum`. -/
 def ozaki1ExactFallbackZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   match (List.range' 1 smax).find? fun s => residualsVanishZ b s xs ys with
@@ -529,7 +532,7 @@ theorem ozaki1ExactFallbackZ_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax :
 /-! ## Correctly rounded Ozaki-II from integer inputs -/
 
 /-- **Correctly rounded Ozaki-II as an integer pipeline**: integer pairs in, the integer enclosures
-of the configurations in turn, then the exact path with integer slicing; every step integer
+of the configurations in turn, then the exact fallback with integer slicing; every step integer
 arithmetic, and the result the IEEE round to nearest. -/
 def ozaki2CRZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=

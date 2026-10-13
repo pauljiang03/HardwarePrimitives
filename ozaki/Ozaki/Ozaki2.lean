@@ -9,17 +9,17 @@ Ozaki, Uchino and Imamura (2025) replace slicing by modular arithmetic. For one 
 1. Scale `x` by `2^sₓ` so that `max|x|` lies in `(2^(P−1), 2^P]`, and truncate:
    `a = trunc(2^sₓ x)`, `|aᵢ| ≤ 2^P`; likewise `c = trunc(2^s_y y)`. This truncation is the only
    approximation of the scheme.
-2. For each modulus `m` of a CRT basis, multiply the symmetric residues of `a` and `c` on the
-   engine: one low-precision product per modulus. With `m ≤ 2^(b+1)` the residues are `b`-bit
-   integers, and the engine is exact.
+2. For each modulus `m` of a CRT basis, multiply the symmetric residues of `a` and `c` on the matrix
+   multiplier: one low-precision product per modulus. With `m ≤ 2^(b+1)` the residues are `b`-bit
+   integers, and the matrix multiplier is exact.
 3. Reconstruct `a · c` from the residues of the products (`crt_eq`); this is exact when
    `2 k 2^(2P) < M`.
 4. Scale back by `2^(−sₓ−s_y)` and round once.
 
 Main results:
 
-* `ozaki2_eq`: with an exact engine and `2 k 2^(2P) < M`, Ozaki-II returns the single rounding of
-  `2^(−sₓ−s_y) (a · c)`;
+* `ozaki2_eq`: with an exact matrix multiplier and `2 k 2^(2P) < M`, Ozaki-II returns the single
+  rounding of `2^(−sₓ−s_y) (a · c)`;
 * `truncProduct_error`: `|x · y − 2^(−sₓ−s_y) (a · c)| ≤ Σᵢ (2^(−sₓ)|yᵢ| + 2^(−sₓ−s_y)|aᵢ|)`, the
   a-priori bound the Z3 model checks at runtime (`[S5.1]`);
 * `truncProduct_error_normwise`: that is at most `8 k max|x| max|y| 2^(−P)`;
@@ -218,14 +218,15 @@ def toInt? (v : ℚ) : Option ℤ := if v.den = 1 then some v.num else none
 theorem toInt?_intCast (z : ℤ) : toInt? (z : ℚ) = some z := by
   simp [toInt?, Rat.den_intCast, Rat.num_intCast]
 
-/-- The product of the residues of `a` and `c` modulo `m`, on the engine, reduced modulo `m`. -/
+/-- The product of the residues of `a` and `c` modulo `m`, on the matrix multiplier, reduced modulo
+`m`. -/
 def residueProduct (mult : MatrixMultiplier) (m : ℕ) (a c : List ℤ) : Option ℤ := do
   let v ← mult (a.map fun z => symMod z m) (c.map fun z => symMod z m)
   let z ← toInt? v
   return z % (m : ℤ)
 
-/-- **Ozaki-II** for one output entry `x · y`: scale and truncate to `P`-bit integers, one engine
-product per modulus, CRT reconstruction, one final rounding. -/
+/-- **Ozaki-II** for one output entry `x · y`: scale and truncate to `P`-bit integers, one dot
+product on the matrix multiplier per modulus, CRT reconstruction, one final rounding. -/
 def ozaki2 (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
     Option ℚ := do
   let a := scaleTrunc (scaleShift P x) x
@@ -254,7 +255,7 @@ theorem dvd_dotZ_symMod (m : ℕ) :
     exact Int.dvd_add (Int.dvd_add (Int.dvd_trans hz (Int.dvd_mul_left x _))
       (Int.dvd_trans hx (Int.dvd_mul_right _ _))) ih
 
-/-- With an exact engine, each modulus returns the residue of `a · c`. -/
+/-- With an exact matrix multiplier, each modulus returns the residue of `a · c`. -/
 theorem residueProduct_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) {m : ℕ}
     (hm : 0 < m) (hmb : m ≤ 2 ^ (b + 1)) {a c : List ℤ} (hlen : a.length = c.length)
     (hbound : a.length * (2 ^ b * 2 ^ b) ≤ bound) :
@@ -275,8 +276,8 @@ theorem residueProduct_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mul
     simpa using hbound)]
   simp [toInt?_intCast]
 
-/-- **Exact reconstruction.** With an engine exact on `b`-bit integers, moduli at most `2^(b+1)`,
-and `2 k 2^(2P) < M`, Ozaki-II rounds `2^(−sₓ−s_y) (a · c)` once. -/
+/-- **Exact reconstruction.** With a matrix multiplier exact on `b`-bit integers, moduli at most
+`2^(b+1)`, and `2 k 2^(2P) < M`, Ozaki-II rounds `2^(−sₓ−s_y) (a · c)` once. -/
 theorem ozaki2_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (round : ℚ → Option ℚ) {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
@@ -326,9 +327,9 @@ theorem ozaki2_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactO
   unfold ozaki2
   simp only [ha, hc, hrs, Option.bind_eq_bind, Option.bind_some, hcrt]
 
-/-- **Ozaki-II error.** With an exact engine and a rounding of relative error `u` and absolute
-error `η`, the result `v` satisfies `|v − x · y| ≤ u |C| + η + Σᵢ (2^(−sₓ)|yᵢ| + 2^(−sₓ−s_y)|aᵢ|)`
-with `C = 2^(−sₓ−s_y) (a · c)`. -/
+/-- **Ozaki-II error.** With an exact matrix multiplier and a rounding of relative error `u` and
+absolute error `η`, the result `v` satisfies
+`|v − x · y| ≤ u |C| + η + Σᵢ (2^(−sₓ)|yᵢ| + 2^(−sₓ−s_y)|aᵢ|)` with `C = 2^(−sₓ−s_y) (a · c)`. -/
 theorem ozaki2_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {round : ℚ → Option ℚ} {u η : ℚ} (hround : RoundWithin round u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))

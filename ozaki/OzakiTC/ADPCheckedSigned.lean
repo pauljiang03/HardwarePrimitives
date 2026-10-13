@@ -6,7 +6,7 @@ import Ozaki.BoundedCheckedSigned
 The checked integer ADP-style pipeline (`adpCRJC`) followed by the checked sign step of
 `Ozaki.BoundedCheckedSigned` (`signStepC`): `adpCRJSC` returns exactly `adpCRJS`, the signed
 integer pipeline, under the requirements of `adpCRJC_eq` and `R ≥ 106` (`adpCRJSC_eq`), the sign
-oracle's exact path running on the guarded INT8 engine (`int8SplitKC`); for binary64
+oracle's exact fallback running on the guarded INT8 matrix multiplier (`int8SplitKC`); for binary64
 entries, every data integer within `264` bits and every exponent and counter within `25` bits, it is
 the IEEE binary64 result with IEEE's sign of zero (`adpCRJSC_binary64_eq`). -/
 
@@ -60,7 +60,7 @@ theorem adpCRJSC_eq {B : Widths} {EM smax : ℕ} {cfgs : List (ℕ × ℕ)} {xs 
 
 /-- **Signed FP64 by ADP-style slicing, every integer within 264 bits and every exponent and
 counter within 25 bits**: on binary64 entries with `k ≤ 2^20`, configurations of at most `11`
-slices of width at most `81`, and at most `300` slices of `6` bits on the exact path. -/
+slices of width at most `81`, and at most `300` slices of `6` bits on the exact fallback. -/
 theorem adpCRJSC_binary64_eq {cfgs : List (ℕ × ℕ)} {xs ys : List SEntry}
     (hlen : xs.length = ys.length) (hk : xs.length ≤ 2 ^ 20)
     (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a.1) (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a.1)

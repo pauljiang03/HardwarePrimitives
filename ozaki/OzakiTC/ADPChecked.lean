@@ -12,23 +12,23 @@ below `2^R`, exponent-like integers below `2^X`), as `Ozaki.BoundedChecked` does
   (`fixedShiftZC`), each shift amount and the shifted significand (`floorShiftZC`, `toFixedZC`),
   and the test for dropped bits (`Ozaki.Checked.dropsZC`);
 * the remapped digits (`remapFromC`: the low digit with its carry, the remapped digit, the rest),
-  each INT8 engine output read back, each weight `256^(t+u)`, each weighted product and every
-  partial sum of the recombination (`int8RecombineKC`);
-* the sums of the bound `K`, the enclosure's exponent, the enclosure test, and the exact path on
-  the split-K INT8 engine (the checked jumping exact path of `Ozaki.BoundedChecked`).
+  each output of the INT8 matrix multiplier read back, each weight `256^(t+u)`, each weighted
+  product and every partial sum of the recombination (`int8RecombineKC`);
+* the sums of the bound `K`, the enclosure's exponent, the enclosure test, and the exact fallback on
+  the split-K INT8 matrix multiplier (the checked jumping exact fallback of `Ozaki.BoundedChecked`).
 
-The INT8 engine's own arithmetic is guarded too (`OzakiTC.Int8Checked`): every byte product,
-every partial sum of each chunk's 32-bit register, checked against the register's own range so that
-it never wraps, and every chunk sum of split-K, both in the recombination (`int8DotKC`) and on the
-exact path (`int8SplitKC`).
+The INT8 matrix multiplier's own arithmetic is guarded too (`OzakiTC.Int8Checked`): every byte
+product, every partial sum of each chunk's 32-bit register, checked against the register's own range
+so that it never wraps, and every chunk sum of split-K, both in the recombination (`int8DotKC`) and
+on the exact fallback (`int8SplitKC`).
 
 `adpCRJC_eq`: on binary entries, for configurations `(s, W)` that fit, if `R` and `X` meet
-`adpR`, `adpX` for each configuration and `exactR`, `exactX` for the exact path, the checked
+`adpR`, `adpX` for each configuration and `exactR`, `exactX` for the exact fallback, the checked
 function returns exactly what `adpCRJ` returns. `adpCRJC_binary64`: for binary64 entries,
 `k ≤ 2^20`, configurations with `s ≤ 11` and `W ≤ 81` (as `(8, 56)` and `(11, 81)`) and at most
-`300` slices on the exact path, every data integer fits `264` bits and every exponent and counter
-`25` bits; `adpCRJC_binary64_eq` adds that the result is the binary64 round to nearest of `x · y`.
-The tighter `259` and `17` bits are in `OzakiTC.CheckedTight`.
+`300` slices on the exact fallback, every data integer fits `264` bits and every exponent and
+counter `25` bits; `adpCRJC_binary64_eq` adds that the result is the binary64 round to nearest of
+`x · y`. The tighter `259` and `17` bits are in `OzakiTC.CheckedTight`.
 
 The same on Tensor Core blocks for Ozaki-II (`v100_fp64CRJ_widths`, `v100_binary32CRJ_widths`). -/
 
@@ -89,8 +89,8 @@ def sliceVecC (B : Widths) (s t : ℕ) (N : List ℤ) : Option (List ℤ) :=
     let ds ← remapFromC B 0 s z
     pure (ds.getD t 0)
 
-/-- `int8RecombineK`: the slices, each INT8 engine output read back, each weight, each weighted
-product, and the partial sums of the rows and of the whole. -/
+/-- `int8RecombineK`: the slices, each output of the INT8 matrix multiplier read back, each weight,
+each weighted product, and the partial sums of the rows and of the whole. -/
 def int8RecombineKC (B : Widths) (s : ℕ) (Na Nb : List ℤ) : Option ℤ := do
   let rows ← (List.range s).mapM fun t => do
     let terms ← (List.range s).mapM fun u => do
@@ -429,8 +429,8 @@ theorem adpEnclosureZC_eq {B : Widths} {s W p EM : ℕ} {emin emax : ℤ} (hs : 
 /-- **One theorem bounding every integer of ADP's correctly rounded slicing.** On binary64-style
 entries (significands below `2^53`, exponents at most `EM` in magnitude), for configurations that
 fit, if `R` and `X` meet `adpR`, `adpX` for every configuration and `exactR`, `exactX` for the
-exact path on the INT8 engine, the checked function returns exactly what `adpCRJ` returns: no
-guard ever fails. -/
+exact fallback on the INT8 matrix multiplier, the checked function returns exactly what `adpCRJ`
+returns: no guard ever fails. -/
 theorem adpCRJC_eq {B : Widths} {EM smax : ℕ} {cfgs : List (ℕ × ℕ)} {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hx : EntriesIn 53 EM xs) (hy : EntriesIn 53 EM ys)
     (hcfg : ∀ c ∈ cfgs, 0 < c.1 ∧ ADP.remapFits c.2 c.1 = true ∧
@@ -496,7 +496,7 @@ theorem bitlen_le_four {s : ℕ} (hs : s ≤ 11) : bitlen s ≤ 4 := bitlen_le_i
 
 /-- **Every integer of ADP's correctly rounded slicing fits 264 bits, every exponent and counter
 25 bits**: on binary64 entries, `k ≤ 2^20`, configurations with at most `11` slices and widths at
-most `81` that fit, and at most `300` slices of `6` bits on the exact path. -/
+most `81` that fit, and at most `300` slices of `6` bits on the exact fallback. -/
 theorem adpCRJC_binary64 {cfgs : List (ℕ × ℕ)} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a)

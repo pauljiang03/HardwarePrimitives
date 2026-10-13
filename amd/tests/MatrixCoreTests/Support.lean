@@ -47,7 +47,7 @@ def toObs : Outcome → Obs
   | .infinity s => .inf s
   | .nan => .nan
 
-/-- `d = Σ a_ℓ b_ℓ + c` through the chained blocks of a profile, for operand pairs `(a_ℓ, b_ℓ)`. -/
+/-- `d = Σ a_ℓ b_ℓ + c` through the chained blocks of a model, for operand pairs `(a_ℓ, b_ℓ)`. -/
 def observe (P : Model) (ps : List (In × In)) (c : In) : Option Obs := do
   let a ← ps.mapM fun q => encodeIn P.a q.1
   let b ← ps.mapM fun q => encodeIn P.b q.2

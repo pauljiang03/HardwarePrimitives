@@ -2,7 +2,7 @@ import MatrixCore.Specification.Stages
 
 /-! # The implementation meets the independent specification
 
-For every profile the specification transcribes (CDNA 1 and the SFMA with correct rounding,
+For every model the specification transcribes (CDNA 1 and the SFMA with correct rounding,
 CDNA 3 with Algorithms 1 and 2), and for every input, the implementation returns the word `w`
 exactly when the specification's `Result` holds for `w`. -/
 
@@ -10,7 +10,7 @@ namespace MatrixCore.Spec
 
 open MatrixCore
 
-/-- A profile and its transcription in the specification. -/
+/-- A model and its transcription in the specification. -/
 structure Supported (P : Model) (S : Params) : Prop where
   a : S.a = operandOf P.a
   b : S.b = operandOf P.b
@@ -124,7 +124,7 @@ theorem accumulate_supported {P : Model} {S : Params} (hS : Supported P S) (x : 
   rw [hno]
   rcases hS.kind with ⟨hP, _⟩ | ⟨hP, _⟩ | ⟨hP, _⟩ <;> simp [hP]
 
-/-- **Equivalence.** On every supported profile and for every input, the implementation returns
+/-- **Equivalence.** On every supported model and for every input, the implementation returns
 `w` exactly when `w` is the specification's result. -/
 theorem blockBits_eq_spec {P : Model} {S : Params} (hS : Supported P S) (x : BlockInput P)
     (w : F32) :
@@ -198,7 +198,7 @@ theorem blockBits_eq_spec {P : Model} {S : Params} (hS : Supported P S) (x : Blo
       simp only [hacc, hS.subnormals, Bool.not_true, fl32_false, hw]
       rfl
 
-/-! ## The paper's paths -/
+/-! ## The paper's variants -/
 
 theorem supported_sfma : Supported sfmaF32 sfma := ⟨rfl, rfl, rfl, rfl, rfl, by decide, Or.inl ⟨rfl, rfl⟩⟩
 theorem supported_cdna1F16 : Supported MatrixCore.cdna1F16 Spec.cdna1F16 :=
@@ -218,7 +218,7 @@ theorem supported_cdna3FP8 (a b : Format) :
 theorem layoutOf_e4m3 : layoutOf e4m3fnuz = e4m3 := rfl
 theorem layoutOf_e5m2 : layoutOf e5m2fnuz = e5m2 := rfl
 
-/-- The paper's paths, each with the implementation profile and its transcription. -/
+/-- The paper's variants, each with the implementation model and its transcription. -/
 theorem supported_eq_spec_cdna3F16 (x : BlockInput MatrixCore.cdna3F16) (w : F32) :
     blockBits x = .ok w ↔ Result Spec.cdna3F16 (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c w :=
   blockBits_eq_spec supported_cdna3F16 x w

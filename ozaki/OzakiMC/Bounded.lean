@@ -6,11 +6,11 @@ import Ozaki.BoundedChecked
 /-! # Correctly rounded Ozaki-I with bounded registers on the matrix-core model
 
 `Ozaki.ozaki1CRB` on matrix-core blocks with split-K: every slice product on the hardware model,
-the check, the exact path and the final rounding in integer registers whose width does not depend
-on the inputs' exponents, for binary32 and FP64 inputs of any length. `mcOzaki1CRID`,
+the rounding test, the exact fallback and the final rounding in integer registers whose width does
+not depend on the inputs' exponents, for binary32 and FP64 inputs of any length. `mcOzaki1CRID`,
 `mcOzaki1CRIL` take the stored entries `(m, e)` and slice in integers too (`Ozaki.ozaki1CRI`);
 `mcOzaki1CRIDS`, `mcOzaki1CRILS` add IEEE's signed zeros. `cdna3F16_fp64CRI_widths` and
-`cdna3F16_binary32CRI_widths` bound every integer off the matrix core at once
+`cdna3F16_binary32CRI_widths` bound every integer off the matrix core together
 (`Ozaki.Checked.ozaki1CRIC`). -/
 
 open MatrixCore

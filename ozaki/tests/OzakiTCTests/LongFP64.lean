@@ -5,11 +5,11 @@ import OzakiTC.LongDot
 
 The binary64 cases of [`data/correct-reference.json`](../../data/correct-reference.json) (random
 `4 × 8` by `8 × 4` binary64 products, exponents within `4` and `40` binades), against the words the
-exact-fraction oracle computes. With `k = 8` and `11`-bit slices the engine needs split-K (chunks of
-four), so these checks exercise `tcSplitK` as well:
+exact-fraction oracle computes. With `k = 8` and `11`-bit slices the matrix multiplier needs split-K
+(chunks of four), so these checks exercise `tcSplitK` as well:
 
 * `tcOzaki1CRD`: correctly rounded FP64 by Ozaki-I on V100 fp16 blocks, five then six slices, then
-  the exact path on V100 blocks;
+  the exact fallback on V100 blocks;
 * `tcOzaki2CRD`: the same by Ozaki-II with twelve moduli at most `4096` (`P = 69` for `k = 8`);
 * `tcOzaki1D`: FP64 emulation by Ozaki-I with binary64 recombination and six slices, within its
   proved bound of the exact product (checked here by exact rational arithmetic). -/
@@ -57,10 +57,10 @@ example : (do
     pure (ok.all fun r => r.all id)) = some true := by
   decide +kernel
 
-/-! ## With a `96`-bit window accumulator
+/-! ## With a `96`-bit truncated sum
 
-The same results when the check runs on a `96`-bit window sum (`tcOzaki1CRDW`): the accumulator of
-the check needs about `115` bits here, not the exact sum. -/
+The same results when the rounding test runs on a `96`-bit truncated sum (`tcOzaki1CRDW`): the
+accumulator of the rounding test needs about `115` bits here, not the exact sum. -/
 
 example : (do
     let A ← decode64 A_narrow64; let B ← decode64 B_narrow64

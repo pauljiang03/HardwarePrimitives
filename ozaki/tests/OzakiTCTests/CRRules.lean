@@ -2,12 +2,12 @@ import OzakiTC.Ozaki2ChoiceCR
 
 /-! # The design rules and the margin, by kernel evaluation
 
-* **The shortcut.** Small integers leave nothing over after one slice, so the exact path costs
-  `1` engine product against `15` for a five-slice check: the adaptive scheme goes straight to it,
-  costs `1`, and returns the exact sum. Values with full 53-bit significands need five slices
-  (`25` products), more than the first check's `15`, so the adaptive scheme keeps the check; the
-  check settles, at a cost of `15`.
-* **Slice counts from `k`.** At `k = 4` the first check has `5` slices; the scheme with both rules
+* **The shortcut.** Small integers leave nothing over after one slice, so the exact fallback costs
+  `1` product on the matrix multiplier against `15` for a five-slice test: the adaptive scheme goes
+  straight to it, costs `1`, and returns the exact sum. Values with full 53-bit significands need
+  five slices (`25` products), more than the first test's `15`, so the adaptive scheme keeps the
+  test; the test succeeds, at a cost of `15`.
+* **Slice counts from `k`.** At `k = 4` the first test has `5` slices; the scheme with both rules
   returns the correctly rounded product.
 * **Ozaki-II with the margin** on H100 fp16, `13` moduli and `P = 65`, returns the correctly
   rounded product of a pair of binary64 vectors. -/

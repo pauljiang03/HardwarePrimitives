@@ -35,7 +35,7 @@ theorem scalar64_finite_boundary :
     binaryAdd fp64 fp64.maxFinite 0 = some fp64.maxFinite ∧
     binaryAdd fp64 fp64.maxFinite (pow2 971) = none := by decide +kernel
 
-/-- A budget can fail even though the signed final sum fits. -/
+/-- The coefficient bound can fail even though the signed final sum fits. -/
 theorem scalar_coefficient_boundary :
     magnitudeSum [2 ^ 52 - 1, 2 ^ 52] < 2 ^ 53 ∧
     ¬ magnitudeSum [2 ^ 52, -(2 ^ 52)] < 2 ^ 53 ∧
@@ -87,7 +87,7 @@ theorem onGrid_of_den {x q : ℚ} (hq : q ≠ 0) (h : (x / q).den = 1) : ∃ z :
   have hn : ((x / q).num : ℚ) = x / q := Rat.ext rfl h.symm
   ⟨(x / q).num, by rw [hn, Rat.div_mul_cancel hq]⟩
 
-/-- The FP32 input-budget hypotheses hold together on a concrete block. -/
+/-- The FP32 input-grid hypotheses hold together on a concrete block. -/
 theorem inputGrid_fp32_witness :
     let t := inputGridTrace
     let g := t.defaultExtraction

@@ -11,11 +11,11 @@ the Lean definitions with an implementation that shares no code with them.
 * binary32, V100: the Z3 models' two test cases, a product with heavy cancellation, and a product
   exactly halfway between two binary32 values; Ozaki-I tries three then four slices, Ozaki-II five
   then six moduli, and both fall back to the exact product;
-* binary64, ADP on the INT8 engine: two random `4 × 8` by `8 × 4` products of binary64 values,
-  trying `7`, `8`, then `9` slices of widths `54`, `62`, `70`.
+* binary64, ADP on the INT8 matrix multiplier: two random `4 × 8` by `8 × 4` products of binary64
+  values, trying `7`, `8`, then `9` slices of widths `54`, `62`, `70`.
 
-The last group shows how often the fast path settles an entry: with four slices every Z3 entry is
-certified without the exact product; with three, all but two. -/
+The last group shows how often the fast path decides an entry: with four slices every Z3 entry is
+decided without the exact product; with three, all but two. -/
 
 open TensorCore Ozaki Ozaki.TC
 
@@ -201,7 +201,7 @@ example : (do
     let C ← tcOzaki1CRGemm v100F16F32 11 [3, 4] A B; encodeMatrix C) = some C_halfway := by
   decide +kernel
 
-/-! ## ADP on the INT8 engine, binary64 -/
+/-! ## ADP on the INT8 matrix multiplier, binary64 -/
 
 /-- The ADP configurations `(slices, width)`. -/
 def cfgsADP : List (ℕ × ℕ) := [(7, 54), (8, 62), (9, 70)]
@@ -216,14 +216,14 @@ example : (do
     let C ← adpCRGemm cfgsADP A B; encode64 C) = some C_wide64 := by
   decide +kernel
 
-/-! ## How often the fast path settles an entry -/
+/-! ## How often the fast path decides an entry -/
 
-/-- Whether the enclosure from `s` slices certifies the entry. -/
+/-- Whether the rounding test succeeds on the enclosure from `s` slices. -/
 def succeeds (s : ℕ) (x y : List ℚ) : Bool :=
   ((ozaki1Enclosure (tcMultiplier v100F16F32) 11 s x y).bind fun p =>
     roundEnclosure round32Value p.1 p.2).isSome
 
-/-- How many entries of `AB` the enclosure from `s` slices certifies. -/
+/-- On how many entries of `AB` the rounding test succeeds with the enclosure from `s` slices. -/
 def successCount (s : ℕ) (A B : List (List F32)) : Option ℕ := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   pure ((A.flatMap fun x => (transpose B).map fun y => succeeds s x y).count true)
@@ -234,10 +234,11 @@ example : successCount 4 A_narrow B_narrow = some 16 ∧ successCount 4 A_wide B
 example : successCount 3 A_narrow B_narrow = some 14 ∧ successCount 3 A_wide B_wide = some 16 := by
   decide +kernel
 
-/-! ## The exact path on Tensor Core blocks
+/-! ## The exact fallback on Tensor Core blocks
 
-`tcOzaki1CRE` takes its exact path on V100 blocks too (all `s²` slice products at the smallest slice
-count that leaves nothing over). With no slice counts to try, every entry takes the exact path. -/
+`tcOzaki1CRE` takes its exact fallback on V100 blocks too (all `s²` slice products at the smallest
+slice count that leaves nothing over). With no slice counts to try, every entry takes the exact
+fallback. -/
 
 example : (do
     let A ← decodeMatrix A_narrow; let B ← decodeMatrix B_narrow
@@ -257,16 +258,16 @@ example : (do
     encodeMatrix C) = some C_halfway := by
   decide +kernel
 
-/-! ## How often Ozaki-II's and ADP's checks settle an entry
+/-! ## How often Ozaki-II's and ADP's rounding tests decide an entry
 
-The correctly rounded theorems hold whatever the checks do, because the last resort is exact. These
-counts show how often the engine's enclosure settles an entry by itself. Ozaki-II with the Z3
-models' four moduli (`P = 22`) settles none (its truncation error exceeds half a binary32 ulp),
-five moduli settle 12 and 9 of 16, six settle all. ADP settles every entry at the configuration its
-own ESC rule picks for these inputs (`8` slices of width `56` for `narrow64`, `11` of width `81` for
-`wide64`), and fewer with fewer slices. -/
+The correctly rounded theorems hold whatever the tests do, because the last resort is exact. These
+counts show how often the matrix multiplier's enclosure decides an entry by itself. Ozaki-II with
+the Z3 models' four moduli (`P = 22`) decides none (its truncation error exceeds half a binary32
+ulp), five moduli decide 12 and 9 of 16, six decide all. ADP decides every entry at the
+configuration its own ESC rule picks for these inputs (`8` slices of width `56` for `narrow64`, `11`
+of width `81` for `wide64`), and fewer with fewer slices. -/
 
-/-- Whether the Ozaki-II enclosure of one configuration certifies the entry. -/
+/-- Whether the rounding test succeeds on the Ozaki-II enclosure of one configuration. -/
 def succeeds2 (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
   ((ozaki2Enclosure (tcMultiplier v100F16F32) B P x y).bind fun p =>
     roundEnclosure round32Value p.1 p.2).isSome
@@ -282,7 +283,7 @@ example : successCount2 basis5 28 A_narrow B_narrow = some 12 ∧
 example : successCount2 basis6 34 A_narrow B_narrow = some 16 ∧
     successCount2 basis6 34 A_wide B_wide = some 16 := by decide +kernel
 
-/-- Whether the ADP enclosure of `s` slices of width `W` certifies the entry. -/
+/-- Whether the rounding test succeeds on the ADP enclosure of `s` slices of width `W`. -/
 def succeedsADP (s W : ℕ) (x y : List ℚ) : Bool :=
   (roundEnclosure fp64Round (adpEnclosure s W x y).1 (adpEnclosure s W x y).2).isSome
 

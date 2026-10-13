@@ -20,10 +20,10 @@ of `x · y` or `none` on overflow, and sign its result: a nonzero result by its 
 result or an overflow by the exact sum's sign, which a sign oracle supplies. `crIEEE_eq`: whenever
 the scheme is correctly rounded and the oracle is right on the finite inputs, the wrapper meets the
 specification for every input. `exactSignB` is such an oracle in bounded integer arithmetic: the
-sign of the exact path's integer slice products by the top-down descent of `Ozaki.SignOracle`
+sign of the exact fallback's integer slice products by the top-down summation of `Ozaki.SignOracle`
 (`exactSignB_eq`).
 
-**The other variants** with special values, agreeing with the rational ones on finite results:
+**The other versions** with special values, agreeing with the rational ones on finite results:
 native dot products (`nativeDotIEEE`, products rounded and added left to right from `+0` with IEEE
 operations, `nativeDotIEEE_fin`), plain Ozaki-I (`ozaki1IEEE`, the scaled slice products added with
 IEEE addition, `ozaki1IEEE_fin`) and plain Ozaki-II (`ozaki2IEEE`, one IEEE rounding,
@@ -213,9 +213,9 @@ theorem finParts_inFormat : ∀ {xs : List FVal} {sx : List Signed},
 
 /-! ## The sign oracle in bounded arithmetic -/
 
-/-- **The sign of `x · y` from the exact path**: at the first slice count up to `smax` that leaves
-nothing over, the sign of the engine's integer slice products by the top-down descent `signSum`;
-`0` if there is no such slice count or the engine fails. -/
+/-- **The sign of `x · y` from the exact fallback**: at the first slice count up to `smax` that
+leaves nothing over, the sign of the integer slice products of the matrix multiplier by the top-down
+summation `signSum`; `0` if there is no such slice count or the matrix multiplier fails. -/
 def exactSignB (mult : MatrixMultiplier) (b smax : ℕ) (x y : List ℚ) : ℤ :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | some s =>
@@ -225,8 +225,8 @@ def exactSignB (mult : MatrixMultiplier) (b smax : ℕ) (x y : List ℚ) : ℤ :
     | none => 0
   | none => 0
 
-/-- **The oracle is the exact sign** on any exact engine, when the inputs leave nothing over after
-at most `smax` slices. -/
+/-- **The oracle is the exact sign** on any exact matrix multiplier, when the inputs leave nothing
+over after at most `smax` slices. -/
 theorem exactSignB_eq {mult : MatrixMultiplier} {b bound smax : ℕ} (hmult : mult.ExactOn b bound)
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
@@ -254,7 +254,7 @@ theorem exactSignB_eq {mult : MatrixMultiplier} {b bound smax : ℕ} (hmult : mu
     rw [List.map_map]
     rfl
 
-/-- **`crIEEE` with the exact-path sign oracle, for inputs of a format**: the hypotheses of
+/-- **`crIEEE` with the exact-fallback sign oracle, for inputs of a format**: the hypotheses of
 `crIEEE_eq` from the finite scheme's theorem on vectors of the format whose length is the inputs'.
 This is how every correctly rounded scheme is given special values. -/
 theorem crIEEE_exactSign (hp : 0 < p) (hle : emin ≤ emax) {scheme : List ℚ → List ℚ → Option ℚ}
@@ -383,9 +383,9 @@ theorem nativeDotIEEE_fin (hp : 0 < p) (hle : emin ≤ emax) {sx sy : List Signe
 
 /-! ## Plain Ozaki-I and Ozaki-II with special values -/
 
-/-- **Ozaki-I with IEEE special values**: the specification's special cases, otherwise the engine's
-scaled slice products added left to right from `+0` with IEEE addition (`±Inf` on overflow, signed
-zeros by IEEE addition). -/
+/-- **Ozaki-I with IEEE special values**: the specification's special cases, otherwise the matrix
+multiplier's scaled slice products added left to right from `+0` with IEEE addition (`±Inf` on
+overflow, signed zeros by IEEE addition). -/
 def ozaki1IEEE (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s : ℕ) (xs ys : List FVal) : FVal :=
   match dotSpecial xs ys with
   | some v => v
@@ -470,7 +470,7 @@ theorem ozaki2IEEE_fin {mult : MatrixMultiplier} {B : CRTBasis} {P : ℕ} {sx sy
     rw [roundF_of_some h]
     exact ⟨_, rfl⟩
 
-/-- Special inputs give the specification's special result, in every variant. -/
+/-- Special inputs give the specification's special result, in every version. -/
 theorem crIEEE_special {scheme : List ℚ → List ℚ → Option ℚ} {sgn : List ℚ → List ℚ → ℤ}
     {xs ys : List FVal} {v : FVal} (h : dotSpecial xs ys = some v) :
     crIEEE scheme sgn xs ys = v ∧ dotIEEE p emin emax xs ys = v := by

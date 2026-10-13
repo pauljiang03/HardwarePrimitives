@@ -23,7 +23,7 @@ logarithms are not available here, so the statements use rational powers of two:
   is `d ≥ 1` satisfies `2^(2g) c̄ ≤ 2^(2P')` for every entry `c̄ ≤ d` of `C̄` in the row.
 * **Lemma 1** (`uchino_lemma1`, `uchino_lemma1_lt`): `Σₕ |A'ₕ| |B'ₕ| ≤ (P − 1)/2 < P/2` for every
   entry, from its row's and its column's shifts (the geometric mean of their (31)). The `_of`
-  variants take (1) only at the values used.
+  versions take (1) only at the values used.
 
 **Three imprecisions.** Line 11 of Algorithm 2 reads `fl▽(⌊fma(c0, eᵢ, P')⌋)`, the proof
 `⌊fl▽(fma(c0, eᵢ, P'))⌋`; only the second (a round-down `fma`, then the floor) is covered, a
@@ -47,11 +47,11 @@ hypothesis, `2^(2g) m ≤ 2^(2P' − 1/k)` for the row's maximum `m` of `C̄` (t
 gives `|A'||B'| (1 + t) ≤ (P − 1)/2` for `k t ≤ 1/2`. This slack is the one numeric fact of their
 analysis that is not derived here.
 
-**End to end.** `ozaki2Uchino_R64` discharges the reconstruction hypothesis of
-`ozaki2Uchino_error` for every residue vector the engine can produce, with the closed form `R64`
-of `uchino_R64`, under a margin `2(Λ + δ̄) < P` for a bound `Λ` on `|A'||B'|` (`δ̄ =
-uchinoDeltaBar`, about `(K + 2) u ρ P`); `ozaki2Uchino_scaled_error` takes `Λ` from their scaling
-with the slack. Both are instantiated, every hypothesis checked by the kernel, in
+**End to end.** `ozaki2Uchino_R64` discharges the reconstruction hypothesis of `ozaki2Uchino_error`
+for every residue vector the matrix multiplier can produce, with the closed form `R64` of
+`uchino_R64`, under a margin `2(Λ + δ̄) < P` for a bound `Λ` on `|A'||B'|` (`δ̄ = uchinoDeltaBar`,
+about `(K + 2) u ρ P`); `ozaki2Uchino_scaled_error` takes `Λ` from their scaling with the slack.
+Both are instantiated, every hypothesis checked by the kernel, in
 `tests/OzakiTCTests/UchinoScaling.lean`. -/
 
 local notation "ℕ" => Nat

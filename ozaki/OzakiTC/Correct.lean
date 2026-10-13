@@ -10,13 +10,15 @@ and succeeds on intervals. TensorCore's binary32 and binary64 round to nearest d
 (`round32Value_nearest`, `fp64Round_nearest`, IEEE's round to nearest even of `Ozaki.Binary`). With them:
 
 * `tcOzaki1CR`, `tcOzaki2CR`: Ozaki-I and Ozaki-II on Tensor Core blocks, correctly rounded to
-  binary32 for every input on every path where the engine is exact (`tcOzaki1CR_eq`,
+  binary32 for every input on every variant where the matrix multiplier is exact (`tcOzaki1CR_eq`,
   `tcOzaki2CR_eq`);
-* `adpCR`: fixed-point Ozaki-I as in ADP on the INT8 engine (fixed point of width `W`, `s` remapped byte slices, exact
-  recombination), correctly rounded to binary64 for every input (`adpCR_eq`).
+* `adpCR`: fixed-point Ozaki-I as in ADP on the INT8 matrix multiplier (fixed point of width `W`,
+  `s` remapped byte slices, exact recombination), correctly rounded to binary64 for every input
+  (`adpCR_eq`).
 
-The check runs on the exact values, never on a Tensor Core: a Tensor Core's output is not monotone
-in its inputs (TC-EFT's non-monotonicity theorems), and the test relies on monotone rounding. -/
+The rounding test runs on the exact values, never on a Tensor Core: a Tensor Core's output is not
+monotone in its inputs (TC-EFT's non-monotonicity theorems), and the test relies on monotone
+rounding. -/
 
 open TensorCore
 
@@ -73,8 +75,8 @@ def tcOzaki2CRGemm (p : Model) (cfgs : List (CRTBasis × ℕ)) (A B : List (List
     Option (List (List ℚ)) :=
   A.mapM fun x => (transpose B).mapM fun y => tcOzaki2CR p cfgs x y
 
-/-- **Ozaki-I on the Tensor Core, correctly rounded.** On any path where the engine is exact on
-`b`-bit slices, the result is the binary32 round to nearest of `x · y`, for every input. -/
+/-- **Ozaki-I on the Tensor Core, correctly rounded.** On any variant where the matrix multiplier is
+exact on `b`-bit slices, the result is the binary32 round to nearest of `x · y`, for every input. -/
 theorem tcOzaki1CR_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (hK : 0 < p.nfma) (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :
@@ -98,7 +100,7 @@ theorem v100_ozaki1CR_z3 (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.l
 /-! ## Entirely on the Tensor Core
 
 Binary32 values are multiples of `2^-149` with exponent at most `128`, so `smax` slices of `b` bits
-with `smax (b + 1) > 277` leave nothing over, and the exact path runs on Tensor Core blocks too
+with `smax (b + 1) > 277` leave nothing over, and the exact fallback runs on Tensor Core blocks too
 (`24` slices of `11` bits). -/
 
 theorem finiteValue32_gridMultiple {a : ℚ} (h : FiniteValue32 a) : GridMultiple (-149) a := by
@@ -121,14 +123,15 @@ theorem splitExp_le_128 {b : ℕ} (hb : b ≤ 129) {x : List ℚ} (hx : ∀ a �
     rw [absQ_eq] at this
     exact Rat.le_of_lt (lt_of_le_of_lt' this hmax)
 
-/-- Correctly rounded Ozaki-I with the exact path on Tensor Core blocks as well. -/
+/-- Correctly rounded Ozaki-I with the exact fallback on Tensor Core blocks as well. -/
 def tcOzaki1CRE (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRE (tcMultiplier p) round32Value b ss smax x y
 
-/-- **Ozaki-I on the Tensor Core, correctly rounded, with every engine product on Tensor Core
-blocks.** For binary32 inputs, every result, whether the check settles it or the exact path does,
-is the binary32 round to nearest of `x · y`; all slice products, including the exact path's, run on
-Tensor Core blocks, while the slicing, their exact sum and the check are exact arithmetic. -/
+/-- **Ozaki-I on the Tensor Core, correctly rounded, with every slice product on Tensor Core
+blocks.** For binary32 inputs, every result, whether the rounding test decides it or the
+exact fallback does, is the binary32 round to nearest of `x · y`; all slice products, including the
+exact fallback's, run on Tensor Core blocks, while the slicing, their exact sum and the rounding
+test are exact arithmetic. -/
 theorem tcOzaki1CRE_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (hK : 0 < p.nfma) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) (hb : b ≤ 129)
     {x y : List ℚ} (hx : ∀ a ∈ x, FiniteValue32 a) (hy : ∀ a ∈ y, FiniteValue32 a)
@@ -146,8 +149,8 @@ theorem tcOzaki1CRE_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts
     hlen hk (residualsVanish_of_gridMultiple hpos (fun a ha => finiteValue32_gridMultiple (hx a ha))
       (fun a ha => finiteValue32_gridMultiple (hy a ha)) (by omega) (by omega))
 
-/-- The Z3 configuration on V100 with its exact path on V100 blocks: `11`-bit slices, the exact path at up
-to `24` slices. -/
+/-- The Z3 configuration on V100 with its exact fallback on V100 blocks: `11`-bit slices, the exact
+fallback at up to `24` slices. -/
 theorem v100_ozaki1CRE (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, FiniteValue32 a)
     (hy : ∀ a ∈ y, FiniteValue32 a) (hlen : x.length = y.length) (hk : x.length = z3K) :
     tcOzaki1CRE v100F16F32 11 ss 24 x y = round32Value (dot x y) :=
@@ -233,8 +236,8 @@ theorem toFixed_remap {s W : ℕ} (hfit : ADP.remapFits W s = true) (x : List �
   rw [hc] at hr
   omega
 
-/-- On an INT8 engine without wraparound, the enclosure from `s` slices of width `W` contains
-`x · y`. -/
+/-- On an INT8 matrix multiplier without wraparound, the enclosure from `s` slices of width `W`
+contains `x · y`. -/
 theorem adpEnclosure_sound {s W : ℕ} (hs : 0 < s) (hfit : ADP.remapFits W s = true)
     {x y : List ℚ} (hk : x.length * (128 * 128) < 2 ^ 31) :
     Rat.abs (dot x y - (adpEnclosure s W x y).1) ≤ (adpEnclosure s W x y).2 := by
@@ -246,9 +249,9 @@ theorem adpEnclosure_sound {s W : ℕ} (hs : 0 < s) (hfit : ADP.remapFits W s = 
   exact dot_approx_error x (fixedVals W x) y (fixedVals W y) (fixedVals_length W x).symm
     (fixedVals_length W y).symm
 
-/-- **ADP's slicing, correctly rounded.** On the INT8 engine, with configurations whose widths fit
-their slice counts and dot products short enough that INT32 cannot wrap (`k · 2^14 < 2^31`),
-`adpCR` returns the binary64 round to nearest of `x · y` for every input. -/
+/-- **ADP's slicing, correctly rounded.** On the INT8 matrix multiplier, with configurations whose
+widths fit their slice counts and dot products short enough that INT32 cannot wrap
+(`k · 2^14 < 2^31`), `adpCR` returns the binary64 round to nearest of `x · y` for every input. -/
 theorem adpCR_eq {cfgs : List (ℕ × ℕ)} (hcfg : ∀ c ∈ cfgs, 0 < c.1 ∧ ADP.remapFits c.2 c.1 = true)
     {x y : List ℚ} (hk : x.length * (128 * 128) < 2 ^ 31) :
     adpCR cfgs x y = fp64Round (dot x y) := by

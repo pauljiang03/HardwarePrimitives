@@ -8,7 +8,7 @@ The Ozaki schemes need the matrix core to multiply small integers exactly. On th
 binary32 with RNE. This file shows that for integer operands nothing is lost on three of them:
 
 * `correct_rounding` (SFMA, CDNA 1): `S_acc` is the exact sum;
-* `pair_wise_sum` (CDNA 2): every `fl{·}` of the pairwise tree rounds an integer partial sum, and
+* `pair_wise_sum` (CDNA 2): every `fl{·}` of the pairwise sum rounds an integer partial sum, and
   flushing subnormals leaves integer operands unchanged;
 * `global_alignment` (CDNA 3 fp16, bf16, XF32): products of exponent at most `24` are aligned to
   `24` fractional bits, and both RD steps of the late addition of `c` act on integers.
@@ -251,9 +251,9 @@ theorem sumQ_absQ_cast (zs : List ℤ) :
   | cons z zs ih =>
     simp only [List.map_cons, sumQ, ih, List.sum_cons, Rat.natCast_add, absQ_intCast]
 
-/-! ## The pairwise tree -/
+/-! ## The pairwise sum -/
 
-/-- The pairwise tree of integers whose magnitudes total at most `2^24` is their exact sum. -/
+/-- The pairwise sum of integers whose magnitudes total at most `2^24` is their exact sum. -/
 theorem pairwiseGroupSum_int (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ depth + 1 →
     (zs.map Int.natAbs).sum ≤ 2 ^ 24 →
     pairwiseGroupSum ftz depth (zs.map fun z : ℤ => (z : ℚ)) = some ((zs.sum : ℤ) : ℚ)
@@ -340,7 +340,7 @@ theorem productOverflows : x.productOverflows = false := by
   have := of_decide_eq_true hle
   grind
 
-/-- The products as a list of integers within the budget. -/
+/-- The products as a list of integers within the exactness bound. -/
 theorem ints : ∃ zs : List ℤ, x.p.map Unpacked.value = zs.map (fun z : ℤ => (z : ℚ)) ∧
     (zs.map Int.natAbs).sum ≤ 2 ^ 24 := by
   obtain ⟨zs, hzs⟩ := intList (x.p.map Unpacked.value) (by
@@ -362,7 +362,7 @@ theorem c_int : ∃ z : ℤ, x.c.value = z := h.c.1
 
 end IntPrepared
 
-/-- CDNA 2: the pairwise tree of integer products is their exact sum. -/
+/-- CDNA 2: the pairwise sum of integer products is their exact sum. -/
 theorem pairwiseSum_int (P : Model) {x : Prepared} (h : IntPrepared x) :
     pairwiseSum P x = some x.exact := by
   have hx' : (if P.subnormals then x else x.flushed) = x := by
@@ -438,9 +438,9 @@ theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlig
     · rw [hcz] at he; cases he; omega
     · rename_i hm; cases he; exact h.c.exp_le hm h.c_le
   obtain ⟨zc, hzc⟩ := h.c_int
-  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normaliseRD P.late.accFracBits (T : ℚ) = T := by
+  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normalizeRD P.late.accFracBits (T : ℚ) = T := by
     intro T hT
-    unfold normaliseRD
+    unfold normalizeRD
     split
     · rename_i h0; rw [h0]
     · rename_i h0
@@ -559,7 +559,7 @@ theorem wordValue_of_read {i : InputFormat} {w : i.Word} {u : Unpacked}
     (h : (i.read w).toFinite = some u) : i.wordValue w = u.value := by
   unfold InputFormat.wordValue; rw [h]; rfl
 
-/-- The products of integer words add up to an integer within their budget. -/
+/-- The products of integer words add up to an integer within the sum of their magnitudes. -/
 theorem exactProducts_int {P : Model} :
     ∀ (a : List P.a.Word) (b : List P.b.Word), (∀ w ∈ a, IntWord P.a w) → (∀ w ∈ b, IntWord P.b w) →
       ∃ Z : ℤ, exactProducts P a b = Z ∧ absQ (Z : ℚ) ≤ wordDotAbs P a b
@@ -667,13 +667,13 @@ theorem evalBlock_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.
 integer `c`, return `c + Σ aᵢbᵢ` exactly when `|c| + Σ|aᵢbᵢ| ≤ 2^24`. -/
 theorem runBlocks_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) :
-    ∀ (groups : List (List P.a.Word × List P.b.Word)) (c : F32) (zc : ℤ),
+    ∀ (blocks : List (List P.a.Word × List P.b.Word)) (c : F32) (zc : ℤ),
       value32 c = some (zc : ℚ) →
-      (∀ g ∈ groups, g.1.length = P.nfma ∧ g.2.length = P.nfma ∧
+      (∀ g ∈ blocks, g.1.length = P.nfma ∧ g.2.length = P.nfma ∧
         (∀ w ∈ g.1, IntWord P.a w) ∧ ∀ w ∈ g.2, IntWord P.b w) →
-      absQ (zc : ℚ) + sumQ (groups.map fun g => wordDotAbs P g.1 g.2) ≤ pow2 24 →
-      ∃ ts, runBlocks P c groups = .ok ts ∧
-        value32 (lastOutput c ts) = some ((zc : ℚ) + sumQ (groups.map fun g =>
+      absQ (zc : ℚ) + sumQ (blocks.map fun g => wordDotAbs P g.1 g.2) ≤ pow2 24 →
+      ∃ ts, runBlocks P c blocks = .ok ts ∧
+        value32 (lastOutput c ts) = some ((zc : ℚ) + sumQ (blocks.map fun g =>
           exactProducts P g.1 g.2))
   | [], c, zc, hc, _, _ => ⟨[], rfl, by simp [lastOutput, hc, sumQ]; grind⟩
   | g :: rest, c, zc, hc, hg, hbound => by
@@ -743,7 +743,7 @@ theorem mem_padToBlocks {n : ℕ} {xs : List (BitVec w)} {v : BitVec w}
   · exact Or.inl h
   · exact Or.inr (List.mem_replicate.mp h).2
 
-/-- The blocks' budgets add up to the budget of the whole vectors. -/
+/-- The blocks' sums of product magnitudes add up to that of the whole vectors. -/
 theorem blocks_dotAbs (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word} {b : List P.b.Word}
     (hlen : a.length = b.length) :
     sumQ ((blocks P a b).map fun ab => wordDotAbs P ab.1 ab.2) = wordDotAbs P a b := by
@@ -774,7 +774,7 @@ theorem dotBits_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (ha : ∀ w ∈ a, IntWord P.a w) (hb : ∀ w ∈ b, IntWord P.b w) {c : F32} {zc : ℤ}
     (hc : value32 c = some (zc : ℚ)) (hbound : absQ (zc : ℚ) + wordDotAbs P a b ≤ pow2 24) :
     ∃ d, dotBits P a b c = .ok d ∧ value32 d = some ((zc : ℚ) + exactProducts P a b) := by
-  have hgroups : ∀ g ∈ blocks P a b, g.1.length = P.nfma ∧ g.2.length = P.nfma ∧
+  have hblocks : ∀ g ∈ blocks P a b, g.1.length = P.nfma ∧ g.2.length = P.nfma ∧
       (∀ w ∈ g.1, IntWord P.a w) ∧ ∀ w ∈ g.2, IntWord P.b w := by
     intro g hg
     unfold blocks at hg
@@ -790,7 +790,7 @@ theorem dotBits_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
       rcases mem_padToBlocks (chunks_mem_mem _ _ g2 hm.2 w hw) with h | h
       · exact hb w h
       · rw [h]; exact h0b
-  obtain ⟨ts, hts, hv⟩ := runBlocks_int hP hfa hfb (blocks P a b) c zc hc hgroups
+  obtain ⟨ts, hts, hv⟩ := runBlocks_int hP hfa hfb (blocks P a b) c zc hc hblocks
     (by rw [blocks_dotAbs P hn hlen]; exact hbound)
   refine ⟨lastOutput c ts, ?_, ?_⟩
   · rw [dotBits_eq_runBlocks P c hlen, hts]; rfl

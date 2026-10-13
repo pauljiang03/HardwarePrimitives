@@ -1,7 +1,7 @@
 import TensorCore.TC.Specification.Equivalence
 import TensorCore.TC.Specification.Variants
 
-/-! The model equals the independent specification on every supported path. -/
+/-! The model equals the independent specification on every supported variant. -/
 
 namespace TensorCore.IndependentSpec
 
@@ -23,13 +23,13 @@ def supportedInput (variant : Variant) (x : BlockInput (implementationModel vari
 theorem supported_parameters (variant : Variant) :
     parametersOf (implementationModel variant) = parameters variant := by cases variant <;> rfl
 
-/-- Every supported GPU path and every input, with failures observed as none. -/
+/-- Every supported GPU variant and every input, with failures observed as none. -/
 theorem supported_eq_spec (variant : Variant) (x : BlockInput (implementationModel variant)) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parameters variant) (supportedInput variant x) := by
   cases variant <;> exact evalBlock_eq_spec x
 
-/-- Every paper-valid input of every supported path produces the specified bits. -/
+/-- Every paper-valid input of every supported variant produces the specified bits. -/
 theorem supported_valid_success (variant : Variant) (x : BlockInput (implementationModel variant))
     (hv : Valid (parameters variant) (supportedInput variant x)) :
     ∃ t, evalBlock x = .ok t ∧

@@ -2,11 +2,11 @@ import OzakiMC.SplitChoice
 import OzakiMC.TwoPass
 import Ozaki.ModuliRule
 
-/-! # Choosing the configuration per AMD path, with two passes, for Ozaki-I and Ozaki-II
+/-! # Choosing the configuration per AMD variant, with two passes, for Ozaki-I and Ozaki-II
 
-`OzakiMC.SplitChoice` chose Ozaki-I's slice width with split-K. With the two-pass engine of
-`OzakiMC.TwoPass` the AMD paths gain a second kind of configuration, and Ozaki-II gets the same
-treatment as on the Tensor Core (`OzakiTC.Ozaki2Choice`):
+`OzakiMC.SplitChoice` chose Ozaki-I's slice width with split-K. With the two-pass matrix multiplier
+of `OzakiMC.TwoPass` the AMD variants gain a second kind of configuration, and Ozaki-II gets the
+same treatment as on the Tensor Core (`OzakiTC.Ozaki2Choice`):
 
 * **split-K** with `b`-bit slices (`2b ≤ 24`), chunks of `chunkLen b` on chained blocks
   (`mcSplitK_exactOn`): `mcBlocks` blocks per product;
@@ -20,7 +20,7 @@ The costs are model blocks, with the limits stated in `OzakiTC.SplitChoice` and
 
 ## Results (inner dimension `k = 1024`, blocks)
 
-| path | `N_FMA` | Ozaki-I FP64 best | Ozaki-II FP64 best | Ozaki-I binary32 | Ozaki-II binary32 |
+| variant | `N_FMA` | Ozaki-I FP64 best | Ozaki-II FP64 best | Ozaki-I binary32 | Ozaki-II binary32 |
 | --- | --- | --- | --- | --- | --- |
 | SFMA | 1 | `b = 24`, two passes, 12288 | `b = 12`, split-K, 10240 | 6144 | 5120 |
 | CDNA 1 fp16 | 4 | `b = 11`, split-K, 3840 | `b = 11`, 2816 | 1536 | 1536 |
@@ -33,14 +33,15 @@ The costs are model blocks, with the limits stated in `OzakiTC.SplitChoice` and
 The SFMA is the one place where two passes win: a block holds one product, so one pass allows
 `12`-bit slices (`5` for FP64, `15` products), while two passes (TwoProdFMA) allow `24`-bit slices
 (`3`, `6` products at two blocks each, `12288` blocks against `15360`). On CDNA 3 fp16 two passes
-make full groups of `11`-bit products exact, but `10`-bit slices fill them in one pass more cheaply,
-as on the Tensor Core. For FP64, Ozaki-II costs fewer blocks than Ozaki-I on every path. -/
+make full block FMAs of `11`-bit products exact, but `10`-bit slices fill them in one pass more
+cheaply, as on the Tensor Core. For FP64, Ozaki-II costs fewer blocks than Ozaki-I on every variant.
+-/
 
 open MatrixCore
 
 namespace Ozaki.MC
 
-/-- How a slice or residue product runs on an AMD path. -/
+/-- How a slice or residue product runs on an AMD variant. -/
 inductive MCRun where
   | splitK (b : ℕ)
   | twoPass (b : ℕ)
@@ -98,7 +99,7 @@ def mcBest2 (P : Model) (bmax bmax2 t k : ℕ) : Option MCRun :=
       | none => some r
       | some a => if r.cost2 P.nfma t k < a.cost2 P.nfma t k then some r else some a) none
 
-/-! ## The best configurations per path (`k = 1024`) -/
+/-! ## The best configurations per variant (`k = 1024`) -/
 
 /-- **The SFMA: two passes win for Ozaki-I.** `24`-bit slices with TwoProdFMA cost `12288` blocks
 for FP64 against `15360` for `12`-bit slices in one pass. For Ozaki-II, `12`-bit residues in one
@@ -167,7 +168,7 @@ theorem cdna3F16_fp64CR2 {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
   rwa [hm] at this
 
 /-- **Correctly rounded FP64 on the SFMA with two passes**: `24`-bit slices (TwoProdFMA), the exact
-path at up to `84` slices (`84 · 25 > 2098`), every length. -/
+fallback at up to `84` slices (`84 · 25 > 2098`), every length. -/
 theorem sfma_fp64CR2pass (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     ozaki1CRE (mcMultiplier2 sfmaF32) rne64 24 ss 84 x y = rne64 (dot x y) :=

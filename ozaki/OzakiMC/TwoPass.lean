@@ -3,7 +3,7 @@ import OzakiMC.IEEE
 
 /-! # Two passes through `c` on the matrix-core model
 
-On the Tensor Core, running a group a second time from `c = −D1` recovers exactly what the first
+On the Tensor Core, running a block FMA a second time from `c = −D1` recovers exactly what the first
 pass truncated (`Ozaki.TC.twoPass_exact`). Here is what happens on each AMD architecture.
 
 * **SFMA and CDNA 1** (`correct_rounding`): `S_acc` is the exact sum `c + Σ aᵢbᵢ`, rounded once
@@ -12,25 +12,27 @@ pass truncated (`Ozaki.TC.twoPass_exact`). Here is what happens on each AMD arch
   products whose sum is at most `2^48` (`mcTwoPass_exact`). On the SFMA, whose block is one
   product, this is the classical TwoProdFMA: it makes products of `24`-bit integers exact, where
   one pass allows only `12`-bit slices.
-* **CDNA 3** (`global_alignment`): products of exponent at most `24` align without loss, and the late
-  addition of `c` is exact for an integer `c` up to `2^31` when the exact sum is within `2^31`
+* **CDNA 3** (`global_alignment`): products of exponent at most `24` align without loss, and the
+  late addition of `c` is exact for an integer `c` up to `2^31` when the exact sum is within `2^31`
   (`alignedAccumulation_wide`). Pass 1 rounds `S` to `D1` and pass 2 returns `S − D1` exactly, so
-  two passes recover `S` for full groups of `11`-bit fp16 products, which one pass does not
-  (`cdna3F16_full_group`, `cdna3F16_twoPass_full_group`).
-* **CDNA 2** (`pair_wise_sum`): every node of the pairwise tree is rounded to binary32 before `c`
-  is added. A second pass from `c = −D1` sees the same rounded tree, so it recovers what the final
-  rounding lost but not what the tree lost; with operands whose tree rounds, two passes return the
-  tree's value, not the exact sum (`cdna2_twoPass_fails`). For Ozaki's integer slices the tree
-  never rounds: a full group of four `11`-bit products is at most `2^24` (`pairwiseSumsBounded_of_bound`).
+  two passes recover `S` for full block FMAs of `11`-bit fp16 products, which one pass does not
+  (`cdna3F16_full_blockFMA`, `cdna3F16_twoPass_full_blockFMA`).
+* **CDNA 2** (`pair_wise_sum`): every pairwise sum is rounded to binary32 before `c` is added. A
+  second pass from `c = −D1` sees the same rounded pairwise sums, so it recovers what the final
+  rounding lost but not what the pairwise sums lost; with operands whose pairwise sums round, two
+  passes return the rounded sum, not the exact sum (`cdna2_twoPass_fails`). For Ozaki's integer
+  slices the pairwise sums never round: a full group of four `11`-bit products is at most `2^24`
+  (`pairwiseSumsBounded_of_bound`).
 
 **Is a second pass ever needed?** On CDNA 1 and 2 (`4` fp16 products per block, `2` or `4` bf16) and
-CDNA 3 XF32 (`4`), a full group of the widest slices fits the `2^24` budget, so one pass is exact.
-On CDNA 3 fp16 a group holds `8` products and `8 · 2^22 = 2^25`, so `11`-bit slices in full groups
-need two passes; `10`-bit slices fit in one. On the SFMA two passes allow `24`-bit slices.
+CDNA 3 XF32 (`4`), a full block FMA of the widest slices fits the exactness bound `2^24`, so one
+pass is exact. On CDNA 3 fp16 a block FMA holds `8` products and `8 · 2^22 = 2^25`, so `11`-bit
+slices in full block FMAs need two passes; `10`-bit slices fit in one. On the SFMA two passes allow
+`24`-bit slices.
 
 `mcMultiplier2` runs every block twice and adds the results exactly; it is exact on vectors of every
-length on the SFMA with `24`-bit slices and on CDNA 1 and CDNA 3 whenever a full group of products
-is at most `2^30` (`mcMultiplier2_exactOn`). -/
+length on the SFMA with `24`-bit slices and on CDNA 1 and CDNA 3 whenever a full block FMA of
+products is at most `2^30` (`mcMultiplier2_exactOn`). -/
 
 open MatrixCore
 
@@ -110,9 +112,9 @@ theorem alignedAccumulation_wide {P : Model} (hacc : P.accumulation = .globalAli
     · rw [hcz] at he; cases he; omega
     · rename_i hm; cases he; exact h.c.exp_le hm h.c_le
   obtain ⟨zc, hzc⟩ := h.c_int
-  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 31 → normaliseRD P.late.accFracBits (T : ℚ) = T := by
+  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 31 → normalizeRD P.late.accFracBits (T : ℚ) = T := by
     intro T hT
-    unfold normaliseRD
+    unfold normalizeRD
     split
     · rename_i h0; rw [h0]
     · rename_i h0
@@ -459,10 +461,10 @@ theorem mcTwoPass_exact_ga {P : Model} (hacc : P.accumulation = .globalAlignment
   · rw [absQ_eq]; exact Rat.le_trans hcle h3031
   · rw [absQ_eq]; exact Rat.le_trans hsle h3031
 
-/-! ## The two-pass engine -/
+/-! ## The two-pass matrix multiplier -/
 
-/-- Split-K with chunks of at most `m`, for an engine exact on vectors of at most `m` entries: exact
-on vectors of every length. -/
+/-- Split-K with chunks of at most `m`, for a matrix multiplier exact on vectors of at most `m`
+entries: exact on vectors of every length. -/
 theorem chunked_exactOn_short {mult : MatrixMultiplier} {b m : ℕ} (hm : 0 < m)
     (hmult : ∀ x y : List ℤ, x.length = y.length → x.length ≤ m → (∀ a ∈ x, a.natAbs ≤ 2 ^ b) →
       (∀ a ∈ y, a.natAbs ≤ 2 ^ b) → mult x y = some (dotZ x y)) (B : ℕ) :
@@ -480,14 +482,14 @@ theorem chunked_exactOn_short {mult : MatrixMultiplier} {b m : ℕ} (hm : 0 < m)
 
 /-- One block run twice: the integers padded with zeros to `N_FMA`, encoded, and run by
 `mcTwoPass`. -/
-def mcGroup2 (P : Model) : MatrixMultiplier := fun x y => do
+def mcBlock2 (P : Model) : MatrixMultiplier := fun x y => do
   let a ← (x ++ List.replicate (P.nfma - x.length) 0).mapM fun z : ℤ => P.a.encodeExact (z : ℚ)
   let b ← (y ++ List.replicate (P.nfma - y.length) 0).mapM fun z : ℤ => P.b.encodeExact (z : ℚ)
   mcTwoPass P a b
 
-/-- **The two-pass matrix-core engine**: split-K with chunks of one block, every block run twice,
-the block results added exactly. -/
-def mcMultiplier2 (P : Model) : MatrixMultiplier := chunked P.nfma (mcGroup2 P)
+/-- **The two-pass matrix multiplier on the matrix core**: split-K with chunks of one block, every
+block run twice, the block results added exactly. -/
+def mcMultiplier2 (P : Model) : MatrixMultiplier := chunked P.nfma (mcBlock2 P)
 
 /-- The configurations and slice widths for which a block of `b`-bit integers run twice is exact:
 `correct_rounding` (no product-overflow detection) with `N_FMA · 2^(2b) ≤ 2^48`, or CDNA 3's global
@@ -505,8 +507,8 @@ theorem dotZ_replicate_zero : ∀ k : ℕ, dotZ (List.replicate k 0) (List.repli
   | 0 => rfl
   | k + 1 => by simp [List.replicate_succ, dotZ_cons, dotZ_replicate_zero k]
 
-/-- **The two-pass engine is exact on vectors of every length** with `b`-bit slices, whenever
-`TwoPassOK P b`. -/
+/-- **The two-pass matrix multiplier is exact on vectors of every length** with `b`-bit slices,
+whenever `TwoPassOK P b`. -/
 theorem mcMultiplier2_exactOn {P : Model} {b : ℕ} (hok : TwoPassOK P b) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) (hn : 0 < P.nfma) (hea : EncodesInts P.a b)
     (heb : EncodesInts P.b b) (B : ℕ) : (mcMultiplier2 P).ExactOn b B := by
@@ -588,13 +590,13 @@ theorem mcMultiplier2_exactOn {P : Model} {b : ℕ} (hok : TwoPassOK P b) (hfa :
       (fun z : ℤ => P.a.encodeExact (z : ℚ)) = some (x'.map Ea) := hmx
   have hmy' : (y ++ List.replicate (P.nfma - y.length) 0).mapM
       (fun z : ℤ => P.b.encodeExact (z : ℚ)) = some (y'.map Eb) := hmy
-  unfold mcGroup2
+  unfold mcBlock2
   simp only [hmx', hmy', Option.bind_eq_bind, Option.bind_some]
   rw [hrun, hdot]; rfl
 
 /-! ## Instances -/
 
-/-- **CDNA 3 fp16 with full groups**: eight products of `11`-bit slices (`8 · 2^22 = 2^25`), two
+/-- **CDNA 3 fp16 with full block FMAs**: eight products of `11`-bit slices (`8 · 2^22 = 2^25`), two
 passes each, exact for every length. -/
 theorem cdna3F16_exactOn2 (B : ℕ) : (mcMultiplier2 cdna3F16).ExactOn 11 B :=
   mcMultiplier2_exactOn (by decide) binary16_small binary16_small (by decide)
@@ -616,10 +618,11 @@ theorem cdna3XF32_exactOn2 (B : ℕ) : (mcMultiplier2 cdna3XF32).ExactOn 11 B :=
 
 /-! ## When a second pass is needed, and when it fails -/
 
-/-- **Where one pass is not enough.** A full group of the widest slices each path encodes fits the
-`2^24` budget on CDNA 1 and 2 (fp16 and bf16) and CDNA 3 bf16 and XF32; it does not on CDNA 3 fp16
-(`8 · 2^22 = 2^25`), and on the SFMA a single product of slices wider than `12` bits exceeds it. -/
-theorem full_groups_fit :
+/-- **Where one pass is not enough.** A full block FMA of the widest slices each variant encodes
+fits the exactness bound `2^24` on CDNA 1 and 2 (fp16 and bf16) and CDNA 3 bf16 and XF32; it does
+not on CDNA 3 fp16 (`8 · 2^22 = 2^25`), and on the SFMA a single product of slices wider than `12`
+bits exceeds it. -/
+theorem full_blockFMAs_fit :
     cdna1F16.nfma * 2 ^ 22 ≤ 2 ^ 24 ∧ cdna1BF16.nfma * 2 ^ 16 ≤ 2 ^ 24 ∧
     cdna2F16.nfma * 2 ^ 22 ≤ 2 ^ 24 ∧ cdna2BF16.nfma * 2 ^ 16 ≤ 2 ^ 24 ∧
     cdna2BF16_1k.nfma * 2 ^ 16 ≤ 2 ^ 24 ∧ cdna3BF16.nfma * 2 ^ 16 ≤ 2 ^ 24 ∧
@@ -627,9 +630,9 @@ theorem full_groups_fit :
     ¬ cdna3F16.nfma * 2 ^ 22 ≤ 2 ^ 24 ∧ ¬ sfmaF32.nfma * 2 ^ 26 ≤ 2 ^ 24 := by
   decide
 
-/-- **CDNA 3 fp16, a full group recovered.** `7 × 2047² = 29331463`, which one pass returns as
-`29331464` (`cdna3F16_full_group`); two passes return it exactly. -/
-theorem cdna3F16_twoPass_full_group :
+/-- **CDNA 3 fp16, a full block FMA recovered.** `7 × 2047² = 29331463`, which one pass returns as
+`29331464` (`cdna3F16_full_blockFMA`); two passes return it exactly. -/
+theorem cdna3F16_twoPass_full_blockFMA :
     mcTwoPass cdna3F16 (List.replicate 7 (0x67FF : BitVec 16) ++ [0]) (List.replicate 8 0x67FF) =
       some 29331463 := by
   decide +kernel
@@ -644,9 +647,9 @@ theorem sfma_twoProd :
   decide +kernel
 
 /-- **CDNA 2: two passes can fail.** Products `2^22` and `2^-14` (fp16 `0x6800 · 0x6800` and
-`0x0400 · 0x3C00`): the pairwise tree rounds `2^22 + 2^-14` to `2^22` before `c` is added, so pass 2
-from `c = −2^22` sees the same rounded node and returns `0`; two passes return `2^22`, not the exact
-`2^22 + 2^-14`. On CDNA 1, which adds exactly, the same block is recovered. -/
+`0x0400 · 0x3C00`): the pairwise sum rounds `2^22 + 2^-14` to `2^22` before `c` is added, so pass 2
+from `c = −2^22` sees the same rounded pairwise sum and returns `0`; two passes return `2^22`, not
+the exact `2^22 + 2^-14`. On CDNA 1, which adds exactly, the same block is recovered. -/
 theorem cdna2_twoPass_fails :
     mcTwoPass cdna2F16 [(0x6800 : BitVec 16), 0x0400, 0, 0] [0x6800, 0x3C00, 0, 0] =
       some (2 ^ (22 : ℕ)) ∧

@@ -4,26 +4,27 @@ import Ozaki.SignOracle
 
 /-! # Correctly rounded Ozaki-I with bounded registers
 
-`ozaki1CRW` decides in exact rational arithmetic. Here every step after the engine is integer
-arithmetic of bounded width, equal to it:
+`ozaki1CRW` decides in exact rational arithmetic. Here every step after the matrix multiplier is
+integer arithmetic of bounded width, equal to it:
 
-* the engine's slice products are integer terms `(v, gₜ + hᵤ)`, worth `v 2^(gₜ+hᵤ)`
-  (`sliceProductInt`);
-* **the check** (`ozaki1TestB`): each term rounded down to the window grid `q` by a shift, the
-  results added in a two's-complement register of `W + bitlen (n (k + 2)) + 1` bits, which never
-  wraps (`ozaki1TestB_register`); the bound `(s + 1) k 2^c + n 2^q` as integers at the grid
-  `min q c`; both ends rounded with `roundExact`. It equals `roundEnclosure` of the window
+* the slice products of the matrix multiplier are integer terms `(v, gₜ + hᵤ)`, worth
+  `v 2^(gₜ+hᵤ)` (`sliceProductInt`);
+* **the rounding test** (`ozaki1TestB`): each term rounded down to the truncation grid `q` by a
+  shift, the results added in a two's-complement register of `W + bitlen (n (k + 2)) + 1` bits,
+  which never wraps (`ozaki1TestB_register`); the bound `(s + 1) k 2^c + n 2^q` as integers at the
+  grid `min q c`; both ends rounded with `roundExact`. It equals `roundEnclosure` of the truncated
   enclosure (`ozaki1TestB_eq`);
-* **the exact path** (`ozaki1ExactFallbackB`): the `s²` slice products as integer terms, rounded by
-  `roundSum` with windows of `bitlen (s² + 1) + p + 4` bits, equal to rounding the exact path's
-  value (`ozaki1ExactFallbackB_eq`);
+* **the exact fallback** (`ozaki1ExactFallbackB`): the `s²` slice products as integer terms, rounded
+  by `roundSum` with ranges of `bitlen (s² + 1) + p + 4` bits, equal to rounding the value of the
+  exact fallback (`ozaki1ExactFallbackB_eq`);
 * `ozaki1CRB` is `ozaki1CRW` with `rnd = roundRNE p emin emax` (`ozaki1CRB_eq_CRW`), hence correctly
   rounded (`ozaki1CRB_eq`), for binary64 and binary32 inputs in particular (`ozaki1CRB64_eq`,
   `ozaki1CRB32_eq`).
 
-No integer in it depends on the inputs' exponent range: window parts, window sums, residuals (each
-at most a slice product, `sliceProductInt_natAbs_le`, at most the engine's budget) and query terms
-are bounded by `W`, `p`, `b`, `s` and `k`; only exponents and the number of windows grow with it. -/
+No integer in it depends on the inputs' exponent range: truncated parts of terms, truncated sums,
+residuals (each at most a slice product, `sliceProductInt_natAbs_le`, at most the exactness bound of
+the matrix multiplier) and query terms are bounded by `W`, `p`, `b`, `s` and `k`; only exponents
+and the number of ranges of the top-down summation grow with it. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -31,10 +32,10 @@ local notation "ℚ" => Rat
 
 namespace Ozaki
 
-/-! ## Engine outputs as integer terms -/
+/-! ## Outputs of the matrix multiplier as integer terms -/
 
-/-- The engine's product of two slices as an integer term `(v, g + h)`, if the engine returned an
-integer `v`. -/
+/-- The product of two slices on the matrix multiplier as an integer term `(v, g + h)`, if the
+matrix multiplier returned an integer `v`. -/
 def sliceProductInt (mult : MatrixMultiplier) (sl sl' : Slice) : Option (ℤ × ℤ) :=
   (mult sl.coeffs sl'.coeffs).bind fun v =>
     if v.den = 1 then some (v.num, sl.grid + sl'.grid) else none
@@ -68,7 +69,8 @@ theorem sliceProductInt_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult
     sliceProductInt mult sl sl' = some (exactSliceInt sl sl') :=
   sliceProductInt_of_eq (multiplier_exact hmult hlen hbound hsl hsl').1
 
-/-- **Slice products are bounded by the engine's budget**, whatever the exponents. -/
+/-- **Slice products are bounded by the exactness bound of the matrix multiplier**, whatever the
+exponents. -/
 theorem sliceProductInt_natAbs_le {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.ExactOn b bound)
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {sl sl' : Slice} (hsl : sl ∈ (split b s x).1) (hsl' : sl' ∈ (split b s y).1) :
@@ -98,7 +100,7 @@ theorem pairInt_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.
   obtain ⟨hly, _, _⟩ := split_length b s y
   exact sliceProductInt_exact hmult hlen hbound (getD_mem (by omega)) (getD_mem (by omega))
 
-/-! ## The window in integers -/
+/-! ## The truncated sum in integers -/
 
 /-- `⌊z 2^(g − q)⌋`: a left shift, or an arithmetic right shift (floor division by `2^(q−g)`). -/
 def floorPart (q : ℤ) (t : ℤ × ℤ) : ℤ :=
@@ -159,7 +161,7 @@ theorem abs_floor_le (v : ℚ) : Rat.abs ((v.floor : ℤ) : ℚ) ≤ Rat.abs v +
   have := le_abs_self v
   constructor <;> grind
 
-/-- A term below `k 2^(q + W)` in magnitude has a window part below `k 2^W + 2`. -/
+/-- A term below `k 2^(q + W)` in magnitude has a truncated part below `k 2^W + 2`. -/
 theorem natAbs_floorPart_lt {q : ℤ} {W k : ℕ} {t : ℤ × ℤ}
     (h : Rat.abs (tval t) ≤ k * 2 ^ (q + W)) : (floorPart q t).natAbs < k * 2 ^ W + 2 := by
   have h1 := abs_floor_le (tval t * 2 ^ (-q))
@@ -208,8 +210,9 @@ theorem roundEnclosureB_eq (p : ℕ) (emin emax N q K c : ℤ) (n : ℕ) :
   generalize roundRNE p emin emax ((N : ℚ) * 2 ^ q + ((K : ℚ) * 2 ^ c + (n : ℚ) * 2 ^ q)) = r2
   cases r1 <;> cases r2 <;> rfl
 
-/-- **The bounded check for `s` slices**: the engine's slice products as integer terms, the window
-sum in a `W + bitlen (n (k + 2)) + 1`-bit register, and the integer enclosure test. -/
+/-- **The bounded rounding test for `s` slices**: the slice products of the matrix multiplier as
+integer terms, the truncated sum in a `W + bitlen (n (k + 2)) + 1`-bit register, and the integer
+enclosure test. -/
 def ozaki1TestB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (x y : List ℚ) :
     Option ℚ :=
   match (trianglePairs s).mapM (pairInt mult (split b s x).1 (split b s y).1) with
@@ -228,7 +231,7 @@ theorem exactTerms_eq_map (b s : ℕ) (x y : List ℚ) :
   rw [List.map_map]
   exact List.map_congr_left fun p _ => (tval_exactPairInt _ _ p).symm
 
-/-- **The window register never wraps**: the window parts of the `n` slice products add up, in
+/-- **The register never wraps**: the truncated parts of the `n` slice products add up, in
 magnitude, below `2^(W + bitlen (n (k + 2)))`. -/
 theorem ozaki1TestB_register (b s W : ℕ) (x y : List ℚ) :
     ((((trianglePairs s).map (exactPairInt (split b s x).1 (split b s y).1)).map
@@ -256,7 +259,7 @@ theorem ozaki1TestB_register (b s W : ℕ) (x y : List ℚ) :
   rw [← Nat.pow_add, Nat.add_comm (bitlen _)] at h4
   omega
 
-/-- **The bounded check is the enclosure test** on the window enclosure, with
+/-- **The bounded rounding test is the enclosure test** on the truncated enclosure, with
 `rnd = roundRNE p emin emax`. -/
 theorem ozaki1TestB_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
@@ -277,11 +280,11 @@ theorem ozaki1TestB_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.E
   rw [Rat.intCast_natCast, Rat.natCast_mul]
   all_goals simp only [List.length_map]
 
-/-! ## The exact path in integers -/
+/-! ## The exact fallback in integers -/
 
-/-- **The exact path with bounded registers**: the first slice count up to `smax` that leaves
-nothing over, all `s²` slice products from the engine as integer terms, rounded by `roundSum` with
-windows of `bitlen (s² + 1) + p + 4` bits. -/
+/-- **The exact fallback with bounded registers**: the first slice count up to `smax` that leaves
+nothing over, all `s²` slice products from the matrix multiplier as integer terms, rounded by
+`roundSum` with ranges of `bitlen (s² + 1) + p + 4` bits. -/
 def ozaki1ExactFallbackB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
@@ -324,8 +327,8 @@ theorem ozaki1ExactFallbackB_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult
 
 /-! ## The scheme -/
 
-/-- **Correctly rounded Ozaki-I with bounded registers**: the bounded checks for the slice counts
-`ss` in turn, then the bounded exact path. -/
+/-- **Correctly rounded Ozaki-I with bounded registers**: the bounded tests for the slice counts
+`ss` in turn, then the bounded exact fallback. -/
 def ozaki1CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   match ss with
@@ -355,8 +358,8 @@ theorem ozaki1CRB_eq_CRW {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult
     cases (ozaki1TruncatedEnclosure mult b s W x y).bind
       (fun e => roundEnclosure (roundRNE p emin emax) e.1 e.2) <;> rfl
 
-/-- **Correctly rounded Ozaki-I with bounded registers is correctly rounded**: on an exact engine,
-for every input whose exact path ends within `smax` slices. -/
+/-- **Correctly rounded Ozaki-I with bounded registers is correctly rounded**: on an exact matrix
+multiplier, for every input whose exact fallback ends within `smax` slices. -/
 theorem ozaki1CRB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
     {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -384,8 +387,9 @@ theorem ozaki1CRB32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.E
     ozaki1CRB mult 24 (-126) 127 b W ss smax x y = rne32Q (dot x y) :=
   ozaki1CRB_eq (by decide) (by decide) hmult W ss hlen hbound (vanish32Q hb hsmax hx hy)
 
-/-- **The exact path's integer terms are bounded by the engine's budget**: every term handed to
-`roundSum` has `|v| ≤ budget`, and `roundSum`'s own registers are bounded by its window, `p` and the
+/-- **The integer terms of the exact fallback are bounded by the exactness bound of the matrix
+multiplier**: every term handed to `roundSum` has `|v| ≤ bound`, and the registers of `roundSum` are
+bounded by its range width, `p` and the
 number of terms (`topDownSum_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt`). -/
 theorem ozaki1ExactFallbackB_terms {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {s : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
@@ -400,12 +404,13 @@ theorem ozaki1ExactFallbackB_terms {mult : MatrixMultiplier} {b bound : ℕ} (hm
 
 /-! ## Examples, checked by the kernel -/
 
-/-- The window check settles `x · y` for a non-dyadic product with `4` slices and `W = 40`. -/
+/-- The rounding test on the truncated sum decides `x · y` for a non-dyadic product with `4` slices
+and `W = 40`. -/
 example : ozaki1TestB exactMultiplier 24 (-126) 127 8 4 40 [3, 5/4, -7/8] [1/2, 3, 2/3] =
     rne32Q (dot [3, 5/4, -7/8] [1/2, 3, 2/3]) := by decide +kernel
 
-/-- A binary32 tie with a heavy cancellation, `2^40 + 1 + 2^-24 − 2^40`: two slices do not settle
-it, and the bounded exact path rounds it to the even `1`. -/
+/-- A binary32 tie with a heavy cancellation, `2^40 + 1 + 2^-24 − 2^40`: with two slices the
+rounding test does not decide it, and the bounded exact fallback rounds it to the even `1`. -/
 example : ozaki1CRB exactMultiplier 24 (-126) 127 8 20 [2] 40 [2 ^ 40, 1, 2 ^ (-24 : ℤ), -(2 ^ 40)]
       [1, 1, 1, 1] = some 1 ∧
     rne32Q (dot [2 ^ 40, 1, 2 ^ (-24 : ℤ), -(2 ^ 40)] [1, 1, 1, 1]) = some 1 := by decide +kernel

@@ -6,7 +6,7 @@ The hardware observation of one block, for every input word. The paper reports:
 
 * infinities are detected at the input: one sign of infinity gives that infinity, and `+∞`
   together with `−∞` gives NaN (with a negative sign on the GPUs; the NaN payload is not
-  characterised, so it is not modelled);
+  characterized, so it is not modeled);
 * CDNA 3 maps a product with `|p_ℓ| ≥ 2^128` to an infinity before accumulation, by magnitude
   rather than exponent;
 * CDNA 1 lets products exceed `2^128` and handles overflow when the sum is converted;
@@ -79,7 +79,7 @@ def roundOutcome (ftz : Bool) (s : ℚ) : Outcome :=
   | some d => .finite d
   | none => .infinity (decide (s < 0))
 
-/-- Balanced pairwise tree over extended values, as `pairwiseGroupSum`. -/
+/-- The balanced pairwise sum over extended values, as `pairwiseGroupSum`. -/
 def pairwiseGroupSumX (ftz : Bool) : ℕ → List XVal → XVal
   | _, [] => .fin 0
   | _, [x] => x

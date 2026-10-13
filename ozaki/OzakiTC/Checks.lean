@@ -1,9 +1,9 @@
 import OzakiTC.Scaling
 
-/-! # The Z3 models' engine lemmas on the Tensor Core model
+/-! # The lemmas about the Z3 models' matrix multiplier, on the Tensor Core model
 
-The Z3 models' engine takes fp16 operands, widens them to binary32, multiplies and adds in
-binary32, and proves three lemmas about it (Ozaki-I `[Z.2]`, `[Z.3]`, `[Z.4]`; Ozaki-II `[Z.1]`,
+The Z3 models' matrix multiplier takes fp16 operands, widens them to binary32, multiplies and adds
+in binary32, and proves three lemmas about it (Ozaki-I `[Z.2]`, `[Z.3]`, `[Z.4]`; Ozaki-II `[Z.1]`,
 `[Z.2]`, `[Z.3]`), with runtime checks `[E.1]`–`[E.4]`. The same facts, for every input:
 
 * `fp16_encodes_int` (`I:[Z.2]`, `II:[Z.1]`, `[E.1]`, `[E.2]`): every integer of magnitude at most
@@ -14,16 +14,17 @@ binary32, and proves three lemmas about it (Ozaki-I `[Z.2]`, `[Z.3]`, `[Z.4]`; O
 * `fp32Add_int_exact` (`I:[Z.4]`, `II:[Z.3]`, `[E.4]`): a binary32 addition of integers whose sum is
   at most `2^24` is exact.
 
-The Tensor Core itself multiplies exactly and adds a whole group exactly before one rounding
-(`evalBlock_int`, `runBlocks_int`); these lemmas are about the Z3 models' engine, stated with
-TC-EFT's formats and roundings. -/
+The Tensor Core itself multiplies exactly and adds a whole block FMA exactly before one rounding
+(`evalBlock_int`, `runBlocks_int`); these lemmas are about the Z3 models' matrix multiplier, stated
+with TC-EFT's formats and roundings. -/
 
 open TensorCore
 
 namespace Ozaki.TC
 
-/-- **fp16 holds every `11`-bit integer** (`I:[Z.2]`, `II:[Z.1]`): the engine's fp16 encoding of an
-integer `|z| ≤ 2^11` succeeds and decodes to `z`, so widening it is exact (`[E.1]`, `[E.2]`). -/
+/-- **fp16 holds every `11`-bit integer** (`I:[Z.2]`, `II:[Z.1]`): the matrix multiplier's fp16
+encoding of an integer `|z| ≤ 2^11` succeeds and decodes to `z`, so widening it is exact (`[E.1]`,
+`[E.2]`). -/
 theorem fp16_encodes_int {z : ℤ} (hz : z.natAbs ≤ 2 ^ 11) :
     ∃ w, encodeInt fp16 z = some w ∧ ∃ d, (classify fp16 w).finite = some d ∧ d.value = z :=
   encodeInt_spec (by decide) (by decide) (by decide) (Nat.le_trans hz (by decide))

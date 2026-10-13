@@ -1,23 +1,23 @@
 import OzakiTC.ADPFix
 import Ozaki.CheckedMultipliers
 
-/-! # The INT8 engine with its arithmetic guarded
+/-! # The INT8 matrix multiplier with its arithmetic guarded
 
-ADP's INT8 engine (`int8Dot 32`, TC-EFT's fixed-width register) multiplies bytes and accumulates
-in a 32-bit register; split-K (`int8DotK`, `int8SplitK`) adds the chunk results. Here every integer
-of that arithmetic is guarded:
+ADP's INT8 matrix multiplier (`int8Dot 32`, TC-EFT's fixed-width register) multiplies bytes and
+accumulates in a 32-bit register; split-K (`int8DotK`, `int8SplitK`) adds the chunk results. Here
+every integer of that arithmetic is guarded:
 
 * `regSumC`: the register's partial sums, each checked to stay in the register's own signed range
   `(−2^(w−1), 2^(w−1))`, so the register provably never wraps; `int8DotC` adds the byte products,
   each guarded against `2^R`, in it. It returns the exact dot product, the value of `int8Dot`
   (`int8DotC_eq`).
 * `int8DotKC`: split-K over `int8DotC` with the chunk sums guarded (`int8DotKC_eq`), used by the
-  checked ADP recombination; `int8SplitKC`: the guarded split-K engine of `Ozaki.CheckedMultipliers`
-  over `int8DotC`, used by the checked ADP exact path. Both are exact where the unguarded ones are
-  (`int8SplitKC_exactOn`).
+  checked ADP recombination; `int8SplitKC`: the guarded split-K matrix multiplier of
+  `Ozaki.CheckedMultipliers` over `int8DotC`, used by the checked ADP exact fallback. Both are exact
+  where the unguarded ones are (`int8SplitKC_exactOn`).
 
-`ozaki1ExactFallbackI_congr`: the integer exact path depends only on the engine's values on exact
-slices, so it is the same on any two engines exact on them. -/
+`ozaki1ExactFallbackI_congr`: the integer exact fallback depends only on the matrix multiplier's
+values on exact slices, so it is the same on any two matrix multipliers exact on them. -/
 
 open TensorCore
 
@@ -42,8 +42,8 @@ theorem regSumC_eq {w : ℕ} : ∀ {acc : ℤ} {zs : List ℤ},
       regSumC_eq (Nat.lt_of_le_of_lt (Nat.add_le_add_right h1 _) (by omega))]
     simp only [List.sum_cons, Int.add_assoc]
 
-/-- **The INT8 engine, every integer guarded**: each byte product guarded against `2^R`, every
-partial sum of the 32-bit register checked against the register's range. -/
+/-- **The INT8 matrix multiplier, every integer guarded**: each byte product guarded against `2^R`,
+every partial sum of the 32-bit register checked against the register's range. -/
 def int8DotC (B : Widths) (x y : List ℤ) : Option ℤ := do
   let ps ← (List.zipWith (· * ·) x y).mapM B.gv
   regSumC 32 0 ps
@@ -54,8 +54,8 @@ theorem dotAbs_eq_map_sum (x y : List ℤ) :
 
 theorem dotZ_eq_zipWith_sum (x y : List ℤ) : (List.zipWith (· * ·) x y).sum = dotZ x y := rfl
 
-/-- **The guarded INT8 engine is exact and never wraps** while the products total less than
-`2^31`; it returns the 32-bit register's value. -/
+/-- **The guarded INT8 matrix multiplier is exact and never wraps** while the products total less
+than `2^31`; it returns the 32-bit register's value. -/
 theorem int8DotC_eq {B : Widths} {x y : List ℤ} (hR : 31 ≤ B.R) (h : dotAbs x y < 2 ^ 31) :
     int8DotC B x y = some (int8Dot 32 x y) := by
   rw [int8Dot_exact (by decide) h]
@@ -68,7 +68,7 @@ theorem int8DotC_eq {B : Widths} {x y : List ℤ} (hR : 31 ≤ B.R) (h : dotAbs 
   rw [regSumC_eq (by simp only [Int.natAbs_zero, Nat.zero_add, dotAbs_eq_map_sum]; exact h)]
   simp [dotZ_eq_zipWith_sum]
 
-/-- `int8DotK`, split-K over the guarded engine with the chunk sums guarded. -/
+/-- `int8DotK`, split-K over the guarded matrix multiplier with the chunk sums guarded. -/
 def int8DotKC (B : Widths) (x y : List ℤ) : Option ℤ := do
   let ds ← ((chunksOf (2 ^ 16) x).zip (chunksOf (2 ^ 16) y)).mapM fun p => int8DotC B p.1 p.2
   sumC B ds
@@ -101,7 +101,7 @@ theorem int8DotKC_eq {B : Widths} {x y : List ℤ} (hR : 31 ≤ B.R) (hlen : x.l
   rw [List.map_map]
   exact Nat.lt_of_le_of_lt hle hD
 
-/-- The INT8 engine with its arithmetic guarded. -/
+/-- The INT8 matrix multiplier with its arithmetic guarded. -/
 def int8MultiplierC (B : Widths) : MatrixMultiplier := fun x y => (int8DotC B x y).map fun z : ℤ => ((z : ℤ) : ℚ)
 
 theorem int8MultiplierC_exactOn {B : Widths} (hR : 31 ≤ B.R) : (int8MultiplierC B).ExactOn 6 (2 ^ 31 - 1) := by
@@ -111,7 +111,7 @@ theorem int8MultiplierC_exactOn {B : Widths} (hR : 31 ≤ B.R) : (int8Multiplier
     int8Dot_exact (by decide) (Nat.lt_of_le_of_lt hb (by decide))]
   rfl
 
-/-- **Split-K on the INT8 engine, every integer guarded.** -/
+/-- **Split-K on the INT8 matrix multiplier, every integer guarded.** -/
 def int8SplitKC (B : Widths) : MatrixMultiplier := chunkedC B (2 ^ 18) (int8MultiplierC B)
 
 theorem int8SplitKC_exactOn {B : Widths} (hR : 31 ≤ B.R) {D : ℕ} (hD : D < 2 ^ B.R) :
@@ -119,7 +119,7 @@ theorem int8SplitKC_exactOn {B : Widths} (hR : 31 ≤ B.R) {D : ℕ} (hD : D < 2
   chunkedC_exactOn (int8MultiplierC_exactOn hR) (by decide) (by decide)
     (Nat.lt_of_lt_of_le (by decide) (Nat.pow_le_pow_right (by decide) hR)) hD
 
-/-- **The integer exact path is the same on any two engines exact on its slices.** -/
+/-- **The integer exact fallback is the same on any two matrix multipliers exact on its slices.** -/
 theorem ozaki1ExactFallbackI_congr {e1 e2 : MatrixMultiplier} {b bound : ℕ} (h1 : e1.ExactOn b bound)
     (h2 : e2.ExactOn b bound) (p : ℕ) (emin emax : ℤ) (smax : ℕ) {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) :

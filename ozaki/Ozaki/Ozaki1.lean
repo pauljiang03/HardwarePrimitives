@@ -6,18 +6,20 @@ import Ozaki.Summation
 One output entry `x · y` (row `x` of `A`, column `y` of `B`) is computed as follows.
 
 1. Split `x` and `y` into `s` slices of `b`-bit integers (`Ozaki.Split`).
-2. Multiply slice `t` of `x` with slice `u` of `y` on a low-precision engine for every pair with
-   `t + u < s`: `s (s + 1) / 2` engine products.
+2. Multiply slice `t` of `x` with slice `u` of `y` on a low-precision matrix multiplier for every
+   pair with `t + u < s`: `s (s + 1) / 2` products on the matrix multiplier.
 3. Scale each product by `2^(gₜ + hᵤ)` and add the scaled products in working precision, smallest
    first.
 
-The engine is abstract here (`MatrixMultiplier`): any function that returns an integer dot product. The
-hardware libraries supply engines built from the NVIDIA Tensor Core model (`OzakiTC`) and the AMD
-matrix-core model (`OzakiMC`), and prove them exact on slices (`MatrixMultiplier.ExactOn`).
+The matrix multiplier is abstract here (`MatrixMultiplier`): any function that returns an integer
+dot product. The hardware libraries supply matrix multipliers built from the NVIDIA Tensor Core
+model (`OzakiTC`) and the AMD matrix-core model (`OzakiMC`), and prove them exact on slices
+(`MatrixMultiplier.ExactOn`).
 
 Main results:
 
-* `ozaki1_eq_sumWith`: with an exact engine, Ozaki-I adds exactly the scaled exact slice products;
+* `ozaki1_eq_sumWith`: with an exact matrix multiplier, Ozaki-I adds exactly the scaled exact slice
+  products;
 * `dot_eq_exactTerms_add`: the exact error identity
   `x · y − Σ_{t+u<s} 2^(gₜ+hᵤ) qₜ·pᵤ = r · y + Σₜ 2^gₜ (qₜ · r'ₛ₋ₜ)`, where `r` is the residual of
   `x` after `s` slices and `r'ₖ` the residual of `y` after `k` slices;
@@ -38,19 +40,20 @@ local notation "ℚ" => Rat
 
 namespace Ozaki
 
-/-! ## Engines -/
+/-! ## Matrix multipliers -/
 
-/-- A low-precision matrix engine seen from one output entry: it evaluates an integer dot product
-`Σ xᵢ yᵢ`, returning its value or failing. -/
+/-- A low-precision matrix multiplier seen from one output entry: it evaluates an integer dot
+product `Σ xᵢ yᵢ`, returning its value or failing. -/
 abbrev MatrixMultiplier := List ℤ → List ℤ → Option ℚ
 
-/-- The engine returns `Σ xᵢ yᵢ` exactly on equally long vectors whose entries have magnitude at
-most `2^b` and whose products have total magnitude at most `bound`. -/
+/-- The matrix multiplier returns `Σ xᵢ yᵢ` exactly on equally long vectors whose entries have
+magnitude at most `2^b` and whose products have total magnitude at most `bound`, the exactness
+bound. -/
 def MatrixMultiplier.ExactOn (mult : MatrixMultiplier) (b bound : ℕ) : Prop :=
   ∀ x y : List ℤ, x.length = y.length → (∀ a ∈ x, a.natAbs ≤ 2 ^ b) →
     (∀ a ∈ y, a.natAbs ≤ 2 ^ b) → dotAbs x y ≤ bound → mult x y = some (dotZ x y)
 
-/-- The ideal engine: exact integer arithmetic. -/
+/-- The ideal matrix multiplier: exact integer arithmetic. -/
 def exactMultiplier : MatrixMultiplier := fun x y => some (dotZ x y)
 
 theorem exactMultiplier_exactOn (b bound : ℕ) : exactMultiplier.ExactOn b bound :=
@@ -107,7 +110,8 @@ theorem sum_trianglePairs (s : ℕ) (f : ℕ → ℕ → ℚ) :
 
 /-! ## The scheme -/
 
-/-- The term of the slice pair `(t, u)`: the engine's slice product, scaled by `2^(gₜ + hᵤ)`. -/
+/-- The term of the slice pair `(t, u)`: the slice product of the matrix multiplier, scaled by
+`2^(gₜ + hᵤ)`. -/
 def pairTerm (mult : MatrixMultiplier) (sx sy : List Slice) (p : ℕ × ℕ) : Option ℚ :=
   (mult (sx.getD p.1 default).coeffs (sy.getD p.2 default).coeffs).map
     fun v => 2 ^ ((sx.getD p.1 default).grid + (sy.getD p.2 default).grid) * v
@@ -122,7 +126,7 @@ def exactTerms (b s : ℕ) (x y : List ℚ) : List ℚ :=
   (trianglePairs s).map (exactTerm (split b s x).1 (split b s y).1)
 
 /-- **Ozaki-I** for one output entry `x · y`: `s` slices of `b` bits, the `s (s + 1) / 2` slice
-products with `t + u < s` on the engine, then left-to-right summation with `add`. -/
+products with `t + u < s` on the matrix multiplier, then left-to-right summation with `add`. -/
 def ozaki1 (mult : MatrixMultiplier) (add : ℚ → ℚ → Option ℚ) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ((trianglePairs s).mapM (pairTerm mult (split b s x).1 (split b s y).1)).bind (sumWith add 0)
 
@@ -141,7 +145,8 @@ theorem getD_mem {l : List α} [Inhabited α] {t : ℕ} (h : t < l.length) : l.g
   rw [List.getD_eq_getElem?_getD, List.getElem?_eq_getElem h]
   exact List.getElem_mem h
 
-/-- Every engine call of Ozaki-I multiplies two slices whose coefficients are `b`-bit integers. -/
+/-- Every call of Ozaki-I to the matrix multiplier multiplies two slices whose coefficients are
+`b`-bit integers. -/
 theorem pairTerm_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.ExactOn b bound)
     {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {p : ℕ × ℕ} (hp : p ∈ trianglePairs s) :
@@ -163,8 +168,8 @@ theorem pairTerm_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult
       (split_coeff_bound b s y _ hmy)) ?_
     rw [hl1]; exact hbound
 
-/-- **Exact engine calls.** With an engine exact on `b`-bit slices, Ozaki-I adds exactly the
-scaled exact slice products. -/
+/-- **Exact calls to the matrix multiplier.** With a matrix multiplier exact on `b`-bit slices,
+Ozaki-I adds exactly the scaled exact slice products. -/
 theorem ozaki1_eq_sumWith {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (add : ℚ → ℚ → Option ℚ) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
@@ -361,8 +366,8 @@ theorem abs_exactTerm_le (b s : ℕ) (x y : List ℚ) {p : ℕ × ℕ}
   have := Rat.mul_le_mul_of_nonneg_left this (show (0 : ℚ) ≤ x.length from Rat.natCast_nonneg)
   grind
 
-/-- **Ozaki-I error.** With an engine exact on `b`-bit slices and additions of relative error `u`
-and absolute error `η`, the result is within
+/-- **Ozaki-I error.** With a matrix multiplier exact on `b`-bit slices and additions of relative
+error `u` and absolute error `η`, the result is within
 `((1 + u)^n − 1) n k 2^(E+F) + n (1 + u)^n η + (s + 1) k 2^(E+F−s(b+1))` of `x · y`. -/
 theorem ozaki1_error {mult : MatrixMultiplier} {add : ℚ → ℚ → Option ℚ} {b bound s : ℕ} {u η : ℚ}
     (hmult : mult.ExactOn b bound) (hu : 0 ≤ u) (hη : 0 ≤ η) (hadd : AddWithin add u η)

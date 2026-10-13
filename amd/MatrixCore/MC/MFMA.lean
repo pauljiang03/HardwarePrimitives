@@ -5,7 +5,7 @@ import MatrixCore.MC.InnerProduct
 `mfma P A B C` takes `A` by rows, `B` by columns and `C` by rows. Each entry `d_ij` is the
 observed inner product of row `i` of `A` and column `j` of `B` with `c_ij` (`mfma_entry`). A finite
 entry is the finite-domain inner product, so every theorem about inner products applies to it:
-its blocks satisfy the profile contracts, and it is within the sum of their error bounds of the
+its blocks satisfy the contracts of the model, and it is within the sum of their error bounds of the
 exact `c_ij + Σ_ℓ a_iℓ b_ℓj` (`mfma_finite`, `mfma_error`). -/
 
 namespace MatrixCore

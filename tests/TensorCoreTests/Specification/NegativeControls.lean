@@ -49,7 +49,7 @@ def ampereEAlignMinInput : BlockInput a100BF16F32 :=
   ⟨[(0x1a7c, 0x1a00), (0x1880, 0x1880), (0x1880, 0x1800), (0x1880, 0x1800)] ++
     List.replicate 4 (0, 0), 0⟩
 
-/-- Hopper's finer grid needs a separate witness at its own floor. -/
+/-- Hopper's finer grid needs a separate witness at its own minimum alignment exponent. -/
 def hopperEAlignMinInput : BlockInput hopperBF16F32 :=
   ⟨[(0x1a7f, 0x1a00), (0x1800, 0x1800), (0x1800, 0x1780), (0x1800, 0x1780)] ++
     List.replicate 12 (0, 0), 0⟩
@@ -70,16 +70,16 @@ theorem hopper_eAlignMin_removal_detected :
   · rw [← evalBlock_eq_spec]
     decide +kernel
 
-def cancelGroup : List (F16 × F16) := (0xbc00, 0x3c00) :: List.replicate 7 (0, 0)
-def tinyGroup : List (F16 × F16) := (1, 0x3c00) :: List.replicate 7 (0, 0)
+def cancelBlock : List (F16 × F16) := (0xbc00, 0x3c00) :: List.replicate 7 (0, 0)
+def tinyBlock : List (F16 × F16) := (1, 0x3c00) :: List.replicate 7 (0, 0)
 
-theorem group_reversal_detected :
-    lastBits (parametersOf ampereF16F32) 0x3f800000 [cancelGroup, tinyGroup] = some 0x33800000 ∧
-    lastBits (parametersOf ampereF16F32) 0x3f800000 [tinyGroup, cancelGroup] = some 0 := by
+theorem block_reversal_detected :
+    lastBits (parametersOf ampereF16F32) 0x3f800000 [cancelBlock, tinyBlock] = some 0x33800000 ∧
+    lastBits (parametersOf ampereF16F32) 0x3f800000 [tinyBlock, cancelBlock] = some 0 := by
   constructor
-  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [cancelGroup, tinyGroup]).symm.trans
+  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [cancelBlock, tinyBlock]).symm.trans
       (by decide +kernel)
-  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [tinyGroup, cancelGroup]).symm.trans
+  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [tinyBlock, cancelBlock]).symm.trans
       (by decide +kernel)
 
 /-- Value equality alone cannot distinguish these two encodings; the sign clause can. -/

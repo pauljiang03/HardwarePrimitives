@@ -61,7 +61,7 @@ theorem Word.sub_value {x y z : Word} (h : x.sub y = some z) :
   rw [Word.neg_value] at ha
   simpa [Rat.sub_eq_add_neg] using ha
 
-/-- A sufficient input-derived magnitude budget guarantees an accepted addition. -/
+/-- A sufficient input-derived bound on the magnitudes guarantees an accepted addition. -/
 theorem Word.add_exists (x y : Word)
     (h : x.magnitude.toNat + y.magnitude.toNat < 2 ^ 576) :
     ∃ z, x.add y = some z := by
@@ -107,7 +107,7 @@ theorem sumWords_value {xs : List Word} {z : Word} (h : sumWords xs = some z) :
 
 def wordMagnitudeSum (xs : List Word) : ℕ := (xs.map fun x => x.magnitude.toNat).sum
 
-/-- Every suffix sum fits under the original inputs' absolute budget. -/
+/-- Every suffix sum fits under the magnitude sum of the original inputs. -/
 theorem sumWords_exists (xs : List Word) (h : wordMagnitudeSum xs < 2 ^ 576) :
     ∃ z, sumWords xs = some z ∧ z.magnitude.toNat ≤ wordMagnitudeSum xs := by
   induction xs with

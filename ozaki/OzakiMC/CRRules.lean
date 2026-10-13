@@ -4,13 +4,13 @@ import Ozaki.Adaptive
 /-! # The two design rules and the correct-rounding margin on the matrix-core model
 
 `Ozaki.Adaptive`'s rules on matrix-core blocks with split-K (slice counts from the inner dimension,
-and the shortcut to the exact path), each correctly rounded for every length, and the per-path
-comparison of Ozaki-I and Ozaki-II with the margin of `Ozaki.SliceRuleCR`: at `k = 1024`, `t = 63`
-for FP64 and `34` for binary32.
+and the shortcut to the exact fallback), each correctly rounded for every length, and the
+per-variant comparison of Ozaki-I and Ozaki-II with the margin of `Ozaki.SliceRuleCR`: at
+`k = 1024`, `t = 63` for FP64 and `34` for binary32.
 
 ## Results (inner dimension `k = 1024`, blocks)
 
-| path | Ozaki-I FP64 | Ozaki-II FP64 | Ozaki-I binary32 | Ozaki-II binary32 |
+| variant | Ozaki-I FP64 | Ozaki-II FP64 | Ozaki-I binary32 | Ozaki-II binary32 |
 | --- | --- | --- | --- | --- |
 | SFMA | `b = 24`, two passes, 12288 | `b = 12`, 11264 | 6144 | 7168 |
 | CDNA 1 fp16 | `b = 11`, 5376 | 3072 | 2560 | 1792 |
@@ -20,9 +20,9 @@ for FP64 and `34` for binary32.
 | CDNA 3 bf16 | `b = 8`, 4608 | 2048 | 1920 | 1280 |
 | CDNA 3 XF32 | `b = 11`, 5376 | 3072 | 2560 | 1792 |
 
-As on the Tensor Core, Ozaki-II is cheaper for FP64 on every path with the margin, now by `1.1×`
+As on the Tensor Core, Ozaki-II is cheaper for FP64 on every variant with the margin, now by `1.1×`
 (SFMA) to `2.25×`; for binary32 it is cheaper except on the SFMA, where two-pass Ozaki-I with
-`24`-bit slices wins. The counts leave out the work off the engine. -/
+`24`-bit slices wins. The counts leave out the work off the matrix multiplier. -/
 
 open MatrixCore
 

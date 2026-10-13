@@ -6,7 +6,7 @@ namespace TensorCore.EFMachine
 
 set_option exponentiation.threshold 1024
 
-/-- Both extracted lists fit within the original absolute coefficient budget. -/
+/-- The magnitude sum of each extracted list is at most that of the original terms. -/
 theorem split_magnitudeSum (ts : List Term) (g : Grid) :
     wordMagnitudeSum ((ts.map fun t => t.word.split g).map WordSplit.coarse) ≤
       wordMagnitudeSum (ts.map Term.word) ∧

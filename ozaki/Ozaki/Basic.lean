@@ -307,7 +307,8 @@ def dotZ (x y : List ℤ) : ℤ := (List.zipWith (· * ·) x y).sum
 /-- An integer vector read as rationals. -/
 def ofInts (x : List ℤ) : List ℚ := x.map fun z : ℤ => (z : ℚ)
 
-/-- `Σᵢ |xᵢ yᵢ|`, the magnitude budget of an integer dot product. -/
+/-- `Σᵢ |xᵢ yᵢ|`, the sum of the product magnitudes of an integer dot product, which the
+exactness bound of a matrix multiplier limits. -/
 def dotAbs (x y : List ℤ) : ℕ := (List.zipWith (fun a b => (a * b).natAbs) x y).sum
 
 @[simp] theorem dot_nil_left (y : List ℚ) : dot [] y = 0 := by simp [dot]

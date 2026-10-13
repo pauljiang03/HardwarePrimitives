@@ -9,7 +9,7 @@ Bounds for each lossy stage of Algorithms 1 and 2:
   `2^(e_max − 23 − n_eab)` per product, and odd/even grouping adds two RD steps of the same size;
 * when `e_c ≤ e_max`, `s'_c` differs from `c` by less than `2^(e_max − 24)`;
 * when `e_c > e_max`, both RD steps round down: `S_acc ≤ S_{p_i,sum} + c`, by less than
-  `2^(e_c − 32) + 2^(e' − 31)`, where `e'` is the exponent of the normalised sum. -/
+  `2^(e_c − 32) + 2^(e' − 31)`, where `e'` is the exponent of the normalized sum. -/
 
 namespace MatrixCore
 
@@ -161,7 +161,7 @@ theorem shiftedSum_bounds (P : Model) (eC : ℤ) (S : ℚ) (c : Unpacked) :
   intro T
   have h1 := rdGrid_bounds S (eC - P.late.sumFracBits)
   have hp := pow2_pos (normExp (absQ T) - P.late.accFracBits)
-  unfold shiftedSum normaliseRD
+  unfold shiftedSum normalizeRD
   by_cases hT : rdGrid S (eC - P.late.sumFracBits) + c.value = 0
   · simp only [hT, ↓reduceIte]
     constructor <;> grind
@@ -223,7 +223,7 @@ theorem cExp_none {P : Model} {c : Unpacked} (h : cExp P c = none) : c.value = 0
 
 * `e_c ≤ e_max`: `|S_acc − (Σ p_ℓ + c)| < (n + 2)·2^(e_max − F) + 2^(e_max − 24)`;
 * `e_c > e_max`: `S_acc` is below `Σ p_ℓ + c` up to the product error, by less than
-  `(n + 2)·2^(e_max − F) + 2^(e_c − 32) + 2^(e' − 31)`, `e'` the normalised exponent of `T`;
+  `(n + 2)·2^(e_max − F) + 2^(e_c − 32) + 2^(e' − 31)`, `e'` the normalized exponent of `T`;
 * no product exponent (all products zero): the second branch with no product error. -/
 theorem alignedAccumulation_error (P : Model) (x : Prepared)
     (hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n)

@@ -15,7 +15,7 @@ def Term.unnormalized (t : Term) : UnnormalizedProduct :=
   ⟨if t.negative then -(t.significand.toNat : ℤ) else t.significand.toNat,
     (t.biasedExp.toNat : ℤ) - 256, t.mantissaBits.toNat⟩
 
-/-- A significand below 4 with at most 23 mantissa bits. -/
+/-- A significand below 4 with at most 23 bits after the binary point. -/
 def Term.Valid (t : Term) : Prop :=
   t.significand.toNat < 2 ^ (t.mantissaBits.toNat + 2) ∧ t.mantissaBits.toNat ≤ 23
 

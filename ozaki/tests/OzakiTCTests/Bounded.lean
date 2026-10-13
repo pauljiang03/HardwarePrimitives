@@ -4,10 +4,11 @@ import OzakiTC.Bounded
 /-! # Correctly rounded FP64 with bounded registers
 
 The binary64 cases of [`data/correct-reference.json`](../../data/correct-reference.json) through
-`tcOzaki1CRBD`, the correctly rounded Ozaki-I whose check, exact path and final rounding run in
-integer registers of bounded width, on V100 fp16 blocks with split-K. It returns the exact-fraction
-oracle's words with the check settling entries (five, then six slices, `96`-bit window), and with
-no check at all (`ss = []`), so that every entry goes through the bounded exact path.
+`tcOzaki1CRBD`, the correctly rounded Ozaki-I whose rounding test, exact fallback and final rounding
+run in integer registers of bounded width, on V100 fp16 blocks with split-K. It returns the
+exact-fraction oracle's words with the rounding test succeeding on entries (five, then six slices, a
+`96`-bit truncated sum), and with no rounding test at all (`ss = []`), so that every entry goes
+through the bounded exact fallback.
 
 The same cases through `tcOzaki1CRID`, whose inputs are the stored entries `(m, e)` and whose slicing
 is integer too, and three zero results through `tcOzaki1CRIDS`, which gives them IEEE's sign. -/
@@ -28,7 +29,7 @@ example : (do
     encode64 C) = some C_wide64 := by
   decide +kernel
 
-/-! Every entry through the bounded exact path. -/
+/-! Every entry through the bounded exact fallback. -/
 
 example : (do
     let A ← decode64 A_narrow64; let B ← decode64 B_narrow64

@@ -1,21 +1,21 @@
 import OzakiTC.ADPLabels
 import OzakiTC.ADPFix
 
-/-! # Choosing ADP's slice encoding and count on the INT8 engine
+/-! # Choosing ADP's slice encoding and count on the INT8 matrix multiplier
 
 ADP's emulation converts each row and column to `W`-bit fixed point, `W = t + ESC + 1` for a target
 of `t` bits (`53 + ESC + 1` for FP64, `adpWidth`), cuts the integers into `s` byte slices, and
-multiplies all `s²` slice pairs on the INT8 engine. Its knobs are the slice encoding and the slice
-count, which the encoding's range fixes (`slicesNeededWith`, `slicesNeededWith_spec`); the
+multiplies all `s²` slice pairs on the INT8 matrix multiplier. Its knobs are the slice encoding and
+the slice count, which the encoding's range fixes (`slicesNeededWith`, `slicesNeededWith_spec`); the
 exponent span `ESC` comes from the data.
 
 * **Every candidate is exact** (`adpCandidate_exact`): with any of the three encodings and its
   slice count, an emulated entry is one binary64 rounding of the fixed-point product, for vectors
-  with `k · 2^16 < 2^31` (`emulEntryWith_eq`); with the remap encoding the INT8 engine with split-K
-  makes this hold for every length (`adpCRE_eq`).
+  with `k · 2^16 < 2^31` (`emulEntryWith_eq`); with the remap encoding the INT8 matrix multiplier
+  with split-K makes this hold for every length (`adpCRE_eq`).
 * **The cost** of an encoding is `s² · ⌈k / K₈⌉` INT8 blocks of `K₈` byte products. The INT8
-  engine of this development has no group structure, since INT8 hardware semantics are out of
-  scope (issue #2); `K₈ = 32`, the `k` of the `m16n8k32` integer MMA shape, is a modelling
+  matrix multiplier of this development has no block FMA structure, since INT8 hardware semantics
+  are out of scope (issue #2); `K₈ = 32`, the `k` of the `m16n8k32` integer MMA shape, is a modeling
   assumption. INT8 blocks are not comparable with the Tensor Core or matrix-core blocks of the other
   choices without the instructions' relative throughput, which the models do not give.
 
@@ -92,7 +92,7 @@ theorem adp_best :
   decide +kernel
 
 /-- **Correctly rounded FP64 with ADP's slicing at `ESC = 0`**: `7` remapped slices of a `54`-bit
-fixed point, every product on the INT8 engine, binary64 inputs of any length. -/
+fixed point, every product on the INT8 matrix multiplier, binary64 inputs of any length. -/
 theorem adp_fp64CR_esc0 {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     adpCRE [(7, 54)] 300 x y = fp64Round (dot x y) := by

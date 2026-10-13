@@ -56,7 +56,7 @@ example : rne32 (1 + p2 (-24)) = some 0x3F800000 ∧ rne32 (1 + 3 * p2 (-24)) = 
 example : fl32 true (-p2 (-130)) = some 0x80000000 ∧ fl32 false (-p2 (-130)) = some 0x80080000 := by
   decide +kernel
 
-/-- Profiles by architecture and input format. -/
+/-- Models by architecture and input format. -/
 example : Architecture.model .cdna1 .fp16 = some cdna1F16 ∧
     Architecture.model .cdna2 .bf16_1k = some cdna2BF16_1k ∧
     Architecture.model .cdna3 (.fp8 e4m3fnuz e5m2fnuz) = some (cdna3FP8 e4m3fnuz e5m2fnuz) ∧

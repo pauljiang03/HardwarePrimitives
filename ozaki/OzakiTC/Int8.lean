@@ -2,19 +2,19 @@ import OzakiTC.Exactness
 import Ozaki.ADP
 import Ozaki.Binary
 
-/-! # Ozaki-I on an INT8 engine (ADP)
+/-! # Ozaki-I on an INT8 matrix multiplier (ADP)
 
 NVIDIA's ADP emulates binary64 GEMM on INT8 tensor cores, which multiply bytes and accumulate in
 an INT32 register. TC-EFT models a fixed-width register as `machineAccumulate w`, `w`-bit
-two's-complement additions that wrap on overflow; `int8Dot w` is the INT8 engine with that
-register. This file proves:
+two's-complement additions that wrap on overflow; `int8Dot w` is the INT8 matrix multiplier with
+that register. This file proves:
 
 * `int8Dot_exact`: the register holds the exact sum whenever `Σ|xᵢyᵢ| < 2^(w−1)`; for signed and
   unsigned bytes in a 32-bit register this is `int8Dot_bytes` (`[Z.1]`: `k = 4` products of
   `s8 · s8` or `s8 · u8`);
 * `int8Dot_16_wraps`: a 16-bit register wraps on four byte products (`[Z.2]`);
-* `int8Ozaki_eq`: Ozaki-I on the INT8 engine (fixed point, remapped slices, all `s²` slice
-  products, exact recombination, one binary64 rounding) returns the binary64 rounding of the
+* `int8Ozaki_eq`: Ozaki-I on the INT8 matrix multiplier (fixed point, remapped slices, all `s²`
+  slice products, exact recombination, one binary64 rounding) returns the binary64 rounding of the
   exact fixed-point product, when every fixed-point integer fits the remap range and
   `k · 2^14 < 2^31`. -/
 
@@ -22,7 +22,8 @@ open TensorCore
 
 namespace Ozaki.TC
 
-/-- The INT8 engine: products of byte operands accumulated in a `w`-bit wrapping register. -/
+/-- The INT8 matrix multiplier: products of byte operands accumulated in a `w`-bit wrapping
+register. -/
 def int8Dot (w : ℕ) (x y : List ℤ) : ℤ := (machineAccumulate w 0 (List.zipWith (· * ·) x y)).toInt
 
 theorem magnitudeSum_zipWith : ∀ x y : List ℤ,
@@ -53,19 +54,20 @@ theorem int8Dot_16_wraps :
     int8Dot 16 [127, 127, 127, 127] [127, 127, 127, 127] = -1020 ∧
       dotZ [127, 127, 127, 127] [127, 127, 127, 127] = 64516 := by decide
 
-/-! ## Ozaki-I on the INT8 engine -/
+/-! ## Ozaki-I on the INT8 matrix multiplier -/
 
 /-- Fixed point: `N = ⌊a · 2^shift⌋` (round toward `−∞`, as §3 states for the lead slice). -/
 def toFixed (shift : ℤ) (x : List ℚ) : List ℤ := x.map fun a => (a * (2 : ℚ) ^ shift).floor
 
-/-- The exactly recombined slice products on the INT8 engine: `Σ_{t,u} 256^(t+u) (Nₐ,ₜ · N_b,ᵤ)`. -/
+/-- The exactly recombined slice products on the INT8 matrix multiplier:
+`Σ_{t,u} 256^(t+u) (Nₐ,ₜ · N_b,ᵤ)`. -/
 def int8Recombine (s : ℕ) (Na Nb : List ℤ) : ℤ :=
   ((List.range s).map fun t => ((List.range s).map fun u =>
     256 ^ (t + u) * int8Dot 32 (ADP.sliceVec s t Na) (ADP.sliceVec s u Nb)).sum).sum
 
-/-- **Ozaki-I on the INT8 engine** for one output entry: fixed-point integers with the given
-shifts, `s` remapped byte slices, all `s²` slice products, exact recombination, and one binary64
-round to nearest even (IEEE's, `Ozaki.rne64`). -/
+/-- **Ozaki-I on the INT8 matrix multiplier** for one output entry: fixed-point integers with the
+given shifts, `s` remapped byte slices, all `s²` slice products, exact recombination, and one
+binary64 round to nearest even (IEEE's, `Ozaki.rne64`). -/
 def int8Ozaki (s : ℕ) (shiftA shiftB : ℤ) (x y : List ℚ) : Option ℚ :=
   rne64 ((int8Recombine s (toFixed shiftA x) (toFixed shiftB y) : ℚ) * pow2 (-(shiftA + shiftB)))
 

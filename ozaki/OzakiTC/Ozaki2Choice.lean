@@ -1,25 +1,26 @@
 import OzakiTC.SplitChoice
 import Ozaki.ModuliRule
 
-/-! # Choosing the configuration of Ozaki-II per Tensor Core path, and Ozaki-I against Ozaki-II
+/-! # Choosing the configuration of Ozaki-II per Tensor Core variant, and Ozaki-I against Ozaki-II
 
-Ozaki-II runs one engine product per modulus. With `b`-bit residues (moduli at most `2^(b+1)`) the
-engine configurations are those of Ozaki-I (`OzakiTC.SplitChoice`): split-K with chunks of
-`chunkLen b`, or two passes over full groups, every one exact for every length
-(`candidates_exact`). For a target of `t` bits the moduli rule `moduliFor b t k` takes `P = t + 2`
-and the fewest greedy coprime moduli at most `2^(b+1)` whose product exceeds `2 k 2^(2P)`
-(`Ozaki.moduliFor_spec`); then Ozaki-II's truncation term is at most `2^-t · k · max|x| · max|y|`,
-the target of Ozaki-I's slice rule. The cost of a configuration is `moduliFor b t k · blocks`, in
-Tensor Core blocks, against Ozaki-I's `s(s+1)/2 · blocks`.
+Ozaki-II runs one product on the matrix multiplier per modulus. With `b`-bit residues (moduli at
+most `2^(b+1)`) the configurations of the matrix multiplier are those of Ozaki-I
+(`OzakiTC.SplitChoice`): split-K with chunks of `chunkLen b`, or two passes over full block FMAs,
+every one exact for every length (`candidates_exact`). For a target of `t` bits the moduli rule
+`moduliFor b t k` takes `P = t + 2` and the fewest greedy coprime moduli at most `2^(b+1)` whose
+product exceeds `2 k 2^(2P)` (`Ozaki.moduliFor_spec`); then Ozaki-II's truncation term is at most
+`2^-t · k · max|x| · max|y|`, the target of Ozaki-I's slice rule. The cost of a configuration is
+`moduliFor b t k · blocks`, in Tensor Core blocks, against Ozaki-I's `s(s+1)/2 · blocks`.
 
-**The cost counts model blocks only.** It leaves out the work off the engine, which differs
-between the schemes: Ozaki-II computes residues and a Chinese-remainder reconstruction with
-integers of `2P + log₂ k + 1` bits; Ozaki-I splits and adds exact slice products. It also leaves
-out the extra moduli correct rounding may need, since Ozaki-II carries no margin (see `OzakiTC.Correct`).
+**The cost counts model blocks only.** It leaves out the work off the matrix multiplier, which
+differs between the schemes: Ozaki-II computes residues and a Chinese-remainder reconstruction with
+integers of `2P + log₂ k + 1` bits; Ozaki-I splits and adds exact slice products. It also leaves out
+the extra moduli correct rounding may need, since Ozaki-II carries no margin (see
+`OzakiTC.Correct`).
 
 ## Results (inner dimension `k = 1024`)
 
-| path | FP64: Ozaki-II best | moduli | blocks | Ozaki-I best blocks | binary32: Ozaki-II blocks | Ozaki-I blocks |
+| variant | FP64: Ozaki-II best | moduli | blocks | Ozaki-I best blocks | binary32: Ozaki-II blocks | Ozaki-I blocks |
 | --- | --- | --- | --- | --- | --- | --- |
 | V100 fp16 | `b = 11`, split-K | 11 | 2816 | 3840 | 1536 | 1536 |
 | A100 fp16 | `b = 10`, split-K | 12 | 1536 | 2688 | 768 | 768 |
@@ -31,11 +32,11 @@ out the extra moduli correct rounding may need, since Ozaki-II carries no margin
 | H100 tf32 (mma) | `b = 10`, split-K | 12 | 1536 | 2688 | 768 | 768 |
 
 For FP64, Ozaki-II needs `11` to `14` residue products where Ozaki-I needs `15` to `28` slice
-products, so it costs `1.4` to `2` times fewer blocks on every path. For binary32 the counts are
+products, so it costs `1.4` to `2` times fewer blocks on every variant. For binary32 the counts are
 close (`6` moduli against `6` slice products for `10`- and `11`-bit residues), and the two tie
 except on bf16, where Ozaki-II's `8` moduli beat Ozaki-I's `10` products. As for Ozaki-I, `10`-bit
-residues filling a whole group win wherever a group holds more than four products, and two passes
-never win. -/
+residues filling a whole block FMA win wherever a block FMA holds more than four products, and two
+passes never win. -/
 
 open TensorCore
 
@@ -54,9 +55,9 @@ def best2 (p : Model) (bmax t k : ℕ) : Option SliceRun :=
     | none => some r
     | some a => if r.cost2 p.nfma t k < a.cost2 p.nfma t k then some r else some a) none
 
-/-- **Every candidate is exact for Ozaki-II**: its engine is exact on vectors of every length, its
-moduli are at most `2^(b+1)`, and they meet the reconstruction condition for every length up to
-`k`. -/
+/-- **Every candidate is exact for Ozaki-II**: its matrix multiplier is exact on vectors of every
+length, its moduli are at most `2^(b+1)`, and they meet the reconstruction condition for every
+length up to `k`. -/
 theorem ozaki2Candidates_ok {p : Model} {bmax : ℕ}
     (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits) (hwide : 23 ≤ p.alignFracBits)
     (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma) {t k : ℕ} :
@@ -78,7 +79,7 @@ theorem moduliBasis_valid :
     (moduliBasis 8 8).Valid ∧ (moduliBasis 10 6).Valid ∧ (moduliBasis 11 6).Valid := by
   decide +kernel
 
-/-! ## The best configuration per path (`k = 1024`) -/
+/-! ## The best configuration per variant (`k = 1024`) -/
 
 theorem v100F16_best2 :
     best2 v100F16F32 11 53 1024 = some (.splitK 11) ∧ (SliceRun.splitK 11).cost2 4 53 1024 = 2816 ∧
@@ -103,7 +104,7 @@ theorem a100TF32_best2 :
     best2 a100TF32F32 11 24 1024 = some (.splitK 11) ∧ (SliceRun.splitK 11).cost2 4 24 1024 = 1536 := by
   decide +kernel
 
-/-- **H100 fp16**: Ozaki-II with `12` moduli at most `2048` (`10`-bit residues in full groups of
+/-- **H100 fp16**: Ozaki-II with `12` moduli at most `2048` (`10`-bit residues in full block FMAs of
 sixteen) costs `768` blocks for FP64, against `1344` for Ozaki-I's best and `1408` for `11`-bit
 residues with two passes. -/
 theorem h100F16_best2 :

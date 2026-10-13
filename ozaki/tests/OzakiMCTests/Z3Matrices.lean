@@ -5,11 +5,11 @@ import OzakiMC
 The two `4 × 4` cases of the Z3 models (`random.Random(2026)`, exponents in `[2^-1, 2^1]` and
 `[2^-6, 2^6]`), with the outputs of the unmodified Z3 models recorded in
 [`data/z3-reference.json`](../../data/z3-reference.json). Every word is binary32. The Lean
-pipelines return the same words on every path whose engine is exact on `11`-bit slices: CDNA 1,
-CDNA 2 and CDNA 3 fp16, CDNA 3 XF32, and the binary32 SFMA; Ozaki-I with four `11`-bit slices (ten
-slice products) and Ozaki-II with moduli `{4096, 4095, 4093, 4091}` and `P = 22`. The bf16 paths
-cannot encode `11`-bit slices and return `none`. Each check is a kernel evaluation of the same
-definitions the theorems use. -/
+pipelines return the same words on every variant whose matrix multiplier is exact on `11`-bit
+slices: CDNA 1, CDNA 2 and CDNA 3 fp16, CDNA 3 XF32, and the binary32 SFMA; Ozaki-I with four
+`11`-bit slices (ten slice products) and Ozaki-II with moduli `{4096, 4095, 4093, 4091}` and
+`P = 22`. The bf16 variants cannot encode `11`-bit slices and return `none`. Each check is a kernel
+evaluation of the same definitions the theorems use. -/
 
 open MatrixCore Ozaki Ozaki.MC
 

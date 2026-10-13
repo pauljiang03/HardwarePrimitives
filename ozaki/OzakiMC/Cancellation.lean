@@ -12,9 +12,9 @@ operands, an integer `c` and every product at most `2^24` in magnitude (true for
 * **CDNA 3** (`global_alignment`): products of exponent at most `24` align to `24` fractional bits
   without loss, and the late addition of `c` rounds an integer down to an integer; exact whenever
   `|c| ≤ 2^24` and the exact sum is within `2^24`;
-* **CDNA 2** (`pair_wise_sum`): every node of the pairwise tree is rounded to binary32, so every
-  node's sum must be within `2^24` as well (`PairwiseSumsBounded`), not only the total; cancellation inside a
-  node is free, cancellation across the tree is not.
+* **CDNA 2** (`pair_wise_sum`): every pairwise sum is rounded to binary32, so every pairwise sum
+  must be within `2^24` as well (`PairwiseSumsBounded`), not only the total; cancellation inside a
+  pairwise sum is free, cancellation across pairwise sums is not.
 
 `accumulate_cancel` states this for prepared blocks and `evalBlock_cancel` for encoded ones. As on
 the Tensor Core, this is the exact condition, not a scheduling rule: the sums are known only after
@@ -24,9 +24,9 @@ open MatrixCore
 
 namespace Ozaki.MC
 
-/-! ## The pairwise tree -/
+/-! ## The pairwise sum -/
 
-/-- Every node of CDNA 2's pairwise tree on `zs`, with `depth` levels, sums to at most `2^24`. -/
+/-- Every pairwise sum of CDNA 2 on `zs`, with `depth` levels, is at most `2^24` in magnitude. -/
 def PairwiseSumsBounded : ℕ → List ℤ → Prop
   | _, [] => True
   | _, [_] => True
@@ -36,8 +36,8 @@ def PairwiseSumsBounded : ℕ → List ℤ → Prop
       PairwiseSumsBounded depth ((z1 :: z2 :: rest).drop ((z1 :: z2 :: rest).length / 2)) ∧
       (z1 :: z2 :: rest).sum.natAbs ≤ 2 ^ 24
 
-/-- **The pairwise tree with cancellation.** When every node sums to at most `2^24`, the tree of
-integers is their exact sum. -/
+/-- **The pairwise sum with cancellation.** When every pairwise sum is at most `2^24` in magnitude,
+the pairwise sum of integers is their exact sum. -/
 theorem pairwiseGroupSum_cancel (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), PairwiseSumsBounded depth zs →
     pairwiseGroupSum ftz depth (zs.map fun z : ℤ => (z : ℚ)) = some ((zs.sum : ℤ) : ℚ)
   | _, [], _ => by simp [pairwiseGroupSum]
@@ -62,7 +62,7 @@ theorem pairwiseGroupSum_cancel (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ)
     rw [← Rat.intCast_add, ← hsum]
     exact flValue_int ftz _ hs
 
-/-- Magnitudes within `2^24` give a tree whose every node is within `2^24`. -/
+/-- Magnitudes within `2^24` give pairwise sums that are all within `2^24`. -/
 theorem pairwiseSumsBounded_of_bound : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ depth + 1 →
     (zs.map Int.natAbs).sum ≤ 2 ^ 24 → PairwiseSumsBounded depth zs
   | _, [], _, _ => by simp [PairwiseSumsBounded]
@@ -134,7 +134,7 @@ theorem c_int : ∃ z : ℤ, x.c.value = z := h.c.1
 
 end IntPreparedC
 
-/-- **CDNA 2 with cancellation**: the pairwise tree of integer products, every node within `2^24`,
+/-- **CDNA 2 with cancellation**: the pairwise sums of integer products, each within `2^24`,
 plus `c`, is the exact sum. -/
 theorem pairwiseSum_cancel (P : Model) {x : Prepared} (h : IntPreparedC x)
     (htree : ∀ zs : List ℤ, x.p.map Unpacked.value = zs.map (fun z : ℤ => (z : ℚ)) →
@@ -193,9 +193,9 @@ theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalA
     · rw [hcz] at he; cases he; omega
     · rename_i hm; cases he; exact h.c.exp_le hm h.c_le
   obtain ⟨zc, hzc⟩ := h.c_int
-  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normaliseRD P.late.accFracBits (T : ℚ) = T := by
+  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normalizeRD P.late.accFracBits (T : ℚ) = T := by
     intro T hT
-    unfold normaliseRD
+    unfold normalizeRD
     split
     · rename_i h0; rw [h0]
     · rename_i h0
@@ -239,7 +239,7 @@ theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalA
 
 /-- **Exact accumulation with cancellation.** On an exact configuration, `S_acc` of a block of
 integer operands whose products and `c` are within `2^24` and whose exact sum is within `2^24` is
-that sum; on CDNA 2 every node of the pairwise tree must be within `2^24` too. -/
+that sum; on CDNA 2 every pairwise sum must be within `2^24` too. -/
 theorem accumulate_cancel {P : Model} (hP : ExactConfig P) {x : Prepared} (h : IntPreparedC x)
     (htree : P.accumulation = .pairWiseSum → ∀ zs : List ℤ,
       x.p.map Unpacked.value = zs.map (fun z : ℤ => (z : ℚ)) → PairwiseSumsBounded zs.length zs) :
@@ -257,7 +257,7 @@ theorem accumulate_cancel {P : Model} (hP : ExactConfig P) {x : Prepared} (h : I
 /-- **Exact matrix-core block with cancellation.** On an exact configuration, integer operands
 whose products are each within `2^24`, an integer `c` within `2^24`, and an exact sum
 `c + Σ aᵢbᵢ` within `2^24` give the binary32 word of that sum, however large `Σ|aᵢbᵢ|` is; on
-CDNA 2 every node of the pairwise tree of the products must be within `2^24` as well. -/
+CDNA 2 every pairwise sum of the products must be within `2^24` as well. -/
 theorem evalBlock_cancel {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {x : BlockInput P} (hla : x.a.length = P.nfma)
     (hlb : x.b.length = P.nfma) (ha : ∀ w ∈ x.a, IntWord P.a w) (hb : ∀ w ∈ x.b, IntWord P.b w)
@@ -323,7 +323,7 @@ theorem evalBlock_cancel {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals
 fp16 words: `0x6800 = 2048`, `0xE800 = −2048`; binary32 `0x4B000000 = 2^23`. -/
 
 /-- **CDNA 3, cancellation to zero.** Four products `2^22` and four `−2^22` in one block of eight
-total `2^25` in magnitude, twice the old budget; the block returns `+0`. -/
+total `2^25` in magnitude, twice the exactness bound; the block returns `+0`. -/
 theorem cdna3_cancel_zero :
     (evalBlock (P := cdna3F16)
       ⟨List.replicate 4 (0x6800 : BitVec 16) ++ List.replicate 4 0xE800, List.replicate 8 0x6800,
@@ -332,9 +332,9 @@ theorem cdna3_cancel_zero :
       (List.replicate 8 0x6800) = pow2 25 := by
   decide +kernel
 
-/-- **CDNA 1 and CDNA 2, cancellation against `c`.** `c = 2^23` and products `2^22, −2^22, 2^22,
-−2^22`: `|c| + Σ|aᵢbᵢ| = 2^23 + 2^24` exceeds the old budget, and both return the exact `2^23`; on
-CDNA 2 each node of the pairwise tree (`2^22 − 2^22`) cancels. -/
+/-- **CDNA 1 and CDNA 2, cancellation against `c`.** `c = 2^23` and products
+`2^22, −2^22, 2^22, −2^22`: `|c| + Σ|aᵢbᵢ| = 2^23 + 2^24` exceeds the exactness bound, and both
+return the exact `2^23`; on CDNA 2 each pairwise sum (`2^22 − 2^22`) cancels. -/
 theorem cdna12_cancel_c :
     (evalBlock (P := cdna1F16)
       ⟨[(0x6800 : BitVec 16), 0xE800, 0x6800, 0xE800], List.replicate 4 0x6800, 0x4B000000⟩).map

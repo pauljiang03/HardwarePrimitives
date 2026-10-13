@@ -14,8 +14,9 @@ namespace MatrixCore
 overflow. -/
 def flValue (ftz : Bool) (x : ℚ) : Option ℚ := (fl32 ftz x).bind value32
 
-/-- Balanced pairwise tree: split into halves, sum each half, and round their sum with `fl{·}`.
-`depth` bounds the recursion; any `depth` at least the list length gives the full tree. -/
+/-- The balanced pairwise sum of a group: split it into halves, sum each half, and round their sum
+with `fl{·}`. `depth` bounds the recursion; any `depth` at least the list length gives the full
+pairwise sum. -/
 def pairwiseGroupSum (ftz : Bool) : ℕ → List ℚ → Option ℚ
   | _, [] => some 0
   | _, [x] => some x
@@ -27,8 +28,8 @@ def pairwiseGroupSum (ftz : Bool) : ℕ → List ℚ → Option ℚ
     flValue ftz (u + v)
 
 /-- CDNA 2: inputs flushed when subnormals are unsupported, every product converted to binary32
-with `fl{·}`, the pairwise tree `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added. Returns the
-exact `c + tree`, which the final `fl{·}` rounds; `none` on an intermediate overflow. -/
+with `fl{·}`, the pairwise sum `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added. Returns the
+exact sum of `c` and the pairwise sum, which the final `fl{·}` rounds; `none` on an intermediate overflow. -/
 def pairwiseSum (P : Model) (x : Prepared) : Option ℚ := do
   let x' := if P.subnormals then x else x.flushed
   let ps ← x'.p.mapM fun p => flValue (!P.subnormals) p.value
@@ -64,15 +65,15 @@ def shiftedC (P : Model) (eMax eC : ℤ) (c : Unpacked) : ℚ :=
   | some n => if eMax - eC > n then 0 else rdFrac c.value eMax P.late.cFracBits
   | none => rdFrac c.value eMax P.late.cFracBits
 
-/-- Subnormal-aware normalisation followed by RD to `k` fractional bits: the leading bit is
+/-- Subnormal-aware normalization followed by RD to `k` fractional bits: the leading bit is
 moved to the binary point, but never below exponent `−126`. -/
-def normaliseRD (k : ℕ) (x : ℚ) : ℚ := if x = 0 then 0 else rdFrac x (normExp (absQ x)) k
+def normalizeRD (k : ℕ) (x : ℚ) : ℚ := if x = 0 then 0 else rdFrac x (normExp (absQ x)) k
 
 /-- `S_acc` when `e_c > e_max`: `S'_{p_i,sum}` is `S_{p_i,sum}` shifted right by `e_c − e_max` and
-RD to `32` fractional bits; `S_acc = S'_{p_i,sum} + s_c` is normalised and RD to `31`
+RD to `32` fractional bits; `S_acc = S'_{p_i,sum} + s_c` is normalized and RD to `31`
 fractional bits (Algorithm 1 lines 8–11). -/
 def shiftedSum (P : Model) (eC : ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=
-  normaliseRD P.late.accFracBits (rdFrac pSum eC P.late.sumFracBits + c.value)
+  normalizeRD P.late.accFracBits (rdFrac pSum eC P.late.sumFracBits + c.value)
 
 /-- `S_acc` after the late addition of `c` (Algorithm 1 lines 3–11). -/
 def lateSum (P : Model) (eMax : Option ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=

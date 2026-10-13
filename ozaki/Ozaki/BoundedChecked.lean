@@ -7,40 +7,44 @@ gives each of its functions a *checked* twin in `Ozaki.Checked`, in which every 
 arithmetic operation produces passes through a guard and a failed guard returns `none`:
 
 * data integers must be below `2^R` in magnitude (`Widths.gv`, `Widths.gn`): significands and their
-  shifts, the division, remainder and rounded quotient of the integer slicing, engine outputs read
-  back, window parts, every partial sum of a register, accumulators, query terms, the operands of
-  every comparison by shifting (`cmpDy`), integer parts, rounded significands, the constant
-  `2^p − 1`, and the descent's fuel (the potential, a count of bits);
+  shifts, the division, remainder and rounded quotient of the integer slicing, the outputs of the
+  matrix multiplier read back, the truncated parts of terms, every partial sum of a register,
+  accumulators, query terms, the operands of every comparison by shifting (`cmpDy`), integer parts,
+  rounded significands, the constant `2^p − 1`, and the fuel of the top-down summation (the
+  potential, a count of bits);
 * exponent-like integers must be below `2^X` (`Widths.ge`, `Widths.gi`): exponents, grids, shift
-  amounts, bit positions, the window grids of the descent, the exponent guesses of the rounding,
-  register widths, the exact path's window width, the slicing's exponent count `s (b + 1)` in the
-  check, and the descent's stopping thresholds.
+  amounts, bit positions, the grids of the ranges of the top-down summation, the exponent guesses of
+  the rounding, register widths, the range width of the exact fallback, the slicing's exponent count
+  `s (b + 1)` in the rounding test, and the stopping thresholds of the top-down summation.
 
 Powers of two occur only as shifts (`x · 2^d`, `⌊x / 2^d⌋`, `x mod 2^d`): the shift amount `d` is
 guarded as an exponent and the shifted result as data; no power is formed as an intermediate.
 Comparisons, `min`, `max`, signs, absolute values, bit lengths of guarded integers (at most `R`)
 and parity tests produce no new magnitude and are not guarded; list lengths are the input's size.
-The descent's register width `W + bitlen n + 1` is guarded too: a register may be at most one bit
-wider than the data guard (`Widths.gw`). The result value `±M · 2^g` that `finishRNE` assembles is the output, not an
-intermediate. The engine's own arithmetic is guarded when it runs through the guarded split-K
-engine (`Ozaki.CheckedMultipliers.chunkedC`).
+The register width `W + bitlen n + 1` of the top-down summation is guarded too: a register may be at
+most one bit wider than the data guard (`Widths.gw`). The result value `±M · 2^g` that `finishRNE`
+assembles is the output, not an intermediate. The arithmetic of the matrix multiplier itself is
+guarded when it runs through the guarded split-K matrix multiplier
+(`Ozaki.CheckedMultipliers.chunkedC`).
 
 Each `…C_eq` lemma proves that, on inputs within stated bounds, the checked twin returns exactly
 what the unchecked function returns: no guard ever fails. They compose into one theorem,
-`ozaki1CRIC_eq`: on binary entries with an exact engine, if `R` and `X` meet requirements given by
-explicit formulas in `p`, `emin`, `emax`, `b`, the slice counts, the vector length `k`, `W` and the
-engine's budget (`testD`, `testX` for the checks, `exactR`, `exactX` for the exact path), the
-checked `ozaki1CRIC` equals `ozaki1CRI`. `ozaki1CRISC_eq` does the same for the variant with signed
-zeros (one more requirement, `R ≥ 2p`, for the product of two significands in the sign test).
+`ozaki1CRIC_eq`: on binary entries with an exact matrix multiplier, if `R` and `X` meet
+requirements given by explicit formulas in `p`, `emin`, `emax`, `b`, the slice counts, the vector
+length `k`, `W` and the exactness bound of the matrix multiplier (`testD`, `testX` for the rounding
+tests, `exactR`, `exactX` for the exact fallback), the checked `ozaki1CRIC` equals `ozaki1CRI`.
+`ozaki1CRISC_eq` does the same for the version with signed zeros (one more requirement, `R ≥ 2p`,
+for the product of two significands in the sign test).
 
-The check's integers need `max (W, s (b + 1)) + …` bits (`testD`), the exact path's
-`bitlen budget + 2 (bitlen (smax² + 1) + p + 4) + …` (`exactR`); the descent's fuel is bounded by
-`exactR` (`exact_fuel_lt`), so `X` is set by the exponents alone (`exactX`). Concrete widths, for
-`11`-bit slices, at most `8` slices in each check, a `96`-bit window and `k ≤ 2^20`: binary64 with at
-most `175` slices on the exact path fits `263` bits and `17` bits, binary32 with at most `24` slices
-`207` and `15` (`Ozaki.CheckedTight`). The instances stated here at `332`/`24` (`ozaki1CRIC_binary64`,
-`ozaki1CRIC_binary64_eq`, `ozaki1CRISC_binary64_eq`) and `303`/`17` (`ozaki1CRIC_binary32`,
-`ozaki1CRIC_binary32_eq`) still hold, with room to spare. -/
+The integers of the rounding test need `max (W, s (b + 1)) + …` bits (`testD`), and those of the
+exact fallback `bitlen bound + 2 (bitlen (smax² + 1) + p + 4) + …` (`exactR`); the fuel of the
+top-down summation is bounded by `exactR` (`exact_fuel_lt`), so `X` is set by the exponents alone
+(`exactX`). Concrete widths, for `11`-bit slices, at most `8` slices in each test, a `96`-bit
+truncated sum and `k ≤ 2^20`: binary64 with at most `175` slices in the exact fallback fits `263`
+bits and `17` bits, binary32 with at most `24` slices `207` and `15` (`Ozaki.CheckedTight`). The
+instances stated here at `332`/`24` (`ozaki1CRIC_binary64`, `ozaki1CRIC_binary64_eq`,
+`ozaki1CRISC_binary64_eq`) and `303`/`17` (`ozaki1CRIC_binary32`, `ozaki1CRIC_binary32_eq`) still
+hold, with room to spare. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -754,7 +758,7 @@ theorem roundExactC_eq {B : Widths} {p D : ℕ} {emin emax N q : ℤ} (hN : N.na
     (shiftFloor N.natAbs q)) = Mg at hg hM1 hM2 ⊢
   exact finishRNEC_eq (by omega) (by omega) (by rw [hg]; omega)
 
-/-! ## The descent -/
+/-! ## The top-down summation -/
 
 namespace Checked
 
@@ -828,8 +832,8 @@ def topDownSumJC (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Opt
         | k + 1 => topDownSumJC W T k N q rs'
     else pure none
 
-/-- The potential (the descent's fuel), its partial sums guarded by the data width: a counter of
-bits, it is a data-sized quantity, not an exponent. -/
+/-- The potential (the top-down summation's fuel), its partial sums guarded by the data width: a
+counter of bits, it is a data-sized quantity, not an exponent. -/
 def potentialC : List (ℤ × ℤ) → Option ℕ
   | [] => some 0
   | t :: ts => do
@@ -844,7 +848,7 @@ def topDownSumAllJC (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (Option (ℤ �
 
 end Checked
 
-/-! ### Guards of the descent -/
+/-! ### Guards of the top-down summation -/
 
 /-- Terms with significands below `2^Z` and grids in `[gL, gU]`. -/
 def TermsIn (Z : ℕ) (gL gU : ℤ) (ts : List (ℤ × ℤ)) : Prop :=
@@ -970,7 +974,7 @@ theorem fixedSumC_eq {B : Widths} {w : ℕ} (hw : 0 < w) (hR : w - 1 ≤ B.R) {z
     (h : (zs.map Int.natAbs).sum < 2 ^ (w - 1)) : fixedSumC B w zs = some (fixedSum w zs) :=
   fixedSumFromC_eq hw hR zs 0 (by simpa using h)
 
-/-- The guards of one window of the descent pass. -/
+/-- The guards of one range of the top-down summation. -/
 theorem topDownSumJ_guards {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
     (hX : 2 * (gL.natAbs + gU.natAbs + Z + T + W + 1) < 2 ^ B.X) {A qa : ℤ} {rs : List (ℤ × ℤ)}
     {n : ℕ} (hn : rs.length ≤ n) (hRn : W + bitlen (n + 1) ≤ B.R) (hA : bitlen A.natAbs ≤ T)
@@ -1053,8 +1057,8 @@ theorem topDownSumJ_guards {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W
     · have := maxTop_le_of hrs; omega
     · unfold topOf; simp only; omega
 
-/-- The descent's register-width guard passes: the register has `W + bitlen (n + 1) + 1` bits at
-most, and `W + bitlen (n + 1) ≤ R`. -/
+/-- The top-down summation's register-width guard passes: the register has `W + bitlen (n + 1) + 1`
+bits at most, and `W + bitlen (n + 1) ≤ R`. -/
 theorem topDownSumJ_reg_guard {B : Widths} {W : ℕ} {A qa q : ℤ} {rs : List (ℤ × ℤ)} {n : ℕ}
     (hn : rs.length ≤ n) (hRn : W + bitlen (n + 1) ≤ B.R) :
     B.gw (W + bitlen (((A, qa) :: rs).map (hiPart q)).length + 1) =
@@ -1065,9 +1069,9 @@ theorem topDownSumJ_reg_guard {B : Widths} {W : ℕ} {A qa q : ℤ} {rs : List (
   have := bitlen_mono (Nat.add_le_add_right hn 1)
   omega
 
-/-- **The descent never fails a guard**: on terms with significands below `2^Z` and grids in
-`[gL, gU]`, at most `n` of them, with `R ≥ Z + 1`, `R ≥ W + bitlen (n + 1)` and `X` above twice the
-exponent span plus `Z + T + W`, for any fuel. -/
+/-- **The top-down summation never fails a guard**: on terms with significands below `2^Z` and grids
+in `[gL, gU]`, at most `n` of them, with `R ≥ Z + 1`, `R ≥ W + bitlen (n + 1)` and `X` above twice
+the exponent span plus `Z + T + W`, for any fuel. -/
 theorem topDownSumJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
     (hX : 2 * (gL.natAbs + gU.natAbs + Z + T + W + 1) < 2 ^ B.X) :
     ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)) (n : ℕ), rs.length ≤ n →
@@ -1134,7 +1138,7 @@ theorem topDownSumJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (
       exact ih _ _ _ n (Nat.le_trans (length_rangeRest _ _) hn) hRn hN hrs'
         (fun t' ht' => by obtain ⟨h0, htop, _⟩ := mem_rangeRest ht'; exact ⟨h0, htop⟩) hq1' hq2'
 
-/-- **The descent's last grid is bounded** by the terms' exponent span. -/
+/-- **The top-down summation's last grid is bounded** by the terms' exponent span. -/
 theorem topDownSumJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) :
     ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)), bitlen A.natAbs ≤ T → TermsIn Z gL gU rs →
       (∀ t ∈ rs, t.1 ≠ 0 ∧ topOf t ≤ qa) → min (gL + 1) 0 ≤ qa → qa ≤ max (gU + Z) 0 →
@@ -1241,7 +1245,7 @@ theorem potentialC_eq {B : Widths} {Z : ℕ} : ∀ {ts : List (ℤ × ℤ)},
 theorem TermsIn.nonzero {Z : ℕ} {gL gU : ℤ} {ts : List (ℤ × ℤ)} (h : TermsIn Z gL gU ts) :
     TermsIn Z gL gU (nonzero ts) := fun t ht => h t (mem_nonzero.mp ht).1
 
-/-- **The descent from the top never fails a guard.** -/
+/-- **The top-down summation from the top never fails a guard.** -/
 theorem topDownSumAllJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
     (hX : 2 * (gL.natAbs + gU.natAbs + Z + T + W + 1) < 2 ^ B.X) {ts : List (ℤ × ℤ)}
     (hts : TermsIn Z gL gU ts) (hRn : W + bitlen (ts.length + 1) ≤ B.R)
@@ -1548,7 +1552,7 @@ theorem roundSumJC_eq {B : Widths} {p Z W : ℕ} {emin emax gL gU : ℤ} {ts : L
           omega
         exact finishRNEC_eq (by omega) (by omega) (by rw [hg]; omega)
 
-/-! ## The check and the exact path -/
+/-! ## The rounding test and the exact fallback -/
 
 namespace Checked
 
@@ -1564,7 +1568,7 @@ def truncationGridIntC (b W : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ := d
   let e ← B.ge (ex + ey)
   B.ge (e - W)
 
-/-- An engine output read back: the integer is guarded, and so is the grid sum. -/
+/-- An output of the matrix multiplier read back: the integer is guarded, and so is the grid sum. -/
 def sliceProductIntC (mult : MatrixMultiplier) (sl sl' : Slice) : Option (Option (ℤ × ℤ)) :=
   match mult sl.coeffs sl'.coeffs with
   | none => some none
@@ -1846,16 +1850,16 @@ theorem splitInt_grid_bound {b p EM s : ℕ} {xs : List (ℤ × ℤ)} (hx : Entr
   rw [hb] at this
   omega
 
-/-- The requirement on `R` for the check with `s` slices: `D + b + 3`, where `D` bounds the
+/-- The requirement on `R` for the rounding test with `s` slices: `D + b + 3`, where `D` bounds the
 enclosure's integers. -/
 def testD (p b s W k : ℕ) : ℕ :=
   max W (s * (b + 1)) + bitlen ((trianglePairs s).length * (k + 2)) + bitlen ((s + 1) * k) + p +
     bitlen (k + 2) + 2
 
 set_option maxHeartbeats 4000000 in
-/-- **The check never fails a guard**: on binary entries (significands below `2^p`, exponents at
-most `EM` in magnitude), with an exact engine, `R ≥ testD + b + 3`, `budget < 2^R`, and `X` as
-stated. -/
+/-- **The rounding test never fails a guard**: on binary entries (significands below `2^p`,
+exponents at most `EM` in magnitude), with an exact matrix multiplier, `R ≥ testD + b + 3`,
+`bound < 2^R`, and `X` as stated. -/
 theorem ozaki1TestIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM s W : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
     (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM xs)
@@ -1881,7 +1885,7 @@ theorem ozaki1TestIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (
   rw [hsplit xs hx, hsplit ys hy]
   simp only [Option.bind_eq_bind, Option.bind_some]
   rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
-  -- the engine's slice products
+  -- the slice products of the matrix multiplier
   have hpairs : ∀ pr ∈ trianglePairs s, pairIntC B mult (split b s (entryVals xs)).1
       (split b s (entryVals ys)).1 pr =
         some (some (exactPairInt (split b s (entryVals xs)).1 (split b s (entryVals ys)).1 pr)) := by
@@ -1908,7 +1912,7 @@ theorem ozaki1TestIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (
   simp only
   generalize hts : (trianglePairs s).map (exactPairInt (split b s (entryVals xs)).1
     (split b s (entryVals ys)).1) = ts
-  -- the window grid and the window parts
+  -- the truncation grid and the truncated parts of terms
   have hsx := splitExpInt_natAbs_le (b := b) hx
   have hsy := splitExpInt_natAbs_le (b := b) hy
   rw [truncationGridIntC_eq hx hy (by omega) (by omega)]
@@ -2034,14 +2038,14 @@ theorem vanishIntC_eq {B : Widths} {b p EM s : ℕ} {xs ys : List (ℤ × ℤ)}
   rw [hsplit xs hx, hsplit ys hy]
   rfl
 
-/-- The width of the exact path's sum: `bitlen (smax² + 1) + p + 4`. -/
+/-- The width of the exact fallback's sum: `bitlen (smax² + 1) + p + 4`. -/
 def exactW (p smax : ℕ) : ℕ := bitlen (smax * smax + 1) + p + 4
 
-/-- The requirement on `R` for the exact path. -/
+/-- The requirement on `R` for the exact fallback. -/
 def exactR (p smax bound : ℕ) : ℕ :=
   bitlen bound + 2 * exactW p smax + bitlen (smax * smax + 2) + p + 8
 
-/-- The requirement on `X` for the exact path. -/
+/-- The requirement on `X` for the exact fallback. -/
 def exactX (p b EM smax bound : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
   32 * (p + 1 + EM + b + (smax + 1) * (b + 1)) + 6 * bitlen bound + 20 * exactW p smax +
     4 * p + emin.natAbs + emax.natAbs + 2 * R + 48
@@ -2055,8 +2059,9 @@ theorem mul_lt_two_pow_bitlen_add (A Z : ℕ) : A * Z < 2 ^ (bitlen A + Z) := by
   · calc A * Z ≤ A * 2 ^ Z := Nat.mul_le_mul_left _ (Nat.le_of_lt h2)
       _ < 2 ^ bitlen A * 2 ^ Z := Nat.mul_lt_mul_of_pos_right h1 (Nat.two_pow_pos _)
 
-/-- **The descent's fuel fits the data width**: the potential of the exact path's terms is at most
-`(smax² + 1)` terms times their bit length, below `2^R` whenever `R ≥ exactR`. -/
+/-- **The fuel of the top-down summation fits the data width**: the potential of the terms of the
+exact fallback is at most `(smax² + 1)` terms times their bit length, below `2^R` whenever
+`R ≥ exactR`. -/
 theorem exact_fuel_lt {p smax bound R : ℕ} (hR : exactR p smax bound ≤ R) :
     (smax * smax + 1) * (bitlen bound + 2 * exactW p smax + p + 7) < 2 ^ R := by
   refine Nat.lt_of_lt_of_le (mul_lt_two_pow_bitlen_add _ _) (Nat.pow_le_pow_right (by decide) ?_)
@@ -2065,8 +2070,8 @@ theorem exact_fuel_lt {p smax bound R : ℕ} (hR : exactR p smax bound ≤ R) :
   omega
 
 set_option maxHeartbeats 4000000 in
-/-- **The exact path never fails a guard**: on binary entries with an exact engine, with
-`R ≥ exactR` (and `R ≥ p + b + 3`), `budget < 2^R` and `2^X > exactX`. -/
+/-- **The exact fallback never fails a guard**: on binary entries with an exact matrix multiplier,
+with `R ≥ exactR` (and `R ≥ p + b + 3`), `bound < 2^R` and `2^X > exactX`. -/
 theorem ozaki1ExactFallbackIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
     (hmult : mult.ExactOn b bound) {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -2125,7 +2130,7 @@ theorem ozaki1ExactFallbackIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound
       mapM_id_map, mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
         sliceProductInt_exact hmult hl hb' (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
     simp only
-    -- the terms of the exact path
+    -- the terms of the exact fallback
     have hplen : (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).length =
         s * s := by
       obtain ⟨hlx, _, _⟩ := split_length b s (entryVals xs)
@@ -2165,16 +2170,16 @@ theorem ozaki1ExactFallbackIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound
     exact roundSumJC_eq (W := bitlen (ts.length + 1) + p + 4) (by omega) hterms (by omega)
       (by omega) (by rw [hGE', hGE'']; omega) (Nat.lt_of_le_of_lt hprod hfuel)
 
-/-- The requirement on `X` for the check with `s` slices. -/
+/-- The requirement on `X` for the rounding test with `s` slices. -/
 def testX (p b EM s W k : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
   8 * (p + 1 + EM + 3 * b + 2 + s * (b + 1)) + 4 * W + 2 * testD p b s W k +
     emin.natAbs + emax.natAbs + 2 * p + 2 * R + 8
 
 /-- **One theorem bounding every integer of correctly rounded Ozaki-I.** On binary entries
-(significands below `2^p`, exponents at most `EM` in magnitude), with an exact engine, if `R` and
-`X` meet the requirements of the checks (`testD`, `testX`, for every slice count in `ss`) and of
-the exact path (`exactR`, `exactX`), the checked function returns exactly what `ozaki1CRI`
-returns: no guard ever fails. -/
+(significands below `2^p`, exponents at most `EM` in magnitude), with an exact matrix multiplier, if
+`R` and `X` meet the requirements of the rounding tests (`testD`, `testX`, for every slice count in
+`ss`) and of the exact fallback (`exactR`, `exactX`), the checked function returns exactly what
+`ozaki1CRI` returns: no guard ever fails. -/
 theorem ozaki1CRIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM W smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
     (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM xs)
@@ -2218,8 +2223,8 @@ theorem trianglePairs_length_le {s S : ℕ} (hs : s ≤ S) :
   have : s * (s + 1) ≤ S * (S + 1) := Nat.mul_le_mul hs (by omega)
   omega
 
-/-- The check's requirement for at most `8` slices of `11` bits, a `96`-bit window and
-`k ≤ 2^20`: `testD ≤ 169 + p`. -/
+/-- The requirement of the rounding test for at most `8` slices of `11` bits, a `96`-bit truncated
+sum and `k ≤ 2^20`: `testD ≤ 169 + p`. -/
 theorem testD_le_8 {p s k : ℕ} (hs : s ≤ 8) (hk : k ≤ 2 ^ 20) :
     testD p 11 s 96 k ≤ 169 + p := by
   have hn := trianglePairs_length_le hs
@@ -2238,8 +2243,9 @@ theorem bitlen_dotAbsBound_le {k : ℕ} (hk : k ≤ 2 ^ 20) : bitlen (k * (2 ^ 1
   bitlen_le_iff.mpr (by omega)
 
 /-- **Every integer of correctly rounded FP64 Ozaki-I fits 332 bits, every exponent and counter
-24 bits**: on binary64 entries, `k ≤ 2^20`, `11`-bit slices with at most `8` in each check, a
-`96`-bit window and at most `175` slices on the exact path, with an exact engine. -/
+24 bits**: on binary64 entries, `k ≤ 2^20`, `11`-bit slices with at most `8` in each test, a
+`96`-bit truncated sum and at most `175` slices in the exact fallback, with an exact matrix
+multiplier. -/
 theorem ozaki1CRIC_binary64 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
     (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
@@ -2268,8 +2274,8 @@ theorem ozaki1CRIC_binary64 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)
     omega
 
 /-- **Every integer of correctly rounded binary32 Ozaki-I fits 303 bits, every exponent and counter
-17 bits**: on binary32 entries, `k ≤ 2^20`, `11`-bit slices with at most `8` in each check, a
-`96`-bit window and at most `24` slices on the exact path. -/
+17 bits**: on binary32 entries, `k ≤ 2^20`, `11`-bit slices with at most `8` in each test, a
+`96`-bit truncated sum and at most `24` slices in the exact fallback. -/
 theorem ozaki1CRIC_binary32 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
     (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
@@ -2365,7 +2371,8 @@ def ozaki1CRISC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ
 end Checked
 
 set_option maxHeartbeats 4000000 in
-/-- **The sign of the exact sum never fails a guard**, under the requirements of the exact path. -/
+/-- **The sign of the exact sum never fails a guard**, under the requirements of the exact
+fallback. -/
 theorem exactSignIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
     (hmult : mult.ExactOn b bound) {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -2423,7 +2430,7 @@ theorem exactSignIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
       mapM_id_map, mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
         sliceProductInt_exact hmult hl hb' (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
     simp only [Option.map_some]
-    -- the terms of the exact path
+    -- the terms of the exact fallback
     have hplen : (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).length =
         s * s := by
       obtain ⟨hlx, _, _⟩ := split_length b s (entryVals xs)
@@ -2567,16 +2574,16 @@ def ckXs : List (ℤ × ℤ) := [(5000000000000001, -60), (-7000000000000003, -5
 def ckYs : List (ℤ × ℤ) := [(4503599627370497, -52), (6000000000000007, -70), (-1, -1074),
   (1, -950)]
 
-/-- At the proved widths the checked function agrees with the unchecked one, through the check and
-through the exact path. -/
+/-- At the proved widths the checked function agrees with the unchecked one, through the rounding
+test and through the exact fallback. -/
 example : Checked.ozaki1CRIC ⟨332, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
     some (ozaki1CRI exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs) := by decide +kernel
 
 example : Checked.ozaki1CRIC ⟨332, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [] 175 ckXs ckYs =
     some (ozaki1CRI exactMultiplier 53 (-1022) 1023 11 96 [] 175 ckXs ckYs) := by decide +kernel
 
-/-- The guards are real: a `64`-bit data register is too narrow for the `96`-bit window, and an
-`11`-bit exponent register too narrow for the grids of the slicing. -/
+/-- The guards are real: a `64`-bit data register is too narrow for the `96`-bit truncated sum, and
+an `11`-bit exponent register too narrow for the grids of the slicing. -/
 example : Checked.ozaki1CRIC ⟨64, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
     none := by decide +kernel
 

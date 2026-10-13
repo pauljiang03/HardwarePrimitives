@@ -4,7 +4,7 @@ import OzakiTC.LongDot
 import Ozaki.SplitK
 import Ozaki.Exact64
 
-/-! # ADP's loose ends: subnormal inputs, success, and an exact path on the INT8 engine
+/-! # ADP's loose ends: subnormal inputs, success, and an exact fallback on the INT8 matrix multiplier
 
 Three gaps of `OzakiTC/ADP.lean` and `OzakiTC/Correct.lean`:
 
@@ -17,12 +17,13 @@ Three gaps of `OzakiTC/ADP.lean` and `OzakiTC/Correct.lean`:
   recorded from the Z3 model `adpSafe` returns what `adp` returns.
 * **Success.** `adp` and `adpSafe` return values for finite inputs whose products are within range
   (`adp_isSome`, `adpSafe_isSome`; `adp` needs normal inputs, `adpSafe` does not).
-* **The exact path on the INT8 engine.** `adpCR` falls back to the exact rational product.
-  `adpCRE` takes its exact path on the INT8 engine instead: Ozaki-I with all `s²` slice products of
-  `6`-bit slices (signed bytes), split into chunks so that INT32 never wraps, at the smallest slice
-  count that leaves nothing over. Its fixed-point enclosures run on the INT8 engine with split-K
-  too, so it is correctly rounded for binary64 inputs of any length (`adpCRE_eq`): the IEEE round
-  to nearest even of `x · y`, the rounding of the other any-length variants on both vendors. -/
+* **The exact fallback on the INT8 matrix multiplier.** `adpCR` falls back to the exact rational
+  product. `adpCRE` takes its exact fallback on the INT8 matrix multiplier instead: Ozaki-I with all
+  `s²` slice products of `6`-bit slices (signed bytes), split into chunks so that INT32 never wraps,
+  at the smallest slice count that leaves nothing over. Its fixed-point enclosures run on the INT8
+  matrix multiplier with split-K too, so it is correctly rounded for binary64 inputs of any length
+  (`adpCRE_eq`): the IEEE round to nearest even of `x · y`, the rounding of the other any-length
+  variants on both vendors. -/
 
 open TensorCore
 
@@ -120,9 +121,10 @@ theorem adpSafe_accuracy {cfg : ADPConfig} {A B : List (List (BitVec 64))} {path
     obtain ⟨hl2, hents⟩ := hrest i hi hiC
     exact ⟨hl2, fun j hj hjC => ⟨fun h => absurd h (by decide), fun _ => hents j hj hjC⟩⟩
 
-/-! ## The exact path on the INT8 engine -/
+/-! ## The exact fallback on the INT8 matrix multiplier -/
 
-/-- The INT8 engine as an `MatrixMultiplier`: products accumulated in TC-EFT's 32-bit register. -/
+/-- The INT8 matrix multiplier as a `MatrixMultiplier`: products accumulated in TC-EFT's 32-bit
+register. -/
 def int8Multiplier : MatrixMultiplier := fun x y => some ((int8Dot 32 x y : ℤ) : ℚ)
 
 /-- Exact on `6`-bit slices (signed bytes) while the products total less than `2^31`. -/
@@ -132,7 +134,7 @@ theorem int8Multiplier_exactOn : int8Multiplier.ExactOn 6 (2 ^ 31 - 1) := by
   rw [int8Dot_exact (by decide) (Nat.lt_of_le_of_lt hb (by decide))]
   rfl
 
-/-- Split-K on the INT8 engine: chunks of `2^18` products of `6`-bit slices
+/-- Split-K on the INT8 matrix multiplier: chunks of `2^18` products of `6`-bit slices
 (`2^18 · 2^12 = 2^30 < 2^31`), the chunk results added exactly. -/
 def int8SplitK : MatrixMultiplier := chunked (2 ^ 18) int8Multiplier
 
@@ -191,9 +193,10 @@ theorem adpEnclosureK_sound {s W : ℕ} (hs : 0 < s) (hfit : ADP.remapFits W s =
   exact dot_approx_error x (fixedVals W x) y (fixedVals W y) (fixedVals_length W x).symm
     (fixedVals_length W y).symm
 
-/-- **ADP's slicing, correctly rounded, with every product on the INT8 engine.** The
+/-- **ADP's slicing, correctly rounded, with every product on the INT8 matrix multiplier.** The
 configurations `(s, W)` in turn, each an enclosure of split-K INT8 slice products, then the exact
-path: Ozaki-I with all slice products of `6`-bit slices on the split-K INT8 engine. -/
+fallback: Ozaki-I with all slice products of `6`-bit slices on the split-K INT8 matrix multiplier.
+-/
 def adpCREWith (rnd : ℚ → Option ℚ) (cfgs : List (ℕ × ℕ)) (smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   roundingTest rnd (cfgs.map fun c => some (adpEnclosureK c.1 c.2 x y))
@@ -219,7 +222,7 @@ def adpCRE (cfgs : List (ℕ × ℕ)) (smax : ℕ) (x y : List ℚ) : Option ℚ
   adpCREWith fp64Round cfgs smax x y
 
 /-- **ADP's slicing, correctly rounded, for binary64 inputs of any length**, every product on the
-INT8 engine. -/
+INT8 matrix multiplier. -/
 theorem adpCRE_eq {cfgs : List (ℕ × ℕ)} (hcfg : ∀ c ∈ cfgs, 0 < c.1 ∧ ADP.remapFits c.2 c.1 = true)
     {smax : ℕ} (hsmax : 2098 < smax * 7) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
@@ -451,8 +454,8 @@ def subX : List ℚ := (2 : ℚ) ^ (-1074 : ℤ) :: List.replicate 7 ((2 : ℚ) 
 def subY : List ℚ := 1 :: List.replicate 7 (-(2 : ℚ) ^ (-60 : ℤ))
 
 /-- The correctly rounded variant on the counterexample: the enclosure of `8` slices of width `56`
-does not settle it, the exact path on the INT8 engine does (at `2` slices of `6` bits), and the
-result is the correctly rounded `2^-1074`. -/
+does not decide it, the exact fallback on the INT8 matrix multiplier does (at `2` slices of `6`
+bits), and the result is the correctly rounded `2^-1074`. -/
 example : roundEnclosure fp64Round (adpEnclosureK 8 56 subX subY).1 (adpEnclosureK 8 56 subX subY).2 =
     none := by decide +kernel
 example : adpCRE [(8, 56)] 300 subX subY = some ((2 : ℚ) ^ (-1074 : ℤ)) := by decide +kernel

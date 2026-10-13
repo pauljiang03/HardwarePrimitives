@@ -6,13 +6,13 @@ import TensorCore.Numerics.RoundOp
 
 namespace TensorCore
 
-/-- Encoded operands of one normalization group under a profile; `c` is always FP32. -/
+/-- Encoded operands of one block FMA of a model; `c` is always FP32. -/
 structure BlockInput (p : Model) where
   products : List (p.Word × p.Word)
   c : F32
   deriving Repr, DecidableEq
 
-/-- Decoded operands together with the profile that fixes their alignment semantics. -/
+/-- Decoded operands together with the model that fixes their alignment semantics. -/
 structure PreparedBlock where
   model : Model
   products : List (Decoded × Decoded)
@@ -47,7 +47,7 @@ def maxTermExp (ts : List UnnormalizedProduct) : Option ℤ :=
   (ts.filterMap fun t => if t.significand = 0 then none else some t.unnormalizedExp).foldl
     (fun acc e => some (match acc with | none => e | some v => max v e)) none
 
-/-- Alignment exponent `eta`: nonzero unnormalized-exponent maximum, then the profile floor. -/
+/-- Alignment exponent `eta`: the largest unnormalized exponent of a nonzero term, raised to the model's minimum alignment exponent. -/
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
   b.model.applyEAlignMin (maxTermExp b.terms)
 
@@ -93,7 +93,7 @@ def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 
-/-- One normalization group of the profile, not a complete PTX tile or GEMM. -/
+/-- One block FMA of the model, not a complete PTX tile or GEMM. -/
 def evalBlock {p : Model} (x : BlockInput p) : Except ModelError BlockTrace :=
   if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare x with

@@ -8,7 +8,7 @@ The cheapest configurations of `OzakiTC.Ozaki2Choice` and `OzakiTC.ADPChoice` re
 exact-fraction oracle's words on the first row of the binary64 case `narrow64`
 (`data/correct-reference.json`): correctly rounded FP64 by Ozaki-II on H100 fp16 with `12` moduli at
 most `2048` and `10`-bit residues, and ADP's slicing with `7` remapped slices of a `54`-bit fixed
-point on the INT8 engine. -/
+point on the INT8 matrix multiplier. -/
 
 open TensorCore Ozaki Ozaki.TC OzakiTCTests.Correct
 
@@ -22,7 +22,7 @@ example : (do
     encode64 [row]) = some (C_narrow64.take 1) := by
   decide +kernel
 
-/-- ADP's slicing at `ESC = 0`, correctly rounded, on the INT8 engine. -/
+/-- ADP's slicing at `ESC = 0`, correctly rounded, on the INT8 matrix multiplier. -/
 example : (do
     let A ← decode64 A_narrow64; let B ← decode64 B_narrow64
     let x ← A.head?

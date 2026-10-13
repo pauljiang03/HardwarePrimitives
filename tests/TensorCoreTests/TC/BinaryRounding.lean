@@ -32,7 +32,7 @@ theorem binary_rounding_boundaries :
 theorem formats_wellFormed : fp16.WellFormed ∧ bf16.WellFormed ∧ tf19.WellFormed ∧ fp64.WellFormed := by
   decide
 
-/-- Nearest-even and truncation correctness on the four formats of the source paths. -/
+/-- Nearest-even and truncation correctness on the four formats of the source variants. -/
 theorem fp16_rounding_correct (x : ℚ) (hr : absQ x ≤ fp16.maxFinite) :
     (∃ b, roundBinary fp16 .nearestEven x = some b ∧ NearestEven fp16 x b) ∧
     (∃ b, roundBinary fp16 .truncate x = some b ∧ Truncated fp16 x b) :=

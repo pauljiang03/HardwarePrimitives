@@ -4,9 +4,9 @@ import Ozaki.Adaptive
 /-! # The two design rules on the Tensor Core model
 
 `Ozaki.Adaptive`'s rules on Tensor Core blocks with split-K: slice counts that grow with the inner
-dimension (`crSlices`, starting at `slicesForCR b t k`) and the shortcut straight to the exact path
-when it costs no more than the first check (`adaptList`). Every variant is correctly rounded for
-every length, as `tcOzaki1CRD` is: the rules change only which checks run.
+dimension (`crSlices`, starting at `slicesForCR b t k`) and the shortcut straight to the exact
+fallback when it costs no more than the first test (`adaptList`). Every variant is correctly rounded
+for every length, as `tcOzaki1CRD` is: the rules change only which tests run.
 
 `slicesForCR_table` gives the first slice count for `11`-bit slices: `5` at `k = 4`, `6` from
 `k = 256` to `4096`, `7` at `k = 2^20` for FP64 (`t = 53`); `4` for binary32 at `k = 1024`. The

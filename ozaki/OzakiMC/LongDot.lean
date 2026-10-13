@@ -7,15 +7,15 @@ import Ozaki.TruncatedSum
 
 Split-K on matrix-core blocks: chunks of `2^(24 − 2b)` terms, each an exact matrix-core dot
 product, added exactly. With it the AMD theorems hold for every inner dimension: Ozaki-I's error
-bound, and correctly rounded binary32 Ozaki-I and Ozaki-II whose engine products, including the
-exact path's, run on matrix-core blocks. The correctly rounded results are stated with the
-hardware-independent IEEE round to nearest even of `Ozaki.Binary` (`rne32Q`, `rne64`), the same
-function as on the Tensor Core model.
+bound, and correctly rounded binary32 Ozaki-I and Ozaki-II whose slice products,
+including the exact fallback's, run on matrix-core blocks. The correctly rounded results are stated
+with the hardware-independent IEEE round to nearest even of `Ozaki.Binary` (`rne32Q`, `rne64`), the
+same function as on the Tensor Core model.
 
 FP64 emulation uses the hardware-independent binary64 round to nearest even of `Ozaki.Binary`
 (`rne64`), since `MatrixCore` models no binary64 arithmetic: Ozaki-I with binary64 recombination
 (`mcOzaki1D_error`), and correctly rounded binary64 results from Ozaki-I and Ozaki-II
-(`mcOzaki1CRD_eq`, `mcOzaki2CRD_eq`) for binary64 inputs of any length, every engine product on
+(`mcOzaki1CRD_eq`, `mcOzaki2CRD_eq`) for binary64 inputs of any length, every slice product on
 matrix-core blocks. -/
 
 open MatrixCore
@@ -115,8 +115,8 @@ def mcOzaki2CRD (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y 
   ozaki2CRE (mcSplitK P b) rne64 cfgs b smax x y
 
 /-- **FP64 GEMM on AMD matrix cores, correctly rounded.** For binary64 inputs of any length, on any
-path whose engine is exact on `b`-bit slices, the result is the binary64 round to nearest of
-`x · y`. -/
+variant whose matrix multiplier is exact on `b`-bit slices, the result is the binary64 round to
+nearest of `x · y`. -/
 theorem mcOzaki1CRD_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
@@ -148,11 +148,11 @@ theorem cdna3BF16_fp64CR (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Bin
 
 /-! ## With a two-word accumulator -/
 
-/-- Correctly rounded binary32 Ozaki-I of any inner dimension with a `W`-bit window accumulator. -/
+/-- Correctly rounded binary32 Ozaki-I of any inner dimension with a `W`-bit truncated sum. -/
 def mcOzaki1CRLW (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRW (mcSplitK P b) rne32Q b W ss smax x y
 
-/-- Correctly rounded FP64 by Ozaki-I with a `W`-bit window accumulator. -/
+/-- Correctly rounded FP64 by Ozaki-I with a `W`-bit truncated sum. -/
 def mcOzaki1CRDW (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRW (mcSplitK P b) rne64 b W ss smax x y
 

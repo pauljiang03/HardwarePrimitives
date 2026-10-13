@@ -9,7 +9,7 @@ and sharing only standard-library arithmetic with the implementation:
 * Table 1 layouts and IEEE/FNUZ field decoding;
 * products `s_p = s_a s_b`, `e_p = e_a + e_b`;
 * Algorithm 1 and Algorithm 2 on integer significands: "align to `e_max` and truncate to
-  `24` fractional bits", "shift right and RD to `k` fractional bits", "normalise
+  `24` fractional bits", "shift right and RD to `k` fractional bits", "normalize
   (subnormal-aware) and RD to `31` fractional bits";
 * the exact sum of CDNA 1;
 * binary32 RNE stated as a property of the result word over all finite binary32 words. -/
@@ -95,7 +95,7 @@ structure Late where
   cFrac : ℕ
   /-- `S'_{p_i,sum}` is RD to this many fractional bits. -/
   sumFrac : ℕ
-  /-- The normalised `S_acc` is RD to this many fractional bits. -/
+  /-- The normalized `S_acc` is RD to this many fractional bits. -/
   accFrac : ℕ
   /-- binary8: `s'_c = 0` once `e_max − e_c` exceeds this. -/
   cCutoff : Option ℕ
@@ -107,7 +107,7 @@ structure Late where
 def cExp (L : Late) (c : Num) : Option ℤ := if c.M = 0 then L.cZero else some c.e
 
 /-- Lines 8–11 of Algorithm 1: `S'_{p_i,sum}` is `S` (on the grid `2^g`) shifted to `e_c` and RD
-to `sumFrac` fractional bits; `S_acc = S'_{p_i,sum} + s_c`; `S_acc` is normalised, without going
+to `sumFrac` fractional bits; `S_acc = S'_{p_i,sum} + s_c`; `S_acc` is normalized, without going
 below exponent `−126`, and RD to `accFrac` fractional bits. -/
 def shiftedBranch (L : Late) (S : ℤ) (g : ℤ) (c : Num) (ec : ℤ) : ℚ :=
   let G := ec - L.sumFrac

@@ -2,24 +2,25 @@ import OzakiTC.ADPIntPipeline
 import OzakiTC.Ozaki2Bounded
 import Ozaki.BoundedOzaki2J
 
-/-! # ADP and Ozaki-II as integer pipelines with the jumping descent, on the Tensor Core side
+/-! # ADP and Ozaki-II as integer pipelines with the jumping top-down summation, on the Tensor Core side
 
-`adpCRJ` is ADP's correctly rounded slicing from integer-pair inputs (`adpCRZ`) with its exact path
-through the jumping descent (`Ozaki.ozaki1ExactFallbackI` on the split-K INT8 engine), so the number of
-windows the exact path visits does not depend on the inputs' exponents (`Ozaki.exactFallback_ranges`).
-It returns what `adpCRZ` returns (`adpCRJ_eq_CRZ`) and is correctly rounded for binary64 inputs of
-any length (`adpCRJ_eq`); it is the canonical integer ADP pipeline. `adpCRJS` adds IEEE's signed
-zeros on inputs with sign bits (`adpCRJS_eq`).
+`adpCRJ` is ADP's correctly rounded slicing from integer-pair inputs (`adpCRZ`) with its exact
+fallback through the jumping top-down summation (`Ozaki.ozaki1ExactFallbackI` on the split-K INT8
+matrix multiplier), so the number of ranges the exact fallback visits does not depend on the inputs'
+exponents (`Ozaki.exactFallback_ranges`). It returns what `adpCRZ` returns (`adpCRJ_eq_CRZ`) and is
+correctly rounded for binary64 inputs of any length (`adpCRJ_eq`); it is the canonical integer ADP
+pipeline. `adpCRJS` adds IEEE's signed zeros on inputs with sign bits (`adpCRJS_eq`).
 
-With Tensor Core blocks as the engine: `tcOzaki2CRJ` (FP64), `tcOzaki2CRJL` (binary32) and
-`tcOzaki2CRJS` (FP64 with signed zeros), every residue and slice product on the hardware model, every
-other step integer arithmetic, any length. -/
+With Tensor Core blocks as the matrix multiplier: `tcOzaki2CRJ` (FP64), `tcOzaki2CRJL` (binary32)
+and `tcOzaki2CRJS` (FP64 with signed zeros), every residue and slice product on the hardware model,
+every other step integer arithmetic, any length. -/
 
 open TensorCore
 
 namespace Ozaki.TC
 
-/-- **ADP's slicing, correctly rounded, as an integer pipeline with the jumping descent.** -/
+/-- **ADP's slicing, correctly rounded, as an integer pipeline with the jumping top-down
+summation.** -/
 def adpCRJ (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   roundingTestB 53 (-1022) 1023 (cfgs.map fun c => some (adpEnclosureZ c.1 c.2 xs ys))
     (ozaki1ExactFallbackI int8SplitK 53 (-1022) 1023 6 smax xs ys)
@@ -71,8 +72,8 @@ theorem adpCRJS_eq {cfgs : List (ℕ × ℕ)} (hcfg : ∀ c ∈ cfgs, 0 < c.1 �
 
 /-! ## Ozaki-II on Tensor Core blocks -/
 
-/-- Correctly rounded FP64 by Ozaki-II as an integer pipeline with the jumping descent on Tensor
-Core blocks. -/
+/-- Correctly rounded FP64 by Ozaki-II as an integer pipeline with the jumping top-down summation on
+Tensor Core blocks. -/
 def tcOzaki2CRJ (p : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki2CRJ (tcSplitK p b) 53 (-1022) 1023 cfgs b smax xs ys

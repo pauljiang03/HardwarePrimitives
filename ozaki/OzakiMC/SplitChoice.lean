@@ -1,19 +1,19 @@
 import OzakiMC.LongDot
 import Ozaki.SliceRule
 
-/-! # Choosing the slice width and chunk length per matrix-core path
+/-! # Choosing the slice width and chunk length per matrix-core variant
 
 The AMD analogue of `OzakiTC.SplitChoice`. On the matrix-core model one knob is proved exact:
 split-K with `b`-bit slices, chunks of `chunkLen b = 2^(24 − 2b)` products, each chunk on chained
-blocks of `N_FMA` products (`mcSplitK_exactOn`); there is no two-pass engine on this model. The
-candidates are every `b` up to what the operand format holds with `2b ≤ 24`
+blocks of `N_FMA` products (`mcSplitK_exactOn`); there is no two-pass matrix multiplier on this
+model. The candidates are every `b` up to what the operand format holds with `2b ≤ 24`
 (`mcCandidates_exact`), and the cost of Ozaki-I for `t` bits is `s(s+1)/2` slice products
 (`s = slicesFor b t`, the rule of `Ozaki.SliceRule`) times `⌈chunk / N_FMA⌉` blocks per chunk. As
 on the Tensor Core, the cost is in model blocks, not measured time.
 
 ## Results (inner dimension `k = 1024`)
 
-| path | `N_FMA` | FP64 (`t = 53`): best | blocks | binary32 (`t = 24`): best | blocks |
+| variant | `N_FMA` | FP64 (`t = 53`): best | blocks | binary32 (`t = 24`): best | blocks |
 | --- | --- | --- | --- | --- | --- |
 | SFMA fp32 | 1 | `b = 12` | 15360 | `b = 12` | 6144 |
 | CDNA 1 fp16 | 4 | `b = 11` | 3840 | `b = 11` | 1536 |
@@ -25,7 +25,7 @@ on the Tensor Core, the cost is in model blocks, not measured time.
 | CDNA 3 bf16 | 8 | `b = 8` | 3584 | `b = 8` | 1280 |
 | CDNA 3 XF32 | 4 | `b = 11` | 3840 | `b = 11` | 1536 |
 
-As on A100, CDNA 3 fp16's blocks of eight favour `10`-bit slices: `2688` blocks for FP64 against
+As on A100, CDNA 3 fp16's blocks of eight favor `10`-bit slices: `2688` blocks for FP64 against
 `3840` with `11`-bit slices in chunks of four (`cdna3F16_best`). The SFMA multiplies one product per
 block, so the widest slices it holds (`b = 12`, `2b ≤ 24`) are best. -/
 
@@ -43,7 +43,7 @@ def mcCost (n t k b : ℕ) : ℕ := (trianglePairs (slicesFor b t)).length * mcB
 def mcCandidates (bmax : ℕ) : List ℕ :=
   (List.range (bmax + 1)).reverse.filter fun b => decide (1 ≤ b) && decide (2 * b ≤ 24)
 
-/-- **Every candidate is exact** on vectors of every length, on a path exact on `bmax`-bit slices
+/-- **Every candidate is exact** on vectors of every length, on a variant exact on `bmax`-bit slices
 and below. -/
 theorem mcCandidates_exact {P : Model} {bmax : ℕ} (hP : ∀ b ≤ bmax, ExactMultiplier P b) :
     ∀ b ∈ mcCandidates bmax, ∀ B, (mcSplitK P b).ExactOn b B := by
@@ -59,7 +59,7 @@ def mcBest (P : Model) (bmax t k : ℕ) : Option ℕ :=
     | none => some b
     | some a => if mcCost P.nfma t k b < mcCost P.nfma t k a then some b else some a) none
 
-/-! ## The best configuration per path (`k = 1024`) -/
+/-! ## The best configuration per variant (`k = 1024`) -/
 
 theorem sfma_best :
     mcBest sfmaF32 12 53 1024 = some 12 ∧ mcCost 1 53 1024 12 = 15360 ∧
@@ -109,7 +109,7 @@ theorem cdna3XF32_best :
 /-! ## The chosen configurations, correctly rounded -/
 
 /-- **Correctly rounded FP64 on CDNA 3 fp16 with the cheapest configuration**: `10`-bit slices, the
-exact path at up to `191` slices. -/
+exact fallback at up to `191` slices. -/
 theorem cdna3F16_fp64CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     mcOzaki1CRD cdna3F16 10 ss 191 x y = rne64 (dot x y) :=
@@ -120,7 +120,7 @@ theorem cdna3F16_fp32CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Bi
     mcOzaki1CRL cdna3F16 10 ss 26 x y = rne32Q (dot x y) :=
   mcOzaki1CRL_eq (cdna3F16_exactMultiplier (by decide)) (by decide) ss (by decide) hx hy hlen
 
-/-- **Correctly rounded FP64 on the SFMA with `12`-bit slices**, the exact path at up to `162`
+/-- **Correctly rounded FP64 on the SFMA with `12`-bit slices**, the exact fallback at up to `162`
 slices (`162 · 13 > 2098`). -/
 theorem sfma_fp64CR12 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :

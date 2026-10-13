@@ -5,8 +5,8 @@ import Ozaki.TruncatedSum
 
 /-! # Long dot products and FP64 emulation on the Tensor Core model
 
-The Tensor Core engine is exact while the products of one call total at most `2^24`, so with
-`11`-bit slices a dot product may have only four terms. Split-K lifts the limit: chunks of
+The Tensor Core matrix multiplier is exact while the products of one call total at most `2^24`, so
+with `11`-bit slices a dot product may have only four terms. Split-K lifts the limit: chunks of
 `2^(24 − 2b)` terms (four for `11`-bit slices, `256` for `8`-bit) each run on Tensor Core blocks,
 and the integer chunk results are added exactly. In hardware the chunk results are read out and
 accumulated in an integer register; `tcSplitKReg` does that in TC-EFT's fixed-width two's-complement
@@ -19,13 +19,13 @@ With split-K every theorem of the schemes holds for every inner dimension:
   addition), and correctly rounded binary64 results from Ozaki-I and Ozaki-II (`tcOzaki1CRD_eq`,
   `tcOzaki2CRD_eq`) for binary64 inputs of any length: binary64 values are multiples of `2^-1074`
   with magnitude below `2^1024`, so `smax` slices with `smax (b + 1) > 2098` leave nothing over
-  (`175` slices of `11` bits) and the exact path's slice products run on Tensor Core blocks too.
+  (`175` slices of `11` bits) and the exact fallback's slice products run on Tensor Core blocks too.
 
 The correctly rounded results are stated with the hardware-independent IEEE round to nearest even of
-`Ozaki.Binary` (`rne32Q`, `rne64`), the same function as on the AMD model, so both vendors return the
-same value. Every engine product runs on the Tensor Core model; the slicing, the exact sum of the
-slice products and the rounding check are exact arithmetic (the sum fits a register of about `580`
-bits for binary32 inputs, `exactTerms_sum_register32`). -/
+`Ozaki.Binary` (`rne32Q`, `rne64`), the same function as on the AMD model, so both vendors return
+the same value. Every slice product runs on the Tensor Core model; the slicing,
+the exact sum of the slice products and the rounding test are exact arithmetic (the sum fits a
+register of about `580` bits for binary32 inputs, `exactTerms_sum_register32`). -/
 
 open TensorCore
 
@@ -37,8 +37,8 @@ namespace Ozaki.TC
 added exactly. -/
 def tcSplitK (p : Model) (b : ℕ) : MatrixMultiplier := chunked (chunkLen b) (tcMultiplier p)
 
-/-- On any path where the Tensor Core engine is exact on `b`-bit slices, split-K is exact on
-`b`-bit vectors of every length. -/
+/-- On any variant where the Tensor Core matrix multiplier is exact on `b`-bit slices, split-K is
+exact on `b`-bit vectors of every length. -/
 theorem tcSplitK_exactOn {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (B : ℕ) : (tcSplitK p b).ExactOn b B :=
   chunked_exactOn hmult (chunkLen_pos b) (chunkLen_exactnessBound hb) B
@@ -135,7 +135,7 @@ theorem fp64_binary64 {v : ℚ} (h : fp64.FiniteValue v) : Binary64Value v := by
   congr 2
 
 /-- Correctly rounded binary32 Ozaki-I of any inner dimension; every slice product, including the
-exact path's, on Tensor Core blocks. -/
+exact fallback's, on Tensor Core blocks. -/
 def tcOzaki1CRL (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRE (tcSplitK p b) rne32Q b ss smax x y
 
@@ -145,7 +145,7 @@ def tcOzaki2CRL (p : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y 
     Option ℚ :=
   ozaki2CRE (tcSplitK p b) rne32Q cfgs b smax x y
 
-/-- **Correctly rounded binary32 Ozaki-I for any inner dimension**, on any exact path: the IEEE
+/-- **Correctly rounded binary32 Ozaki-I for any inner dimension**, on any exact variant: the IEEE
 round to nearest even of `x · y`, the same function as on the AMD model. -/
 theorem tcOzaki1CRL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
@@ -154,7 +154,7 @@ theorem tcOzaki1CRL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b
   ozaki1CRE_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn hmult hb _) ss hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
-/-- **Correctly rounded binary32 Ozaki-II for any inner dimension**, on any exact path. -/
+/-- **Correctly rounded binary32 Ozaki-II for any inner dimension**, on any exact variant. -/
 theorem tcOzaki2CRL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {x y : List ℚ}
@@ -204,8 +204,8 @@ def tcOzaki2CRD (p : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y 
   ozaki2CRE (tcSplitK p b) rne64 cfgs b smax x y
 
 /-- **FP64 GEMM on fp16, bf16 or tf32 Tensor Cores, correctly rounded.** For binary64 inputs of any
-length, on any path where the engine is exact on `b`-bit slices, the result is the IEEE binary64
-round to nearest even of `x · y`. -/
+length, on any variant where the matrix multiplier is exact on `b`-bit slices, the result is the
+IEEE binary64 round to nearest even of `x · y`. -/
 theorem tcOzaki1CRD_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
@@ -240,12 +240,12 @@ theorem a100BF16_fp64CR (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Bina
 
 /-! ## With a two-word accumulator -/
 
-/-- Correctly rounded binary32 Ozaki-I of any inner dimension with a `W`-bit window accumulator for
-the check. -/
+/-- Correctly rounded binary32 Ozaki-I of any inner dimension with a `W`-bit truncated sum for
+the rounding test. -/
 def tcOzaki1CRLW (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRW (tcSplitK p b) rne32Q b W ss smax x y
 
-/-- Correctly rounded FP64 by Ozaki-I with a `W`-bit window accumulator for the check. -/
+/-- Correctly rounded FP64 by Ozaki-I with a `W`-bit truncated sum for the rounding test. -/
 def tcOzaki1CRDW (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRW (tcSplitK p b) rne64 b W ss smax x y
 
@@ -266,8 +266,8 @@ theorem tcOzaki1CRDW_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn 
   ozaki1CRW_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) W ss hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
-/-- FP64 on V100 fp16 with a `96`-bit window: correctly rounded for every length. With up to seven
-`11`-bit slices the window's loss `n 2^(E+F−96)` is far below the slicing bound. -/
+/-- FP64 on V100 fp16 with a `96`-bit truncated sum: correctly rounded for every length. With up to
+seven `11`-bit slices the truncation loss `n 2^(E+F−96)` is far below the slicing bound. -/
 theorem v100_fp64CRW (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     tcOzaki1CRDW v100F16F32 11 96 ss 175 x y = rne64 (dot x y) :=

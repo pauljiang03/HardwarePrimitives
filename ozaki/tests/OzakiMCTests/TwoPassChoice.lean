@@ -3,9 +3,9 @@ import OzakiMC.Ozaki2Choice
 
 /-! # Two passes and the chosen configurations on the matrix-core model
 
-* `mcMultiplier2` on CDNA 3 fp16 is exact on `11`-bit vectors whose full groups exceed the one-pass
-  budget: nine products `2047 · 2047` (two blocks, the first of eight products summing to
-  `8 · 2047² > 2^24`), with mixed signs.
+* `mcMultiplier2` on CDNA 3 fp16 is exact on `11`-bit vectors whose full block FMAs exceed the
+  one-pass exactness bound: nine products `2047 · 2047` (two blocks, the first of eight products
+  summing to `8 · 2047² > 2^24`), with mixed signs.
 * On the first entry of the binary64 oracle case `narrow64`, correctly rounded FP64 by Ozaki-I on
   the SFMA with two passes and `24`-bit slices, and by Ozaki-II on CDNA 3 fp16 with `12` moduli at
   most `2048`, return the oracle's value. -/

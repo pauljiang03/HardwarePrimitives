@@ -1,13 +1,13 @@
 import Ozaki.Basic
 
-/-! # ADP and ESC: Ozaki-I on INT8 engines
+/-! # ADP and ESC: Ozaki-I on INT8 matrix multipliers
 
-NVIDIA's guaranteed-accuracy DGEMM (Schwarz et al., *Guaranteed DGEMM Accuracy While Using
-Reduced Precision Tensor Cores Through Extensions of the Ozaki Scheme*, arXiv:2511.13778, modelled
-in Z3 in `ozaki-NVIDIA/` of the Z3 repository) emulates binary64 GEMM on INT8 engines. Each row of
-`A` (column of `B`) is converted to a `W`-bit fixed-point integer, cut into `s` signed 8-bit
-slices, and all `s²` slice products are accumulated exactly. This file formalizes the parts that
-do not depend on the engine:
+NVIDIA's guaranteed-accuracy DGEMM (Schwarz et al., *Guaranteed DGEMM Accuracy While Using Reduced
+Precision Tensor Cores Through Extensions of the Ozaki Scheme*, arXiv:2511.13778, modeled in Z3 in
+`ozaki-NVIDIA/` of the Z3 repository) emulates binary64 GEMM on INT8 matrix multipliers. Each row of
+`A` (column of `B`) is converted to a `W`-bit fixed-point integer, cut into `s` signed 8-bit slices,
+and all `s²` slice products are accumulated exactly. This file formalizes the parts that do not
+depend on the matrix multiplier:
 
 * **Unsigned slice encoding (§3).** `remap s N` cuts `N` into `s` base-256 digits, lowest first,
   turning an unsigned digit `u ∈ [128, 255]` into `u − 256` with a carry. The digits always

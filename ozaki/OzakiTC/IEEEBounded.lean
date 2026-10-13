@@ -10,8 +10,9 @@ The correctly rounded schemes in bounded and in integer arithmetic, with IEEE sp
 (`±Inf`, NaN, signed zeros), each meeting the IEEE specification `dotIEEE` for every input:
 
 * on rational data (`FVal`), wrapped by `crIEEE` with the sign oracle `exactSignB`: Ozaki-II with
-  integer checks (`tcOzaki2CRBI_eq`, `tcOzaki2CRBLI_eq`), ADP-style slicing with integer checks
-  (`adpCRBI_eq`), and the zero-aware bounded Ozaki-I (`tcOzaki1CRBDZI_eq`, `tcOzaki1CRBLZI_eq`);
+  integer rounding tests (`tcOzaki2CRBI_eq`, `tcOzaki2CRBLI_eq`), ADP-style slicing with integer
+  rounding tests (`adpCRBI_eq`), and the bounded Ozaki-I with the bound that counts only nonzero
+  positions (`tcOzaki1CRBDZI_eq`, `tcOzaki1CRBLZI_eq`);
 * on stored data (`IDatum`: `((m, e), sign)`, `±Inf`, NaN), wrapped by `crIEEEI` with the integer
   sign oracle `exactSignI`: Ozaki-I in integers (`tcOzaki1CRIDI_eq`, `tcOzaki1CRILI_eq`), Ozaki-II in
   integers (`tcOzaki2CRJI_eq`, `tcOzaki2CRJLI_eq`), and ADP-style slicing in integers

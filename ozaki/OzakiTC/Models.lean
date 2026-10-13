@@ -1,12 +1,12 @@
 import OzakiTC.MatrixMultiplier
 
-/-! # The eight GPU paths
+/-! # The eight GPU variants
 
-Exact Ozaki engines on every Tensor Core path of `TensorCore`. The slice width is set by what the
-operand format holds: `b = 11` for fp16 and tf32 (`2^11 = 2048` and every smaller integer are
-exact), `b = 8` for bf16. Every path has `F ≥ 23` and `2b ≤ F`.
+Exact matrix multipliers on every Tensor Core variant of `TensorCore`. The slice width is set by
+what the operand format holds: `b = 11` for fp16 and tf32 (`2^11 = 2048` and every smaller integer
+are exact), `b = 8` for bf16. Every variant has `F ≥ 23` and `2b ≤ F`.
 
-| path | `K` | `F` | `b` |
+| variant | `K` | `F` | `b` |
 | --- | --- | --- | --- |
 | V100 fp16 | 4 | 23 | 11 |
 | A100 fp16 | 8 | 24 | 11 |
@@ -17,9 +17,9 @@ exact), `b = 8` for bf16. Every path has `F ≥ 23` and `2b ≤ F`.
 | H100 tf32 (wmma) | 4 | 25 | 11 |
 | H100 tf32 (mma) | 8 | 25 | 11 |
 
-The budget `Σ|aᵢbᵢ| ≤ 2^24` is the same on every path: it is set by the binary32 output. For
-`11`-bit slices it allows inner dimension `k ≤ 4`, a single V100 block; the A100 and H100 fp16
-paths take groups of 8 and 16, whose products can exceed it (`OzakiTC.Limits`). -/
+The exactness bound `Σ|aᵢbᵢ| ≤ 2^24` is the same on every variant: it is set by the binary32 output.
+For `11`-bit slices it allows inner dimension `k ≤ 4`, a single V100 block; the A100 and H100 fp16
+variants take block FMAs of 8 and 16 products, whose products can exceed it (`OzakiTC.Limits`). -/
 
 open TensorCore
 

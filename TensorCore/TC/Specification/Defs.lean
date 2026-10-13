@@ -3,7 +3,7 @@ import Std
 import Init.Data.Rat
 import Init.GrindInstances.Ring.Rat
 
-/-! Independent specification of the aligned FP32-output paths in Accurate Models v4, Section 4.1 (especially 4.1.1, 4.1.2, 4.1.6), Figures 2/3/5, and Table 3. -/
+/-! Independent specification of the aligned FP32-output variants in Accurate Models v4, Section 4.1 (especially 4.1.1, 4.1.2, 4.1.6), Figures 2/3/5, and Table 3. -/
 
 namespace TensorCore.IndependentSpec
 

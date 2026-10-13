@@ -9,7 +9,7 @@ def hopperOnes : BlockInput hopperF16F32 :=
 example : ((evalBlock hopperOnes).toOption.map fun t => t.output.bits) =
     some (BitVec.ofNat 32 0x41800000) := by decide +kernel
 
-/- Arbitrary block size and padding use the same definitions and proofs. -/
+/- Any FMA size and any number of extra alignment bits use the same definitions and proofs. -/
 example (K neab carryBits : ℕ) (x : BlockInput (fp16Fp32Model K neab))
     (t : BlockTrace) (he : evalBlock x = .ok t) (hc : K + 1 ≤ 2 ^ carryBits) :
     t.block.machineAccumulator (26 + neab + carryBits) = t.block.accumulator :=

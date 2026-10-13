@@ -17,8 +17,8 @@ So a block is exact whenever `|c| < 2^(F+1)` and the exact sum `c + Σ aᵢbᵢ`
 whatever the magnitudes of the products (`evalBlock_cancel`); cancellation inside a block is free.
 The condition on the sum is also necessary: a block's output is a binary32 value
 (`evalBlock_exact_needs_binary32`). A chain of blocks is exact when every running value it passes
-on stays below `2^24` (`runBlocks_cancel`), and so is the engine when the dot products of the
-prefixes at its group boundaries do (`tcMultiplier_cancel`).
+on stays below `2^24` (`runBlocks_cancel`), and so is the matrix multiplier when the dot products of
+the prefixes at its block boundaries do (`tcMultiplier_cancel`).
 
 Witnesses where the old condition fails and the new one holds: on A100, four products `2^22` and four
 `−2^22` (total magnitude `2^25`) return `0`, and four products `2047²` and three `−2047²` return
@@ -27,7 +27,7 @@ Witnesses where the old condition fails and the new one holds: on A100, four pro
 
 This is the exact condition, not a scheduling rule: the running values are known only after the
 products are computed, so a scheme that must know in advance that a call is exact still uses the
-budget on `Σ|aᵢbᵢ|`. -/
+exactness bound on `Σ|aᵢbᵢ|`. -/
 
 open TensorCore
 
@@ -119,7 +119,7 @@ theorem evalBlock_exact_needs_binary32 {p : Model} {x : BlockInput p} {t : Block
     (_ht : evalBlock x = .ok t) {v : ℚ} (hv : t.output.value = v) : FiniteValue32 v := by
   rw [← hv]; exact value32_finite _ _ (value32_output t)
 
-/-- `2^24 ≤ 2^(F+1)` on every path (`F ≥ 23`). -/
+/-- `2^24 ≤ 2^(F+1)` on every variant (`F ≥ 23`). -/
 theorem two_pow_24_le {p : Model} {b : ℕ} (hp : IntExact p b) :
     (2 : ℚ) ^ (24 : ℤ) ≤ 2 ^ (p.alignFracBits + 1) :=
   two_pow_le (by have := hp.wide; omega)
@@ -142,8 +142,8 @@ theorem evalBlock_cancel_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : Bloc
 /-! ## Chains -/
 
 /-- Every running value a chain passes on is below `2^24`, and the last one at most `2^24`:
-starting from `v`, each group's result `v + Σ_group` is at most `2^24` in magnitude, and is below
-`2^24` if another group follows. -/
+starting from `v`, each block FMA's result `v + Σ_group` is at most `2^24` in magnitude, and is
+below `2^24` if another block FMA follows. -/
 def ChainOK (p : Model) : ℚ → List (List (p.Word × p.Word)) → Prop
   | _, [] => True
   | v, g :: rest => Rat.abs v < 2 ^ (24 : ℤ) ∧ Rat.abs (v + wordProducts p g) ≤ 2 ^ (24 : ℤ) ∧
@@ -153,11 +153,11 @@ def ChainOK (p : Model) : ℚ → List (List (p.Word × p.Word)) → Prop
 `c` return `c + Σ aᵢbᵢ` exactly when every running value stays within `2^24`, however large the
 products' magnitudes. -/
 theorem runBlocks_cancel {p : Model} {b : ℕ} (hp : IntExact p b) :
-    ∀ (groups : List (List (p.Word × p.Word))) (c : F32) (zc : ℤ), value32 c = some (zc : ℚ) →
-      (∀ g ∈ groups, g.length = p.nfma ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
-      ChainOK p (zc : ℚ) groups →
-      ∃ ts, runBlocks p c groups = .ok ts ∧
-        runValue c ts = zc + wordProducts p groups.flatten
+    ∀ (blocks : List (List (p.Word × p.Word))) (c : F32) (zc : ℤ), value32 c = some (zc : ℚ) →
+      (∀ g ∈ blocks, g.length = p.nfma ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
+      ChainOK p (zc : ℚ) blocks →
+      ∃ ts, runBlocks p c blocks = .ok ts ∧
+        runValue c ts = zc + wordProducts p blocks.flatten
   | [], c, zc, hc, _, _ => ⟨[], rfl, by simp [runValue, value32D, hc, wordProducts]; grind⟩
   | g :: rest, c, zc, hc, hg, ⟨hv, hsum, hrest⟩ => by
     obtain ⟨hlen, hops⟩ := hg g (by simp)
@@ -174,11 +174,11 @@ theorem runBlocks_cancel {p : Model} {b : ℕ} (hp : IntExact p b) :
     · rw [runValue_cons, hval, List.flatten_cons, wordProducts_append, hZ, Rat.intCast_add]
       grind
 
-/-- A chain whose running values at every group boundary, and its total, stay within `2^24`. -/
+/-- A chain whose running values at every block boundary, and its total, stay within `2^24`. -/
 theorem chainOK_of_prefixes (p : Model) :
-    ∀ (groups : List (List (p.Word × p.Word))) (v : ℚ),
-      (∀ j < groups.length, Rat.abs (v + wordProducts p (groups.take j).flatten) < 2 ^ (24 : ℤ)) →
-      Rat.abs (v + wordProducts p groups.flatten) ≤ 2 ^ (24 : ℤ) → ChainOK p v groups
+    ∀ (blocks : List (List (p.Word × p.Word))) (v : ℚ),
+      (∀ j < blocks.length, Rat.abs (v + wordProducts p (blocks.take j).flatten) < 2 ^ (24 : ℤ)) →
+      Rat.abs (v + wordProducts p blocks.flatten) ≤ 2 ^ (24 : ℤ) → ChainOK p v blocks
   | [], _, _, _ => trivial
   | g :: rest, v, hpre, htot => by
     have h0 := hpre 0 (by simp)
@@ -209,7 +209,7 @@ theorem groupsOf_count (K : ℕ) (pad : α) (ps : List α) :
     (groupsOf K pad ps).length = groupCount K ps.length := by
   unfold groupsOf; exact chunks_count _ _ _
 
-/-- The first `j` groups of length `K` are the first `j K` elements. -/
+/-- The first `j` blocks of length `K` are the first `j K` elements. -/
 theorem take_flatten_groups {K : ℕ} :
     ∀ (gs : List (List α)) (j : ℕ), (∀ g ∈ gs, g.length = K) →
       (gs.take j).flatten = gs.flatten.take (j * K)
@@ -232,7 +232,7 @@ theorem take_zip' (x : List α) (y : List β) (m : ℕ) :
     (List.zip x y).take m = List.zip (x.take m) (y.take m) := by
   rw [List.zip_eq_zipWith, List.take_zipWith, ← List.zip_eq_zipWith]
 
-/-- The dot products of the prefixes at every group boundary before the last stay below `2^24`,
+/-- The dot products of the prefixes at every block boundary before the last stay below `2^24`,
 and the whole dot product within `2^24`. -/
 def PrefixesOK (K : ℕ) (x y : List ℤ) : Prop :=
   (∀ j, j * K < x.length → (dotZ (x.take (j * K)) (y.take (j * K))).natAbs < 2 ^ 24) ∧
@@ -244,9 +244,9 @@ theorem intCast_abs_lt {z : ℤ} {n : ℕ} (h : z.natAbs < 2 ^ n) : Rat.abs (z :
 theorem intCast_abs_le {z : ℤ} {n : ℕ} (h : z.natAbs ≤ 2 ^ n) : Rat.abs (z : ℚ) ≤ 2 ^ (n : ℤ) := by
   rw [abs_intCast, two_pow_natCast]; exact Rat.natCast_le_natCast.mpr h
 
-/-- **The engine with cancellation.** On `b`-bit integer vectors whose dot products of the prefixes
-at the group boundaries stay below `2^24`, and whose dot product is within `2^24`, the Tensor Core
-engine is exact, however large `Σ|xᵢyᵢ|` is. -/
+/-- **The matrix multiplier with cancellation.** On `b`-bit integer vectors whose dot products of
+the prefixes at the block boundaries stay below `2^24`, and whose dot product is within `2^24`, the
+Tensor Core matrix multiplier is exact, however large `Σ|xᵢyᵢ|` is. -/
 theorem tcMultiplier_cancel {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (hK : 0 < p.nfma) {x y : List ℤ} (hlen : x.length = y.length)
     (hx : ∀ a ∈ x, a.natAbs ≤ 2 ^ b) (hy : ∀ a ∈ y, a.natAbs ≤ 2 ^ b)
@@ -323,11 +323,11 @@ theorem tcMultiplier_cancel {p : Model} {b : ℕ} (hp : IntExact p b) (hh : Hold
     show y.take x.length = y by rw [hlen]; exact List.take_length, Rat.intCast_zero]
   congr 1; grind
 
-/-- An engine exact on every pair of vectors that satisfies `P`. -/
+/-- A matrix multiplier exact on every pair of vectors that satisfies `P`. -/
 def ExactWhen (mult : MatrixMultiplier) (P : List ℤ → List ℤ → Prop) : Prop :=
   ∀ x y, P x y → mult x y = some (dotZ x y)
 
-/-- `b`-bit vectors of equal length whose prefix dot products at the group boundaries of `K` stay
+/-- `b`-bit vectors of equal length whose prefix dot products at the block boundaries of `K` stay
 within `2^24`. -/
 def CancelOK (b K : ℕ) (x y : List ℤ) : Prop :=
   x.length = y.length ∧ (∀ a ∈ x, a.natAbs ≤ 2 ^ b) ∧ (∀ a ∈ y, a.natAbs ≤ 2 ^ b) ∧
@@ -345,7 +345,7 @@ def negPair : F16 × F16 := (0xE800, 0x6800)
 def posPair : F16 × F16 := (0x6800, 0x6800)
 
 /-- **A100, cancellation to zero.** Four products `2^22` and four `−2^22` total `2^25` in magnitude,
-twice the old budget, and the block returns the exact `0`. -/
+twice the exactness bound, and the block returns the exact `0`. -/
 theorem a100_cancel_zero :
     (evalBlock (p := ampereF16F32) ⟨List.replicate 4 posPair ++ List.replicate 4 negPair, 0⟩).map
       (fun t => t.output.value) = .ok 0 ∧
@@ -355,7 +355,7 @@ theorem a100_cancel_zero :
 
 /-- **A100, cancellation to `2047²`.** Four products `2047²` and three `−2047²` total
 `7 · 2047² > 2^24` in magnitude; the block returns the exact `2047² = 4190209`. Without the three
-negative products, seven `2047²` lose a bit (`a100_full_group`). -/
+negative products, seven `2047²` lose a bit (`a100_full_blockFMA`). -/
 theorem a100_cancel_2047 :
     (evalBlock (p := ampereF16F32)
       ⟨List.replicate 4 (0x67FF, 0x67FF) ++ List.replicate 3 (0xE7FF, 0x67FF) ++ [(0, 0)], 0⟩).map
@@ -363,16 +363,16 @@ theorem a100_cancel_2047 :
     (7 * 2047 * 2047 : ℤ) > 2 ^ 24 := by
   decide +kernel
 
-/-- **H100, cancellation to zero.** Eight products `2^22` and eight `−2^22`, a full group of
+/-- **H100, cancellation to zero.** Eight products `2^22` and eight `−2^22`, a full block FMA of
 sixteen with total magnitude `2^26`, return the exact `0`. -/
 theorem h100_cancel_zero :
     (evalBlock (p := hopperF16F32) ⟨List.replicate 8 posPair ++ List.replicate 8 negPair, 0⟩).map
       (fun t => t.output.value) = .ok 0 := by
   decide +kernel
 
-/-- The engine-level witness: `x = [2048 ×4, −2048 ×4]`, `y = [2048 ×8]` on A100. `Σ|xᵢyᵢ| = 2^25`
-exceeds the budget of `tcMultiplier_exactOn`, but every prefix stays within `2^24`, so the engine is
-exact by `tcMultiplier_cancel`. -/
+/-- The witness at the level of the matrix multiplier: `x = [2048 ×4, −2048 ×4]`, `y = [2048 ×8]` on
+A100. `Σ|xᵢyᵢ| = 2^25` exceeds the exactness bound of `tcMultiplier_exactOn`, but every prefix stays
+within `2^24`, so the matrix multiplier is exact by `tcMultiplier_cancel`. -/
 def cancelX : List ℤ := List.replicate 4 2048 ++ List.replicate 4 (-2048)
 def cancelY : List ℤ := List.replicate 8 2048
 

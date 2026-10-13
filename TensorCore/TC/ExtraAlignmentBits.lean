@@ -2,7 +2,7 @@ import TensorCore.TC.CanonicalEAlignMin
 import TensorCore.TC.ExactAlignment
 import TensorCore.TC.AcceptedDomain
 
-/-! Padding that makes FP16 alignment exact. -/
+/-! Extra alignment bits that make FP16 alignment exact. -/
 
 namespace TensorCore
 
@@ -75,7 +75,7 @@ theorem prepare_fp16_products_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
         pair.1.unnormalizedExp + pair.2.unnormalizedExp ≤ 30
       omega
 
-/-- A sharper sufficient threshold for floors at most 30, including all source canonical profiles. -/
+/-- A sharper sufficient threshold for minimum alignment exponents of at most 30, which covers the models of all source variants. -/
 theorem canonical_source_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hneab : 156 ≤ neab)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
@@ -144,7 +144,7 @@ theorem canonical_source_neab_success_iff (K neab : ℕ) (eAlignMin : Option ℤ
     refine ⟨hs, b, hp, ?_⟩
     rwa [canonical_source_neab_accumulator K neab eAlignMin hf hneab x b hp]
 
-/-- A conservative uniform padding threshold. -/
+/-- A conservative uniform threshold on the extra alignment bits. -/
 theorem canonical_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ 127) (hneab : 253 ≤ neab)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
@@ -186,7 +186,7 @@ theorem canonical_neab_output (K neab : ℕ) (eAlignMin : Option ℤ)
   (evalBlock_exact_alignment he (canonical_neab_exact K neab eAlignMin hf hneab x
     t.block (evalBlock_prepared he))).2
 
-/-- At sufficient padding, acceptance depends on the ideal sum's range directly. -/
+/-- With enough extra alignment bits, acceptance depends on the ideal sum's range directly. -/
 theorem canonical_neab_success_iff (K neab : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ 127) (hneab : 253 ≤ neab)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) :

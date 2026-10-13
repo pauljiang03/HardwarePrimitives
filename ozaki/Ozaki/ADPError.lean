@@ -7,9 +7,9 @@ import Ozaki.Summation
 ADP (`Ozaki/ADP.lean`) converts every row `x` of `A` (column `y` of `B`) to `W`-bit fixed point,
 `N = ⌊a · 2^s⌋` with `s = W − 1 − exp(row max)`, computes the fixed-point product exactly, and
 rounds it once to binary64. This file proves the accuracy of that path for one output entry,
-independently of the engine:
+independently of the matrix multiplier:
 
-* **Binary64 exponents (§4 modelling choice).** `exp64 v` is the IEEE exponent component,
+* **Binary64 exponents (§4 modeling choice).** `exp64 v` is the IEEE exponent component,
   `⌊log₂|v|⌋` but at least `−1022`; every binary64 value is `m · 2^(exp64 v − 52)` with an integer
   `m` (`OnGrid64`, `[D.1]`), and `|v| < 2^(exp64 v + 1)` (`abs_lt_exp64`, `[D.2]`).
 * **Fixed point.** `0 ≤ a 2^s − N < 1` (`fixed_floor`, `[F.2]`), `N ∈ [−2^W, 2^W)`

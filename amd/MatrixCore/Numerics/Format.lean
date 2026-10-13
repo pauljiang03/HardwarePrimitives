@@ -45,7 +45,7 @@ def emax (f : Format) : ℤ :=
 
 end Format
 
-/-- binary32 (fp32): the format of `c` and `d` on every path. -/
+/-- binary32 (fp32): the format of `c` and `d` on every variant. -/
 @[implicit_reducible] def binary32 : Format := ⟨8, 23, 127, .ieee⟩
 /-- binary16 (fp16). -/
 @[implicit_reducible] def binary16 : Format := ⟨5, 10, 15, .ieee⟩
@@ -83,7 +83,7 @@ def sig (x : Unpacked) : ℚ := (x.m : ℚ) / pow2 x.t
 
 def isZero (x : Unpacked) : Bool := x.m == 0
 
-/-- Products are kept in full precision and *denormalised*: the significands are multiplied and
+/-- Products are kept in full precision and *denormalized*: the significands are multiplied and
 the exponents added, so `s_p = s_a s_b ∈ [0, 4)` and `e_p = e_a + e_b`. -/
 def mul (a b : Unpacked) : Unpacked :=
   ⟨a.negative != b.negative, a.m * b.m, a.e + b.e, a.t + b.t⟩

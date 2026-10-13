@@ -2,10 +2,10 @@ import OzakiTC.Int8
 import Ozaki.ADPError
 import Ozaki.Native
 
-/-! # ADP on the INT8 engine (a 32-bit wrapping register over exact integer products)
+/-! # ADP on the INT8 matrix multiplier (a 32-bit wrapping register over exact integer products)
 
 The whole of NVIDIA's ADP (Schwarz et al., arXiv:2511.13778; the Z3 model `ozaki-NVIDIA/adp.py`)
-for binary64 GEMM on the INT8 engine of `OzakiTC/Int8.lean`:
+for binary64 GEMM on the INT8 matrix multiplier of `OzakiTC/Int8.lean`:
 
 1. **Scan (§5.1).** Decode every binary64 word (`value64`, TensorCore's `binaryValue fp64`); an
    Inf or NaN sends the product to native FP64 (`ADPPath.nativeNonfinite`).
@@ -343,8 +343,8 @@ theorem matrixEsc_ge {n : ℕ} {A cols : List (List ℚ)} {m : ℤ} (h : matrixE
 
 /-! ## One emulated entry -/
 
-/-- One emulated entry: fixed point with ADP's shifts, `s` remapped slices on the INT8 engine, exact
-recombination, and binary64 round to nearest. -/
+/-- One emulated entry: fixed point with ADP's shifts, `s` remapped slices on the INT8 matrix
+multiplier, exact recombination, and binary64 round to nearest. -/
 def emulEntry (W s : ℕ) (x y : List ℚ) : Option ℚ :=
   int8Ozaki s (ADP.shiftOf W x) (ADP.shiftOf W y) x y
 
@@ -366,8 +366,8 @@ theorem fixed_in_remap {W s : ℕ} (hfit : ADP.remapFits W s = true) (x : List �
     have := ADP.fixed_range (e := e) (ADP.exp64_le_maxE hm a ha) W
     omega
 
-/-- **Engine operands** (`[E.1]`): the 8-bit two's-complement pattern of a signed byte encodes
-it. -/
+/-- **Operands of the matrix multiplier** (`[E.1]`): the 8-bit two's-complement pattern of a signed
+byte encodes it. -/
 theorem int8_pattern {d : ℤ} (h1 : -128 ≤ d) (h2 : d ≤ 127) : (BitVec.ofInt 8 d).toInt = d := by
   have key : ∀ i : Fin 256, (BitVec.ofInt 8 ((i : ℤ) - 128)).toInt = (i : ℤ) - 128 := by
     decide +kernel

@@ -6,21 +6,21 @@ import OzakiTC.ADPIntPipeline
 
 /-! # Ozaki-II and ADP with bounded registers, and their signed zeros
 
-* `tcOzaki2CRB`: correctly rounded FP64 by Ozaki-II on V100 fp16 blocks with split-K, the check on
-  integer enclosures and the bounded exact path, returns the exact-fraction oracle's words on both
-  binary64 cases (twelve moduli, `P = 69`), and with no configuration at all (every entry through
-  the bounded exact path).
-* `adpCRB`: ADP-style correctly rounded slicing with integer checks and the bounded exact path on the
-  split-K INT8 engine returns the oracle's words on both cases, and the correctly rounded `2^-1074`
-  on the subnormal counterexample.
-* **How often the integer checks settle an entry**, against the rational checks of
+* `tcOzaki2CRB`: correctly rounded FP64 by Ozaki-II on V100 fp16 blocks with split-K, the rounding
+  test on integer enclosures and the bounded exact fallback, returns the exact-fraction oracle's
+  words on both binary64 cases (twelve moduli, `P = 69`), and with no configuration at all (every
+  entry through the bounded exact fallback).
+* `adpCRB`: ADP-style correctly rounded slicing with integer rounding tests and the bounded exact
+  fallback on the split-K INT8 matrix multiplier returns the oracle's words on both cases, and the
+  correctly rounded `2^-1074` on the subnormal counterexample.
+* **How often the integer rounding tests decide an entry**, against the rational tests of
   `OzakiTCTests.Correct`. The integer bound `K` charges each dropped entry a whole unit where the
   rational bound uses the largest actual loss:
   - Ozaki-II, binary64, twelve moduli: `16` of `16` on `narrow64` (rational `16`), `9` on `wide64`
     (rational `10`);
   - Ozaki-II, binary32 on the Z3 cases: Z3 moduli `0` and `0` (rational `0`, `0`); five moduli `10`
     and `6` (rational `12`, `9`); six moduli `16` and `16` (rational `16`, `16`);
-  - ADP: the same counts as the rational check at every configuration tested
+  - ADP: the same counts as the rational test at every configuration tested
     (`(8, 56)`: `16`; `(11, 81)`: `16`; `(8, 62)`: `5`; `(9, 70)`: `11`).
 * **Signed zeros** for Ozaki-II and ADP, rational and bounded: products that are all `−0` give
   `−0`, exact cancellation `+0`, an underflowing negative product `−0`.
@@ -48,7 +48,7 @@ example : (do
     encode64 C) = some C_wide64 := by
   decide +kernel
 
-/-- No configuration: every entry through the bounded exact path. -/
+/-- No configuration: every entry through the bounded exact fallback. -/
 example : (do
     let A ← decode64 A_wide64; let B ← decode64 B_wide64
     let C ← A.mapM fun x => (transpose B).mapM fun y => tcOzaki2CRB v100F16F32 [] 11 175 x y
@@ -67,15 +67,17 @@ example : (do
     encode64 C) = some C_wide64 := by
   decide +kernel
 
-/-- The subnormal counterexample: the integer check of `8` slices of width `56` does not settle
-it, the bounded exact path on the INT8 engine returns the correctly rounded `2^-1074`. -/
+/-- The subnormal counterexample: the integer rounding test with `8` slices of width `56` does not
+decide it, the bounded exact fallback on the INT8 matrix multiplier returns the correctly rounded
+`2^-1074`. -/
 example : enclosureTestB 53 (-1022) 1023 (adpEnclosureB 8 56 subX subY) = none ∧
     adpCRB [(8, 56)] 300 subX subY = some ((2 : ℚ) ^ (-1074 : ℤ)) := by
   decide +kernel
 
-/-! ## How often the integer checks settle an entry -/
+/-! ## How often the integer rounding tests decide an entry -/
 
-/-- Whether Ozaki-II's integer enclosure of one configuration settles the entry (binary64). -/
+/-- Whether the rounding test succeeds on Ozaki-II's integer enclosure of one configuration
+(binary64). -/
 def succeeds2B (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
   ((ozaki2EnclosureB (tcSplitK v100F16F32 11) B P x y).bind (enclosureTestB 53 (-1022) 1023)).isSome
 
@@ -84,7 +86,7 @@ def succeeds2R (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
   ((ozaki2Enclosure (tcSplitK v100F16F32 11) B P x y).bind fun p =>
     roundEnclosure rne64 p.1 p.2).isSome
 
-/-- Whether ADP's integer enclosure settles the entry. -/
+/-- Whether the rounding test succeeds on ADP's integer enclosure. -/
 def succeedsAB (s W : ℕ) (x y : List ℚ) : Bool := (enclosureTestB 53 (-1022) 1023 (adpEnclosureB s W x y)).isSome
 
 def count64 (f : List ℚ → List ℚ → Bool) (A Bm : List (List (BitVec 64))) : Option ℕ := do
@@ -176,7 +178,7 @@ example : (do
     encode64 C) = some C_wide64 := by
   decide +kernel
 
-/-- No configuration: every entry through the exact path with integer slicing. -/
+/-- No configuration: every entry through the exact fallback with integer slicing. -/
 example : (do
     let C ← (pairs A_wide64).mapM fun x => (transposeP (pairs B_wide64)).mapM fun y =>
       tcOzaki2CRZ v100F16F32 [] 11 175 x y

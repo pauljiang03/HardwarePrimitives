@@ -3,18 +3,18 @@ import Ozaki.Correct
 /-! # Correct rounding with a two-word accumulator
 
 Correct rounding only has to decide on which side of the nearest rounding boundary `x · y` lies, so
-the sum `H` of the slice products need not be exact. Keep it in a window of `W` bits below the bound
-`2^(E+F)` of the largest product: round every scaled slice product down to the grid
-`2^q`, `q = E + F − W`, and add the results exactly. The window sum is an integer multiple of
-`2^q` (`truncatedSum_register`), it is within `n · 2^q` of the exact sum for `n` terms
-(`truncatedSum_error`), and that is added to the bound. The correctly rounded scheme stays correct for
-every input (`ozaki1CRW_eq`), and its accumulator holds
+the sum `H` of the slice products need not be exact. Keep only the `W` bits below the bound
+`2^(E+F)` of the largest product: round every scaled slice product down to the grid `2^q`,
+`q = E + F − W`, and add the results exactly. The truncated sum is an integer multiple of `2^q`
+(`truncatedSum_register`), it is within `n · 2^q` of the exact sum for `n` terms
+(`truncatedSum_error`), and that is added to the bound. The correctly rounded scheme stays correct
+for every input (`ozaki1CRW_eq`), and its accumulator holds
 `|N| ≤ (s(s+1)/2) · (k 2^W + 1)` (`ozaki1Truncated_register`): for `W = 96`, `s = 6` and `k ≤ 2^14`
 that is about `115` bits, under two 64-bit words, independent of the inputs' exponent range.
 
-The window costs nothing in the check when `W` exceeds `s (b + 1)` by a few bits: the added
-`n · 2^q` is then far below the slicing bound `(s + 1) k 2^(E + F − s(b+1))`. Only the exact path,
-taken for entries the check cannot settle, adds slice products exactly. -/
+The truncation costs nothing in the rounding test when `W` exceeds `s (b + 1)` by a few bits: the
+added `n · 2^q` is then far below the slicing bound `(s + 1) k 2^(E + F − s(b+1))`. Only the exact
+fallback, taken for entries that the rounding test cannot decide, adds slice products exactly. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -22,7 +22,7 @@ local notation "ℚ" => Rat
 
 namespace Ozaki
 
-/-! ## The window -/
+/-! ## The truncated sum -/
 
 /-- `t` rounded down to a multiple of `2^q`. -/
 def floorGrid (q : ℤ) (t : ℚ) : ℚ := ((t * 2 ^ (-q)).floor : ℚ) * 2 ^ q
@@ -41,7 +41,7 @@ theorem floorGrid_error (q : ℤ) (t : ℚ) :
   · have := Rat.mul_le_mul_of_nonneg_right h1 (Rat.le_of_lt hp); grind
   · have := Rat.mul_lt_mul_of_pos_right h2 hp; grind
 
-/-- The window sum: every term rounded down to the grid `2^q`, then added exactly. -/
+/-- The truncated sum: every term rounded down to the grid `2^q`, then added exactly. -/
 def truncatedSum (q : ℤ) (ts : List ℚ) : ℚ := (ts.map (floorGrid q)).sum
 
 theorem truncatedSum_error (q : ℤ) : ∀ ts : List ℚ,
@@ -62,7 +62,7 @@ theorem truncatedSum_error (q : ℤ) : ∀ ts : List ℚ,
     rw [abs_of_nonneg h1, List.length_cons, natCast_succ]
     grind
 
-/-- The window sum is an integer multiple of `2^q`, with `|N| ≤ Σ|tᵢ| / 2^q + n`. -/
+/-- The truncated sum is an integer multiple of `2^q`, with `|N| ≤ Σ|tᵢ| / 2^q + n`. -/
 theorem truncatedSum_register (q : ℤ) : ∀ ts : List ℚ, ∃ N : ℤ,
     truncatedSum q ts = (N : ℚ) * 2 ^ q ∧
       ((N.natAbs : ℕ) : ℚ) ≤ (ts.map Rat.abs).sum * 2 ^ (-q) + ts.length
@@ -84,9 +84,9 @@ theorem truncatedSum_register (q : ℤ) : ∀ ts : List ℚ, ∃ N : ℤ,
       simp only [List.map_cons, List.sum_cons, List.length_cons, natCast_succ]
       grind
 
-/-! ## Ozaki-I with a window -/
+/-! ## Ozaki-I with a truncated sum -/
 
-/-- The engine's scaled slice products, one per slice pair with `t + u < s`. -/
+/-- The scaled slice products of the matrix multiplier, one per slice pair with `t + u < s`. -/
 def ozaki1Terms (mult : MatrixMultiplier) (b s : ℕ) (x y : List ℚ) : Option (List ℚ) :=
   (trianglePairs s).mapM (pairTerm mult (split b s x).1 (split b s y).1)
 
@@ -95,18 +95,19 @@ theorem ozaki1Terms_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.E
     ozaki1Terms mult b s x y = some (exactTerms b s x y) :=
   mapM_eq_some_map fun _ hp => pairTerm_exact hmult hlen hbound hp
 
-/-- The window grid: `W` bits below `2^(E + F)`, the bound of the largest scaled slice product. -/
+/-- The truncation grid: `W` bits below `2^(E + F)`, the bound of the largest scaled slice
+product. -/
 def truncationGrid (b W : ℕ) (x y : List ℚ) : ℤ := splitExp b x + splitExp b y - W
 
-/-- The enclosure from `s` slices with a `W`-bit window: the window sum of the engine's slice
-products, and the slicing bound plus the window's loss. -/
+/-- The enclosure from `s` slices with a `W`-bit truncated sum: the truncated sum of the slice
+products of the matrix multiplier, and the slicing bound plus the truncation loss. -/
 def ozaki1TruncatedEnclosure (mult : MatrixMultiplier) (b s W : ℕ) (x y : List ℚ) : Option (ℚ × ℚ) :=
   (ozaki1Terms mult b s x y).map fun ts =>
     (truncatedSum (truncationGrid b W x y) ts,
       ozaki1Bound b s x y + ts.length * 2 ^ truncationGrid b W x y)
 
-/-- **Correctly rounded Ozaki-I with a `W`-bit accumulator**: slice counts `ss` in turn, each checked
-on the window sum, then the exact path on the engine. -/
+/-- **Correctly rounded Ozaki-I with a `W`-bit accumulator**: slice counts `ss` in turn, each
+tested on the truncated sum, then the exact fallback on the matrix multiplier. -/
 def ozaki1CRW (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   roundingTest rnd (ss.map fun s => ozaki1TruncatedEnclosure mult b s W x y) (ozaki1ExactFallback mult b smax x y)
@@ -130,8 +131,8 @@ theorem ozaki1TruncatedEnclosure_sound {mult : MatrixMultiplier} {b bound : ℕ}
   unfold ozaki1Bound
   grind
 
-/-- **Ozaki-I with a `W`-bit accumulator, correctly rounded**: on an exact engine, for every input
-whose exact path ends within `smax` slices. -/
+/-- **Ozaki-I with a `W`-bit accumulator, correctly rounded**: on an exact matrix multiplier, for
+every input whose exact fallback ends within `smax` slices. -/
 theorem ozaki1CRW_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (W : ℕ) (ss : List ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
@@ -143,7 +144,7 @@ theorem ozaki1CRW_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsTo
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
   exact ozaki1TruncatedEnclosure_sound hmult s W hlen hbound hcB
 
-/-- **The accumulator is small.** The window sum from `s` slices is `N · 2^q` with
+/-- **The accumulator is small.** The truncated sum from `s` slices is `N · 2^q` with
 `|N| ≤ (s(s+1)/2) · (k 2^W + 1)`: `W + log₂ (s(s+1)/2 · (k + 1)) + 1` bits with the sign, whatever
 the inputs' exponents. -/
 theorem ozaki1Truncated_register {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
@@ -178,8 +179,9 @@ theorem ozaki1Truncated_register {mult : MatrixMultiplier} {b bound : ℕ} (hmul
       rw [← hq]; grind
     grind
 
-/-- **The window's check settles an entry with margin**, as with the exact sum: whenever `x · y` is
-`2B` from every rounding boundary, `B` now including the window's loss `n 2^q`. -/
+/-- **The rounding test on the truncated sum succeeds with margin**, as with the exact sum:
+whenever `x · y` is `2B` from every rounding boundary, `B` now including the truncation loss
+`n 2^q`. -/
 theorem ozaki1TruncatedEnclosure_succeeds {R : ℚ → Prop} {rnd : ℚ → Option ℚ}
     (h : RoundsToNearest R rnd) (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ}
     (hmult : mult.ExactOn b bound) (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)

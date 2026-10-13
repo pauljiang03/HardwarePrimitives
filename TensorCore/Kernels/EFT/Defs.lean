@@ -14,7 +14,7 @@ structure Prepared where
   grid : Grid
   deriving Repr, DecidableEq
 
-/-- Select the common extraction grid from unnormalized unnormalized exponents. -/
+/-- Select the common extraction grid from the unnormalized exponents. -/
 def selectedGrid (variant : Variant) (ts : List Term) (D : F32) : Grid :=
   let alignExp := ts.foldl (fun e t => if t.word.magnitude == 0 then e
     else if e ≤ t.biasedExp then t.biasedExp else e) variant.eAlignMin
@@ -111,7 +111,7 @@ def Result.bits : Result → Option F32
   | .scalar b | .boundedExact b => some b
   | .outOfRange => none
 
-/-- Full bounded Algorithm 1, on each of the eight supported encoded input paths. -/
+/-- Full bounded Algorithm 1, on each of the eight supported variants with encoded inputs. -/
 def tcEft (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Result := do
   let p ← prepare variant x D
   if p.terms.all (fun t => t.word.magnitude == 0) then return .allZero

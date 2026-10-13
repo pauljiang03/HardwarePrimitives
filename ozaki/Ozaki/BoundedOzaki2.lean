@@ -1,10 +1,10 @@
 import Ozaki.BoundedOzaki
 import Ozaki.SignedZero
 
-/-! # Ozaki-II's check in bounded integer arithmetic, and signed zeros for Ozaki-II
+/-! # Ozaki-II's rounding test in bounded integer arithmetic, and signed zeros for Ozaki-II
 
-`ozaki2CRE` checks a rational enclosure: the reconstructed product `H` and the truncation bound
-`B`, a rational computed from the inputs. Here the check is integer arithmetic of bounded width:
+`ozaki2CRE` tests a rational enclosure: the reconstructed product `H` and the truncation bound `B`,
+a rational computed from the inputs. Here the rounding test is integer arithmetic of bounded width:
 
 * **an integer enclosure** `H = N 2^q`, `B = K 2^c` (`enclVal`), tested by `enclosureTestB`: both ends
   rounded at the grid `min q c` with `roundExact` (`enclosureTestB_eq`); `roundingTestB` tries integer
@@ -16,19 +16,21 @@ import Ozaki.SignedZero
 * **Ozaki-II's integer enclosure** (`ozaki2EnclosureB`): `N` the CRT reconstruction of the residue
   products, `q = −(sₓ + s_y)`, and `B = K 2^q` with `K` of the truncated integers (`ozaki2K`), so
   the enclosure contains `x · y` (`ozaki2EnclosureB_sound`);
-* `ozaki2CRB`: the integer checks in turn, then Ozaki-I's bounded exact path. It is correctly
-  rounded (`ozaki2CRB_eq`, binary64 and binary32 instances `ozaki2CRB64_eq`, `ozaki2CRB32_eq`).
+* `ozaki2CRB`: the integer rounding tests in turn, then Ozaki-I's bounded exact fallback. It is
+  correctly rounded (`ozaki2CRB_eq`, binary64 and binary32 instances `ozaki2CRB64_eq`,
+  `ozaki2CRB32_eq`).
 
 **Widths** (`ozaki2EnclosureB_width`): `2|N| ≤ M`, `0 ≤ K ≤ k (2^(P+1) + 1)`, both on the grid `2^q`
 (no alignment shift), so the integers `N ± K` that `roundExact` rounds are at most
 `M/2 + k (2^(P+1) + 1)` in magnitude, whatever the inputs' exponents. `K` charges each truncation a
-whole unit where the rational bound uses the largest actual loss, so the integer check can settle
-fewer entries.
+whole unit where the rational bound uses the largest actual loss, so the integer rounding test can
+decide fewer entries.
 
-**Signed zeros.** `roundingTestSignedB` is `roundingTestSigned` on integer enclosures, with the sign of a
-zero result read off the integer ends (`signB`) or, on the exact path, from the sign of the exact
-sum computed by `signSum` (`ozaki1ExactFallbackBS`). `ozaki2CRS` (rational) and `ozaki2CRBS` (bounded)
-return the IEEE-signed correctly rounded product `crSigned` (`ozaki2CRS_eq`, `ozaki2CRBS_eq`). -/
+**Signed zeros.** `roundingTestSignedB` is `roundingTestSigned` on integer enclosures, with the sign
+of a zero result read off the integer ends (`signB`) or, on the exact fallback, from the sign of the
+exact sum computed by `signSum` (`ozaki1ExactFallbackBS`). `ozaki2CRS` (rational) and `ozaki2CRBS`
+(bounded) return the IEEE-signed correctly rounded product `crSigned` (`ozaki2CRS_eq`,
+`ozaki2CRBS_eq`). -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -80,8 +82,8 @@ theorem roundingTestB_eq_roundingTest (p : ℕ) (emin emax : ℤ) {v : ℚ} :
     | some w => rfl
     | none => exact ih
 
-/-- **The integer check is correct rounding.** If every integer enclosure contains `v` and the
-fallback is the rounding of `v`, `roundingTestB` returns the rounding of `v`. -/
+/-- **The integer rounding test is correct rounding.** If every integer enclosure contains `v` and
+the fallback is the rounding of `v`, `roundingTestB` returns the rounding of `v`. -/
 theorem roundingTestB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {v : ℚ}
     (es : List (Option (ℤ × ℤ × ℤ × ℤ))) (exact : Option ℚ)
     (hes : ∀ e ∈ es, ∀ t, e = some t → Rat.abs (v - (enclVal t).1) ≤ (enclVal t).2)
@@ -101,7 +103,7 @@ theorem roundingTestB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin �
 
 /-! ## Signed zeros on integer enclosures -/
 
-/-- The sign bit an integer enclosure settles for its rounding `r`: the sign of a nonzero `r`; for
+/-- The sign bit an integer enclosure decides for its rounding `r`: the sign of a nonzero `r`; for
 `r = 0`, the side of zero the integer ends lie on; none if they straddle zero. -/
 def signB (e : ℤ × ℤ × ℤ × ℤ) (r : ℚ) : Option Bool :=
   let q0 := min e.2.1 e.2.2.2
@@ -159,8 +161,9 @@ theorem signOfSgn_sgnQ (v : ℚ) (z : Bool) : signOfSgn (sgnQ v) z = sumNeg v z 
     simp only [decide_eq_decide]
     exact h
 
-/-- The signed check on integer enclosures: try them in order, accepting one whose ends round alike
-and whose sign is settled; after the last, the fallback's rounding and the sign of the exact sum. -/
+/-- The signed rounding test on integer enclosures: try them in order, accepting one whose ends
+round alike and whose sign is decided; after the last, the fallback's rounding and the sign of the
+exact sum. -/
 def roundingTestSignedB (p : ℕ) (emin emax : ℤ) :
     List (Option (ℤ × ℤ × ℤ × ℤ)) → Option (ℚ × ℤ) → Bool → Option Signed
   | [], exact, z => exact.map fun rs => ⟨rs.1, signOfSgn rs.2 z⟩
@@ -197,7 +200,7 @@ theorem roundingTestSignedB_eq_roundingTestSigned (p : ℕ) (emin emax : ℤ) {v
     | some w => rfl
     | none => exact ih
 
-/-- **The signed integer check returns the correctly rounded value with the IEEE sign.** -/
+/-- **The signed integer rounding test returns the correctly rounded value with the IEEE sign.** -/
 theorem roundingTestSignedB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {v : ℚ}
     (z : Bool) (es : List (Option (ℤ × ℤ × ℤ × ℤ))) (exact : Option (ℚ × ℤ))
     (hes : ∀ e ∈ es, ∀ t, e = some t → Rat.abs (v - (enclVal t).1) ≤ (enclVal t).2)
@@ -217,10 +220,10 @@ theorem roundingTestSignedB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : e
     rw [hcB] at this
     exact this
 
-/-! ## The bounded exact path with the sign of the exact sum -/
+/-! ## The bounded exact fallback with the sign of the exact sum -/
 
-/-- Ozaki-I's bounded exact path, returning also the sign of the exact sum (`signSum` on the same
-integer terms, with the same windows). -/
+/-- Ozaki-I's bounded exact fallback, returning also the sign of the exact sum (`signSum` on the
+same integer terms, with the same ranges). -/
 def ozaki1ExactFallbackBS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ) (x y : List ℚ) :
     Option (ℚ × ℤ) :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
@@ -272,7 +275,7 @@ truncation or floor, so `|xᵢ 2^sₓ − aᵢ| ≤ 1`; likewise `cⱼ` for `y`.
 `dot_approx_error` for these approximations is then at most `K 2^(−sₓ−s_y)` with the integer
 `K = [x drops bits] (Σ|cⱼ| + k) + [y drops bits] Σ|aᵢ|` (`scaledBound_le`): every entry loses less
 than one unit, nothing when no bits are dropped, `Σ|y| ≤ (Σ|cⱼ| + k) 2^(−s_y)`, and
-`Σ|x̃| = Σ|aᵢ| 2^(−sₓ)`. `K` is computed from the integers the engine multiplies. -/
+`Σ|x̃| = Σ|aᵢ| 2^(−sₓ)`. `K` is computed from the integers the matrix multiplier multiplies. -/
 
 theorem mem_zipWith_sub_map {x : List ℚ} {g : ℚ → ℚ} {d : ℚ}
     (h : d ∈ List.zipWith (· - ·) x (x.map g)) : ∃ a ∈ x, d = a - g a := by
@@ -414,8 +417,8 @@ theorem scaledBound_le {g : ℚ → ℤ} (hg : ∀ t, Rat.abs (t - g t) ≤ 1) (
   grind
 /-! ## Ozaki-II's integer enclosure -/
 
-/-- Ozaki-II's reconstructed integer product `a · c`: the residue products from the engine and the
-CRT reconstruction. -/
+/-- Ozaki-II's reconstructed integer product `a · c`: the residue products from the matrix
+multiplier and the CRT reconstruction. -/
 def ozaki2Int (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℤ :=
   (B.moduli.mapM fun m =>
     residueProduct mult m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y)).map
@@ -456,7 +459,8 @@ theorem ozaki2Bound_le (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length) :
   rw [htv x, htv y]
   exact scaledBound_le truncInt_close _ _ hlen
 
-/-- **Ozaki-II's integer enclosure contains `x · y`** on an exact engine with a valid basis. -/
+/-- **Ozaki-II's integer enclosure contains `x · y`** on an exact matrix multiplier with a valid
+basis. -/
 theorem ozaki2EnclosureB_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (P : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -537,14 +541,14 @@ theorem ozaki2EnclosureB_width {mult : MatrixMultiplier} {B : CRTBasis} {P : ℕ
 /-! ## Correctly rounded Ozaki-II in bounded integer arithmetic -/
 
 /-- **Correctly rounded Ozaki-II with bounded registers**: the configurations `(basis, P)` in turn,
-each checked on its integer enclosure, then Ozaki-I's bounded exact path. -/
+each tested on its integer enclosure, then Ozaki-I's bounded exact fallback. -/
 def ozaki2CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   roundingTestB p emin emax (cfgs.map fun c => ozaki2EnclosureB mult c.1 c.2 x y)
     (ozaki1ExactFallbackB mult p emin emax b smax x y)
 
-/-- **Ozaki-II with bounded registers is correctly rounded** on an exact engine, for every input
-whose exact path ends within `smax` slices. -/
+/-- **Ozaki-II with bounded registers is correctly rounded** on an exact matrix multiplier, for
+every input whose exact fallback ends within `smax` slices. -/
 theorem ozaki2CRB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
     {b bound : ℕ} (hmult : mult.ExactOn b bound) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
     {x y : List ℚ}
@@ -594,7 +598,7 @@ theorem vals_all {xs : List Signed} {Q : ℚ → Prop} (h : ∀ a ∈ xs, Q a.va
   exact h a ha
 
 /-- **Correctly rounded Ozaki-II with signed zeros**: Ozaki-II's enclosures, then Ozaki-I's exact
-path, the sign of a zero result from the enclosure or the exact value. -/
+fallback, the sign of a zero result from the enclosure or the exact value. -/
 def ozaki2CRS (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
   roundingTestSigned rnd (cfgs.map fun c => ozaki2Enclosure mult c.1 c.2 (vals xs) (vals ys))

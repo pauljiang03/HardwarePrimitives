@@ -1,6 +1,6 @@
 import TensorCore.Numerics.Exact
 
-/-! Finite sums and coefficient budgets. -/
+/-! Finite sums and coefficient bounds. -/
 
 namespace TensorCore
 
@@ -140,7 +140,7 @@ theorem ceilLog2_le_iff (n c : ℕ) : ceilLog2 n ≤ c ↔ n ≤ 2 ^ c := by
 theorem le_two_pow_ceilLog2 (n : ℕ) : n ≤ 2 ^ ceilLog2 n :=
   (ceilLog2_le_iff n _).mp (Nat.le_refl _)
 
-/-- The bit-width form of Theorem IV.8's stronger sufficient coefficient budget. -/
+/-- The bit-width form of Theorem IV.8's stronger sufficient coefficient bound. -/
 theorem coefficient_bitSpan_sufficient (zs : List ℤ) (B P : ℕ)
     (hterm : ∀ z ∈ zs, z.natAbs < 2 ^ B) (hspan : B + ceilLog2 zs.length ≤ P) :
     magnitudeSum zs < 2 ^ P := by
@@ -151,7 +151,7 @@ theorem coefficient_bitSpan_sufficient (zs : List ℤ) (B P : ℕ)
   rw [he] at h
   omega
 
-/-- The TC-EFT paper's signed-exponent form: |Tᵢ| < 2^(b+1), Tᵢ = zᵢ 2^ℓ, and `b − ℓ + 1 + ⌈log₂ n⌉ ≤ P` imply the predicate's strict coefficient budget. -/
+/-- The TC-EFT paper's signed-exponent form: |Tᵢ| < 2^(b+1), Tᵢ = zᵢ 2^ℓ, and `b − ℓ + 1 + ⌈log₂ n⌉ ≤ P` imply the predicate's strict coefficient bound. -/
 theorem bitSpan_coefficient_bound (zs : List ℤ) (b ℓ : ℤ) (P : ℕ)
     (hterm : ∀ z ∈ zs, absQ ((z : ℚ) * pow2 ℓ) < pow2 (b + 1))
     (hspan : b - ℓ + 1 + (ceilLog2 zs.length : ℤ) ≤ P) : magnitudeSum zs < 2 ^ P := by

@@ -4,15 +4,15 @@ import Ozaki.Bounded
 
 A sum of terms `zᵢ 2^gᵢ` spread over a wide exponent range is exact in a register only as wide as
 the range. This file rounds it correctly with registers whose width depends on the precision, the
-number of terms and the window `W`, never on the exponents; only the number of steps grows with the
-exponent span.
+number of terms and the range width `W`, never on the exponents; only the number of steps grows with
+the exponent span.
 
-* `topDownSum`: windows from the top down. Each takes the `W` bits below the top of an accumulator
+* `topDownSum`: ranges from the top down. Each takes the `W` bits below the top of an accumulator
   `A 2^qa`, cuts every term at the grid `q` (exactly above, truncated toward zero below, `hiPart`,
   `loPart`), adds the parts above `q` in a register of `W + log₂ n + 1` bits, and keeps the parts
   below as residual terms on their own grids, never larger than the original. It stops when nothing
-  is left over or the window sum `N` reaches `2^T`; otherwise `N 2^q` becomes the accumulator (a
-  heavy cancellation) and the next window starts below it. Every term it returns satisfies
+  is left over or the register sum `N` reaches `2^T`; otherwise `N 2^q` becomes the accumulator (a
+  heavy cancellation) and the next range starts below it. Every term it returns satisfies
   `x = N 2^q + Σ residuals` with each residual below `2^q` (`topDownSum_sound`), and it ends within
   `qa − m` steps for terms on the grid `2^m` (`topDownSum_spec`): at most `E − m` steps for terms on
   the grid `2^m` below `2^E` (`topDownSumAll_fuel_le`);
@@ -23,12 +23,12 @@ exponent span.
   residuals and one more term `N − K 2^(h−q)` at the grid `q`, whose width is checked by the code
   itself.
 
-Register widths (`topDownSum_parts_lt`, `fixedSum_natAbs_le`, `topDownSumAll_spec`, `query_natAbs_lt`):
-window parts below `2^W` (checked by `topDownSum`, which refuses otherwise and provably never does),
-window sums at most `2^(W + bitlen (n + 1))`, residuals no larger than an input coefficient or a
-query term, comparison multipliers below `2^(p+4)` and query terms below `2^(bitlen |N| + p + 6)`
-(guarded in `roundSum`). Exponents and the step count are the only quantities that grow with the
-exponent range. -/
+Register widths (`topDownSum_parts_lt`, `fixedSum_natAbs_le`, `topDownSumAll_spec`,
+`query_natAbs_lt`): parts in the current range below `2^W` (checked by `topDownSum`, which refuses
+otherwise and provably never does), register sums at most `2^(W + bitlen (n + 1))`, residuals no
+larger than an input coefficient or a query term, comparison multipliers below `2^(p+4)` and query
+terms below `2^(bitlen |N| + p + 6)` (guarded in `roundSum`). Exponents and the step count are the
+only quantities that grow with the exponent range. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -198,9 +198,9 @@ theorem loPart_top {q : ℤ} {t : ℤ × ℤ} (h : (loPart q t).1 ≠ 0) :
     have hb := bitlen_le_iff.mpr this
     omega
 
-/-! ## One window -/
+/-! ## One range -/
 
-/-- The residual terms after the window at grid `q`. -/
+/-- The residual terms after the range at grid `q`. -/
 def rangeRest (q : ℤ) (ts : List (ℤ × ℤ)) : List (ℤ × ℤ) := nonzero (ts.map (loPart q))
 
 theorem tsum_range (q : ℤ) (ts : List (ℤ × ℤ)) :
@@ -243,7 +243,7 @@ theorem sum_natAbs_le {B : ℕ} : ∀ {ps : List ℤ}, (∀ z ∈ ps, z.natAbs <
     simp only [List.map_cons, List.sum_cons, List.length_cons, Nat.succ_mul]
     omega
 
-/-- **The window register.** Parts below `2^W` add up exactly in `W + bitlen n + 1` bits. -/
+/-- **The register.** Parts below `2^W` add up exactly in `W + bitlen n + 1` bits. -/
 theorem register_fixedSum {W : ℕ} {ps : List ℤ} (h : ∀ z ∈ ps, z.natAbs < 2 ^ W) :
     fixedSum (W + bitlen ps.length + 1) ps = ps.sum := by
   apply fixedSum_eq (by omega)
@@ -276,10 +276,10 @@ theorem fixedSum_natAbs_le {w : ℕ} (hw : 0 < w) (zs : List ℤ) :
   | nil => intro acc h; exact h
   | cons z zs ih => intro acc _; exact ih _ (wrap_natAbs_le hw _)
 
-/-! ## Descending windows -/
+/-! ## Ranges from the top down -/
 
-/-- **Windows from the top down.** The state is an accumulator `A 2^qa` and residual terms below
-`2^qa`. The window takes the `W` bits below the accumulator's top: grid `q = qa + bitlen |A| − W`.
+/-- **Ranges from the top down.** The state is an accumulator `A 2^qa` and residual terms below
+`2^qa`. The range takes the `W` bits below the accumulator's top: grid `q = qa + bitlen |A| − W`.
 Every part above `q` must be a `W`-bit integer (checked); they are added in a register of
 `W + bitlen n + 1` bits. Stops with `(N, q, residuals)` when nothing is left over or `|N| ≥ 2^T`;
 otherwise continues with `N 2^q` as the accumulator, at most `fuel` more times. -/
@@ -437,7 +437,8 @@ theorem topDownSum_spec {W T : ℕ} (hTW : T < W) {m : ℤ} : ∀ (fuel : ℕ) (
         have := bitlen_mono (Nat.add_le_add_right (length_rangeRest (topOf (A, qa) - W) rs) 1)
         omega
 
-/-- **The window parts are `W`-bit integers**: on every state `topDownSum` reaches from terms below
+/-- **The parts in the current range are `W`-bit integers**: on every state `topDownSum` reaches
+from terms below
 `2^qa`, the parts are below `2^W` (so `topDownSum` never refuses). -/
 theorem topDownSum_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)}
     (hrs : ∀ t ∈ rs, topOf t ≤ qa) :
@@ -530,7 +531,7 @@ theorem le_minGridFrom : ∀ (ts : List (ℤ × ℤ)) {e m : ℤ}, m ≤ e → (
   | t :: ts, _, _, he, h => le_minGridFrom ts (Int.le_min.mpr ⟨he, h t List.mem_cons_self⟩)
       (fun u hu => h u (List.mem_cons_of_mem _ hu))
 
-/-- **The number of windows is bounded by the exponent span**: for terms on the grid `2^m` below
+/-- **The number of ranges is bounded by the exponent span**: for terms on the grid `2^m` below
 `2^E`, the fuel of `topDownSumAll` is at most `E − m`. -/
 theorem topDownSumAll_fuel_le {ts : List (ℤ × ℤ)} {m E : ℤ}
     (h : ∀ t ∈ ts, m ≤ t.2 ∧ Rat.abs (tval t) < 2 ^ E) :
@@ -612,7 +613,7 @@ theorem sgnQ_neg (x : ℚ) : sgnQ (-x) = -sgnQ x := by
     · subst h2; simp
     · rw [if_pos (by grind), if_neg h1, if_neg h2]
 
-/-- The window sum dominates: `|N| ≥ 2^T` and the residuals, at most `n` terms below `2^q`, are
+/-- The register sum dominates: `|N| ≥ 2^T` and the residuals, at most `n` terms below `2^q`, are
 smaller than `2^T 2^q` when `n < 2^T`. -/
 theorem abs_tsum_lt_of_bitlen {N q : ℤ} {T : ℕ} {rs : List (ℤ × ℤ)} {n : ℕ}
     (hrs : ∀ t ∈ rs, topOf t ≤ q) (hlen : rs.length ≤ n) (hT : bitlen n ≤ T)
@@ -634,13 +635,13 @@ theorem abs_tsum_lt_of_bitlen {N q : ℤ} {T : ℕ} {rs : List (ℤ × ℤ)} {n 
     rw [← two_pow_add]
     exact two_pow_le (by omega)
 
-/-- **The sign of a sum of terms**, from windows of `W` bits. -/
+/-- **The sign of a sum of terms**, from ranges of `W` bits. -/
 def signSum (W : ℕ) (ts : List (ℤ × ℤ)) : ℤ :=
   match topDownSumAll W (bitlen (nonzero ts).length) ts with
   | some (N, _, _) => N.sign
   | none => 0
 
-/-- **The sign oracle is exact** for windows wider than `bitlen n`. -/
+/-- **The sign oracle is exact** for ranges wider than `bitlen n`. -/
 theorem signSum_eq {W : ℕ} {ts : List (ℤ × ℤ)} (hW : bitlen ts.length < W) :
     signSum W ts = sgnQ (tsum ts) := by
   have hbl : bitlen (nonzero ts).length ≤ bitlen ts.length :=
@@ -699,10 +700,10 @@ theorem finishRNE_zero (p : ℕ) (emax s : ℤ) : finishRNE p emax s (0, 0) = so
 /-- The query term of `roundSum`: `N − s K 2^(h−q)` at the grid `q`. -/
 def queryTerm (N q s K h : ℤ) : ℤ × ℤ := (N - s * K * 2 ^ (h - q).toNat, q)
 
-/-- **Round to nearest even of a sum of terms** with bounded registers. One descent with
-threshold `2^(bitlen n + p + 3)`; if nothing is left over, round `N 2^q` exactly; if the sum is below
-half the smallest subnormal, return `0`; otherwise answer the comparisons of `roundByCmp` with the
-sign oracle on the residuals and one query term, refusing any query outside the ranges proved to
+/-- **Round to nearest even of a sum of terms** with bounded registers. One top-down summation with
+threshold `2^(bitlen n + p + 3)`; if nothing is left over, round `N 2^q` exactly; if the sum is
+below half the smallest subnormal, return `0`; otherwise answer the comparisons of `roundByCmp` with
+the sign oracle on the residuals and one query term, refusing any query outside the bounds proved to
 suffice (so every query term is below `2^(bitlen |N| + p + 6)`). -/
 def roundSum (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : Option ℚ :=
   match topDownSumAll W (bitlen (nonzero ts).length + p + 3) ts with
@@ -758,7 +759,7 @@ theorem tsum_queryTerm (N q s K h : ℤ) (rs : List (ℤ × ℤ)) (hq : q ≤ h)
     rw [← two_pow_add]; congr 1; omega
   grind
 
-/-- **The bounded rounding of a sum is round to nearest even**, for windows of
+/-- **The bounded rounding of a sum is round to nearest even**, for ranges of
 `W > bitlen (n + 1) + p + 3` bits, whatever the exponents. -/
 theorem roundSum_eq {p : ℕ} (emin emax : ℤ) {W : ℕ} {ts : List (ℤ × ℤ)}
     (hW : bitlen (ts.length + 1) + p + 3 < W) :

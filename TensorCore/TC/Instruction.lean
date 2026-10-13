@@ -3,7 +3,7 @@ import TensorCore.TC.CanonicalEAlignMin
 import TensorCore.TC.Monotonicity
 import TensorCore.TC.Composition
 
-/-! Instruction paths. -/
+/-! Instruction variants. -/
 
 namespace TensorCore
 
@@ -107,7 +107,7 @@ theorem Decoded.value_ne_zero (d : Decoded) (h : d.significand ≠ 0) : d.value 
       _ = 0 := by rw [Rat.div_def, Rat.zero_mul]
   exact h (Rat.intCast_inj.mp h1)
 
-/-- With only zero products, the alignment exponent is the accumulator input's unnormalized exponent, whenever the floor is at most `−126`. -/
+/-- With only zero products, the alignment exponent is the accumulator input's unnormalized exponent, whenever the minimum alignment exponent is at most `−126`. -/
 theorem zero_products_alignExp (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126)
     (c : Decoded) (hc : c.significand ≠ 0) (hlow : -126 ≤ c.unnormalizedExp) :
     (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
@@ -143,7 +143,7 @@ theorem zero_products_alignExp (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : �
     have := hfl f (by rw [hf]; simp)
     simp [Int.max_eq_left (by omega : f ≤ c.unnormalizedExp)]
 
-/-- A group whose products are all zero pairs returns its accumulator input unchanged, for every finite input other than `−0`. -/
+/-- A block FMA whose products are all zero pairs returns its accumulator input unchanged, for every finite input other than `−0`. -/
 theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
     (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (c : F32) (f : Finite32) (hf : finite32 c = some f)
     (hneg : c ≠ 0x80000000) :
@@ -228,8 +228,8 @@ theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
   simp only [prepare, hc, hps]
   exact hrun
 
-/-- Zero groups pass a finite accumulator, other than `−0`, through unchanged. -/
-theorem runBlocks_zero_groups (K neab : ℕ) (eAlignMin : Option ℤ)
+/-- Block FMAs with zero products pass a finite accumulator, other than `−0`, through unchanged. -/
+theorem runBlocks_zero_blocks (K neab : ℕ) (eAlignMin : Option ℤ)
     (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (m : ℕ) (c : F32) (f : Finite32) (hf : finite32 c = some f)
     (hneg : c ≠ 0x80000000) :
     ∃ ts : List BlockTrace,
@@ -251,7 +251,7 @@ theorem runBlocks_zero_groups (K neab : ℕ) (eAlignMin : Option ℤ)
         rw [hbits] at hlast
         exact hlast
 
-/-- A pinned instruction path: inner dimension `k`, products per group, extra alignment bits, floor, and the source of these parameters. -/
+/-- A pinned instruction variant: the inner dimension `k`, the FMA size N_FMA, the extra alignment bits, the minimum alignment exponent, and the source of these numerical features. -/
 structure InstructionVariant where
   name : String
   k : ℕ
@@ -265,12 +265,12 @@ structure InstructionVariant where
 abbrev InstructionVariant.model (p : InstructionVariant) : Model :=
   fp16Fp32Model p.nfma p.neab p.eAlignMin
 
-def InstructionVariant.groups (p : InstructionVariant) : ℕ := p.k / p.nfma
+def InstructionVariant.blocks (p : InstructionVariant) : ℕ := p.k / p.nfma
 
-/-- The schedule of one instruction: `k / N_FMA` contiguous groups in increasing k. -/
+/-- The schedule of one instruction: `k / N_FMA` block FMAs of contiguous products, in increasing k. -/
 def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F16)) :
     List (List (p.model.Word × p.model.Word)) :=
-  chunks p.nfma p.groups pairs
+  chunks p.nfma p.blocks pairs
 
 /-- Execute the instruction. -/
 def InstructionVariant.run (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16)) :
@@ -278,7 +278,7 @@ def InstructionVariant.run (p : InstructionVariant) (c : F32) (pairs : List (F16
   if pairs.length != p.k then .error .wrongProductCount
   else runBlocks p.model c (p.schedule pairs)
 
-/-- The instruction's FP32 result: the last group's output, or the accumulator input when there are no groups. -/
+/-- The instruction's FP32 result: the output of the last block FMA, or the accumulator input when there are none. -/
 def InstructionVariant.output (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16)) :
     Option F32 :=
   match p.run c pairs with
@@ -287,7 +287,7 @@ def InstructionVariant.output (p : InstructionVariant) (c : F32) (pairs : List (
 
 def InstructionVariant.describe (p : InstructionVariant) : String :=
   s!"{p.name}: k = {p.k}, N_FMA = {p.nfma}, extra alignment bits = {p.neab}, " ++
-  s!"floor = {repr p.eAlignMin}, groups per instruction = {p.groups}; evidence: {p.evidence}"
+  s!"minimum alignment exponent = {repr p.eAlignMin}, block FMAs per instruction = {p.blocks}; evidence: {p.evidence}"
 
 theorem InstructionVariant.schedule_flatten (p : InstructionVariant) (pairs : List (F16 × F16))
     (h : pairs.length = p.k) : (p.schedule pairs).flatten = pairs := by
@@ -315,30 +315,30 @@ theorem InstructionVariant.run_blocks (p : InstructionVariant) (c : F32) (pairs 
   · contradiction
   · exact h
 
-/-- If only the first group has nonzero products, the instruction returns that group's output. -/
-theorem single_group_output (p : InstructionVariant) (hfl : ∀ f ∈ p.eAlignMin, f ≤ -126)
+/-- If only the first block FMA has nonzero products, the instruction returns that block FMA's output. -/
+theorem single_block_output (p : InstructionVariant) (hfl : ∀ f ∈ p.eAlignMin, f ≤ -126)
     (hk : p.nfma ≤ p.k) (c : F32) (g : List (F16 × F16)) (hg : g.length = p.nfma)
     (t : BlockTrace) (h1 : evalBlock (⟨g, c⟩ : BlockInput p.model) = .ok t)
     (hneg : t.output.bits ≠ 0x80000000) :
     p.output c (g ++ List.replicate (p.k - p.nfma) (0, 0)) = some t.output.bits := by
-  have hgroups : p.groups = (p.groups - 1) + 1 := by
-    have : 1 ≤ p.groups := by
-      unfold InstructionVariant.groups
+  have hblocks : p.blocks = (p.blocks - 1) + 1 := by
+    have : 1 ≤ p.blocks := by
+      unfold InstructionVariant.blocks
       exact (Nat.le_div_iff_mul_le p.nfmaPos).mpr (by omega)
     omega
-  have hrest : p.k - p.nfma = (p.groups - 1) * p.nfma := by
+  have hrest : p.k - p.nfma = (p.blocks - 1) * p.nfma := by
     have hkm := Nat.div_mul_cancel p.kDiv
-    unfold InstructionVariant.groups at hgroups ⊢
-    have : p.k = (p.k / p.nfma - 1 + 1) * p.nfma := by rw [← hgroups]; exact hkm.symm
+    unfold InstructionVariant.blocks at hblocks ⊢
+    have : p.k = (p.k / p.nfma - 1 + 1) * p.nfma := by rw [← hblocks]; exact hkm.symm
     rw [Nat.succ_mul] at this
     omega
   have hsched : p.schedule (g ++ List.replicate (p.k - p.nfma) (0, 0)) =
-      g :: List.replicate (p.groups - 1) (List.replicate p.nfma (0, 0)) := by
+      g :: List.replicate (p.blocks - 1) (List.replicate p.nfma (0, 0)) := by
     unfold InstructionVariant.schedule
-    rw [hgroups, chunks_first_group _ _ _ _ hg, hrest, chunks_replicate]
+    rw [hblocks, chunks_first_group _ _ _ _ hg, hrest, chunks_replicate]
     simp only [Nat.add_sub_cancel]
-  obtain ⟨ts, hts, hlast⟩ := runBlocks_zero_groups p.nfma p.neab p.eAlignMin hfl
-    (p.groups - 1) t.output.bits t.output (finite32_self t.output) hneg
+  obtain ⟨ts, hts, hlast⟩ := runBlocks_zero_blocks p.nfma p.neab p.eAlignMin hfl
+    (p.blocks - 1) t.output.bits t.output (finite32_self t.output) hneg
   have hlenpad : (g ++ List.replicate (p.k - p.nfma) (0, 0)).length = p.k := by
     simp only [List.length_append, List.length_replicate, hg]
     omega
@@ -351,19 +351,19 @@ theorem single_group_output (p : InstructionVariant) (hfl : ∀ f ∈ p.eAlignMi
     simp only [List.getLast?_cons_cons]
     rw [getD_of_cons _ u us c t.output.bits, hlast]
 
-/-- V100: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.844; four groups of four products. -/
+/-- V100: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.844; four block FMAs of four products. -/
 def v100Wmma16 : InstructionVariant :=
   ⟨"V100 WMMA m16n16k16 FP16->FP32 (HMMA.844)", 16, 4, 0, none,
     "Accurate Models v4 §4.1.1 and Tables 3-4; MATLAB v0.5 GEMM.m increasing-k rule; " ++
     "Jia et al. arXiv:1804.06826 (four sets of four HMMA.884 steps)", by decide, by decide⟩
 
-/-- A100/A2/A30/L40S/Ada: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.1688; two groups of eight, validated by Accurate Models on k = 16 inputs. -/
+/-- A100/A2/A30/L40S/Ada: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.1688; two block FMAs of eight products, validated by Accurate Models on k = 16 inputs. -/
 def ampereWmma16 : InstructionVariant :=
   ⟨"Ampere/Ada WMMA m16n16k16 FP16->FP32 (HMMA.1688)", 16, 8, 1, some (-132),
     "Accurate Models v4 §4.1.2, §4.2 (k = 16 with N_FMA = 8, 10^7-vector validation), Tables 3-4",
     by decide, by decide⟩
 
-/-- H100/H200/B200: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.16816; one group of sixteen. -/
+/-- H100/H200/B200: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.16816; one block FMA of sixteen products. -/
 def hopperWmma16 : InstructionVariant :=
   ⟨"Hopper/Blackwell WMMA m16n16k16 FP16->FP32 (HMMA.16816)", 16, 16, 2, some (-133),
     "Accurate Models v4 §4.1.6 and Tables 3-4", by decide, by decide⟩

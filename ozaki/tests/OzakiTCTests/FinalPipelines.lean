@@ -1,14 +1,14 @@
 import OzakiTC.ADPChecked
 import OzakiTC.IEEEBounded
 
-/-! # The integer Ozaki-II and ADP pipelines: jumping descent, signed zeros, widths, specials
+/-! # The integer Ozaki-II and ADP pipelines: jumping top-down summation, signed zeros, widths, specials
 
 Small kernel-checked cases (`decide +kernel`) on four binary64 entries given as integer pairs,
-on V100 fp16 blocks (Ozaki-II) and the split-K INT8 engine (ADP):
+on V100 fp16 blocks (Ozaki-II) and the split-K INT8 matrix multiplier (ADP):
 
 * `tcOzaki2CRJ` with the twelve moduli at most `4096` (`P = 69`) and with no configuration, so
-  that the entry goes through the jumping exact path, against the binary64 round to nearest of the
-  exact product; the same for `adpCRJ` with the configuration `(8, 56)` and with none;
+  that the entry goes through the jumping exact fallback, against the binary64 round to nearest of
+  the exact product; the same for `adpCRJ` with the configuration `(8, 56)` and with none;
 * signed zeros: products that are all `−0` give `−0`, products that cancel give `+0`
   (`tcOzaki2CRJS`, `adpCRJS`);
 * every integer bounded: the checked `ozaki2CRJC` and `adpCRJC` return the unchecked results at the
@@ -29,12 +29,14 @@ def ys : List (ℤ × ℤ) :=
 
 def cfgs2 : List (CRTBasis × ℕ) := [(fp64Basis, 69)]
 
-/-- Ozaki-II in integers: the configuration settles, and the jumping exact path alone. -/
+/-- Ozaki-II in integers: the rounding test succeeds on the configuration, and the jumping exact
+fallback alone. -/
 example : tcOzaki2CRJ v100F16F32 cfgs2 11 175 xs ys = rne64 (dot (entryVals xs) (entryVals ys)) ∧
     tcOzaki2CRJ v100F16F32 [] 11 175 xs ys = rne64 (dot (entryVals xs) (entryVals ys)) := by
   decide +kernel
 
-/-- ADP in integers: the configuration `(8, 56)`, and the jumping exact path on the INT8 engine. -/
+/-- ADP in integers: the configuration `(8, 56)`, and the jumping exact fallback on the INT8 matrix
+multiplier. -/
 example : adpCRJ [(8, 56)] 300 xs ys = rne64 (dot (entryVals xs) (entryVals ys)) ∧
     adpCRJ [] 300 xs ys = rne64 (dot (entryVals xs) (entryVals ys)) := by
   decide +kernel

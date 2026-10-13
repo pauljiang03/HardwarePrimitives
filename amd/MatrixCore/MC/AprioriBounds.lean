@@ -3,12 +3,12 @@ import MatrixCore.MC.Monotonicity
 /-! # Error bounds from the inputs alone
 
 The bounds of `MatrixCore.MC.ErrorBounds` use values from the computation (the exponent of an
-intermediate sum, the nodes of the CDNA 2 tree). Here they are bounded by the inputs alone, with
-`A = Σ|p_ℓ| + |c|` (`Prepared.absSum`), `u = 2^-24`, and `n` products:
+intermediate sum, the partial sums of the CDNA 2 pairwise sum). Here they are bounded by the
+inputs alone, with `A = Σ|p_ℓ| + |c|` (`Prepared.absSum`), `u = 2^-24`, and `n` products:
 
 * SFMA and CDNA 1: `|exact − d| ≤ 2^-24 A + 2^-150`;
 * CDNA 3: `|exact − d| ≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149`, where `e_max` is the largest
-  product exponent `e_a + e_b` (products are denormalised, so `2^(e_max)` can exceed the products'
+  product exponent `e_a + e_b` (products are denormalized, so `2^(e_max)` can exceed the products'
   magnitudes, and the alignment error is measured against it);
 * CDNA 2 (`n ≤ 4`): `|exact − d| ≤ |exact − exact'| + 2^-21 A' + 2^-120`, where `exact'` and `A'`
   are those of the inputs after flushing subnormals (the flush itself can lose a whole product). -/
@@ -47,18 +47,18 @@ theorem flBound_le (ftz : Bool) (x : ℚ) :
   have := halfUlp32_le x
   unfold flBound; grind
 
-theorem normaliseRD_error (x : ℚ) : absQ (x - normaliseRD 31 x) ≤ pow2 (-31) * absQ x + pow2 (-157) := by
+theorem normalizeRD_error (x : ℚ) : absQ (x - normalizeRD 31 x) ≤ pow2 (-31) * absQ x + pow2 (-157) := by
   have h157 := pow2_pos (-157)
   have hm := Rat.mul_nonneg (Rat.le_of_lt (pow2_pos (-31))) (absQ_nonneg x)
   by_cases hx : x = 0
   · subst hx
-    have : normaliseRD 31 0 = 0 := by unfold normaliseRD; simp
+    have : normalizeRD 31 0 = 0 := by unfold normalizeRD; simp
     rw [this, show absQ ((0 : ℚ) - 0) = 0 by decide +kernel]; grind
-  · have hlo := normaliseRD_le 31 x
-    have hgt := normaliseRD_gt 31 hx
+  · have hlo := normalizeRD_le 31 x
+    have hgt := normalizeRD_gt 31 hx
     have hax := absQ_pos hx
     obtain ⟨_, h2, h3⟩ := normExp_bounds hax
-    have hD : absQ (x - normaliseRD 31 x) ≤ pow2 (normExp (absQ x) - ((31 : ℕ) : ℤ)) := by
+    have hD : absQ (x - normalizeRD 31 x) ≤ pow2 (normExp (absQ x) - ((31 : ℕ) : ℤ)) := by
       rw [absQ_le_iff]; constructor <;> grind
     refine Rat.le_trans hD ?_
     by_cases hn : normExp (absQ x) = -126
@@ -172,10 +172,10 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
     simp only [gridTerm]
     unfold shiftedSum
     rw [h0, hL.accFrac, show rdFrac 0 eC P.late.sumFracBits = 0 from rdGrid_zero _, hex, hz]
-    have hN := normaliseRD_error (0 + x.c.value)
+    have hN := normalizeRD_error (0 + x.c.value)
     rw [Rat.zero_add] at hN ⊢
     rw [c31] at hN
-    generalize absQ (x.c.value - normaliseRD 31 x.c.value) = X at *
+    generalize absQ (x.c.value - normalizeRD 31 x.c.value) = X at *
     generalize absQ x.c.value = ac at *
     rw [c30, c156, c158]
     rw [c158] at hN
@@ -200,11 +200,11 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
     · simp only [hle, ↓reduceIte]
       unfold shiftedSum
       rw [hL.accFrac, hL.sumFrac]
-      show absQ (x.exact - normaliseRD 31 (rdGrid (productSum P x.p).2 (eC - ((32 : ℕ) : ℤ)) + x.c.value)) ≤ _
+      show absQ (x.exact - normalizeRD 31 (rdGrid (productSum P x.p).2 (eC - ((32 : ℕ) : ℤ)) + x.c.value)) ≤ _
       generalize hS : (productSum P x.p).2 = S at hpe
       have ⟨r1, r2⟩ := rdGrid_bounds S (eC - ((32 : ℕ) : ℤ))
       generalize hT : rdGrid S (eC - ((32 : ℕ) : ℤ)) + x.c.value = T
-      have hN := normaliseRD_error T
+      have hN := normalizeRD_error T
       have hTb : absQ T ≤ absQ S + pow2 (eC - ((32 : ℕ) : ℤ)) + absQ x.c.value := by
         have := absQ_rdGrid_le S (eC - ((32 : ℕ) : ℤ))
         have := absQ_add_le (rdGrid S (eC - ((32 : ℕ) : ℤ))) x.c.value
@@ -219,13 +219,13 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
         Rat.mul_le_mul_of_nonneg_right (by grind) (Rat.le_of_lt hG)
       have t1 := absQ_add_le (sumQ (x.p.map Unpacked.value) - S) (S - rdGrid S (eC - ((32 : ℕ) : ℤ)))
       have t2 := absQ_add_le (sumQ (x.p.map Unpacked.value) - S + (S - rdGrid S (eC - ((32 : ℕ) : ℤ))))
-        (T - normaliseRD 31 T)
+        (T - normalizeRD 31 T)
       rw [show sumQ (x.p.map Unpacked.value) - S + (S - rdGrid S (eC - ((32 : ℕ) : ℤ))) +
-        (T - normaliseRD 31 T) = x.exact - normaliseRD 31 T by rw [hex, ← hT]; grind] at t2
+        (T - normalizeRD 31 T) = x.exact - normalizeRD 31 T by rw [hex, ← hT]; grind] at t2
       have hrd : absQ (S - rdGrid S (eC - ((32 : ℕ) : ℤ))) ≤ pow2 (eC - ((32 : ℕ) : ℤ)) := by
         rw [absQ_le_iff]; constructor <;> grind
-      have key := lin_shifted (X := absQ (x.exact - normaliseRD 31 T))
-        (t := absQ (T - normaliseRD 31 T)) (T := absQ T) (c := absQ x.c.value)
+      have key := lin_shifted (X := absQ (x.exact - normalizeRD 31 T))
+        (t := absQ (T - normalizeRD 31 T)) (T := absQ T) (c := absQ x.c.value)
         (B := (x.p.length + 2) * pow2 (e - 24)) (Rat.le_trans t2 (Rat.add_le_add_right.mpr t1)) hpe hrd
         (by rw [c31, c158] at hN; grind) hTb hSb (by rw [c32] at hstep; exact hstep) rfl hlin
         (Rat.le_of_lt hG) (absQ_nonneg _) (sumQ_abs_nonneg _ _) (Rat.le_of_lt h158)
@@ -280,10 +280,10 @@ theorem aligned_apriori {P : Model} (hL : LateModel P)
 
 /-! ## CDNA 2 -/
 
-/-- Relative error growth of a pairwise tree of height `h`: `(1 + 2^-24)^h − 1`. -/
+/-- Relative error growth of a pairwise sum with `h` levels of rounding: `(1 + 2^-24)^h − 1`. -/
 def gam (h : ℕ) : ℚ := (1 + pow2 (-24)) ^ h - 1
 
-/-- Absolute (flush) error count of a pairwise tree of height `h`. -/
+/-- Absolute (flush) error count of a pairwise sum with `h` levels of rounding. -/
 def kap : ℕ → ℚ
   | 0 => 0
   | h + 1 => 2 * (1 + pow2 (-24)) * kap h + 1
@@ -348,8 +348,8 @@ theorem pairwiseGroupSum_short (ftz : Bool) (d : ℕ) {xs : List ℚ} {t : ℚ} 
     simp only [sumQ]
     rw [show ∀ y : ℚ, y + 0 - y = 0 from fun y => by grind]; decide +kernel
 
-/-- **Pairwise tree from its leaves.** A tree of height `h` is within
-`γ_h Σ|x| + κ_h η` of the exact sum of its leaves. -/
+/-- **Pairwise sum from its summands.** A pairwise sum with `h` levels of rounding is within
+`γ_h Σ|x| + κ_h η` of the exact sum of its summands. -/
 theorem pairwiseGroupSum_apriori (ftz : Bool) : ∀ (h d : ℕ) (xs : List ℚ) (t : ℚ), xs.length ≤ 2 ^ h →
     pairwiseGroupSum ftz d xs = some t →
       absQ (sumQ xs - t) ≤ gam h * sumQ (xs.map absQ) + kap h * eta ftz := by

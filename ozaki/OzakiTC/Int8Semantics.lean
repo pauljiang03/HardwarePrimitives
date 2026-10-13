@@ -1,10 +1,10 @@
 import OzakiTC.Int8
 
-/-! # The INT8 engine's accumulation: any order, wrapping or saturating
+/-! # The INT8 matrix multiplier's accumulation: any order, wrapping or saturating
 
-The INT8 engine (`int8Dot`) multiplies bytes exactly and adds the products in TC-EFT's `w`-bit
-two's-complement register (`machineAccumulate w`), one at a time in list order. An INT8 matrix
-instruction adds its products in some internal order and grouping that the hardware does not
+The INT8 matrix multiplier (`int8Dot`) multiplies bytes exactly and adds the products in TC-EFT's
+`w`-bit two's-complement register (`machineAccumulate w`), one at a time in list order. An INT8
+matrix instruction adds its products in some internal order and grouping that the hardware does not
 document, and integer instructions come in two flavours: wrapping (`INT32` arithmetic modulo
 `2^32`) and saturating (clamped to `[−2^31, 2^31 − 1]`). This file shows that neither choice
 matters for ADP:
@@ -21,7 +21,7 @@ matters for ADP:
   wrapping register, every saturating order and the exact dot product coincide
   (`int8_wrap_sat_exact`).
 
-The engine remains a model of the arithmetic, not of a particular instruction's timing or
+The matrix multiplier remains a model of the arithmetic, not of a particular instruction's timing or
 operand layout. -/
 
 open TensorCore
@@ -34,7 +34,7 @@ namespace Ozaki.TC
 `[−2^(w−1), 2^(w−1))`. -/
 def wrapInt (w : ℕ) (z : ℤ) : ℤ := (BitVec.ofInt w z).toInt
 
-/-- **The INT8 engine is the exact dot product, wrapped.** -/
+/-- **The INT8 matrix multiplier is the exact dot product, wrapped.** -/
 theorem int8Dot_eq_wrap (w : ℕ) (x y : List ℤ) : int8Dot w x y = wrapInt w (dotZ x y) := by
   unfold int8Dot wrapInt
   have h : machineAccumulate w 0 (List.zipWith (· * ·) x y) =
@@ -70,9 +70,9 @@ theorem AddTree.wrapSum_eq (w : ℕ) : ∀ t : AddTree, t.wrapSum w = BitVec.ofI
     rw [wrapSum, leaves, AddTree.wrapSum_eq w l, AddTree.wrapSum_eq w r, sumZ_append,
       BitVec.ofInt_add]
 
-/-- **The INT8 engine's result does not depend on the order of accumulation.** For any binary tree
-of wrapping `w`-bit additions whose terms are the products `xᵢyᵢ` in any order, the result is
-`int8Dot w x y`. -/
+/-- **The INT8 matrix multiplier's result does not depend on the order of accumulation.** For any
+binary tree of wrapping `w`-bit additions whose terms are the products `xᵢyᵢ` in any order, the
+result is `int8Dot w x y`. -/
 theorem int8Dot_any_order (w : ℕ) {x y : List ℤ} (t : AddTree)
     (h : t.leaves.Perm (List.zipWith (· * ·) x y)) : (t.wrapSum w).toInt = int8Dot w x y := by
   rw [AddTree.wrapSum_eq, sumZ_perm h, sumZ_zipWith, int8Dot_eq_wrap]
@@ -129,9 +129,9 @@ theorem AddTree.satSum_exact (w : ℕ) :
     rw [sumZ_append, magnitudeSum_append] at this
     omega
 
-/-- **Wrapping and saturating agree on the INT8 engine's operands**, in any order and grouping,
-and equal the exact dot product: under `int8Dot_bytes`'s hypotheses (signed bytes against signed or
-unsigned bytes, `k · 128 · 255 < 2^31`). -/
+/-- **Wrapping and saturating agree on the INT8 matrix multiplier's operands**, in any order and
+grouping, and equal the exact dot product: under `int8Dot_bytes`'s hypotheses (signed bytes against
+signed or unsigned bytes, `k · 128 · 255 < 2^31`). -/
 theorem int8_wrap_sat_exact {x y : List ℤ} (hx : ∀ a ∈ x, a.natAbs ≤ 128)
     (hy : ∀ b ∈ y, b.natAbs ≤ 255) (hk : x.length * (128 * 255) < 2 ^ 31) (t : AddTree)
     (h : t.leaves.Perm (List.zipWith (· * ·) x y)) :

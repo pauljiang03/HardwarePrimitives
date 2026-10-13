@@ -1,6 +1,6 @@
 import TensorCore.TC.Specification.Defs
 
-/-! Independently transcribed parameters of the supported FP32-output paths. -/
+/-! Independently transcribed numerical features of the supported FP32-output variants. -/
 
 namespace TensorCore.IndependentSpec
 

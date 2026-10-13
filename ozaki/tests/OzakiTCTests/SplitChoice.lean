@@ -5,9 +5,9 @@ import OzakiTC.SplitChoice
 
 The binary64 cases of [`data/correct-reference.json`](../../data/correct-reference.json) through
 correctly rounded FP64 Ozaki-I with the configuration `OzakiTC.SplitChoice` picks for the H100 and
-A100 fp16 paths: `10`-bit slices, split-K in chunks of sixteen (one full H100 group, two chained
-A100 groups), five then six slices, then the exact path at up to `191` slices. Each returns the
-exact-fraction oracle's words. -/
+A100 fp16 variants: `10`-bit slices, split-K in chunks of sixteen (one full H100 block FMA, two
+chained A100 block FMAs), five then six slices, then the exact fallback at up to `191` slices. Each
+returns the exact-fraction oracle's words. -/
 
 open TensorCore Ozaki Ozaki.TC OzakiTCTests.Correct
 

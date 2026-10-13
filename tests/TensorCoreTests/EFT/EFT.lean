@@ -42,7 +42,7 @@ theorem cancellation_eft :
       ⟨-9, [5 / 16384, 0, 0, 15 / 8192, 0], 0, true, some 0x449fbe62, some 0x449fbe62⟩ := by
   decide +kernel
 
-/-- Three products near `128` on a `2^-15` grid next to a `2^-48` product exceed the 24-bit coefficient budget on the common grid. -/
+/-- Three products near `128` on a `2^-15` grid next to a `2^-48` product exceed the 24-bit coefficient bound on the common grid. -/
 def supportOverflow : V100Input :=
   ⟨[(0x5bff, 0x37ff), (0x5bff, 0x37ff), (0x5bff, 0x37ff), (1, 1)], 0x4e800000⟩
 

@@ -82,7 +82,7 @@ theorem decode32_fields_eq (w : F32) :
   have : w.toNat < 4294967296 := this
   omega
 
-/-- Normalised binary32 significands and exponents are unique. -/
+/-- Normalized binary32 significands and exponents are unique. -/
 theorem normalized_unique {m₁ m₂ : ℕ} {e₁ e₂ : ℤ}
     (hm₁ : m₁ < 16777216) (hm₂ : m₂ < 16777216) (he₁ : -126 ≤ e₁) (he₂ : -126 ≤ e₂)
     (hn₁ : 8388608 ≤ m₁ ∨ e₁ = -126) (hn₂ : 8388608 ≤ m₂ ∨ e₂ = -126)
@@ -314,7 +314,7 @@ theorem nearestEven32_value {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = some w₀
     have : (0 : ℚ) ≤ ((J + k : ℤ) : ℚ) := by push_cast; rw [hJ]; grind
     exact Rat.intCast_le_intCast.mp (by simpa using this)
   have hJpos : 1 ≤ J := by omega
-  -- the word's significand equals `J` up to a power of two; normalisation forces equality
+  -- the word's significand equals `J` up to a power of two; normalization forces equality
   obtain ⟨hE, habs⟩ := value32_abs hd
   have hM : w.toNat % 8388608 < 8388608 := Nat.mod_lt _ (by decide)
   obtain ⟨b, c, n, _, _⟩ := fields32_spec hE hM
@@ -365,7 +365,7 @@ theorem roundsNearestEven32_unique {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = so
     (h : RoundsNearestEven32 x w) : w = w₀ :=
   value32_injective (nearestEven32_value h₀ h.1) (rne32_value h₀) (by rw [h.2, rne32_sign h₀])
 
-/-- Inside the finite range, `rne32` is characterised by correct rounding: nearest finite value,
+/-- Inside the finite range, `rne32` is characterized by correct rounding: nearest finite value,
 even last bit on ties, and the sign of the input. -/
 theorem rne32_iff {x : ℚ} {w : F32} (hx : absQ x < overflowThreshold32) :
     rne32 x = some w ↔ RoundsNearestEven32 x w := by

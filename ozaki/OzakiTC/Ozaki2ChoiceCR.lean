@@ -1,7 +1,7 @@
 import OzakiTC.Ozaki2Choice
 import OzakiTC.CRRules
 
-/-! # Ozaki-I against Ozaki-II with the correct-rounding margin, per Tensor Core path
+/-! # Ozaki-I against Ozaki-II with the correct-rounding margin, per Tensor Core variant
 
 `OzakiTC.SplitChoice` and `OzakiTC.Ozaki2Choice` chose configurations for an error of
 `2^-t · k · max|x| · max|y|`. Correct rounding needs the bound small against the result's spacing
@@ -9,11 +9,11 @@ whatever `k`, so the rules of `Ozaki.SliceRuleCR` add `⌈log₂ k⌉` bits: at 
 FP64 and `34` for binary32 (`clog2 1024 = 10`). The cost functions are the same (`SliceRun.cost`,
 `SliceRun.cost2` at the larger `t`), and so is the candidate set, every candidate exact for every
 length. With the margin, Ozaki-I needs `6` slices of `11` bits (`21` products) for FP64 and Ozaki-II
-`12` moduli; the two-pass engine still never wins.
+`12` moduli; the two-pass matrix multiplier still never wins.
 
 ## Results (inner dimension `k = 1024`, Tensor Core blocks)
 
-| path | Ozaki-I FP64 | Ozaki-II FP64 | Ozaki-I binary32 | Ozaki-II binary32 |
+| variant | Ozaki-I FP64 | Ozaki-II FP64 | Ozaki-I binary32 | Ozaki-II binary32 |
 | --- | --- | --- | --- | --- |
 | V100 fp16 | `b = 11`, 5376 | `b = 11`, 3072 | 2560 | 1792 |
 | A100 fp16 | `b = 10`, 3584 | `b = 10`, 1664 | 1280 | 1024 |
@@ -25,10 +25,10 @@ length. With the margin, Ozaki-I needs `6` slices of `11` bits (`21` products) f
 | H100 tf32 (mma) | `b = 10`, 3584 | `b = 10`, 1664 | 1280 | 1024 |
 
 With the margin, Ozaki-II costs `1.75` to `2.25` times fewer blocks than Ozaki-I for FP64, and
-`1.25` to `1.5` times fewer for binary32, on every path; without it the two tied for binary32. The
-margin costs Ozaki-I more than Ozaki-II: one more slice (`15 → 21` products for FP64) against one
-more modulus (`11 → 12`). As before, the counts leave out the work off the engine, notably
-Ozaki-II's reconstruction with integers of about `2P + log₂ k` bits, here `P = t + 12`.
+`1.25` to `1.5` times fewer for binary32, on every variant; without it the two tied for binary32.
+The margin costs Ozaki-I more than Ozaki-II: one more slice (`15 → 21` products for FP64) against
+one more modulus (`11 → 12`). As before, the counts leave out the work off the matrix multiplier,
+notably Ozaki-II's reconstruction with integers of about `2P + log₂ k` bits, here `P = t + 12`.
 
 Every basis the moduli rule produces is valid (`Ozaki.moduliBasis_valid_all`), so the chosen
 configurations need no kernel check of their bases (`h100F16_fp64CR2_margin`). -/

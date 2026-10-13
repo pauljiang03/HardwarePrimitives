@@ -1,13 +1,13 @@
 import OzakiMC.MatrixMultiplier
 
-/-! # The matrix-core paths
+/-! # The matrix-core variants
 
-Exact Ozaki engines on the paths of `MatrixCore` whose operand formats hold the slices. The slice
-width is bounded by what the format holds: `b ≤ 11` for fp16 and XF32, `b ≤ 8` for bf16, and
-`b ≤ 24` for the binary32 SFMA. The budget `Σ|aᵢbᵢ| ≤ 2^24` is the same on every path: it is set
-by the binary32 output.
+Exact matrix multipliers on the variants of `MatrixCore` whose operand formats hold the slices. The
+slice width is bounded by what the format holds: `b ≤ 11` for fp16 and XF32, `b ≤ 8` for bf16, and
+`b ≤ 24` for the binary32 SFMA. The exactness bound `Σ|aᵢbᵢ| ≤ 2^24` is the same on every variant:
+it is set by the binary32 output.
 
-| path | `N_FMA` | configuration | `b` |
+| variant | `N_FMA` | configuration | `b` |
 | --- | --- | --- | --- |
 | SFMA (CDNA 1, 2, 3) fp32 | 1 | `correct_rounding` | ≤ 24 |
 | CDNA 1 fp16 | 4 | `correct_rounding` | ≤ 11 |
@@ -19,13 +19,13 @@ by the binary32 output.
 | CDNA 3 bf16 | 8 | `global_alignment` | ≤ 8 |
 | CDNA 3 XF32 | 4 | `global_alignment` | ≤ 11 |
 
-The fp8 paths of CDNA 3 (`odd_even_grouping`) are not covered. -/
+The fp8 variants of CDNA 3 (`odd_even_grouping`) are not covered. -/
 
 open MatrixCore
 
 namespace Ozaki.MC
 
-/-- A profile whose matrix-core engine is exact on `b`-bit slices: an exact configuration, operand
+/-- A model whose matrix core is exact on `b`-bit slices: an exact configuration, operand
 formats with small subnormals that hold every `b`-bit integer, and a nonempty block. -/
 structure ExactMultiplier (P : Model) (b : ℕ) : Prop where
   config : ExactConfig P

@@ -46,7 +46,7 @@ theorem afS_two (K Q : ℕ) : afS 2 K Q + (K + Q + 2) = 2 ^ Q * (K + 2) := by
   rw [show (1 + 1 : ℕ) = 2 from rfl, show K + 1 + 1 = K + 2 by omega] at h
   omega
 
-/-- **The one-bit level against the recursion's budget**: `S(K, Q) < 2 · 2^Q · max{1, −η}`. -/
+/-- **The one-bit level against the recursion's bound**: `S(K, Q) < 2 · 2^Q · max{1, −η}`. -/
 theorem afS_lt_one (K Q : ℕ) (hQ : 1 ≤ Q) :
     afS 2 K Q < 2 * 2 ^ Q * (max 1 (-afEta 1 K (K + Q))).toNat := by
   have hid := afS_two K Q

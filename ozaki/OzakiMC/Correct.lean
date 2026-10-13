@@ -7,11 +7,11 @@ import Ozaki.Correct
 `MatrixCore`'s binary32 round to nearest even returns a nearest binary32 value
 (`rne32_nearestEven`) and succeeds below the overflow threshold (`rne32_isSome_iff`), so it meets
 the two conditions of the enclosure test (`round32Value_nearest`, `round32Value_intervals`). With
-it, Ozaki-I and Ozaki-II on any matrix-core path whose engine is exact return the binary32 round to
-nearest of `x · y` for every input (`mcOzaki1CR_eq`, `mcOzaki2CR_eq`). MatrixCore's rounding follows
-IEEE overflow, TensorCore's fails above the largest finite value; below it both return the binary32
-round to nearest even of the same exact value. The any-`k` variants of `OzakiMC.LongDot` use the
-shared `Ozaki.rne32Q` on both vendors. -/
+it, Ozaki-I and Ozaki-II on any matrix-core variant whose matrix multiplier is exact return the
+binary32 round to nearest of `x · y` for every input (`mcOzaki1CR_eq`, `mcOzaki2CR_eq`).
+MatrixCore's rounding follows IEEE overflow, TensorCore's fails above the largest finite value;
+below it both return the binary32 round to nearest even of the same exact value. The any-`k`
+variants of `OzakiMC.LongDot` use the shared `Ozaki.rne32Q` on both vendors. -/
 
 open MatrixCore
 
@@ -56,13 +56,13 @@ theorem round32Value_intervals : RoundsOnIntervals round32Value := by
   obtain ⟨d, hd, _⟩ := rne32_nearestEven hw
   simp [round32Value, hw, hd]
 
-/-- Correctly rounded Ozaki-I on a matrix-core path: slice counts `ss` in turn, then the exact
+/-- Correctly rounded Ozaki-I on a matrix-core variant: slice counts `ss` in turn, then the exact
 product. -/
 def mcOzaki1CR (P : Model) (b : ℕ) (ss : List ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CR (mcMultiplier P) round32Value b ss x y
 
-/-- Correctly rounded Ozaki-II on a matrix-core path: configurations `(basis, P)` in turn, then the
-exact product. -/
+/-- Correctly rounded Ozaki-II on a matrix-core variant: configurations `(basis, P)` in turn, then
+the exact product. -/
 def mcOzaki2CR (P : Model) (cfgs : List (CRTBasis × ℕ)) (x y : List ℚ) : Option ℚ :=
   ozaki2CR (mcMultiplier P) round32Value cfgs x y
 
@@ -115,12 +115,12 @@ theorem splitExp_le_128 {b : ℕ} (hb : b ≤ 129) {x : List ℚ} (hx : ∀ a �
     refine maxAbs_le (Rat.le_of_lt (two_pow_pos _)) fun a ha => ?_
     exact Rat.le_of_lt (lt_of_le_of_lt' (finiteValue32_abs_le (hx a ha)) maxFinite32_lt_two_pow)
 
-/-- Correctly rounded Ozaki-I with the exact path on matrix-core blocks as well. -/
+/-- Correctly rounded Ozaki-I with the exact fallback on matrix-core blocks as well. -/
 def mcOzaki1CRE (P : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRE (mcMultiplier P) round32Value b ss smax x y
 
-/-- **Ozaki-I on the matrix core, correctly rounded, with every engine product on matrix-core
-blocks.** The slicing, the exact sum and the check are exact arithmetic. -/
+/-- **Ozaki-I on the matrix core, correctly rounded, with every slice product on matrix-core
+blocks.** The slicing, the exact sum and the rounding test are exact arithmetic. -/
 theorem mcOzaki1CRE_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (ss : List ℕ) {smax : ℕ}
     (hsmax : 277 < smax * (b + 1)) (hb : b ≤ 129) {x y : List ℚ}
     (hx : ∀ a ∈ x, FiniteValue32 a) (hy : ∀ a ∈ y, FiniteValue32 a)

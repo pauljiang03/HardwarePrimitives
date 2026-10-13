@@ -48,8 +48,8 @@ import OzakiTC.ADPZeroPolicyIff
 
 /-! # The Ozaki schemes on the NVIDIA Tensor Core model
 
-The engine of the `Ozaki` library built from the block model of `TensorCore`, its exactness on
-every supported GPU path, the binary32 σ-trick, Ozaki-I and Ozaki-II with binary32
-recombination, and Ozaki-I on an INT8 engine modelled by the fixed-width register (ADP). Every
-working-precision rounding is IEEE's round to nearest even (`round32Value`, `fp64Round`);
+The matrix multiplier of the `Ozaki` library built from the block model of `TensorCore`, its
+exactness on every supported GPU variant, the binary32 σ-trick, Ozaki-I and Ozaki-II with binary32
+recombination, and Ozaki-I on an INT8 matrix multiplier modeled by the fixed-width register (ADP).
+Every working-precision rounding is IEEE's round to nearest even (`round32Value`, `fp64Round`);
 TensorCore's own rounding computes the same value up to the largest finite value. -/

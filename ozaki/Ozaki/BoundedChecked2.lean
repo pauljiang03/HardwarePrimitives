@@ -10,33 +10,33 @@ import Ozaki.BoundedOzaki2J
 
 * the scaling exponents from bit lengths (`scaleShiftZC`), the shift amounts, the shifted and
   truncated significands (`truncShiftZC`) and the test for dropped bits (`dropsBitsC`);
-* the symmetric residues (`symModC`), each engine output read back and its residue
+* the symmetric residues (`symModC`), each output of the matrix multiplier read back and its residue
   (`residueProductC`), every product and partial sum of the CRT combination and the final symmetric
   residue (`crtC`);
 * the sums of the integer bound `K` (`boundKC`), the enclosure's exponent, and the enclosure test
   (`roundEnclosureBC` of `Ozaki.BoundedChecked`);
-* the exact path, by the checked jumping exact path of `Ozaki.BoundedChecked`
+* the exact fallback, by the checked jumping exact fallback of `Ozaki.BoundedChecked`
   (`ozaki1ExactFallbackIC`).
 
 The CRT basis's constants are guarded as they are read: each modulus, the weights in use and their
 product `M`. As there, comparisons, signs, absolute values, bit lengths and list lengths produce no
-new magnitudes and are not guarded. The engine's own arithmetic is guarded when it runs through
-`Ozaki.CheckedMultipliers.chunkedC` (split-K with its chunk sums guarded); the matrix engine's block
-arithmetic is the hardware model's.
+new magnitudes and are not guarded. The arithmetic of the matrix multiplier itself is guarded when
+it runs through `Ozaki.CheckedMultipliers.chunkedC` (split-K with its chunk sums guarded); the block
+FMA arithmetic of the matrix multiplier is that of the hardware model.
 
-`ozaki2CRJC_eq` proves that on binary entries with an exact engine, if `R` and `X` meet explicit
-requirements (`ozaki2R`, `ozaki2X` for each configuration; `exactR`, `exactX` for the exact path),
-the checked `ozaki2CRJC` returns exactly what `ozaki2CRJ` returns: no guard ever fails. The
-requirements on the CRT are `crtSize B < 2^R` (the weights times the moduli, summed) and
+`ozaki2CRJC_eq` proves that on binary entries with an exact matrix multiplier, if `R` and `X` meet
+explicit requirements (`ozaki2R`, `ozaki2X` for each configuration; `exactR`, `exactX` for the exact
+fallback), the checked `ozaki2CRJC` returns exactly what `ozaki2CRJ` returns: no guard ever fails.
+The requirements on the CRT are `crtSize B < 2^R` (the weights times the moduli, summed) and
 `2M < 2^R`. Concrete widths:
 
 * binary64 with the twelve moduli at most `4096` (`P = 69`), `11`-bit slices, `k ≤ 2^20` and at
-  most `175` slices on the exact path: every data integer within `264` bits, every exponent and
+  most `175` slices in the exact fallback: every data integer within `264` bits, every exponent and
   counter within `24` bits (`ozaki2CRJC_binary64`, `ozaki2CRJC_binary64_eq`);
 * binary32 with six moduli at most `4096` (`P ≤ 34`), `k ≤ 2^20`, at most `24` slices: `161` and
   `17` bits (`ozaki2CRJC_binary32`, `ozaki2CRJC_binary32_eq`).
 
-The widths are set by the exact path (Ozaki-I's), not by the CRT: the CRT's integers need about
+The widths are set by the exact fallback (Ozaki-I's), not by the CRT: the CRT's integers need about
 `160` bits with twelve moduli. -/
 
 local notation "ℕ" => Nat
@@ -112,8 +112,8 @@ def dropsZC (s : ℤ) (xs : List (ℤ × ℤ)) : Option Bool := do
     dropsBitsC B a.1 j
   pure (ds.any id)
 
-/-- `residueProduct`: the modulus as read, the residues, the engine output read back, and its
-residue. -/
+/-- `residueProduct`: the modulus as read, the residues, the output of the matrix multiplier read
+back, and its residue. -/
 def residueProductC (mult : MatrixMultiplier) (m : ℕ) (a c : List ℤ) : Option (Option ℤ) := do
   let _ ← B.gn m
   let ra ← a.mapM fun z => symModC B z m
@@ -136,7 +136,7 @@ def crtC (Bs : CRTBasis) (rs : List ℤ) : Option ℤ := do
   let d ← dotZC B Bs.weights rs
   symModC B d M
 
-/-- `ozaki2IntZ`: scaling, truncation, the residue products on the engine, the CRT. -/
+/-- `ozaki2IntZ`: scaling, truncation, the residue products on the matrix multiplier, the CRT. -/
 def ozaki2IntZC (mult : MatrixMultiplier) (Bs : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (Option ℤ) := do
   let sx ← scaleShiftZC B P xs
@@ -596,7 +596,7 @@ theorem ozaki2EnclosureZC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : �
     (by simp [scaleTruncZ, hlen]) hk]
   rfl
 
-/-! ## The check, the fallback and the scheme -/
+/-! ## The rounding test, the fallback and the scheme -/
 
 theorem enclosureTestBC_eq {B : Widths} {p E D : ℕ} {emin emax : ℤ} {N q K : ℤ}
     (hN : N.natAbs < 2 ^ E) (hK : K.natAbs < 2 ^ E) (hED : E + 2 ≤ D) (hpD : p + 2 ≤ D)
@@ -658,10 +658,10 @@ theorem ozaki2EnclosureZ_bounds {mult : MatrixMultiplier} {Bs : CRTBasis} {P : �
       omega
 
 /-- **One theorem bounding every integer of correctly rounded Ozaki-II.** On binary entries with an
-exact engine, for configurations with moduli in `(0, 2^(b+1)]`, if `R` and `X` meet the
-requirements of every configuration (`ozaki2R`, `ozaki2X`, `crtSize`, `2M`) and of the exact path
-(`exactR`, `exactX`), the checked function returns exactly what `ozaki2CRJ` returns: no guard ever
-fails. -/
+exact matrix multiplier, for configurations with moduli in `(0, 2^(b+1)]`, if `R` and `X` meet the
+requirements of every configuration (`ozaki2R`, `ozaki2X`, `crtSize`, `2M`) and of the exact
+fallback (`exactR`, `exactX`), the checked function returns exactly what `ozaki2CRJ` returns: no
+guard ever fails. -/
 theorem ozaki2CRJC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM smax : ℕ} {emin emax : ℤ} {cfgs : List (CRTBasis × ℕ)} {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
@@ -744,7 +744,7 @@ theorem bitlen_length_le {k : ℕ} (hk : k ≤ 2 ^ 20) : bitlen k ≤ 21 := bitl
 
 /-- **Every integer of correctly rounded FP64 Ozaki-II fits 264 bits, every exponent and counter
 24 bits**: on binary64 entries, `k ≤ 2^20`, the twelve moduli at most `4096` with any `P ≤ 69`,
-`11`-bit slices and at most `175` slices on the exact path, with an exact engine. -/
+`11`-bit slices and at most `175` slices in the exact fallback, with an exact matrix multiplier. -/
 theorem ozaki2CRJC_binary64 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
     (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
@@ -801,7 +801,7 @@ theorem ozaki2CRJC_binary64_eq {mult : MatrixMultiplier} {xs ys : List (ℤ × �
 
 /-- **Every integer of correctly rounded binary32 Ozaki-II fits 161 bits, every exponent and
 counter 17 bits**: on binary32 entries, `k ≤ 2^20`, six moduli at most `4096` with any `P ≤ 34`,
-`11`-bit slices and at most `24` slices on the exact path. -/
+`11`-bit slices and at most `24` slices in the exact fallback. -/
 theorem ozaki2CRJC_binary32 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
     (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)

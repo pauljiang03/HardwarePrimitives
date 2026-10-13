@@ -1,10 +1,10 @@
 import TensorCore.TC.Invocation
 
-/-! FP16 to FP32 profiles. -/
+/-! Models with FP16 input and FP32 output formats. -/
 
 namespace TensorCore
 
-/-- Canonical FP16 products and FP32 c/output, with arbitrary block size and extra alignment bits beyond the baseline 23. -/
+/-- Canonical FP16 products and FP32 c and output, with any FMA size and any number of extra alignment bits beyond the baseline 23 fractional bits. -/
 @[implicit_reducible] def fp16Fp32Model (K neab : ℕ) (eAlignMin : Option ℤ := none) : Model :=
   ⟨fp16, K, (23 + neab : ℕ), eAlignMin⟩
 

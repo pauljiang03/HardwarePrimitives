@@ -1,9 +1,9 @@
 import Ozaki.SplitK
 import Ozaki.Split
 
-/-! # The slice rule and the block count, for any matrix engine
+/-! # The slice rule and the block count, for any matrix multiplier
 
-Two hardware-independent pieces of the per-path choice of slice width, chunk length and passes
+Two hardware-independent pieces of the per-variant choice of slice width, chunk length and passes
 (`OzakiTC.SplitChoice`, `OzakiMC.SplitChoice`):
 
 * **the slice rule** `slicesFor b t`: the least `s` with `(s + 1) 2^(t+2) ≤ 2^(s(b+1))`, which

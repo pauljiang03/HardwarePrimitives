@@ -4,16 +4,17 @@ import Ozaki.SplitK
 /-! # Split-K with its own arithmetic guarded
 
 The checked pipelines of `Ozaki.BoundedChecked`, `Ozaki.BoundedChecked2` and the ADP files guard
-every integer they compute, and read the engine's outputs back through a guard; the engine's own
-arithmetic was the engine's. Split-K (`chunked`) is software: it cuts both vectors into chunks,
-runs the matrix engine on each chunk pair, and adds the chunk results. `chunkedC` is split-K with
-that software arithmetic guarded too: every chunk result read back as an integer and guarded, and
-every partial sum of the chunk results guarded.
+every integer they compute, and read the outputs of the matrix multiplier back through a guard; the
+arithmetic inside the matrix multiplier was its own. Split-K (`chunked`) is software: it cuts both
+vectors into chunks, runs the matrix multiplier on each chunk pair, and adds the chunk results.
+`chunkedC` is split-K with that software arithmetic guarded too: every chunk result read back as an
+integer and guarded, and every partial sum of the chunk results guarded.
 
-`chunkedC_exactOn`: when the engine is exact on chunks within its budget and the budget and the
-total product are below `2^R`, the guarded split-K engine is exact, so every checked pipeline runs
-on it with all its theorems: the matrix engine's own block arithmetic (alignment, the hardware
-accumulator) is then the only arithmetic not guarded, and it is the hardware model's. -/
+`chunkedC_exactOn`: when the matrix multiplier is exact on chunks within its exactness bound, and
+the exactness bound and the total product are below `2^R`, the guarded split-K matrix multiplier is
+exact, so every checked pipeline runs on it with all its theorems: the block FMA arithmetic of the
+matrix multiplier itself (alignment, the hardware accumulator) is then the only arithmetic not
+guarded, and it is that of the hardware model. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int
@@ -44,9 +45,10 @@ theorem readInt_ok {B : Widths} {z : ℤ} (h : z.natAbs < 2 ^ B.R) :
   simp only [Rat.den_intCast, Rat.num_intCast, ↓reduceIte]
   exact Widths.gv_ok h
 
-/-- **The guarded split-K engine is exact**: if the engine is exact on `b`-bit chunks whose products
-total at most `bound`, `m · 2^(2b) ≤ budget`, and the budget and `D` are below `2^R`, then on
-`b`-bit vectors whose products total at most `D` no guard fails and the result is exact. -/
+/-- **The guarded split-K matrix multiplier is exact**: if the matrix multiplier is exact on `b`-bit
+chunks whose products total at most `bound`, `m · 2^(2b) ≤ bound`, and `bound` and `D` are below
+`2^R`, then on `b`-bit vectors whose products total at most `D` no guard fails and the result is
+exact. -/
 theorem chunkedC_exactOn {B : Widths} {mult : MatrixMultiplier} {b bound m : ℕ}
     (hmult : mult.ExactOn b bound) (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ bound)
     (hbud : bound < 2 ^ B.R) {D : ℕ} (hD : D < 2 ^ B.R) : (chunkedC B m mult).ExactOn b D := by

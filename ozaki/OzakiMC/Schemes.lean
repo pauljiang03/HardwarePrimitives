@@ -3,16 +3,16 @@ import OzakiMC.Rounding
 
 /-! # Ozaki-I and Ozaki-II on the AMD matrix-core model
 
-The schemes of the `Ozaki` library with the matrix-core engine of a `MatrixCore` profile and
-binary32 round-to-nearest in the recombination:
+The schemes of the `Ozaki` library with the matrix core of a `MatrixCore` model as the matrix
+multiplier and binary32 round-to-nearest in the recombination:
 
-* `mcOzaki1 P b s x y`: Ozaki-I with `s` slices of `b` bits, slice products on the profile's
+* `mcOzaki1 P b s x y`: Ozaki-I with `s` slices of `b` bits, slice products on the model's
   blocks, scaled products added with `fp32Add`;
-* `mcOzaki2 P B Pb x y`: Ozaki-II with CRT basis `B` and precision `Pb`, one engine product per
-  modulus, one final binary32 rounding.
+* `mcOzaki2 P B Pb x y`: Ozaki-II with CRT basis `B` and precision `Pb`, one product on the matrix
+  multiplier per modulus, one final binary32 rounding.
 
-For a profile with an exact engine on `b`-bit slices (`ExactMultiplier`) and inner dimension `k` with
-`k · 2^(2b) ≤ 2^24`:
+For a model with an exact matrix multiplier on `b`-bit slices (`ExactMultiplier`) and inner
+dimension `k` with `k · 2^(2b) ≤ 2^24`:
 
 * `mcOzaki1_eq`, `mcOzaki1_error`: every matrix-core call returns its slice product exactly; the
   result is the binary32 sum of the exact scaled slice products, within
@@ -21,26 +21,26 @@ For a profile with an exact engine on `b`-bit slices (`ExactMultiplier`) and inn
   rounding of the truncated product.
 
 `ozaki1_z3` and `ozaki2_z3` specialize them to the Z3 models' configuration (`k = 4`, `b = 11`,
-four slices; moduli `{4096, 4095, 4093, 4091}`, `P = 22`) on any path whose engine is exact on
-`11`-bit slices: SFMA, CDNA 1, 2 and 3 fp16, and CDNA 3 XF32. -/
+four slices; moduli `{4096, 4095, 4093, 4091}`, `P = 22`) on any variant whose matrix multiplier is
+exact on `11`-bit slices: SFMA, CDNA 1, 2 and 3 fp16, and CDNA 3 XF32. -/
 
 open MatrixCore
 
 namespace Ozaki.MC
 
-/-- Ozaki-I on a matrix-core path, with binary32 recombination. -/
+/-- Ozaki-I on a matrix-core variant, with binary32 recombination. -/
 def mcOzaki1 (P : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (mcMultiplier P) fp32Add b s x y
 
-/-- Ozaki-II on a matrix-core path, with one binary32 rounding. -/
+/-- Ozaki-II on a matrix-core variant, with one binary32 rounding. -/
 def mcOzaki2 (P : Model) (B : CRTBasis) (Pb : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki2 (mcMultiplier P) round32Value B Pb x y
 
-/-- `C = AB` with Ozaki-I on a matrix-core path; `A` and `B` by rows. -/
+/-- `C = AB` with Ozaki-I on a matrix-core variant; `A` and `B` by rows. -/
 def mcOzaki1Gemm (P : Model) (b s : ℕ) (A B : List (List ℚ)) : Option (List (List ℚ)) :=
   ozaki1Gemm (mcMultiplier P) fp32Add b s A B
 
-/-- `C = AB` with Ozaki-II on a matrix-core path; `A` and `B` by rows. -/
+/-- `C = AB` with Ozaki-II on a matrix-core variant; `A` and `B` by rows. -/
 def mcOzaki2Gemm (P : Model) (B : CRTBasis) (Pb : ℕ) (A Bm : List (List ℚ)) :
     Option (List (List ℚ)) :=
   ozaki2Gemm (mcMultiplier P) round32Value B Pb A Bm
@@ -95,8 +95,8 @@ theorem mcOzaki2_error {P : Model} {b : ℕ} (hP : ExactMultiplier P b) {B : CRT
 /-! ## The Z3 configuration -/
 
 /-- **The Z3 Ozaki-I model on a matrix core.** For `k = 4` and four slices of `11` bits, on any
-path whose engine is exact on `11`-bit slices, all ten slice products are exact and the result is
-the binary32 sum, smallest first, of the exact scaled products. -/
+variant whose matrix multiplier is exact on `11`-bit slices, all ten slice products are exact and
+the result is the binary32 sum, smallest first, of the exact scaled products. -/
 theorem ozaki1_z3 {P : Model} (hP : ExactMultiplier P z3SliceBits) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length = z3K) :
     mcOzaki1 P z3SliceBits z3Slices x y = sumWith fp32Add 0 (exactTerms z3SliceBits z3Slices x y) :=

@@ -1,11 +1,11 @@
 import TensorCore.TC.CanonicalFormatDefs
 import TensorCore.TC.Canonical
 
-/-! Contracts of the BF16 and TF32 profiles. -/
+/-! Contracts of the BF16 and TF32 models. -/
 
 namespace TensorCore
 
-/-- Uncorrected output, error, and machine-width contract for any profile. -/
+/-- Uncorrected output, error, and machine-width contract for any model. -/
 theorem model_contract (p : Model) (F carryBits : ℕ) (hF : p.alignFracBits = F)
     (hc : p.nfma + 1 ≤ 2 ^ carryBits) (x : BlockInput p) (t : BlockTrace)
     (h : evalBlock x = .ok t) :
@@ -53,7 +53,7 @@ theorem tf19Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
   have he : 23 + neab + 3 + carryBits = 26 + neab + carryBits := by omega
   simpa [he, tf19Fp32Model] using this
 
-/-- The BF16 descriptors are the BF16 profiles embedded as invocations. -/
+/-- The BF16 descriptors are the BF16 models embedded as invocations. -/
 theorem a100BF16_descriptor : a100BF16Invocation = a100BF16F32.toInvocation 24 := rfl
 theorem hopperBF16_descriptor : hopperBF16Invocation = hopperBF16F32.toInvocation 25 := rfl
 
@@ -63,7 +63,7 @@ theorem bf16Fp32_invocation_compatible (K neab : ℕ) (eAlignMin : Option ℤ)
       (evalBlock x).toOption.map (fun t => t.output.bits) :=
   legacy_invocation_bits x (23 + neab) (by change bf16.WellFormed; decide) rfl
 
-/-- A padded TF32 register word decodes as its value word under the `tf19` profile. -/
+/-- A padded TF32 register word decodes as its value word under the `tf19` model. -/
 theorem tf32Register_decode (K neab : ℕ) (eAlignMin : Option ℤ) (w : tf32Register.Word)
     (hp : tf32Padded w = true) :
     tf32Register.decode w = (tf19Fp32Model K neab eAlignMin).decode (tf32Unpack w) := by
@@ -103,7 +103,7 @@ theorem tf32_mapM (K neab : ℕ) (eAlignMin : Option ℤ)
     simp only [tf32UnpackPairs] at ih'
     rw [ih']
 
-/-- Descriptor evaluation of a TF32 path on explicit register words. -/
+/-- Descriptor evaluation of a TF32 variant on explicit register words. -/
 def tf32InvocationBits (K F : ℕ) (eAlignMin : Option ℤ)
     (ps : List (tf32Register.Word × tf32Register.Word)) (c : F32) : Option F32 :=
   invocationBits (p := alignedInvocation tf32Register K F eAlignMin) ⟨ps, c⟩
@@ -149,7 +149,7 @@ private theorem finite32_some' {bits : F32} {d : Decoded} (hd : decode32 bits = 
     rfl
 
 set_option maxRecDepth 4096 in
-/-- A padded-word descriptor and the profile of its value layout compute the same block. -/
+/-- A padded-word descriptor and the model of its value layout compute the same block. -/
 theorem padded_prepared_bits (f : Format) (pad K F : ℕ) (eAlignMin : Option ℤ)
     (ps : List (Decoded × Decoded)) (c : Decoded) :
     (evalInvocationPrepared (p := alignedInvocation ⟨⟨f, .ieee⟩, pad⟩ K F eAlignMin)
@@ -166,7 +166,7 @@ theorem padded_prepared_bits (f : Format) (pad K F : ℕ) (eAlignMin : Option �
     | none => simp [finite32_none' hd, finiteBinary_none hd]; rfl
     | some d => simp [finite32_some' hd, finiteBinary_some hd]; rfl
 
-/-- On padded register words, a TF32 descriptor computes the `tf19` profile's block. -/
+/-- On padded register words, a TF32 descriptor computes the block of the `tf19` model. -/
 theorem tf32_invocation_bits (K neab : ℕ) (eAlignMin : Option ℤ)
     (ps : List (tf32Register.Word × tf32Register.Word)) (c : F32)
     (hp : ∀ pair ∈ ps, tf32Padded pair.1 = true ∧ tf32Padded pair.2 = true) :

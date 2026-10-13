@@ -1,17 +1,17 @@
 import OzakiTCTests.Z3Matrices
 
-/-! # The Z3 models' test matrices on every Tensor Core path
+/-! # The Z3 models' test matrices on every Tensor Core variant
 
-`Z3Matrices` checks the V100 path. Here the same `4 × 4` cases run on the other seven paths of
+`Z3Matrices` checks the V100 variant. Here the same `4 × 4` cases run on the other seven variants of
 `TensorCore`:
 
-* the A100 and H100 fp16 paths and the three tf32 paths hold `11`-bit slices, so both schemes in
-  the Z3 configuration return exactly the Z3 models' binary32 words. With `k = 4` every block
-  carries at most four nonzero products, within the budget even where a group takes eight or
-  sixteen;
-* the bf16 paths cannot hold `11`-bit slices (bf16 has eight significant bits), so the Z3
+* the A100 and H100 fp16 variants and the three tf32 variants hold `11`-bit slices, so both schemes
+  in the Z3 configuration return exactly the Z3 models' binary32 words. With `k = 4` every block
+  carries at most four nonzero products, within the exactness bound even where a block FMA takes
+  eight or sixteen;
+* the bf16 variants cannot hold `11`-bit slices (bf16 has eight significant bits), so the Z3
   configuration returns `none`. With `8`-bit slices, and for Ozaki-II moduli at most `2^9`, they
-  return the same result as an exact engine.
+  return the same result as an exact matrix multiplier.
 
 Each check is a kernel evaluation of the same definitions the theorems use. -/
 
@@ -19,23 +19,23 @@ open TensorCore Ozaki Ozaki.TC OzakiTCTests.Z3Matrices
 
 namespace OzakiTCTests.AllVariants
 
-/-- Ozaki-I on a path, from binary32 words to binary32 words. -/
+/-- Ozaki-I on a variant, from binary32 words to binary32 words. -/
 def runI (p : Model) (b s : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   let C ← tcOzaki1Gemm p b s A B; encodeMatrix C
 
-/-- Ozaki-II on a path, from binary32 words to binary32 words. -/
+/-- Ozaki-II on a variant, from binary32 words to binary32 words. -/
 def runII (p : Model) (Bs : CRTBasis) (P : ℕ) (A B : List (List F32)) :
     Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   let C ← tcOzaki2Gemm p Bs P A B; encodeMatrix C
 
-/-- Ozaki-I with an exact engine, for comparison. -/
+/-- Ozaki-I with an exact matrix multiplier, for comparison. -/
 def runIExact (b s : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   let C ← ozaki1Gemm exactMultiplier fp32Add b s A B; encodeMatrix C
 
-/-- Ozaki-II with an exact engine, for comparison. -/
+/-- Ozaki-II with an exact matrix multiplier, for comparison. -/
 def runIIExact (Bs : CRTBasis) (P : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   let C ← ozaki2Gemm exactMultiplier round32Value Bs P A B; encodeMatrix C
@@ -77,11 +77,11 @@ example : runII hopperTF32MmaF32 z3Basis 22 A_narrow B_narrow = some C2_narrow :
 example : runI hopperTF32MmaF32 11 4 A_wide B_wide = some C1_wide := by decide +kernel
 example : runII hopperTF32MmaF32 z3Basis 22 A_wide B_wide = some C2_wide := by decide +kernel
 
-/-! ## The bf16 paths
+/-! ## The bf16 variants
 
 The Z3 configuration needs `11`-bit slices and residues up to `2048`, which bf16 cannot hold. With
-`8`-bit slices and the moduli `{512, 511, 509, 503}` (`M ≈ 2^35.9`, so `P = 16`), every engine
-call is exact and the result is that of an exact engine. -/
+`8`-bit slices and the moduli `{512, 511, 509, 503}` (`M ≈ 2^35.9`, so `P = 16`), every call
+to the matrix multiplier is exact and the result is that of an exact matrix multiplier. -/
 
 /-- Four pairwise coprime moduli at most `2^9`: residues fit bf16. -/
 def bf16Basis : CRTBasis := crtBasis [512, 511, 509, 503]
