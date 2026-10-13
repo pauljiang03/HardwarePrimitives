@@ -30,6 +30,8 @@ FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a blo
 | The laws and normal forms on every modeled variant | Random testing; exhaustive enumeration over 2, 3 and 4 products |
 | Distinct normal forms always differ on some input (completeness) | Reduced to supports of at most 3 products; checked exhaustively; two lemmas remain in Lean |
 | The CDNA 1 merge law and the CDNA 2 `c`-split law | Tested; follow directly from the block formulas; not yet in Lean |
+| How far apart two schedules can be: structural bound, divergence of two schedules, shared work | Proved in Lean for any matrix multiplier, instantiated for SFMA and CDNA 1; other block constants derived on paper and checked numerically |
+| Inside the exact region (small integer operands) every schedule agrees | Proved in Lean on every Tensor Core model and on CDNA 1, 2 and 3 |
 | Decision procedure with separating inputs; Triton front end | Python prototype; Triton front end planned |
 
 The Lean development is the [`mmalgebra/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra)
@@ -373,6 +375,178 @@ products (30 per variant on V100, A100, H100, CDNA 1, 2 and 3, and SFMA), it fou
 equivalent and 170 different, and gave a separating input, confirmed on the model, for every one
 of the 170; no pair was left undecided.
 
+## How far apart can two schedules be?
+
+Bitwise equality is a yes-or-no question. When two schedules are not equivalent, the next
+question is how far apart their results can be. The answer has three parts: a bound that holds
+for every input, the worst case that an adversarial search finds, and the typical difference on
+realistic data. Throughout, `M = Σ|aᵢbᵢ| + |c|` is the magnitude of an entry's inputs and
+`u = 2^-24` is the unit roundoff of binary32.
+
+### A structural bound
+
+Every operation in a term has a proven error bound. The per-block theorems of the two models
+bound the distance between a block's output and the exact sum of its inputs, and a binary32
+addition rounds once:
+
+| Operation | Error of one operation | Per unit of input magnitude, normal operands | Lean |
+| --- | --- | --- | --- |
+| V100, A100, H100 block FMA | `< (K + 1)·2^(η − F) + ulp(D)` | `12u`, `11u`, `10.5u` | [`evalBlock_error_bound`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/ErrorBounds.lean#L81) |
+| CDNA 1 block, SFMA step | `≤ 2^-24 A + 2^-150` | `u` | [`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L76) |
+| CDNA 2 block | `≤ (flushed inputs) + 2^-21 A + 2^-120` | `8u` | [`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L473) |
+| CDNA 3 block | `≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149` | `14u` | [`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L238) |
+| binary32 addition | `≤ 2^-24 \|x + y\| + 2^-150` | `u` | [`MMAlgebra.MC.add_le`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L122) |
+
+Here `A = |c| + Σ|p|` for the block. For the Tensor Cores the per-unit constant follows from the
+model bound because, with normal operands, every term's magnitude is at least 2 to the power of
+its exponent, so `2^η ≤ A`, and the truncated output satisfies `ulp(D) ≤ 2^-23 |D| + 2^-149` with
+`|D| ≤ A`; CDNA 3 is the same with `2^(e_max) ≤ A`. With a subnormal factor, 2 to the power of a
+product's exponent can exceed its magnitude by a factor of up to `2^10` per subnormal fp16 factor,
+and the bound then uses the exponent itself.
+
+A block's accumulator input is a computed value, so its magnitude is at most the magnitude of its
+subterm plus that subterm's error. The bound therefore composes over the term:
+
+```text
+E(blk(t, I)) = E(t) + err_block(M(t) + E(t), I)
+E(t ⊕ u)     = E(t) + E(u) + 2^-24 (M(t) + E(t) + M(u) + E(u)) + 2^-150
+```
+
+Unrolled, each product contributes its magnitude times the sum of the constants of the operations
+it passes through. A chain of `m` block FMAs costs about `m` times the block constant: for
+`k = 1024` with `C` in the epilogue, `3,073u·M` (about `1.8·10⁻⁴ M`) on V100, `1,409u·M` on A100,
+`673u·M` on H100 and `257u·M` on CDNA 1. A split-K shortens the chains, which is why it is often
+more accurate than the unsplit loop, though not bitwise equal to it.
+
+**Two schedules.** For two terms over the same products and `c`, on one GPU or on two,
+`|t₁(x) − t₂(x)| ≤ E(t₁) + E(t₂)`. **Shared work does not diverge**: when both terms contain the
+same subterm, evaluated on the same GPU, that subterm has the same computed value in both, so it
+counts as an exact leaf, and the bound counts only the work after the point where the schedules
+part. For `k = 64` on V100, the plain bound for no split against split-K by two is `291u·M`, and
+with the first half's chain as a shared prefix it is `99u·M`. Two runs of a split-K by four with
+atomic additions share all four partials, so they differ only through the order of four additions:
+the bound is `8u·M`, although each partial alone carries an error bound of hundreds of `u·M`.
+(The `k = 64` figures are the bound evaluated on the worst input found below.)
+
+**The exact region.** If every block FMA and every addition of two terms is exact, the terms
+agree exactly. A sufficient condition is the one the Ozaki schemes use: integer operands of at
+most 11 bits (for fp16), an integer `c`, and `|c| + Σ|aᵢbᵢ| < 2^24`. Then every partial sum is a
+binary32 integer, every block of every model returns the exact sum of its inputs (the exactness
+theorems of the Ozaki development, cancellation included), and every schedule returns the exact
+result. This is the hinge of the whole picture: inside the exact region every schedule agrees,
+and outside it, by completeness, the schedules that the laws do not equate disagree on some input.
+For example, products `2047·2047`, `2047·1000`, `−1000·3` and `3·3` with `c = 12345` give
+`6,246,563` under one block from `c`, a split-K whose partials are added before `c`, and a
+reversed chain with `c` in the epilogue alike.
+
+In Lean, the composition is proved once for any matrix multiplier with a binary32 addition
+([`MMAlgebra.eval_error`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160)), and
+instantiated for the correctly rounded models, SFMA and CDNA 1 ([`MMAlgebra.MC.block_le_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L67),
+[`MMAlgebra.MC.cdna1_divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L153)). The exact region is proved on every Tensor Core model and on
+the exact configurations of CDNA 1, 2 and 3 ([`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172),
+[`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), with the example [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44)). The block
+constants for the Tensor Cores, CDNA 2 and CDNA 3 are derived from the per-block theorems by the
+argument above, which is not yet in Lean; the prototype checks the composed bound on 1,800 random
+evaluations, subnormal operands included, with no violation.
+
+### The worst case, and how tight the bound is
+
+An adversarial search maximizes `|t₁(x) − t₂(x)| / M` over inputs with normal fp16 operands. It
+starts from structured inputs and improves them by local changes, and every witness it reports is
+checked on the model against the bound. The structured inputs that win are an **anchor and dust**:
+one product, or `c`, of about `1`, and many products just below the anchor's alignment grid. On
+V100, in a chain whose accumulator holds the anchor, every later block aligns to `2^-23` and
+truncates every dust product it receives; a schedule that sums the dust first, from zero, loses
+nothing. For `k = 1024`, `C` in the first block against `C` in the epilogue differ by
+`2,040u·M`, about 1,020 dust products' worth of `2^-23` each.
+
+For `k = 64`, with the shared-work bound:
+
+| Pair, `k = 64` | V100 | A100 | H100 | CDNA 1 | CDNA 2 | CDNA 3 |
+| --- | --- | --- | --- | --- | --- | --- |
+| No split against split-K by 2 | 64 / 99 | 32 / 47 | 18 / 24 | 5.4 / 11 | 5.4 / 67 | 4 / 11 |
+| No split against split-K by 4, pairwise | 96 / 148 | 54 / 70 | 24 / 36 | 12 / 16 | 12 / 100 | 6 / 16 |
+| `C` in the first block against the epilogue | 126 / 193 | 64 / 89 | 32 / 43 | 16 / 17 | 16 / 129 | 8 / 17 |
+| Stream-K cut after 24 against after 16 | 65 / 136 | 26 / 66 | 12 / 37 | 2 / 6 | 2 / 20 | 2 / 6 |
+
+Each cell is the worst case found over the bound, in units of `u·M`. The search reaches 31 to 94
+percent of the bound on the Tensor Cores, CDNA 1 and CDNA 3, so the bound is tight within a factor
+of about three there. On CDNA 2 it reaches about a tenth: the a-priori constant `2^-21` per block
+is loose, since a block rounds only three times. The search gives lower bounds on the true worst
+case; the bound is an upper bound.
+
+### Typical differences
+
+On realistic data the differences are small in absolute terms but almost always present. For
+every pair of programs that are not equivalent, 69 to 100 percent of entries differ (about half
+for two arrival orders of atomic additions), by a median of 1 to 25 ulps of the result on uniform,
+normal and LLM-like data. Where an entry's result is much smaller than its magnitude `M`, as on
+near-cancelling data, the difference in ulps of the result reaches hundreds or thousands.
+Measured against `M`, typical differences stay below `23u·M`, one to two orders of magnitude
+below the worst cases (CDNA 2 on LLM-like data aside, for a reason given below). The next section
+gives the numbers program by program.
+
+## How different can BLAS programs be?
+
+A BLAS library chooses among many programs for the same matrix product. The table models a
+realistic set for one problem size, `k = 1024` with fp16 inputs and binary32 output, on the A100
+model, each compared with a reference program (no split-K, `C` added in the epilogue). Bitwise
+equality is decided by the algebra; the bound is the constant form of the structural bound for
+normal operands; the worst case is the best of an adversarial search; the typical columns give the
+share of 200 entries that differ and the median difference in ulps of the result, on normal data
+(entries of `A` and `B` drawn from `N(0, 1)`) and on LLM-like data (activations from `N(0, 1)` with
+1 percent outlier channels 64 times larger, weights from `N(0, 0.02²)`).
+
+| Program (A100), against the reference | Bitwise equal | Bound (`u·M`) | Worst found (`u·M`) | Normal data | LLM-like data |
+| --- | --- | ---: | ---: | --- | --- |
+| Other `BLOCK_K`, tile shapes, `k = 8` or `16` instructions | yes | 0 | 0 | 0% | 0% |
+| `C` in the first block FMA | no | 2,817 | 1,014 | 100%, 25 ulps | 91%, 7.5 ulps |
+| Split-K 2, partials added serially | no | 1,411 | 510 | 92%, 7 ulps | 92%, 10 ulps |
+| Split-K 4, serial | no | 1,413 | 715 | 97%, 10 ulps | 95%, 14 ulps |
+| Split-K 4, pairwise | no | 1,412 | 788 | 96%, 10 ulps | 96%, 14 ulps |
+| Split-K 8, serial | no | 1,417 | 933 | 98%, 11 ulps | 98%, 15.5 ulps |
+| Split-K 8, pairwise | no | 1,413 | 892 | 98%, 11 ulps | 96%, 15 ulps |
+| Stream-K, cut after 384 products | no | 1,763 | 667 | 96%, 8 ulps | 94%, 11 ulps |
+| Split-K 4 with atomic additions, two arrival orders | no | 8 | 2 | 48%, 0 ulps | 50%, 0.5 ulps |
+| CUDA-core fallback (sequential binary32 FMA) | no | 2,434 | 1,024 | 96%, 12 ulps | 98%, 16 ulps |
+
+The same program on different GPUs:
+
+| Reference program on | Bitwise equal | Bound (`u·M`) | Worst found (`u·M`) | Normal data | LLM-like data |
+| --- | --- | ---: | ---: | --- | --- |
+| A100 and H100 | no | 2,082 | 546 | 92%, 3 ulps | 91%, 6 ulps |
+| V100 and A100 | no | 4,482 | 1,021 | 97%, 10.5 ulps | 97%, 18 ulps |
+| A100 and CDNA 3 | no | 3,202 | 1,018 | 95%, 12 ulps | 98%, 17 ulps |
+| H100 and CDNA 3 | no | 2,466 | 516 | 96%, 10 ulps | 98%, 13 ulps |
+| A100 and CDNA 1 | no | 1,666 | 1,022 | 97%, 11.5 ulps | 98%, 17 ulps |
+| A100 and CDNA 2 | no | 3,458 | 1,024 | 96%, 11.5 ulps | 100%, 130.5 ulps |
+
+And one program change, split-K by 2 against the reference, on every modeled GPU:
+
+| Split-K 2 against the reference | V100 | A100 | H100 | CDNA 1 | CDNA 2 | CDNA 3 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Bound (`u·M`) | 3,075 | 1,411 | 675 | 259 | 2,051 | 1,795 |
+| Worst found (`u·M`) | 1,020 | 510 | 256 | 128 | 128 | 64 |
+| Entries that differ, normal data | 86% | 92% | 92% | 80% | 77% | 72% |
+| Median difference, normal data | 4 ulps | 7 ulps | 6 ulps | 2 ulps | 2 ulps | 1 ulp |
+
+Three observations stand out. First, nearly every program change alters nearly every entry, by a
+few ulps on typical data and by up to about a thousand `u·M` on adversarial data; only the changes
+the algebra proves harmless (tile shapes, `BLOCK_K`, instruction shapes) leave every bit in place.
+Second, the bounds and the worst cases shrink from V100 to A100 to H100, with longer blocks and
+more extra alignment bits, and are smallest on the correctly rounded CDNA 1 and on CDNA 3, whose
+late addition of `c` defeats the anchor-and-dust inputs; typical medians are a few ulps on every
+GPU. Third, CDNA 2 differs from
+every other GPU on LLM-like data by far more than elsewhere: about 0.24 percent of weights drawn
+from `N(0, 0.02²)` are fp16 subnormals, which CDNA 2 flushes to zero, so their products vanish.
+
+These are modeled programs. The internals of cuBLAS and rocBLAS are not public, so which program a
+library runs for a given shape is not known here; probing a real library's reduction order by
+testing, in the manner of FPRev, needs GPU access and is future work. The study covers fp16
+inputs at one size; the worst cases are lower bounds from a heuristic search, and the bounds
+assume normal operands. The full results, including uniform and near-cancelling data and the 99th
+percentiles, are in the prototype's recorded output.
+
 ## Applications and value
 
 ### Split-K, stream-K and the placement of `C`
@@ -487,6 +661,11 @@ for any two that do not, an input that shows it.
   for terms with additions, and for the AMD models beyond base witnesses.
 - **The AMD laws in Lean.** The CDNA 1 merge law and the CDNA 2 `c`-split law are tested and follow
   directly from the block formulas, but are not yet theorems.
+- **Divergence constants in Lean.** The block contracts of the Tensor Cores, CDNA 2 and CDNA 3
+  (bounding `2^η` and the output ulp by magnitudes), a sharper CDNA 2 constant than `2^-21`, and
+  closed forms for chains and split-K.
+- **Real libraries.** Which programs cuBLAS and rocBLAS run for which shapes, probed on GPUs by
+  testing, so that the modeled programs can be replaced by measured ones.
 - **Extremes of the formats.** CDNA 1 bf16 terms with additions near binary32's underflow
   threshold are not fully classified, and FP8 is not covered (CDNA 3's FP8 blocks group odd and
   even products separately and depend on positions).
@@ -514,6 +693,11 @@ for any two that do not, an input that shows it.
 | Normal forms sound and complete over 2 and 3 products on every variant, and over 4 on five variants | Exhaustive enumeration, separating inputs found by search | [`classes.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/classes.py), [`terms.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms.py), [`terms4.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms4.py), [`bf16_extremes.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/bf16_extremes.py) |
 | Completeness reduces to supports of at most 3 products | Exhaustive: chains over up to 6 products, terms over 4 | [`restriction_lemma.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/restriction_lemma.py), [`terms4.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms4.py) |
 | The decision procedure, the configuration study, the one-rounding comparison | 210 random pairs; 10 configurations on 6 variants | [`decide_equiv.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/decide_equiv.py), [`config_study.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/config_study.py), [`oneround.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/oneround.py) |
+| The structural bound, divergence of two schedules, and shared work, for any matrix multiplier | Proved | [`MMAlgebra.eval_error`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160) |
+| The divergence bound on SFMA and CDNA 1 | Proved | [`MMAlgebra.MC.crContract`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L141), [`MMAlgebra.MC.cdna1_divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L153) |
+| Inside the exact region every schedule agrees | Proved; kernel-checked example | [`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172), [`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44) |
+| The composed bound on the Tensor Cores, CDNA 2 and CDNA 3; worst cases and tightness | 1,800 random evaluations with no violation; adversarial search, witnesses checked on the model | [`divergence.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/divergence.py) |
+| How different BLAS programs are | Modeled programs, `k = 1024`, 200 entries on each of four kinds of data | [`blas_programs.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/blas_programs.py) |
 | The Python port computes the Lean models' output words | 1,800 random blocks on 12 variants, bit for bit | [`validate_port.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/validate_port.py) |
 | The models match the hardware | Replayed measurements and published vectors; assumed beyond them | [NVIDIA validation](/TC-EFT/model/validation/), [AMD validation](/TC-EFT/amd/validation/) |
 
