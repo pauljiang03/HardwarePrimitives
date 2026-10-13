@@ -70,6 +70,7 @@ export default defineConfig({
             { label: 'Error bounds', slug: 'properties/error-bounds' },
             { label: 'Non-monotonicity', slug: 'properties/non-monotonicity' },
             { label: 'TC-EFT correction', slug: 'properties/eft' },
+            { label: 'MMAlgebra: schedule equivalence', slug: 'mmalgebra' },
           ],
         },
         {

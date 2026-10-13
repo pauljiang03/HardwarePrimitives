@@ -14,9 +14,9 @@ for bit the same. It has three parts, each building on the one before:
    their error bounds, non-monotonicity and TC-EFT.
 2. **Emulation.** The [Ozaki schemes](/MMAlgebra/ozaki/), proved on both models,
    with correctly rounded variants.
-3. **Schedules.** An algebra of reduction schedules that decides which ways of
-   computing a matrix product give identical bits on each architecture (in
-   progress).
+3. **Schedules.** An [algebra of reduction schedules](/MMAlgebra/mmalgebra/)
+   that decides which ways of computing a matrix product give identical bits
+   on each architecture, and how far apart they can be when they do not.
 
 ## The Tensor Core model
 
@@ -125,5 +125,6 @@ limits](/MMAlgebra/model/scope/) and [What is tested](/MMAlgebra/proofs/tested/)
 - [The model at a glance](/MMAlgebra/model/): the whole pipeline on one page.
 - [The AMD model at a glance](/MMAlgebra/amd/): the matrix-core model of CDNA 1, 2 and 3.
 - [Quick start](/MMAlgebra/quick-start/): build the project and run the examples.
+- [Schedules](/MMAlgebra/mmalgebra/): when two GEMM schedules give the same bits.
 - [What is proven](/MMAlgebra/proofs/theorems/): the headline results and where they live.
 - [Source on GitHub](https://github.com/pauljiang03/MMAlgebra).

@@ -1,0 +1,524 @@
+---
+title: 'MMAlgebra: when two GEMM schedules give the same bits'
+description: The algebra of matrix multiply-accumulate reductions. For each modeled matrix multiplier, the exact laws under which two GEMM schedules give bitwise identical results, with proofs, completeness, concrete witnesses, a decision procedure, and a plan for Triton.
+---
+
+**MMAlgebra** (the algebra of matrix multiply-accumulate reductions) answers one question for
+every matrix multiplier modeled on this site: when do two ways of computing the same matrix product
+give the same result, bit for bit? For one entry of `D = C + AB`, every GEMM schedule (split-K,
+stream-K, the k-tile depth, the instruction shape, and whether `C` is added in the first block FMA
+or in the epilogue) is a small term built from block FMAs and binary32 additions. The block
+semantics of [the Tensor Core model](/TC-EFT/model/) and [the AMD matrix-core
+model](/TC-EFT/amd/) determine which rewrites of these terms preserve the output word for every
+input. The answer is an algebra per architecture: a short list of laws, a completeness result
+saying that no other laws hold (proved in Lean for two products, checked exhaustively on small
+terms), and, for any two schedules that are not equivalent, a concrete input on which they
+differ.
+
+The three algebras are simple to state. On NVIDIA Tensor Cores, AMD CDNA 3 and SFMA, the algebra
+is **rigid**: the products inside one block FMA can be permuted, zero products can be dropped and
+the two operands of an addition can be swapped, but every other change to a schedule changes the
+result on some input. On CDNA 1 (fp16), a block
+FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a block is a
+**binary32 summation tree** with `c` added last, so `c` can be moved out of a block.
+
+| Part | Status |
+| --- | --- |
+| Products in a block act as a multiset; zero products are invisible; restriction to a support (Tensor Core model, every variant) | Proved in Lean |
+| Chains holding two products in different patterns differ on some input (V100, A100, H100 fp16) | Proved in Lean |
+| Separating inputs on CDNA 1, 2 and 3; one instruction is not one rounding on V100, A100 and CDNA 1–3 | Kernel-checked in Lean |
+| The laws and normal forms on every modeled variant | Random testing; exhaustive enumeration over 2, 3 and 4 products |
+| Distinct normal forms always differ on some input (completeness) | Reduced to supports of at most 3 products; checked exhaustively; two lemmas remain in Lean |
+| The CDNA 1 merge law and the CDNA 2 `c`-split law | Tested; follow directly from the block formulas; not yet in Lean |
+| Decision procedure with separating inputs; Triton front end | Python prototype; Triton front end planned |
+
+The Lean development is the [`mmalgebra/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra)
+project of this repository, which requires the two models, and the Python prototype is in
+[`mmalgebra/prototype/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra/prototype).
+
+## The problem: bitwise reproducibility of matrix products
+
+Floating-point addition is not associative, so the result of a long dot product depends on the
+order in which its terms are added. A GPU matrix product fixes that order through many choices
+that are usually made for speed: the tile shapes, the depth of the k-loop step, which matrix
+instruction is used, whether the inner dimension is split across thread blocks (split-K, or the
+work-centric decomposition of Stream-K by Osama, Merrill, Cecka, Garland and Owens,
+[arXiv:2301.03598](https://arxiv.org/abs/2301.03598)), how the partial results are combined, and
+where `C` and a bias are added. Several of these choices depend on the problem shape, and some
+depend on the batch size.
+
+This matters in practice:
+
+- **Batch invariance in LLM inference.** Thinking Machines Lab
+  ([*Defeating Nondeterminism in LLM Inference*](https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/),
+  Horace He, September 2025) traced nondeterministic outputs at temperature 0 mainly to kernels
+  that are not batch-invariant: a request's numerics depend on the batch it is served in, and
+  split-K reductions chosen for small batches are one cause. Their fix compiles one kernel
+  configuration for all shapes; with default kernels, 1,000 completions at temperature 0 gave 80
+  distinct outputs, and with batch-invariant kernels all 1,000 were identical. SGLang
+  ([deterministic inference](https://lmsys.org/blog/2025-09-22-sglang-deterministic/), building on
+  those kernels) and vLLM ([batch invariance](https://docs.vllm.ai/en/latest/features/batch_invariance.html),
+  `VLLM_BATCH_INVARIANT=1`, in beta) now ship such modes, at a cost in throughput.
+- **Libraries promise little.** cuBLAS guarantees
+  [bitwise identical results](https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility)
+  run to run only for one toolkit version on GPUs of the same architecture with the same number
+  of SMs, with conditions on streams and workspaces. PyTorch states that
+  [completely reproducible results](https://docs.pytorch.org/docs/stable/notes/randomness.html)
+  are not guaranteed across releases, commits or platforms.
+- **Autotuning.** An autotuner that picks the fastest configuration per shape can pick
+  configurations with different numerics for different shapes, or on a different day.
+- **Across GPUs.** The same schedule gives different bits on different matrix multipliers, since
+  their block FMAs align, truncate and round differently.
+
+Practitioners' working rule is that only an identical schedule reproduces. MMAlgebra makes that
+rule exact: it says which schedule changes are harmless on which hardware, proves it, and shows
+with a concrete input that every other change is harmful. It also finds the exceptions, where
+two schedules that look different always agree.
+
+## Background: block FMAs
+
+A matrix multiplier does not add one product at a time. Following Khattak and Mikaitis
+([NVIDIA](https://arxiv.org/abs/2512.07004); with Graziani for
+[AMD](https://arxiv.org/abs/2609.14845)), one **block FMA** computes `d = c + a₁b₁ + … + a_K b_K`
+for an FMA size `K` (`N_FMA`) of 1 to 16, with a binary32 accumulator `c` and output `d`, and an
+MMA or MFMA instruction whose inner dimension `k` exceeds `K` is a chain of `k / K` block FMAs, in
+increasing `k`, each block's output being the next block's `c` (see [instructions and
+chaining](/TC-EFT/model/instructions/)). How a block forms its sum is what differs:
+
+| Variant | `K` (fp16) | How one block FMA adds |
+| --- | ---: | --- |
+| V100, A100, H100 Tensor Cores | 4, 8, 16 | Exact products in denormalized form; every term, `c` included, aligned to the largest exponent with `23 + n_eab` fractional bits (0, 1, 2 extra alignment bits) and truncated; one exact multi-term addition; truncation to binary32 ([the model](/TC-EFT/model/), [variants](/TC-EFT/model/variants/)) |
+| CDNA 1 (MI100) | 4 | Exact sum of `c` and the products, rounded once to nearest ([correct rounding](/TC-EFT/amd/architectures/#cdna-1-mi100-correct_rounding)) |
+| CDNA 2 (MI210, MI250) | 4 | Each product rounded to binary32, pairwise sums `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added last; subnormals flushed ([pairwise sums](/TC-EFT/amd/architectures/#cdna-2-mi210-mi250-pair_wise_sum)) |
+| CDNA 3 (MI300) | 8 | Products aligned to their largest exponent with 24 fractional bits; `c` added late, with rounding down; final rounding to nearest ([global alignment](/TC-EFT/amd/architectures/#cdna-3-mi300a-mi300x-algorithms-1-and-2)) |
+| SFMA (fp32 inputs, all CDNA) | 1 | A sequential FMA, each step rounded to nearest |
+
+Every variant above has a bit-level Lean model on this site, validated against recorded or
+published hardware outputs ([NVIDIA](/TC-EFT/model/validation/), [AMD](/TC-EFT/amd/validation/)).
+MMAlgebra uses the models as its semantics, through a Python port that agrees with them bit for
+bit on 1,800 random blocks.
+
+## The algebra
+
+### Terms
+
+Fix one output entry, with products `pᵢ = aᵢbᵢ` of a row of `A` and a column of `B`. A schedule
+for that entry is a term:
+
+| Term | Meaning |
+| --- | --- |
+| `0` | The zero accumulator (a product computed with `β = 0`, or with `C` added later) |
+| `c` | The initial accumulator, the entry of `C` |
+| `blk(t, I)` | One block FMA whose accumulator input is the value of `t` and whose products are the set `I` of at most `K` indices; the other slots hold zero pairs |
+| `t ⊕ u` | A binary32 round-to-nearest-even addition, done outside the matrix multiplier (combining split-K partials, or adding `C` or a bias in the epilogue) |
+
+Each product appears exactly once. A chain of blocks from `0` is written `[0 1 2 3] [4 5 6 7]`.
+On V100 (`K = 4`), with `k = 16`:
+
+| Schedule | Term |
+| --- | --- |
+| One pass, `C` in the first block | `blk(blk(blk(blk(c, 0–3), 4–7), 8–11), 12–15)` |
+| One pass, `C` in the epilogue | `[0–3] [4–7] [8–11] [12–15] ⊕ c` |
+| Split-K by two, partials added | `blk(blk(c, 0–3), 4–7) ⊕ [8–11] [12–15]` |
+| Stream-K, cut after 12 products | `blk(blk(blk(c, 0–3), 4–7), 8–11) ⊕ [12–15]` |
+
+The k-tile depth `BLOCK_K`, the tile shapes, the number of warps and the number of pipeline
+stages do not appear: they change which thread computes an entry and when, but not the sequence of
+block FMAs that the entry goes through, as long as the products are still consumed in increasing
+`k`. Neither does the instruction shape, as long as the instruction's `k` is a multiple of `K`:
+one `k = 16` instruction on V100 and two `k = 8` instructions are the same four blocks.
+
+Two terms are **equivalent** on a variant when they produce the same output word, sign of zero
+included, on every input (an input on which one overflows must make the other overflow too).
+
+### A hand-sized example
+
+Take three products, `x = 1.5 × 1.5 = 2.25` and `y = z = 2^-12 × 2^-11 = 2^-23` (fp16 words
+`0x3e00`, `0x0c00`, `0x1000`), and three schedules for them:
+
+| Schedule | V100 | A100, H100 | CDNA 1 | CDNA 2 | CDNA 3 |
+| --- | --- | --- | --- | --- | --- |
+| One block `[x y z]` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25` | `2.25 + 2^-22` |
+| Two blocks `[x] [y z]` | `2.25` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25 + 2^-22` |
+| Split-K `[x] ⊕ [y z]` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25 + 2^-22` | `2.25 + 2^-22` |
+
+On V100 the single block aligns to the largest exponent among its terms, which is `0` (the
+product `x` keeps the exponent sum `0 + 0` with significand `2.25`), so the grid is `2^-23` and
+both small products survive. In the two-block schedule, the first block returns `2.25`, which as a
+binary32 accumulator has exponent `1`; the second block aligns to `2^(1 − 23) = 2^-22`, and both
+products of `2^-23` are truncated away. A100 and H100 keep one or two extra alignment bits, so the
+same input does not separate these schedules there (other inputs do). On CDNA 2 the order of
+events is reversed: the single block adds `y` to `x` first in its pairwise tree, and `2.25 + 2^-23`
+is a tie that rounds to even, `2.25`, twice; the chain adds `y + z = 2^-22` first.
+
+The same products show early and late accumulation of `C` on V100. With `c = 2.25`,
+`blk(c, {y, z})` returns `2.25`, while `c ⊕ [y z]` returns `2.25 + 2^-22`. In Lean:
+[`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29) and
+[`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13).
+
+## Laws by architecture
+
+A **law** is an equation between terms that holds for every input. The table lists the candidate
+laws and where they hold; the counts below it are violations in 300 random trials per variant
+(the inputs mix normal, subnormal and wide-exponent words).
+
+| Law | Tensor Cores | CDNA 1 fp16 | CDNA 2 | CDNA 3 | SFMA |
+| --- | --- | --- | --- | --- | --- |
+| Products in a block act as a multiset | proved | proved | only the 8 symmetries of the pairwise tree | proved | n/a |
+| Zero products are invisible | proved | holds | holds, slot by slot | holds | holds |
+| `t ⊕ u = u ⊕ t` | holds | holds | holds | holds | holds |
+| A one-product first block merges into the next: `[x] [J] = [x J]` | fails | holds | fails | fails | n/a |
+| Two one-product blocks added: `[x] ⊕ [y] = [x y]` | fails | holds | holds | fails | n/a |
+| `c` splits off: `blk(t, I) = t ⊕ blk(0, I)` | fails | fails | holds | fails | fails |
+| Negating every input negates the output | holds | holds | holds | fails | holds |
+
+| Violations / 300 | V100 | A100 | H100 | CDNA 1 | CDNA 2 | CDNA 3 | SFMA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Permute the products of a block | 0 | 0 | 0 | 0 | 25 | 0 | 0 |
+| Move a block boundary by one product | 36 | 51 | 48 | 33 | 43 | 48 | n/a |
+| Merge a one-product first block | 10 | 8 | 4 | 0 | 41 | 31 | n/a |
+| `[x] ⊕ [y] = [x y]` | 35 | 34 | 47 | 0 | 0 | 17 | n/a |
+| `c` splits off a block | 121 | 117 | 123 | 23 | 0 | 42 | 24 |
+| Split-K, chain of 3 blocks as 2 + 1 | 106 | 108 | 129 | 25 | 0 | 47 | 26 |
+| Negate every input | 0 | 0 | 0 | 0 | 0 | 40 | 0 |
+
+SFMA has `K = 1`, so the laws about several products in one block do not apply to it (n/a).
+The random tests found no violation of a law marked as holding, and a violation of every law
+marked as failing. On CDNA 2 the permutations that violate are the 199 trials outside the 8
+symmetries of the tree (25 violations); the 101 inside them gave none.
+
+### Why each law holds or fails
+
+**Products act as a multiset** wherever a block adds its terms in one step after aligning them to
+a common exponent: the largest exponent and the exact sum of truncated terms do not depend on the
+order. In Lean this is [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) for every Tensor Core model, and
+[`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L37) for the sum that CDNA 1 and CDNA 3 round at the end of a block. CDNA 2's block is a fixed tree
+`((p₁ + p₂) + (p₃ + p₄))` with a rounding at every node, so only the tree's own symmetries (swap
+within a pair, swap the pairs) preserve it ([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L53)).
+
+**Zero products are invisible**: a product with a zero factor adds nothing to the exact sum and
+is ignored when the alignment exponent is chosen, so it can replace an empty slot and the reverse
+([`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230)). A block with no products returns its accumulator input
+when that input is finite and not `−0` ([`zero_products_passthrough`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Instruction.lean#L147)). The exception is real: in
+the random tests, one SFMA block returned `−0` (a tiny negative product rounded to zero), and an
+empty block after it returned `+0`. On CDNA 2 a zero product prunes
+its leaf of the tree, but moving it to another slot reshapes the tree.
+
+**The merge law of CDNA 1** follows from correct rounding: a block returns the binary32 value
+nearest to the exact sum of `c` and its products ([`MatrixCore.correctRounding_nearestEven`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L30)),
+and an fp16 product (at most 22 significant bits, magnitude between `2^-48` and `2^32`) is exactly
+representable in binary32. So a block from `0` holding one product returns that product exactly,
+and `[x] [J]` rounds the same exact sum as `[x J]`; likewise `[x] ⊕ [y]` and `[x y]` both round
+`x + y`. On the Tensor Cores the merge fails because the product and the accumulator are aligned
+differently: inside a block, `x` takes part with its exponent sum, while as an accumulator it has
+been normalized, as in the hand-sized example.
+
+**The `c`-split law of CDNA 2** follows from the block formula
+`d = fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` ([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L24)): `c` is added last,
+in one binary32 addition. The equation holds with an addition that, like CDNA 2's own, flushes
+subnormal inputs and results to zero. One consequence: a split-K whose last part is a single
+block gives the unsplit chain's bits on CDNA 2. On every other variant, `c` takes part in the
+block's alignment or rounding (early accumulation), and moving it changes the result.
+
+**Negation** is a symmetry of truncation toward zero and of rounding to nearest. CDNA 3 rounds
+down in two of its steps, so negating every input can change the magnitude of the output
+([`MatrixCore.globalAlignment_sign_asymmetric`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L71)). This is not a schedule law, but where it holds, a
+separating input still separates after negation.
+
+### Normal forms: three algebras
+
+Applying the laws in one direction gives a normal form for each term, and two terms with the same
+normal form are equivalent by the laws.
+
+- **Rigid** (V100, A100 and H100, fp16 and bf16; CDNA 3; SFMA). A block is determined by its
+  accumulator input's normal form and its set of products, and an addition by the unordered pair
+  of its operands. A chain from `0` is an **ordered partition** of its products into blocks of at
+  most `K`. With `K ≥ 4`, over 3 products there are 13 chains and 28 terms with additions, in 13
+  and 28 classes, and over 4 products, 301 terms in 301 classes.
+- **Correctly rounded nodes** (CDNA 1 fp16). Every block and every addition rounds the exact sum
+  of its children, so a term is a **rooted tree** whose internal nodes have at least two children,
+  in no order, and whose leaves are the products and `c`. Over 2 products all schedules agree; over
+  3 products the 28 terms fall into 4 classes (`((x + y) + z)`, `((x + z) + y)`, `((y + z) + x)`, and
+  the fan `x + y + z`); over 4 products, 301 terms fall into 26.
+- **Summation trees** (CDNA 2). Blocks contribute their pairwise trees, and `c` and every addition
+  are further binary32 additions, so a term is an **unordered binary tree** of additions. Over 3
+  products, the 1,608 terms (counting slot positions) fall into the 3 binary trees; over `n`
+  products there are `(2n − 3)!! = 1, 3, 15, 105, …` classes.
+
+CDNA 1 bf16 is a boundary case. Its blocks are correctly rounded too, but a bf16 product can fall
+below binary32's range, and then a one-product block rounds it: with `p₀ = 2^-149` and
+`p₁ = 2^-150`, `[p₀] [p₁]` returns `2^-148` (the tie `1.5 · 2^-149` rounds to even) while
+`[p₁] [p₀]` returns `2^-149`, because `[p₁]` alone rounds `2^-150` to `+0`
+([`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23)). Over all inputs its chains are rigid: the twelve
+chain patterns of three products are pairwise separated.
+
+## Completeness
+
+**Statement.** On each modeled variant, two terms with different normal forms produce different
+output words on some input. In other words, the laws above are all the laws: whatever they do not
+equate, the hardware model separates. The status of this statement, proved in part and checked
+in full on small terms, is at the end of this section.
+
+The argument has three steps.
+
+1. **Restriction.** Set `aᵢ = 0` for every product outside a support `S`. Every block then behaves
+   as the block with those slots emptied (zero products are invisible), so the term evaluates as
+   its restriction to `S`, with empty blocks and additions of an all-zero part dropped. In Lean,
+   [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) proves this for chains on every Tensor Core model. Dropping an
+   empty block or an addition of `+0` needs the value passing through to be other than `−0`.
+2. **Small supports.** Two different normal forms already differ after restriction to some
+   support of at most three products. For rigid chains, two products suffice: an ordered partition
+   is the same thing as a total preorder ("`x` is not after `y`"), and a total preorder is
+   determined by how it orders each pair. For trees, three suffice: a rooted tree whose internal
+   nodes have at least two children is determined by its restrictions to triples of leaves, a
+   classical fact about phylogenetic trees. For terms
+   with additions the step was checked exhaustively: over 4 products, every one of the 45,150 pairs
+   of distinct rigid normal forms (325 on CDNA 1, 14,535 on SFMA) differs on a support of at most
+   3; for chains it holds over up to 6 products (4,670 rigid classes, 1,436 on CDNA 1).
+3. **Base witnesses.** For each pair of different normal forms over at most three products, there
+   is an input that separates them; planted on the support, with zero products elsewhere, it
+   separates the full terms.
+
+The base witnesses are concrete. On V100 and A100, take `x = 0.0066986… × 0.0047111… ≈ 3.156·10⁻⁵`
+and `y = 56224 × (105 · 2^-24) ≈ 0.351877`:
+
+| Chain | Output | |
+| --- | --- | --- |
+| `[x y]` | `0.35190868377685547` | `0x3eb42d60` |
+| `[x] [y]` | `0.35190868377685547` | `0x3eb42d60` |
+| `[y] [x]` | `0.35190874338150024` | `0x3eb42d62` |
+| exact `x + y` | `0.35190877068…` | |
+
+The product `y` has a subnormal factor, so the exponent the hardware sees for it is `15 + (−14) =
+1`, although its value is about `0.35`. In any block that holds `y`, the grid is `2^(1 − 23) =
+2^-22`, and `x` keeps only 132 units of `2^-22`. When `y` has been rounded by an earlier block, it
+enters the next block as a binary32 accumulator with exponent `−2`; the grid is `2^-25`, and 1,058
+units of `2^-25` of `x` survive, two units of the last place more. The pair `[x] [y]` against `[x y]`
+is separated by exchanging the roles of the two products. Lean turns this into a theorem about
+all chains: [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377) shows that two chains holding `x` and `y` in different
+patterns differ on an input supported on `{x, y}`, given five concrete block evaluations, which
+[`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485) and
+[`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) discharge by kernel evaluation (H100 needs different words:
+`x = 0x0052 × 0x6587`, `y = 0x0ba7 × 0x3ff9`, where `[x] [y]` is three units in the last place
+above `[x y] = [y] [x]`).
+
+On the AMD models the witnesses are kernel-checked: products `p₀ ≈ 0.002458`, `p₁ ≈ 12.41` and
+`p₂ ≈ 0.000948` give `((p₀ + p₁) + p₂) = 12.4131507…` but `((p₀ + p₂) + p₁) = 12.4131498…` on
+both CDNA 1 and CDNA 2, and on CDNA 1 the chains `[p₀] [p₁ p₂]` and `[p₀ p₁ p₂]` agree with the
+second, as the merge law says ([`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35)). On
+CDNA 3, two products separate the three chain patterns ([`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47)).
+
+**Status.** Every enumeration agrees with the statement: chains and terms over 2 and 3 products
+on all variants, and terms over 4 products on V100, H100, CDNA 1, CDNA 3 and SFMA, gave no unsound
+class, and every pair of classes was separated, directly by an input found by search or through a
+support of at most three products. The exceptions are on CDNA 1 bf16: its chains needed the tie
+input above, and its terms with additions near binary32's underflow threshold are not yet all
+separated. In Lean, completeness is proved for two products on V100, A100 and H100. Two lemmas would give it for
+all chains there: that an ordered block partition is determined by its pairwise patterns (step 2),
+and that an fp16 block started from `+0` never returns `−0` (step 1, to drop empty parts).
+
+## One instruction is not one rounding
+
+A natural abstraction treats each matrix instruction as one operation: it adds its `k` products
+and the incoming accumulator exactly and rounds once, so the products inside one instruction have
+no order of their own, and the reduction order is the chain of instructions. Yang, Riasanovsky,
+Deng and Sarkar ([arXiv:2609.11356](https://arxiv.org/abs/2609.11356), September 2026) state this
+assumption for NVIDIA's fp16, bf16 and tf32 instructions (their Section 3.2.1) and report that
+their measurements, made on GB300, agree with it. On the models of V100, A100 and CDNA 1–3 it is
+both unsound and incomplete, because an instruction whose `k` exceeds the FMA size is a chain of
+block FMAs.
+
+**Unsound: it accepts a rewrite that changes the bits.** Exchange the products at `k = 0` and
+`k = 15` inside one `k = 16` instruction. A single rounding cannot see the change; a chain of
+blocks can, because the two products move to different blocks.
+
+| Variant | Blocks per `k = 16` instruction | In order | `k = 0` and `k = 15` exchanged | Lean |
+| --- | --- | --- | --- | --- |
+| V100 (`HMMA.844`) | 4 × 4 | `−14.43653488…` | `−14.43653583…` | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17) |
+| A100 (`HMMA.1688`) | 2 × 8 | `4.57211368…·10⁻⁴` | `4.57211397…·10⁻⁴` | [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27) |
+| CDNA 1 | 4 × 4 | `487.12280…` | `487.12277…` | [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16) |
+| CDNA 2 | 4 × 4 | `239.79177…` | `239.79176…` | [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26) |
+| CDNA 3 | 2 × 8 | `−0.0011084491…` | `−0.0011084490…` | [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
+| H100 (`HMMA.16816`) | 1 × 16 | never changes | | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
+
+Each witness has two or three nonzero products and zeros elsewhere; the outputs differ in the last
+place.
+
+**Incomplete: it rejects rewrites that preserve the bits.** One `k = 16` instruction and two
+`k = 8` instructions round a different number of times under the abstraction, but on V100, A100
+and CDNA 1–3 both are the same chain of block FMAs and give the same bits on every input. On
+CDNA 2, moving `C` out of a block into a separate addition preserves the bits (the `c`-split law),
+while the abstraction counts one rounding against two. A checker built on the abstraction would
+keep such kernels apart, and would merge kernels that differ only in the order of products inside
+one instruction. Whether the second situation arises in compiled kernels has not been checked
+here.
+
+## Deciding equivalence
+
+Completeness turns into a decision procedure that always gives evidence:
+
+1. Compute both normal forms. If they are equal, the terms are **equivalent**, and the chain of
+   laws that rewrote one into the other is the certificate.
+2. Otherwise, search the supports of at most three products for one on which the restricted
+   normal forms differ; step 2 of the completeness proof guarantees one exists.
+3. Look up an input that separates the two small restricted terms (a finite table per variant,
+   filled by search), place it on the support, and set every other product to zero.
+4. Evaluate both full terms on the model and confirm that the output words differ. The procedure
+   returns this input only after the check, so a wrong table entry or a gap in the theory would
+   surface as an undecided case rather than a wrong answer.
+
+The normal forms take nearly linear time in the size of the terms, and the support search
+examines `O(n³)` restrictions for `n` products. On 210 random pairs of chain and split-K schedules over 6
+products (30 per variant on V100, A100, H100, CDNA 1, 2 and 3, and SFMA), it found 40 pairs
+equivalent and 170 different, and gave a separating input, confirmed on the model, for every one
+of the 170; no pair was left undecided.
+
+## Applications and value
+
+### Split-K, stream-K and the placement of `C`
+
+For a `k = 64` entry, ten common configurations (no split, split by 2 or 4 with partials combined
+serially or pairwise, stream-K cuts after 24 or 16 products, each with `C` in the first block or in
+the epilogue) give **ten different bitwise classes on every model**, V100, A100, H100 and CDNA 1,
+2 and 3. They also differ often on ordinary data:
+
+| Pair of configurations (random dense inputs, out of 60) | V100 | A100 | H100 | CDNA 1 | CDNA 2 | CDNA 3 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| No split against split-K by 2 | 45 | 36 | 29 | 33 | 28 | 33 |
+| `C` in the first block against `C` in the epilogue | 7 | 5 | 4 | 6 | 6 | 8 |
+| Split-K by 4, serial against pairwise combination | 20 | 12 | 19 | 13 | 16 | 20 |
+| Stream-K cut after 24 against after 16 products | 35 | 28 | 33 | 24 | 31 | 35 |
+
+What is safe follows from the same theory: `BLOCK_K`, the tile shapes `BLOCK_M` and `BLOCK_N`,
+the number of warps and of pipeline stages, and the instruction shape (when its `k` is a multiple
+of `K`) never change the bits on any modeled variant, as long as they leave the block sequence of
+every entry unchanged, which holds when the compiler still feeds the products to the matrix
+multiplier in increasing `k`. A split-K with atomic additions is also covered: two partials added atomically
+into a buffer that starts at `+0` give the same bits in either order (`(0 ⊕ P₁) ⊕ P₂` and
+`(0 ⊕ P₂) ⊕ P₁` agree by commutativity), but with three partials, or with `C` already in the
+buffer, the arrival order changes the result on some input.
+
+### Batch invariance
+
+A serving system is batch-invariant when the term for each output entry does not depend on the
+batch size `M`. With MMAlgebra this becomes checkable: enumerate the configurations a launch
+heuristic picks for each `M`, compute the term for one entry under each, and decide whether they
+are equivalent. If not, the separating input, embedded as one row of `A` in batches of the two
+sizes, is a test case that shows the difference. Today's batch-invariant modes fix one
+configuration for all shapes; the algebra says which other configurations could be allowed
+without changing a bit, and shows with a concrete input that each excluded one changes some.
+
+### Reproducible autotuning
+
+The configurations of a kernel fall into equivalence classes per architecture. Restricting an
+autotuner to the class of a reference configuration keeps the results bitwise reproducible while
+it still tunes everything that does not change the numerics; on rigid hardware that means tile
+shapes, `BLOCK_K`, warps and stages (while the block sequence is unchanged), and on CDNA 1 and
+CDNA 2 the classes are larger. Triton's
+[`triton.autotune`](https://triton-lang.org/main/python-api/generated/triton.autotune.html) already
+accepts a pruning function (`prune_configs_by` with `early_config_prune`) through which such a
+restriction can be applied.
+
+### Across GPUs
+
+The term of a schedule is portable; its bits are not. The same term gives different bits on
+different variants, since their block FMAs differ, and the algebra says which rewrites are safe on
+each target. Because the models are executable, a term can also be evaluated on a CPU to obtain
+the exact bits a modeled GPU would return, which makes a reference result for one GPU checkable
+on another machine. Identical bits across vendors need a common semantics instead, such as the
+[correctly rounded Ozaki schemes](/TC-EFT/ozaki/correct-rounding/).
+
+### Who benefits, and how this compares
+
+Engineers of LLM inference and of reinforcement learning, who need a request's numerics to be
+independent of the batch or the rollout and the trainer to agree; kernel and compiler engineers,
+who want to know whether a transformation or a tuning choice can change results; and numerical
+analysts, who get exact statements in place of rules of thumb.
+
+| Approach | What it gives | What MMAlgebra adds |
+| --- | --- | --- |
+| Fixing one kernel configuration (Thinking Machines, SGLang, vLLM) | Batch invariance by construction, at a cost in throughput | Which other configurations are provably safe, and a witness for each unsafe one |
+| Library guarantees (cuBLAS, PyTorch) | Run-to-run reproducibility under fixed versions and hardware | Reasons tied to the schedule, valid across configurations |
+| Correctly rounded or order-invariant arithmetic (RepDL, Xie, Zhang and Chen, [arXiv:2510.09180](https://arxiv.org/abs/2510.09180)) | Bits independent of order and platform, by changing the arithmetic | Reproducibility of the native kernels, where it holds |
+| Revealing accumulation orders by testing (FPRev, Xie, Gao, Wang and Xue, [arXiv:2411.00442](https://arxiv.org/abs/2411.00442), USENIX ATC 2025) and bit-accurate models of MMA units (MMA-Sim, Xie, Xu, Wang, Yang and Yang, [arXiv:2511.10909](https://arxiv.org/abs/2511.10909); Khattak, Mikaitis and Graziani) | The order and semantics of the hardware | The equational theory that the semantics induce on schedules, with proofs |
+| Static bitwise-equivalence checking of compiled kernels (Yang et al., [arXiv:2609.11356](https://arxiv.org/abs/2609.11356)) | Equivalence classes of compiled Triton kernels from PTX and AMDGCN, validated on 51,152 configurations on GB300 and 4,500 on gfx942, used to prune Triton's autotuner; on reductions and GEMMs it returns 1.0 to 2.5 times the true number of classes, and it reports classes rather than separating inputs | Semantics from validated block-FMA models instead of one rounding per instruction; laws proved for every input on the Tensor Core models; completeness, with a separating input for every inequivalent pair it decides; the extra equivalences of CDNA 1 and CDNA 2 |
+
+The closest work is Yang et al.'s checker, which already works on real compiled kernels, covers
+reductions beyond GEMM and attention, and was measured on Hopper and Blackwell GPUs, none of which
+MMAlgebra does yet. The two are complementary: the algebra could serve as the arithmetic core of
+such a checker on the architectures it models.
+
+What is not new should be said plainly. That only identical schedules reproduce on rigid
+hardware matches practitioners' experience. The contribution is the proofs, the completeness
+result with its reduction to three products, the counterexamples to a natural abstraction, the
+AMD exceptions, and a decision procedure that always returns evidence.
+
+## Triton integration plan
+
+The goal is a reproducibility checker for Triton GEMM kernels: given a kernel, its autotuning
+configurations and a target architecture, report which configurations give identical bits, and
+for any two that do not, an input that shows it.
+
+1. **Extract the term.** For one output entry, read off the reduction: the K-loop over `BLOCK_K`
+   steps with `tl.dot` accumulating into a register (`acc = tl.dot(a, b, acc)`), a split over K
+   through a program id with partials combined by atomic additions or a second pass, and the
+   epilogue that adds `C` or a bias. The first front end will match this canonical structure in
+   Triton's intermediate representation, where the loop, the dot operations and the atomics are
+   explicit, and will reject kernels it does not understand rather than guess.
+2. **Lower to block FMAs.** Map each `tl.dot` to the MMA or MFMA instruction the compiler selects
+   for the target and data type, and that instruction to its chain of block FMAs from the models
+   (`HMMA.844` as four blocks of four on V100, `HMMA.1688` as two blocks of eight on A100, and so
+   on). Instructions without a model, such as Hopper's `wgmma` and Blackwell's `tcgen05.mma`, are
+   reported as unsupported.
+3. **Decide per architecture.** Group the configurations into classes with the decision
+   procedure, and attach a separating input to every pair of classes.
+4. **Reproducible autotuning.** Offer a pruning function for `triton.autotune` that keeps only the
+   configurations equivalent to a reference configuration.
+5. **Batch-invariance verification.** Given the launch heuristic as a function of `(M, N, K)`,
+   prove that the term of every entry is independent of `M` over a range of sizes, or return two
+   sizes and an input on which they disagree.
+6. **Confirm on hardware.** Run the separating inputs on GPUs of each modeled architecture, to
+   test the models where the recorded data is thin.
+
+## Roadmap and open problems
+
+- **Completeness in Lean.** The two lemmas named above (ordered partitions are determined by
+  their pairwise patterns; an fp16 block started from `+0` never returns `−0`), then completeness
+  for terms with additions, and for the AMD models beyond base witnesses.
+- **The AMD laws in Lean.** The CDNA 1 merge law and the CDNA 2 `c`-split law are tested and follow
+  directly from the block formulas, but are not yet theorems.
+- **Extremes of the formats.** CDNA 1 bf16 terms with additions near binary32's underflow
+  threshold are not fully classified, and FP8 is not covered (CDNA 3's FP8 blocks group odd and
+  even products separately and depend on positions).
+- **Newer instructions.** WGMMA on Hopper and the `tcgen05` instructions of Blackwell have no model
+  in this repository.
+- **Attention.** Online softmax rescales the accumulator between block FMAs, so its terms need a
+  scaling operation, with laws of its own.
+- **Epilogues.** `β·C` with `β ≠ 1`, bias and activation functions add multiplications and other
+  operations to the terms.
+- **Hardware confirmation** of the separating inputs, and the **Triton front end** above.
+
+## Evidence
+
+| Claim | Evidence | Where |
+| --- | --- | --- |
+| Products in a block act as a multiset (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
+| Zero products are invisible (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230) |
+| A chain on an input supported on `S` equals the chain restricted to `S` | Proved | [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) |
+| Chains with different patterns of two products differ (V100, A100, H100 fp16) | Proved, with kernel-checked base witnesses | [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377), [`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485), [`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) |
+| Multiset law on CDNA 1 and CDNA 3 (for the sum before the final rounding); order dependence on CDNA 2 | Proved in the AMD library | [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L37), [`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L53) |
+| Base witnesses on CDNA 1, 2 and 3 | Kernel-checked | [`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35), [`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47) |
+| One instruction is not one rounding | Kernel-checked | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17), [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27), [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16), [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26), [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
+| The worked examples on this page | Kernel-checked | [`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29), [`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13), [`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23) |
+| The laws on every modeled variant | Random testing, 300 trials per law and variant | [`laws.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/laws.py) |
+| Normal forms sound and complete over 2 and 3 products on every variant, and over 4 on five variants | Exhaustive enumeration, separating inputs found by search | [`classes.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/classes.py), [`terms.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms.py), [`terms4.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms4.py), [`bf16_extremes.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/bf16_extremes.py) |
+| Completeness reduces to supports of at most 3 products | Exhaustive: chains over up to 6 products, terms over 4 | [`restriction_lemma.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/restriction_lemma.py), [`terms4.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms4.py) |
+| The decision procedure, the configuration study, the one-rounding comparison | 210 random pairs; 10 configurations on 6 variants | [`decide_equiv.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/decide_equiv.py), [`config_study.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/config_study.py), [`oneround.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/oneround.py) |
+| The Python port computes the Lean models' output words | 1,800 random blocks on 12 variants, bit for bit | [`validate_port.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/validate_port.py) |
+| The models match the hardware | Replayed measurements and published vectors; assumed beyond them | [NVIDIA validation](/TC-EFT/model/validation/), [AMD validation](/TC-EFT/amd/validation/) |
+
+Every theorem uses only Lean's standard axioms (`propext`, `Classical.choice`, `Quot.sound`),
+which the project's audit checks. The prototype's recorded outputs are in
+[`mmalgebra/prototype/results/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra/prototype/results),
+and `python3 scripts/check.py --prototype` in `mmalgebra/` reproduces them. The theorems are about
+the models; that GPUs behave like them rests on the models' validation.
