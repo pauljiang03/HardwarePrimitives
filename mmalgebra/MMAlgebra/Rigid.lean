@@ -428,6 +428,100 @@ theorem nfR_valid : ∀ (t : Term) (U : LTree Bool Bool), nfL rigidLabels t = so
         rcases two_perm (sortKids_perm [(false, W), (false, V)]) with h | h <;> rw [h] <;>
           simp [rvalid, rvalidKids, ih₁ W hq₁, ih₂ V hq₂]
 
+/-! ## Block sizes of normal forms -/
+
+mutual
+/-- Every block node has at most `K` products: the normal form of a term whose blocks have `K`
+slots. -/
+def rfits (K : ℕ) : LTree Bool Bool → Bool
+  | .leaf _ => true
+  | .node true cs => decide ((prodKids cs).length ≤ K) && rfitsKids K cs
+  | .node false cs => rfitsKids K cs
+/-- Every child fits. -/
+def rfitsKids (K : ℕ) : List (Bool × LTree Bool Bool) → Bool
+  | [] => true
+  | (_, t) :: cs => rfits K t && rfitsKids K cs
+end
+
+theorem rfitsKids_eq (K : ℕ) : ∀ cs : List (Bool × LTree Bool Bool),
+    rfitsKids K cs = cs.all fun c => rfits K c.2
+  | [] => rfl
+  | (e, t) :: cs => by simp [rfitsKids, rfitsKids_eq K cs]
+
+theorem rfitsKids_perm (K : ℕ) {cs ds : List (Bool × LTree Bool Bool)} (h : cs.Perm ds) :
+    rfitsKids K cs = rfitsKids K ds := by
+  rw [rfitsKids_eq, rfitsKids_eq]
+  apply Bool.eq_iff_iff.mpr
+  simp only [List.all_eq_true]
+  exact ⟨fun h' c hc => h' c (h.symm.subset hc), fun h' c hc => h' c (h.subset hc)⟩
+
+theorem length_blockLeaves_le (I : List (Option ℕ)) : (blockLeaves I).length ≤ I.length := by
+  unfold blockLeaves; exact List.length_filterMap_le _ _
+
+/-- **Normal forms of terms with `K`-slot blocks fit `K`.** -/
+theorem nfR_fits (K : ℕ) : ∀ (t : Term) (U : LTree Bool Bool), TermWF K t →
+    nfL rigidLabels t = some U → rfits K U = true
+  | .zero, U, _, h => by simp [nfL] at h
+  | .init, U, _, h => by simp [nfL] at h
+  | .hole, U, _, h => by simp [nfL] at h
+  | .blk t I, U, hw, h => by
+    have ih := nfR_fits K t
+    change mk true (optKid true (nfL rigidLabels t) ++
+      (blockLeaves I).map fun i => ((false, leaf i) : Bool × LTree Bool Bool)) = some U at h
+    have hkids : ∀ c ∈ optKid true (nfL rigidLabels t) ++
+        (blockLeaves I).map (fun i => ((false, leaf i) : Bool × LTree Bool Bool)),
+        rfits K c.2 = true := by
+      intro c hc
+      rcases List.mem_append.mp hc with hc | hc
+      · cases hq : nfL rigidLabels t with
+        | none => rw [hq] at hc; simp [optKid] at hc
+        | some u =>
+          rw [hq] at hc; simp only [optKid, List.mem_singleton] at hc; subst hc
+          exact ih u hw.1 hq
+      · obtain ⟨i, _, rfl⟩ := List.mem_map.mp hc
+        simp [rfits]
+    have hn : (prodKids (optKid true (nfL rigidLabels t) ++
+        (blockLeaves I).map fun i => ((false, leaf i) : Bool × LTree Bool Bool))).length ≤ K := by
+      rw [prodKids_append, prodKids_optKid_true, prodKids_leafs, List.nil_append, ← hw.2]
+      exact length_blockLeaves_le I
+    generalize optKid true (nfL rigidLabels t) ++
+      (blockLeaves I).map (fun i => ((false, leaf i) : Bool × LTree Bool Bool)) = ks at h hkids hn
+    match ks, h, hkids, hn with
+    | [(e, w)], h, hkids, _ =>
+      simp only [mk, Option.some.injEq] at h
+      rw [← h]
+      exact hkids (e, w) (by simp)
+    | k₁ :: k₂ :: ks, h, hkids, hn =>
+      simp only [mk, Option.some.injEq] at h; subst h
+      have hp := sortKids_perm (k₁ :: k₂ :: ks)
+      simp only [rfits, Bool.and_eq_true, decide_eq_true_eq]
+      refine ⟨?_, ?_⟩
+      · rw [(prodKids_perm hp).length_eq]; exact hn
+      · rw [rfitsKids_perm K hp, rfitsKids_eq]
+        simp only [List.all_eq_true]
+        intro c hc; exact hkids c hc
+  | .add t₁ t₂, U, hw, h => by
+    have ih₁ := nfR_fits K t₁
+    have ih₂ := nfR_fits K t₂
+    change mk false (optKid false (nfL rigidLabels t₁) ++ optKid false (nfL rigidLabels t₂)) =
+      some U at h
+    cases hq₁ : nfL rigidLabels t₁ with
+    | none =>
+      cases hq₂ : nfL rigidLabels t₂ with
+      | none => rw [hq₁, hq₂] at h; simp [optKid, mk] at h
+      | some V => rw [hq₁, hq₂] at h; simp only [optKid, List.nil_append, mk, Option.some.injEq] at h
+                  subst h; exact ih₂ V hw.2 hq₂
+    | some W =>
+      cases hq₂ : nfL rigidLabels t₂ with
+      | none => rw [hq₁, hq₂] at h; simp only [optKid, List.append_nil, mk, Option.some.injEq] at h
+                subst h; exact ih₁ W hw.1 hq₁
+      | some V =>
+        rw [hq₁, hq₂] at h
+        simp only [optKid, List.singleton_append, mk, Option.some.injEq] at h
+        subst h
+        rcases two_perm (sortKids_perm [(false, W), (false, V)]) with h | h <;> rw [h] <;>
+          simp [rfits, rfitsKids, ih₁ W hw.1 hq₁, ih₂ V hw.2 hq₂]
+
 /-! ## Relabeling leaves -/
 
 section Relabel
@@ -539,6 +633,21 @@ theorem rvalidKids_mapKids (g : ℕ → ℕ) : ∀ cs : List (Bool × LTree Bool
   | (e, t) :: cs => by simp only [mapKids, rvalidKids, rvalid_mapLeaves g t, rvalidKids_mapKids g cs]
 end
 
+mutual
+theorem rfits_mapLeaves (K : ℕ) (g : ℕ → ℕ) : ∀ T : LTree Bool Bool,
+    rfits K (mapLeaves g T) = rfits K T
+  | .leaf i => rfl
+  | .node true cs => by
+    simp only [mapLeaves, rfits, rfitsKids_mapKids K g cs, prodKids_mapKids, List.length_map]
+  | .node false cs => by
+    simp only [mapLeaves, rfits, rfitsKids_mapKids K g cs]
+theorem rfitsKids_mapKids (K : ℕ) (g : ℕ → ℕ) : ∀ cs : List (Bool × LTree Bool Bool),
+    rfitsKids K (mapKids g cs) = rfitsKids K cs
+  | [] => rfl
+  | (e, t) :: cs => by
+    simp only [mapKids, rfitsKids, rfits_mapLeaves K g t, rfitsKids_mapKids K g cs]
+end
+
 /-! ## Base witnesses from fingerprint tables -/
 
 /-- Every two-leaf code. -/
@@ -584,17 +693,17 @@ theorem sep_of_table {γ δ : Type} (codes : List γ) (hall : ∀ κ, κ ∈ cod
 /-- **The rigid base step.** If inputs on `{0, 1}` separate the valid two-leaf normal forms and
 inputs on `{0, 1, 2}` separate the valid three-leaf ones, then any two terms over the same products,
 at most three, with different normal forms are separated by some input. -/
-theorem rigid_base (ins2 ins3 : List (ℕ → α))
-    (h2 : ∀ κ₁ κ₂ : Bool × Bool × Bool, rvalid (realize2 κ₁ 0 1) = true →
-      rvalid (realize2 κ₂ 0 1) = true → κ₁ ≠ κ₂ →
+theorem rigid_base_fits (ins2 ins3 : List (ℕ → α))
+    (h2 : ∀ κ₁ κ₂ : Bool × Bool × Bool, (rvalid (realize2 κ₁ 0 1) && rfits K (realize2 κ₁ 0 1)) = true →
+      (rvalid (realize2 κ₂ 0 1) && rfits K (realize2 κ₂ 0 1)) = true → κ₁ ≠ κ₂ →
       ∃ q ∈ ins2, evR m K q (realize2 κ₁ 0 1) ≠ evR m K q (realize2 κ₂ 0 1))
-    (h3 : ∀ κ₁ κ₂ : Shape3 Bool Bool, rvalid (κ₁.realize 0 1 2) = true →
-      rvalid (κ₂.realize 0 1 2) = true → κ₁ ≠ κ₂ →
+    (h3 : ∀ κ₁ κ₂ : Shape3 Bool Bool, (rvalid (κ₁.realize 0 1 2) && rfits K (κ₁.realize 0 1 2)) = true →
+      (rvalid (κ₂.realize 0 1 2) && rfits K (κ₂.realize 0 1 2)) = true → κ₁ ≠ κ₂ →
       ∃ q ∈ ins3, evR m K q (κ₁.realize 0 1 2) ≠ evR m K q (κ₂.realize 0 1 2)) :
     ∀ t₁ t₂ : Term, TermWF K t₁ → TermWF K t₂ → t₁.leaves.Nodup → t₂.leaves.Nodup →
       t₁.leaves.length ≤ 3 → (∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) → nfL rigidLabels t₁ ≠ nfL rigidLabels t₂ →
       ∃ p, True ∧ evRO m K p (nfL rigidLabels t₁) ≠ evRO m K p (nfL rigidLabels t₂) := by
-  intro t₁ t₂ _ _ n₁ n₂ hlen hl hne
+  intro t₁ t₂ hw₁ hw₂ n₁ n₂ hlen hl hne
   have F := labelsNF rigidLabels
   obtain ⟨U₁, hU₁⟩ : ∃ U, nfL rigidLabels t₁ = some U := by
     cases h : nfL rigidLabels t₁ with
@@ -620,6 +729,8 @@ theorem rigid_base (ins2 ins3 : List (ℕ → α))
   have c₂ := nfL_canon rigidLabels t₂ n₂ U₂ hU₂
   have v₁ := nfR_valid t₁ U₁ hU₁
   have v₂ := nfR_valid t₂ U₂ hU₂
+  have f₁ := nfR_fits K t₁ U₁ hw₁ hU₁
+  have f₂ := nfR_fits K t₂ U₂ hw₂ hU₂
   have hUne : U₁ ≠ U₂ := by intro h; exact hne (by rw [hU₁, hU₂, h])
   have m₁ : ∀ x, x ∈ U₁.leaves ↔ x ∈ t₁.leaves := fun x => p₁.mem_iff
   have m₂ : ∀ x, x ∈ U₂.leaves ↔ x ∈ t₁.leaves := fun x => by rw [p₂.mem_iff, hl x]
@@ -634,7 +745,9 @@ theorem rigid_base (ins2 ins3 : List (ℕ → α))
     have hκ : κ₁ ≠ κ₂ := by intro h; subst h; exact hUne rfl
     rw [realize2_lab κ₁ a b, rvalid_mapLeaves] at v₁
     rw [realize2_lab κ₂ a b, rvalid_mapLeaves] at v₂
-    obtain ⟨q, _, hq⟩ := h2 κ₁ κ₂ v₁ v₂ hκ
+    rw [realize2_lab κ₁ a b, rfits_mapLeaves] at f₁
+    rw [realize2_lab κ₂ a b, rfits_mapLeaves] at f₂
+    obtain ⟨q, _, hq⟩ := h2 κ₁ κ₂ (by rw [v₁, f₁]; rfl) (by rw [v₂, f₂]; rfl) hκ
     refine ⟨fun x => if x = a then q 0 else q 1, trivial, ?_⟩
     rw [hU₁, hU₂]
     simp only [evRO]
@@ -654,7 +767,9 @@ theorem rigid_base (ins2 ins3 : List (ℕ → α))
     have hκ : κ₁ ≠ κ₂ := by intro h; subst h; exact hUne rfl
     rw [realize3_lab κ₁ a b c, rvalid_mapLeaves] at v₁
     rw [realize3_lab κ₂ a b c, rvalid_mapLeaves] at v₂
-    obtain ⟨q, _, hq⟩ := h3 κ₁ κ₂ v₁ v₂ hκ
+    rw [realize3_lab κ₁ a b c, rfits_mapLeaves] at f₁
+    rw [realize3_lab κ₂ a b c, rfits_mapLeaves] at f₂
+    obtain ⟨q, _, hq⟩ := h3 κ₁ κ₂ (by rw [v₁, f₁]; rfl) (by rw [v₂, f₂]; rfl) hκ
     refine ⟨fun x => if x = a then q 0 else if x = b then q 1 else q 2, trivial, ?_⟩
     rw [hU₁, hU₂]
     simp only [evRO]
@@ -674,6 +789,20 @@ theorem rigid_base (ins2 ins3 : List (ℕ → α))
         simp only [e, if_neg (show c ≠ a by omega), if_neg (show c ≠ b by omega)]
     rw [hc, hc]; exact hq
 
+theorem rigid_base (ins2 ins3 : List (ℕ → α))
+    (h2 : ∀ κ₁ κ₂ : Bool × Bool × Bool, rvalid (realize2 κ₁ 0 1) = true →
+      rvalid (realize2 κ₂ 0 1) = true → κ₁ ≠ κ₂ →
+      ∃ q ∈ ins2, evR m K q (realize2 κ₁ 0 1) ≠ evR m K q (realize2 κ₂ 0 1))
+    (h3 : ∀ κ₁ κ₂ : Shape3 Bool Bool, rvalid (κ₁.realize 0 1 2) = true →
+      rvalid (κ₂.realize 0 1 2) = true → κ₁ ≠ κ₂ →
+      ∃ q ∈ ins3, evR m K q (κ₁.realize 0 1 2) ≠ evR m K q (κ₂.realize 0 1 2)) :
+    ∀ t₁ t₂ : Term, TermWF K t₁ → TermWF K t₂ → t₁.leaves.Nodup → t₂.leaves.Nodup →
+      t₁.leaves.length ≤ 3 → (∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) → nfL rigidLabels t₁ ≠ nfL rigidLabels t₂ →
+      ∃ p, True ∧ evRO m K p (nfL rigidLabels t₁) ≠ evRO m K p (nfL rigidLabels t₂) :=
+  rigid_base_fits ins2 ins3
+    (fun κ₁ κ₂ v₁ v₂ hκ => h2 κ₁ κ₂ (Bool.and_eq_true_iff.mp v₁).1 (Bool.and_eq_true_iff.mp v₂).1 hκ)
+    (fun κ₁ κ₂ v₁ v₂ hκ => h3 κ₁ κ₂ (Bool.and_eq_true_iff.mp v₁).1 (Bool.and_eq_true_iff.mp v₂).1 hκ)
+
 /-- **Completeness for terms on a rigid machine.** With the laws of a rigid multiplier and inputs
 that separate the normal forms on two and three products, two terms over the same products, each
 once, with different rigid normal forms differ on an input that is `z` outside at most three of the
@@ -690,6 +819,25 @@ theorem rigid_term_complete (A : RigidAlg m K) (ins2 ins3 : List (ℕ → α))
   obtain ⟨s, q, hs, hz, _, hq⟩ := term_complete (labelsNF rigidLabels) A.slot (fun _ => True) (evRO m K)
     (fun t hw hn p _ => rigid_sound A p t hw hn)
     (rigid_base ins2 ins3
+      (sep_of_table codes2All mem_codes2All _ ins2 (fun κ q => evR m K q (realize2 κ 0 1)) hnd2)
+      (sep_of_table codes3All mem_codes3All _ ins3 (fun κ q => evR m K q (κ.realize 0 1 2)) hnd3))
+    t₁ t₂ hw₁ hw₂ n₁ n₂ hl hne
+  exact ⟨s, q, hs, hz, hq⟩
+
+/-- **Completeness for terms on a rigid machine, with small blocks.** As `rigid_term_complete`, with
+fingerprint tables over the normal forms whose blocks fit `K` slots only (for `K < 3`). -/
+theorem rigid_term_complete_fits (A : RigidAlg m K) (ins2 ins3 : List (ℕ → α))
+    (hnd2 : ((codes2All.filter fun κ => rvalid (realize2 κ 0 1) && rfits K (realize2 κ 0 1)).map
+      fun κ => ins2.map fun q => evR m K q (realize2 κ 0 1)).Nodup)
+    (hnd3 : ((codes3All.filter fun κ => rvalid (κ.realize 0 1 2) && rfits K (κ.realize 0 1 2)).map
+      fun κ => ins3.map fun q => evR m K q (κ.realize 0 1 2)).Nodup)
+    (t₁ t₂ : Term) (hw₁ : TermWF K t₁) (hw₂ : TermWF K t₂) (n₁ : t₁.leaves.Nodup)
+    (n₂ : t₂.leaves.Nodup) (hl : ∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) (hne : nfR t₁ ≠ nfR t₂) :
+    ∃ (s : List ℕ) (q : ℕ → α), s.length ≤ 3 ∧ (∀ i, i ∉ s → q i = A.z) ∧
+      eval m q m.zero m.zero t₁ ≠ eval m q m.zero m.zero t₂ := by
+  obtain ⟨s, q, hs, hz, _, hq⟩ := term_complete (labelsNF rigidLabels) A.slot (fun _ => True) (evRO m K)
+    (fun t hw hn p _ => rigid_sound A p t hw hn)
+    (rigid_base_fits ins2 ins3
       (sep_of_table codes2All mem_codes2All _ ins2 (fun κ q => evR m K q (realize2 κ 0 1)) hnd2)
       (sep_of_table codes3All mem_codes3All _ ins3 (fun κ q => evR m K q (κ.realize 0 1 2)) hnd3))
     t₁ t₂ hw₁ hw₂ n₁ n₂ hl hne

@@ -13,6 +13,7 @@ import MMAlgebraMC.RoundedMC
 import MMAlgebraMC.PairwiseMC
 import MMAlgebraMC.ChainBF16
 import MMAlgebraMC.Contracts
+import MMAlgebraMC.SFMA
 
 /-! # The reduction algebra on the AMD matrix-core model
 
