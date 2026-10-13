@@ -30,19 +30,18 @@ def crLabels : Labels Unit Unit := ⟨(), (), (), (), ()⟩
 /-- The normal form of correctly rounded nodes. -/
 abbrev nfC : Term → Option (LTree Unit Unit) := nfL crLabels
 
-/-- The laws of a matrix multiplier whose blocks and additions round the exact sum of their
-inputs: `rnd` is the rounding, `good` the words that it returns and that pass through an empty
-block, `G` a set of exact values closed under addition on which `rnd` returns good words (on the
-models, the multiples of `2^-149`), and `Adm` the admissible inputs (finite operands). -/
-structure CRAlg (m : Machine α β) (K : ℕ) where
+/-- The laws of a matrix multiplier whose results round exact sums: `rnd` is the rounding, `good`
+the words that it returns and that pass through an empty block, `G` a set of exact values closed
+under addition on which `rnd` returns good words (on the models, the multiples of `2^-149`), and
+`Adm` the admissible inputs (finite operands). Binary32 addition rounds the exact sum of its
+operands, and a product is a binary32 value. -/
+structure RoundLaws (m : Machine α β) where
   z : α
   slot : SlotZero m z
   rnd : ℚ → Option β
   good : β → Prop
   G : ℚ → Prop
   Adm : (ℕ → α) → Prop
-  block : ∀ p, Adm p → ∀ d (I : List (Option ℕ)), I.length = K → good d →
-    m.block d (I.map (Option.map p)) = rnd (m.val d + m.slotVal (I.map (Option.map p)))
   add : ∀ x y, m.add x y = rnd (m.val x + m.val y)
   rnd_val : ∀ w, good w → rnd (m.val w) = some w
   rnd_good : ∀ (x : ℚ) (w : β), G x → rnd x = some w → good w
@@ -50,10 +49,16 @@ structure CRAlg (m : Machine α β) (K : ℕ) where
   zero_good : good m.zero
   G_add : ∀ x y : ℚ, G x → G y → G (x + y)
   G_zero : G 0
-  G_val : ∀ w, G (m.val w)
+  G_good : ∀ w, good w → G (m.val w)
   G_pval : ∀ p, Adm p → ∀ i, G (m.pval (p i))
   /-- A product is a binary32 value: rounding it returns a word of that value. -/
   prod_exact : ∀ p, Adm p → ∀ i, ∃ w, rnd (m.pval (p i)) = some w ∧ m.val w = m.pval (p i)
+
+/-- The laws of correctly rounded nodes: besides `RoundLaws`, a block with `K` slots rounds the
+exact sum of its accumulator and its products. -/
+structure CRAlg (m : Machine α β) (K : ℕ) extends RoundLaws m where
+  block : ∀ p, Adm p → ∀ d (I : List (Option ℕ)), I.length = K → good d →
+    m.block d (I.map (Option.map p)) = rnd (m.val d + m.slotVal (I.map (Option.map p)))
 
 section Eval
 variable (m : Machine α β) (rnd : ℚ → Option β) (p : ℕ → α)
@@ -101,42 +106,37 @@ theorem sumCR_append (rnd : ℚ → Option β) (p : ℕ → α) :
     simp only [List.cons_append, sumCR, sumCR_append rnd p cs ds]
     cases evCR m rnd p t <;> cases sumCR m rnd p cs <;> cases sumCR m rnd p ds <;> simp <;> grind
 
-theorem evCR_good (A : CRAlg m K) (p : ℕ → α) (hp : A.Adm p) :
-    ∀ (U : LTree Unit Unit) (w : β), evCR m A.rnd p U = some w → A.good w := by
-  intro U w h
-  cases U with
-  | leaf i =>
-    simp only [evCR] at h
-    exact A.rnd_good _ _ (A.G_pval p hp i) h
-  | node l cs =>
+mutual
+theorem evCR_good (A : RoundLaws m) (p : ℕ → α) (hp : A.Adm p) :
+    ∀ (U : LTree Unit Unit) (w : β), evCR m A.rnd p U = some w → A.good w
+  | .leaf i, w, h => A.rnd_good _ _ (A.G_pval p hp i) h
+  | .node l cs, w, h => by
     simp only [evCR] at h
     cases hs : sumCR m A.rnd p cs with
     | none => rw [hs] at h; cases h
     | some s =>
       rw [hs] at h
-      simp only [Option.bind_some] at h
-      have hG : ∀ (cs : List (Unit × LTree Unit Unit)) s, sumCR m A.rnd p cs = some s → A.G s := by
-        intro cs
-        induction cs with
-        | nil => intro s h; simp only [sumCR, Option.some.injEq] at h; subst h; exact A.G_zero
-        | cons c cs ih =>
-          intro s h
-          obtain ⟨e, t⟩ := c
-          simp only [sumCR] at h
-          cases ht : evCR m A.rnd p t with
-          | none => rw [ht] at h; cases h
-          | some w =>
-            rw [ht] at h
-            cases hs' : sumCR m A.rnd p cs with
-            | none => rw [hs'] at h; cases h
-            | some s' =>
-              rw [hs'] at h
-              simp only [Option.bind_some, Option.map_some, Option.some.injEq] at h
-              subst h
-              exact A.G_add _ _ (A.G_val w) (ih s' hs')
-      exact A.rnd_good _ _ (hG cs s hs) h
+      exact A.rnd_good _ _ (sumCR_G A p hp cs s hs) h
+theorem sumCR_G (A : RoundLaws m) (p : ℕ → α) (hp : A.Adm p) :
+    ∀ (cs : List (Unit × LTree Unit Unit)) (s : ℚ), sumCR m A.rnd p cs = some s → A.G s
+  | [], s, h => by
+    simp only [sumCR, Option.some.injEq] at h; subst h; exact A.G_zero
+  | (e, t) :: cs, s, h => by
+    simp only [sumCR] at h
+    cases ht : evCR m A.rnd p t with
+    | none => rw [ht] at h; cases h
+    | some w =>
+      rw [ht] at h
+      cases hs' : sumCR m A.rnd p cs with
+      | none => rw [hs'] at h; cases h
+      | some s' =>
+        rw [hs'] at h
+        simp only [Option.bind_some, Option.map_some, Option.some.injEq] at h
+        subst h
+        exact A.G_add _ _ (A.G_good w (evCR_good A p hp t w ht)) (sumCR_G A p hp cs s' hs')
+end
 
-theorem sumCR_leafs (A : CRAlg m K) (p : ℕ → α) (hp : A.Adm p) (l : List ℕ) :
+theorem sumCR_leafs (A : RoundLaws m) (p : ℕ → α) (hp : A.Adm p) (l : List ℕ) :
     sumCR m A.rnd p (l.map fun i => (((), leaf i) : Unit × LTree Unit Unit)) =
       some ((l.map fun i => m.pval (p i)).sum) := by
   induction l with
@@ -183,12 +183,12 @@ theorem cr_sound (A : CRAlg m K) (p : ℕ → α) (hp : A.Adm p) :
       | i :: j :: rest =>
         show A.rnd _ = (sumCR m A.rnd p (sortKids ((i :: j :: rest).map
           fun i => (((), leaf i) : Unit × LTree Unit Unit)))).bind A.rnd
-        rw [sumCR_perm A.rnd p (sortKids_perm _), sumCR_leafs A p hp]
+        rw [sumCR_perm A.rnd p (sortKids_perm _), sumCR_leafs A.toRoundLaws p hp]
         rfl
     | some u =>
       show (evCR m A.rnd p u).bind _ = evCRO m A.rnd p m.zero (mk () ([((), u)] ++ _))
       rw [List.singleton_append]
-      have hg := evCR_good A p hp u
+      have hg := evCR_good A.toRoundLaws p hp u
       generalize hb : blockLeaves I = bl at hblk
       match bl with
       | [] =>
@@ -204,7 +204,7 @@ theorem cr_sound (A : CRAlg m K) (p : ℕ → α) (hp : A.Adm p) :
           fun i => (((), leaf i) : Unit × LTree Unit Unit)))).bind A.rnd
         rw [sumCR_perm A.rnd p (sortKids_perm _)]
         simp only [sumCR]
-        rw [sumCR_leafs A p hp]
+        rw [sumCR_leafs A.toRoundLaws p hp]
         cases h : evCR m A.rnd p u with
         | none => rfl
         | some d =>
@@ -234,7 +234,7 @@ theorem cr_sound (A : CRAlg m K) (p : ℕ → α) (hp : A.Adm p) :
         show (some m.zero).bind (fun x => (evCR m A.rnd p V).bind fun y => m.add x y) =
           evCR m A.rnd p V
         rw [Option.bind_some]
-        have hg := evCR_good A p hp V
+        have hg := evCR_good A.toRoundLaws p hp V
         cases h : evCR m A.rnd p V with
         | none => rfl
         | some y =>
@@ -245,7 +245,7 @@ theorem cr_sound (A : CRAlg m K) (p : ℕ → α) (hp : A.Adm p) :
       | none =>
         show (evCR m A.rnd p U).bind (fun x => (some m.zero).bind fun y => m.add x y) =
           evCR m A.rnd p U
-        have hg := evCR_good A p hp U
+        have hg := evCR_good A.toRoundLaws p hp U
         cases h : evCR m A.rnd p U with
         | none => rfl
         | some x =>
@@ -297,44 +297,44 @@ def codes3Unit : List (Shape3 Unit Unit) :=
 theorem mem_codes3Unit (κ : Shape3 Unit Unit) : κ ∈ codes3Unit := by
   cases κ <;> simp [codes3Unit]
 
-/-- **The correctly rounded base step.** If inputs on `{0, 1, 2}` separate the four trees on three
+/-- **The base step for unlabeled trees.** If inputs on `{0, 1, 2}` separate the four trees on three
 leaves, then any two terms over the same products, at most three, with different normal forms are
 separated by an admissible input. -/
-theorem cr_base (A : CRAlg m K) (ins3 : List (ℕ → α)) (hadm : ∀ q ∈ ins3, ∀ g : ℕ → ℕ,
+theorem unit_base (F : NormalForm Unit Unit) (A : RoundLaws m) (ins3 : List (ℕ → α)) (hadm : ∀ q ∈ ins3, ∀ g : ℕ → ℕ,
       A.Adm (fun x => q (g x)))
     (h3 : ∀ κ₁ κ₂ : Shape3 Unit Unit, κ₁ ≠ κ₂ →
       ∃ q ∈ ins3, evCR m A.rnd q (κ₁.realize 0 1 2) ≠ evCR m A.rnd q (κ₂.realize 0 1 2)) :
     ∀ t₁ t₂ : Term, TermWF K t₁ → TermWF K t₂ → t₁.leaves.Nodup → t₂.leaves.Nodup →
-      t₁.leaves.length ≤ 3 → (∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) → nfL crLabels t₁ ≠ nfL crLabels t₂ →
-      ∃ p, A.Adm p ∧ evCRO m A.rnd p m.zero (nfL crLabels t₁) ≠ evCRO m A.rnd p m.zero (nfL crLabels t₂) := by
+      t₁.leaves.length ≤ 3 → (∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) → F.nf t₁ ≠ F.nf t₂ →
+      ∃ p, A.Adm p ∧ evCRO m A.rnd p m.zero (F.nf t₁) ≠ evCRO m A.rnd p m.zero (F.nf t₂) := by
   intro t₁ t₂ _ _ n₁ n₂ hlen hl hne
-  obtain ⟨U₁, hU₁⟩ : ∃ U, nfL crLabels t₁ = some U := by
-    cases h : nfL crLabels t₁ with
+  obtain ⟨U₁, hU₁⟩ : ∃ U, F.nf t₁ = some U := by
+    cases h : F.nf t₁ with
     | some U => exact ⟨U, rfl⟩
     | none =>
       exfalso
-      have e₁ := (nfL_none_iff crLabels t₁).mp h
+      have e₁ := (F.none_iff t₁).mp h
       have e₂ : t₂.leaves = [] := List.eq_nil_iff_forall_not_mem.mpr fun i hi => by
         have := (hl i).mpr hi; rw [e₁] at this; simp at this
-      exact hne (by rw [h]; exact ((nfL_none_iff crLabels t₂).mpr e₂).symm)
-  obtain ⟨U₂, hU₂⟩ : ∃ U, nfL crLabels t₂ = some U := by
-    cases h : nfL crLabels t₂ with
+      exact hne (by rw [h]; exact ((F.none_iff t₂).mpr e₂).symm)
+  obtain ⟨U₂, hU₂⟩ : ∃ U, F.nf t₂ = some U := by
+    cases h : F.nf t₂ with
     | some U => exact ⟨U, rfl⟩
     | none =>
       exfalso
-      have e₂ := (nfL_none_iff crLabels t₂).mp h
+      have e₂ := (F.none_iff t₂).mp h
       have e₁ : t₁.leaves = [] := List.eq_nil_iff_forall_not_mem.mpr fun i hi => by
         have := (hl i).mp hi; rw [e₂] at this; simp at this
-      exact hne (by rw [h]; exact (nfL_none_iff crLabels t₁).mpr e₁)
-  have p₁ : U₁.leaves.Perm t₁.leaves := by have := oleaves_nfL crLabels t₁; rw [hU₁] at this; exact this
-  have p₂ : U₂.leaves.Perm t₂.leaves := by have := oleaves_nfL crLabels t₂; rw [hU₂] at this; exact this
-  have c₁ := nfL_canon crLabels t₁ n₁ U₁ hU₁
-  have c₂ := nfL_canon crLabels t₂ n₂ U₂ hU₂
+      exact hne (by rw [h]; exact (F.none_iff t₁).mpr e₁)
+  have p₁ : U₁.leaves.Perm t₁.leaves := by have := F.leaves t₁; rw [hU₁] at this; exact this
+  have p₂ : U₂.leaves.Perm t₂.leaves := by have := F.leaves t₂; rw [hU₂] at this; exact this
+  have c₁ := F.canon t₁ n₁ U₁ hU₁
+  have c₂ := F.canon t₂ n₂ U₂ hU₂
   have hUne : U₁ ≠ U₂ := by intro h; exact hne (by rw [hU₁, hU₂, h])
   have m₁ : ∀ x, x ∈ U₁.leaves ↔ x ∈ t₁.leaves := fun x => p₁.mem_iff
   have m₂ : ∀ x, x ∈ U₂.leaves ↔ x ∈ t₁.leaves := fun x => by rw [p₂.mem_iff, hl x]
   have hne' : t₁.leaves ≠ [] := by
-    intro h; have := (nfL_none_iff crLabels t₁).mpr h; rw [hU₁] at this; cases this
+    intro h; have := (F.none_iff t₁).mpr h; rw [hU₁] at this; cases this
   rcases small_support n₁ hlen hne' with ⟨a, ha⟩ | ⟨a, b, hab, ha⟩ | ⟨a, b, c, hab, hbc, ha⟩
   · exfalso; apply hUne
     rw [shape1 c₁ (p₁.nodup_iff.mpr n₁) (fun x => by rw [m₁, ha]),
@@ -378,7 +378,7 @@ theorem cr_term_complete (A : CRAlg m K) (ins3 : List (ℕ → α))
       eval m q m.zero m.zero t₁ ≠ eval m q m.zero m.zero t₂ :=
   term_complete (labelsNF crLabels) A.slot A.Adm (evCRO m A.rnd · m.zero)
     (fun t hw hn p hp => cr_sound A p hp t hw hn)
-    (cr_base A ins3 hadm (by
+    (unit_base (labelsNF crLabels) A.toRoundLaws ins3 hadm (by
       have := sep_of_table codes3Unit mem_codes3Unit (fun _ => true) ins3
         (fun κ q => evCR m A.rnd q (κ.realize 0 1 2)) (by rw [List.filter_eq_self.mpr (fun _ _ => rfl)]; exact hnd3)
       exact fun κ₁ κ₂ h => this κ₁ κ₂ rfl rfl h))

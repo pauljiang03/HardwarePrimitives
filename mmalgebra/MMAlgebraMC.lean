@@ -10,6 +10,7 @@ import MMAlgebraMC.Words
 import MMAlgebraMC.Blocks
 import MMAlgebraMC.RigidMC
 import MMAlgebraMC.RoundedMC
+import MMAlgebraMC.PairwiseMC
 
 /-! # The reduction algebra on the AMD matrix-core model
 

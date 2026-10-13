@@ -8,6 +8,7 @@ import MMAlgebra.TermComplete
 import MMAlgebra.Shapes
 import MMAlgebra.Rigid
 import MMAlgebra.Rounded
+import MMAlgebra.Pairwise
 
 /-! # Reduction terms and their divergence, on any matrix multiplier
 

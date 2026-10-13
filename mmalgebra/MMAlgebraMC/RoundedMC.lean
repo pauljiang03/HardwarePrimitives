@@ -207,7 +207,7 @@ def cdna1Alg : MMAlgebra.CRAlg (mcMachine cdna1F16) 4 where
   zero_good := mc_zero_good
   G_add := fun _ _ hx hy => OnGrid.add hx hy
   G_zero := OnGrid.zero _
-  G_val := val_onGrid _
+  G_good := fun w _ => val_onGrid _ w
   G_pval := fun p hp i => by
     obtain ⟨k, e, h1, _, _, he⟩ := fp16_prod_exact rfl rfl (p i) (hp i)
     rw [he]; exact onGrid_intCast_mul k (e - 23) _ (by omega)
