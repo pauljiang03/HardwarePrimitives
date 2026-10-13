@@ -1,0 +1,115 @@
+
+## Block boundaries and split-K (V100 fp16)
+   products: p0 = 0x3e00 x 0x3e00 = 1.5 x 1.5, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p2 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   one block [x y z]                            0x40100001   2.250000238418579
+   two blocks [x] [y z]                         0x40100000   2.25
+   split-K [x] + [y z]                          0x40100001   2.250000238418579
+
+## Block boundaries and split-K (A100 fp16)
+   products: p0 = 0x3e00 x 0x3e00 = 1.5 x 1.5, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p2 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   one block [x y z]                            0x40100001   2.250000238418579
+   two blocks [x] [y z]                         0x40100001   2.250000238418579
+   split-K [x] + [y z]                          0x40100001   2.250000238418579
+
+## Block boundaries and split-K (H100 fp16)
+   products: p0 = 0x3e00 x 0x3e00 = 1.5 x 1.5, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p2 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   one block [x y z]                            0x40100001   2.250000238418579
+   two blocks [x] [y z]                         0x40100001   2.250000238418579
+   split-K [x] + [y z]                          0x40100001   2.250000238418579
+
+## Block boundaries and split-K (CDNA1 fp16)
+   products: p0 = 0x3e00 x 0x3e00 = 1.5 x 1.5, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p2 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   one block [x y z]                            0x40100001   2.250000238418579
+   two blocks [x] [y z]                         0x40100001   2.250000238418579
+   split-K [x] + [y z]                          0x40100001   2.250000238418579
+
+## Block boundaries and split-K (CDNA2 fp16)
+   products: p0 = 0x3e00 x 0x3e00 = 1.5 x 1.5, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p2 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   one block [x y z]                            0x40100000   2.25
+   two blocks [x] [y z]                         0x40100001   2.250000238418579
+   split-K [x] + [y z]                          0x40100001   2.250000238418579
+
+## Block boundaries and split-K (CDNA3 fp16)
+   products: p0 = 0x3e00 x 0x3e00 = 1.5 x 1.5, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p2 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   one block [x y z]                            0x40100001   2.250000238418579
+   two blocks [x] [y z]                         0x40100001   2.250000238418579
+   split-K [x] + [y z]                          0x40100001   2.250000238418579
+
+## Early versus late addition of C (V100 fp16)
+   products: p0 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125, p1 = 0xc00 x 0x1000 = 0.000244140625 x 0.00048828125
+   c = 0x40100000 = 2.25
+   C in the block: blk(c, [y z])                0x40100000   2.25
+   C in the epilogue: c + blk(0, [y z])         0x40100001   2.250000238418579
+
+## Two products, three patterns (V100 fp16)  [Lean: MMAlgebra.TC.v100_complete_pair]
+   products: p0 = 0x1edc x 0x1cd3 = 0.0066986083984375 x 0.004711151123046875, p1 = 0x7add x 0x69 = 56224.0 x 6.258487701416016e-06
+   [x] alone                                    0x38045d50   3.155815647915006e-05
+   [y] alone                                    0x3eb42940   0.35187721252441406
+   [x y]                                        0x3eb42d60   0.35190868377685547
+   [x] then [y]                                 0x3eb42d60   0.35190868377685547
+   [y] then [x]                                 0x3eb42d62   0.35190874338150024
+
+## Two products, three patterns (A100 fp16)  [Lean: MMAlgebra.TC.a100_complete_pair]
+   products: p0 = 0x1edc x 0x1cd3 = 0.0066986083984375 x 0.004711151123046875, p1 = 0x7add x 0x69 = 56224.0 x 6.258487701416016e-06
+   [x y]                                        0x3eb42d60   0.35190868377685547
+   [x] then [y]                                 0x3eb42d60   0.35190868377685547
+   [y] then [x]                                 0x3eb42d62   0.35190874338150024
+
+## Two products, three patterns (H100 fp16)  [Lean: MMAlgebra.TC.h100_complete_pair]
+   products: p0 = 0x52 x 0x6587 = 4.887580871582031e-06 x 1415.0, p1 = 0xba7 x 0x3ff9 = 0.00023353099822998047 x 1.9931640625
+   [x] alone                                    0x3be29f00   0.006915926933288574
+   [y] alone                                    0x39f409bc   0.0004654655931517482
+   [x y]                                        0x3bf1df98   0.007381390780210495
+   [x] then [y]                                 0x3bf1df9b   0.007381392177194357
+   [y] then [x]                                 0x3bf1df98   0.007381390780210495
+
+## Two products, three patterns (CDNA3 fp16)  [Lean: MMAlgebra.MC.cdna3_pair]
+   products: p0 = 0x2e6 x 0xb09 = 4.4226646423339844e-05 x 0.00021469593048095703, p1 = 0x37ea x 0x2d78 = 0.49462890625 x 0.08544921875
+   [p0] then [p1]                               0x3d2d1ec2   0.04226566106081009
+   [p1] then [p0]                               0x3d2d1ec3   0.04226566478610039
+   [p0 p1]                                      0x3d2d1ec2   0.04226566106081009
+
+## Three products, summation trees (CDNA1 fp16)  [Lean: MMAlgebra.MC.cdna1_trees]
+   products: p0 = 0x81f x 0x4ce3 = 0.00012576580047607422 x 19.546875, p1 = 0x43fe x 0x4236 = 3.99609375 x 3.10546875, p2 = 0x7e0 x 0x47e3 = 0.0001201629638671875 x 7.88671875
+   [p0] [p1] [p2]  = ((p0 + p1) + p2)           0x41469c44   12.413150787353516
+   [p0] [p2] [p1]  = ((p0 + p2) + p1)           0x41469c43   12.4131498336792
+   [p0] [p1 p2]    = (p0 + p1 + p2)             0x41469c43   12.4131498336792
+   [p0 p1 p2]      = (p0 + p1 + p2)             0x41469c43   12.4131498336792
+
+## Three products, summation trees (CDNA2 fp16)  [Lean: MMAlgebra.MC.cdna2_trees]
+   products: p0 = 0x81f x 0x4ce3 = 0.00012576580047607422 x 19.546875, p1 = 0x43fe x 0x4236 = 3.99609375 x 3.10546875, p2 = 0x7e0 x 0x47e3 = 0.0001201629638671875 x 7.88671875
+   [p0] [p1] [p2]  = ((p0 + p1) + p2)           0x41469c44   12.413150787353516
+   [p0] [p2] [p1]  = ((p0 + p2) + p1)           0x41469c43   12.4131498336792
+
+## One k = 16 instruction, products k = 0 and k = 15 exchanged (V100 fp16)  [Lean: MMAlgebra.TC.v100_wmma_swap]
+   products: p0 = 0x29af x 0x33fb = 0.044403076171875 x 0.2493896484375, p1 = 0xc352 x 0x43e5 = -3.66015625 x 3.947265625
+   products in order                            0xc166fc0c   -14.436534881591797
+   k = 0 and k = 15 exchanged                   0xc166fc0d   -14.436535835266113
+
+## One k = 16 instruction, products k = 0 and k = 15 exchanged (A100 fp16)  [Lean: MMAlgebra.TC.a100_wmma_swap]
+   products: p0 = 0x467 x 0xb7f7 = 6.717443466186523e-05 x -0.497802734375, p1 = 0x4496 x 0x703 = 4.5859375 x 0.00010699033737182617
+   products in order                            0x39efb5df   0.00045721136848442256
+   k = 0 and k = 15 exchanged                   0x39efb5e0   0.000457211397588253
+
+## One k = 16 instruction, products k = 0 and k = 15 exchanged (CDNA1 fp16)  [Lean: MMAlgebra.MC.cdna1_k16_swap]
+   products: p0 = 0xb853 x 0x8cfe = -0.54052734375 x -0.0003046989440917969, p1 = 0xd7ce x 0xc3cf = -124.875 x -3.904296875, p2 = 0xaad7 x 0x47fb = -0.053436279296875 x 7.98046875
+   products in order                            0x43f38fb8   487.122802734375
+   k = 0 and k = 15 exchanged                   0x43f38fb7   487.1227722167969
+
+## One k = 16 instruction, products k = 0 and k = 15 exchanged (CDNA2 fp16)  [Lean: MMAlgebra.MC.cdna2_k16_swap]
+   products: p0 = 0x8cce x 0x3be6 = -0.0002932548522949219 x 0.9873046875, p1 = 0xd76b x 0xbfda = -118.6875 x -1.962890625, p2 = 0x4efe x 0x33ce = 27.96875 x 0.243896484375
+   products in order                            0x436fcab2   239.79177856445312
+   k = 0 and k = 15 exchanged                   0x436fcab1   239.79176330566406
+
+## One k = 16 instruction, products k = 0 and k = 15 exchanged (CDNA3 fp16)  [Lean: MMAlgebra.MC.cdna3_k16_swap]
+   products: p0 = 0x8187 x 0x8919 = -2.3305416107177734e-05 x -0.00015556812286376953, p1 = 0xd7f6 x 0x92 = -127.375 x 8.702278137207031e-06
+   products in order                            0xba914962   -0.0011084491852670908
+   k = 0 and k = 15 exchanged                   0xba914961   -0.001108449068851769
+
+## A product below binary32's range (CDNA1 bf16)
+   products: p0 = 0x1a00 x 0x1a80 = 2.6469779601696886e-23 x 5.293955920339377e-23, p1 = 0x1a00 x 0x1a00 = 2.6469779601696886e-23 x 2.6469779601696886e-23
+   [p0] then [p1]                               0x2          2.802596928649634e-45
+   [p1] then [p0]                               0x1          1.401298464324817e-45
+   [p0 p1]                                      0x2          2.802596928649634e-45
+
+all examples reproduced

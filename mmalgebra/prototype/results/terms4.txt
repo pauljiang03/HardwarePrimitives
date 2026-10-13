@@ -1,0 +1,5 @@
+V100 fp16    n=4 terms=301 normal-forms=301 unsound=0 pairs=45150 separated-by-random=45140 not-determined-by-<=3-restrictions=0
+H100 fp16    n=4 terms=301 normal-forms=301 unsound=0 pairs=45150 separated-by-random=44969 not-determined-by-<=3-restrictions=0
+CDNA1 fp16   n=4 terms=301 normal-forms=26 unsound=0 pairs=325 separated-by-random=325 not-determined-by-<=3-restrictions=0
+CDNA3 fp16   n=4 terms=301 normal-forms=301 unsound=0 pairs=45150 separated-by-random=45082 not-determined-by-<=3-restrictions=0
+SFMA fp32    n=4 terms=171 normal-forms=171 unsound=0 pairs=14535 separated-by-random=14535 not-determined-by-<=3-restrictions=0

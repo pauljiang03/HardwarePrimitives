@@ -1,0 +1,1 @@
+CDNA1 bf16 n=3 chain patterns=12 pairs=66 unseparated=0

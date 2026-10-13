@@ -1,0 +1,32 @@
+name = "mmalgebra"
+version = "0.1.0"
+defaultTargets = ["MMAlgebraTC", "MMAlgebraMC", "MMAlgebraTCTests", "MMAlgebraMCTests"]
+
+[leanOptions]
+pp.unicode.fun = true
+
+[[require]]
+name = "tensorCore"
+path = ".."
+
+[[require]]
+name = "matrixCore"
+path = "../amd"
+
+[[lean_lib]]
+name = "MMAlgebraTC"
+globs = ["MMAlgebraTC", "MMAlgebraTC.*"]
+
+[[lean_lib]]
+name = "MMAlgebraMC"
+globs = ["MMAlgebraMC", "MMAlgebraMC.*"]
+
+[[lean_lib]]
+name = "MMAlgebraTCTests"
+srcDir = "tests"
+globs = ["MMAlgebraTCTests", "MMAlgebraTCTests.*"]
+
+[[lean_lib]]
+name = "MMAlgebraMCTests"
+srcDir = "tests"
+globs = ["MMAlgebraMCTests", "MMAlgebraMCTests.*"]

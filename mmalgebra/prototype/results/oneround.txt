@@ -1,0 +1,23 @@
+V100 fp16 R1 witness support [0, 1] a ['0x29af', '0xc352'] b ['0x33fb', '0x43e5'] 0xc166fc0c 0xc166fc0d
+A100 fp16 R1 witness support [0, 1] a ['0x467', '0x4496'] b ['0xb7f7', '0x703'] 0x39efb5df 0x39efb5e0
+CDNA1 fp16 R1 witness support [0, 1, 2] a ['0xb853', '0xd7ce', '0xaad7'] b ['0x8cfe', '0xc3cf', '0x47fb'] 0x43f38fb8 0x43f38fb7
+CDNA2 fp16 R1 witness support [0, 1, 2] a ['0x8cce', '0xd76b', '0x4efe'] b ['0x3be6', '0xbfda', '0x33ce'] 0x436fcab2 0x436fcab1
+CDNA3 fp16 R1 witness support [0, 1] a ['0x8187', '0xd7f6'] b ['0x8919', '0x92'] 0xba914962 0xba914961
+  V100 fp16    R1 swap k=0,15 inside one k16 MMA                  abstraction:accepts  model: different
+  V100 fp16    R2 one k16 MMA -> two k8 MMAs                      abstraction:rejects  model: equivalent (same blocks)
+  V100 fp16    R3 C in accumulator -> C in epilogue (one block)   abstraction:rejects  model: differs on 61/300 random
+  A100 fp16    R1 swap k=0,15 inside one k16 MMA                  abstraction:accepts  model: different
+  A100 fp16    R2 one k16 MMA -> two k8 MMAs                      abstraction:rejects  model: equivalent (same blocks)
+  A100 fp16    R3 C in accumulator -> C in epilogue (one block)   abstraction:rejects  model: differs on 47/300 random
+  H100 fp16    R1 swap k=0,15 inside one k16 MMA                  abstraction:accepts  model: equivalent
+  H100 fp16    R2 one k16 MMA -> two k8 MMAs                      abstraction:rejects  model: n/a (k8 FMA size unknown)
+  H100 fp16    R3 C in accumulator -> C in epilogue (one block)   abstraction:rejects  model: differs on 34/300 random
+  CDNA1 fp16   R1 swap k=0,15 inside one k16 MMA                  abstraction:accepts  model: different
+  CDNA1 fp16   R2 one k16 MMA -> two k8 MMAs                      abstraction:rejects  model: equivalent (same blocks)
+  CDNA1 fp16   R3 C in accumulator -> C in epilogue (one block)   abstraction:rejects  model: differs on 30/300 random
+  CDNA2 fp16   R1 swap k=0,15 inside one k16 MMA                  abstraction:accepts  model: different
+  CDNA2 fp16   R2 one k16 MMA -> two k8 MMAs                      abstraction:rejects  model: equivalent (same blocks)
+  CDNA2 fp16   R3 C in accumulator -> C in epilogue (one block)   abstraction:rejects  model: equal on 300 random (law)
+  CDNA3 fp16   R1 swap k=0,15 inside one k16 MMA                  abstraction:accepts  model: different
+  CDNA3 fp16   R2 one k16 MMA -> two k8 MMAs                      abstraction:rejects  model: equivalent (same blocks)
+  CDNA3 fp16   R3 C in accumulator -> C in epilogue (one block)   abstraction:rejects  model: differs on 32/300 random

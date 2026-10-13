@@ -1,0 +1,7 @@
+V100 fp16    {'equivalent': 0, 'different': 30, 'unknown': 0}
+A100 fp16    {'equivalent': 14, 'different': 16, 'unknown': 0}
+H100 fp16    {'equivalent': 12, 'different': 18, 'unknown': 0}
+CDNA1 fp16   {'equivalent': 0, 'different': 30, 'unknown': 0}
+CDNA2 fp16   {'equivalent': 1, 'different': 29, 'unknown': 0}
+CDNA3 fp16   {'equivalent': 13, 'different': 17, 'unknown': 0}
+SFMA fp32    {'equivalent': 0, 'different': 30, 'unknown': 0}

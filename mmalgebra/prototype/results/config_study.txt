@@ -1,0 +1,36 @@
+
+V100 fp16: 10 configurations, 10 bitwise classes
+   s1-serial-C0         vs s2-serial-C0         theory=differ  random dense inputs differing: 45/60
+   s1-serial-C0         vs s1-serial-Cepi       theory=differ  random dense inputs differing: 7/60
+   s4-serial-C0         vs s4-tree-C0           theory=differ  random dense inputs differing: 20/60
+   streamK(24|40)-C0    vs streamK(16|48)-C0    theory=differ  random dense inputs differing: 35/60
+
+A100 fp16: 10 configurations, 10 bitwise classes
+   s1-serial-C0         vs s2-serial-C0         theory=differ  random dense inputs differing: 36/60
+   s1-serial-C0         vs s1-serial-Cepi       theory=differ  random dense inputs differing: 5/60
+   s4-serial-C0         vs s4-tree-C0           theory=differ  random dense inputs differing: 12/60
+   streamK(24|40)-C0    vs streamK(16|48)-C0    theory=differ  random dense inputs differing: 28/60
+
+H100 fp16: 10 configurations, 10 bitwise classes
+   s1-serial-C0         vs s2-serial-C0         theory=differ  random dense inputs differing: 29/60
+   s1-serial-C0         vs s1-serial-Cepi       theory=differ  random dense inputs differing: 4/60
+   s4-serial-C0         vs s4-tree-C0           theory=differ  random dense inputs differing: 19/60
+   streamK(24|40)-C0    vs streamK(16|48)-C0    theory=differ  random dense inputs differing: 33/60
+
+CDNA1 fp16: 10 configurations, 10 bitwise classes
+   s1-serial-C0         vs s2-serial-C0         theory=differ  random dense inputs differing: 33/60
+   s1-serial-C0         vs s1-serial-Cepi       theory=differ  random dense inputs differing: 6/60
+   s4-serial-C0         vs s4-tree-C0           theory=differ  random dense inputs differing: 13/60
+   streamK(24|40)-C0    vs streamK(16|48)-C0    theory=differ  random dense inputs differing: 24/60
+
+CDNA2 fp16: 10 configurations, 10 bitwise classes
+   s1-serial-C0         vs s2-serial-C0         theory=differ  random dense inputs differing: 28/60
+   s1-serial-C0         vs s1-serial-Cepi       theory=differ  random dense inputs differing: 6/60
+   s4-serial-C0         vs s4-tree-C0           theory=differ  random dense inputs differing: 16/60
+   streamK(24|40)-C0    vs streamK(16|48)-C0    theory=differ  random dense inputs differing: 31/60
+
+CDNA3 fp16: 10 configurations, 10 bitwise classes
+   s1-serial-C0         vs s2-serial-C0         theory=differ  random dense inputs differing: 33/60
+   s1-serial-C0         vs s1-serial-Cepi       theory=differ  random dense inputs differing: 8/60
+   s4-serial-C0         vs s4-tree-C0           theory=differ  random dense inputs differing: 20/60
+   streamK(24|40)-C0    vs streamK(16|48)-C0    theory=differ  random dense inputs differing: 35/60

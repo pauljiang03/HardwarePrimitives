@@ -1,0 +1,210 @@
+[
+ {
+  "profile": "V100 fp16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "V100 fp16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "A100 fp16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "A100 fp16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "H100 fp16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "H100 fp16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "A100 bf16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "A100 bf16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "H100 bf16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "H100 bf16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "SFMA fp32",
+  "n": 2,
+  "schedules": 2,
+  "classes": 2,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "SFMA fp32",
+  "n": 3,
+  "schedules": 6,
+  "classes": 6,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA1 fp16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 1,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA1 fp16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 4,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA1 bf16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA1 bf16",
+  "n": 3,
+  "schedules": 12,
+  "classes": 12,
+  "unsound": 0,
+  "unseparated": 6
+ },
+ {
+  "profile": "CDNA2 fp16",
+  "n": 2,
+  "schedules": 44,
+  "classes": 1,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA2 fp16",
+  "n": 3,
+  "schedules": 696,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA2 bf16",
+  "n": 2,
+  "schedules": 10,
+  "classes": 1,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA2 bf16",
+  "n": 3,
+  "schedules": 72,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA2 bf16_1k",
+  "n": 2,
+  "schedules": 44,
+  "classes": 1,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA2 bf16_1k",
+  "n": 3,
+  "schedules": 696,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA3 fp16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA3 fp16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA3 bf16",
+  "n": 2,
+  "schedules": 3,
+  "classes": 3,
+  "unsound": 0,
+  "unseparated": 0
+ },
+ {
+  "profile": "CDNA3 bf16",
+  "n": 3,
+  "schedules": 13,
+  "classes": 13,
+  "unsound": 0,
+  "unseparated": 0
+ }
+]

@@ -1,0 +1,28 @@
+V100 fp16      n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+V100 fp16      n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0
+A100 fp16      n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+A100 fp16      n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0
+H100 fp16      n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+H100 fp16      n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0
+A100 bf16      n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+A100 bf16      n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0
+H100 bf16      n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+H100 bf16      n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0
+SFMA fp32      n=2 terms=     3 normal-forms=    3 unsound=0 unseparated=0
+SFMA fp32      n=3 terms=    18 normal-forms=   18 unsound=0 unseparated=0
+CDNA1 fp16     n=2 terms=     4 normal-forms=    1 unsound=0 unseparated=0
+CDNA1 fp16     n=3 terms=    28 normal-forms=    4 unsound=0 unseparated=0
+CDNA1 bf16     n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+   NOT SEPARATED CDNA1 bf16 ('blk', ('blk', ('blk', None, frozenset({2})), frozenset({1})), frozenset({0})) | ('blk', ('blk', ('blk', None, frozenset({1})), frozenset({2})), frozenset({0}))
+   NOT SEPARATED CDNA1 bf16 ('blk', ('blk', ('blk', None, frozenset({2})), frozenset({1})), frozenset({0})) | ('blk', ('blk', None, frozenset({1, 2})), frozenset({0}))
+   NOT SEPARATED CDNA1 bf16 ('blk', ('blk', ('blk', None, frozenset({2})), frozenset({1})), frozenset({0})) | ('blk', ('add', ('leaf', 1), ('leaf', 2)), frozenset({0}))
+   NOT SEPARATED CDNA1 bf16 ('blk', ('blk', ('blk', None, frozenset({2})), frozenset({1})), frozenset({0})) | ('add', ('blk', ('blk', None, frozenset({1})), frozenset({2})), ('leaf', 0))
+CDNA1 bf16     n=3 terms=    27 normal-forms=   27 unsound=0 unseparated=54
+CDNA2 fp16     n=2 terms=    60 normal-forms=    1 unsound=0 unseparated=0
+CDNA2 fp16     n=3 terms=  1608 normal-forms=    3 unsound=0 unseparated=0
+CDNA2 bf16     n=2 terms=    14 normal-forms=    1 unsound=0 unseparated=0
+CDNA2 bf16     n=3 terms=   180 normal-forms=    3 unsound=0 unseparated=0
+CDNA3 fp16     n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+CDNA3 fp16     n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0
+CDNA3 bf16     n=2 terms=     4 normal-forms=    4 unsound=0 unseparated=0
+CDNA3 bf16     n=3 terms=    28 normal-forms=   28 unsound=0 unseparated=0

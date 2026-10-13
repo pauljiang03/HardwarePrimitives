@@ -60,6 +60,7 @@ The calculation succeeds with the FP32 value `4.0`. It prints the encoded result
 | [`examples/`](examples/README.md) | Checked worked examples and Lean batch adapters |
 | [`amd/`](amd/README.md) | Matrix-Core: the AMD matrix-core (CDNA 1–3) formalization of *Accurate Models of AMD Matrix Cores*, a standalone Lake project with its own FloatLib implementation |
 | [`ozaki/`](ozaki/README.md) | The Ozaki schemes (Ozaki-I, Ozaki-II, and ADP/ESC) on the Tensor Core and Matrix-Core models, with correctly rounded versions of all three; a standalone Lake project that requires both |
+| [`mmalgebra/`](mmalgebra/README.md) | MMAlgebra: the algebra of matrix multiply-accumulate reductions, which decides when two GEMM schedules give bitwise identical results on the Tensor Core and Matrix-Core models, with a Python prototype; a standalone Lake project that requires both |
 | [`floatlib-port/`](floatlib-port/README.md) | Independent FloatLib implementation and equivalence proofs, with its own Lake project |
 | [`docs/`](docs/README.md) | Numbered guide, command reference, and trust boundaries |
 | [`scripts/`](scripts/) | Validation runners, exact-arithmetic oracles, and proof audits |
