@@ -10,10 +10,10 @@ theorem. *The paper* is Khattak, Mikaitis and Graziani, *Accurate Models of AMD 
 
 | What it says | Lean name | File |
 | --- | --- | --- |
-| On every path of the paper (SFMA, CDNA 1 fp16/bf16, CDNA 3 fp16/bf16/XF32/fp8) and for every input, the model returns a word exactly when an independently written transcription of the paper's algorithms specifies that word. | `Spec.blockBits_eq_spec`, `Spec.supported_*` | [Specification/Equivalence.lean](Specification/Equivalence.lean) |
+| On every variant in the paper (SFMA, CDNA 1 fp16/bf16, CDNA 3 fp16/bf16/XF32/fp8) and for every input, the model returns a word exactly when an independently written transcription of the paper's algorithms specifies that word. | `Spec.blockBits_eq_spec`, `Spec.supported_*` | [Specification/Equivalence.lean](Specification/Equivalence.lean) |
 | The same for CDNA 2 (fp16, bf16, bf16 `_1k`) against a transcription of Fig. 2 with `fl{·}` stated as RNE with flush to zero. | `Spec.pairwise_eq_spec`, `Spec.supported_cdna2*` | [Specification/Pairwise.lean](Specification/Pairwise.lean) |
 | A block is accepted exactly when `a` and `b` have `N_FMA` entries, every operand is finite, accumulation succeeds, and `S_acc` is below the overflow threshold. | `evalBlock_success_iff` | [MC/AcceptedDomain.lean](MC/AcceptedDomain.lean) |
-| On every profile with subnormals, the output is `fl{S_acc}`: the nearest binary32 value, ties to even. | `evalBlock_nearestEven` | [MC/AcceptedDomain.lean](MC/AcceptedDomain.lean) |
+| On every model that supports subnormals, the output is `fl{S_acc}`: the nearest binary32 value, ties to even. | `evalBlock_nearestEven` | [MC/AcceptedDomain.lean](MC/AcceptedDomain.lean) |
 | The observation for any input words reports a finite word exactly when the model accepts, with the same word; otherwise an infinity or NaN. | `blockOutcome_finite_iff` | [MC/SpecialAgreement.lean](MC/SpecialAgreement.lean) |
 | The specification's CDNA 2 `fl{·}` (value and output word) is the model's. | `Spec.fl_iff`, `Spec.flWord_iff` | [Specification/Pairwise.lean](Specification/Pairwise.lean) |
 
@@ -60,7 +60,7 @@ are flushed. The bounds use the exact `Σ a_ℓ b_ℓ + c` of the decoded inputs
 | --- | --- | --- |
 | `fl{x}` is within half an ulp of `x`, which is at most `2^-24 |x| + 2^-150`; with flushing, within `flBound true x`. | `rneValue_error`, `halfUlp32_le`, `flValue_error` | [Numerics/RoundingError.lean](Numerics/RoundingError.lean), [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
 | SFMA and CDNA 1: `|exact − d| ≤ halfUlp32 exact`. | `correctRounding_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
-| CDNA 2: `|exact − d|` is at most the effect of flushing subnormal inputs, plus one `flBound` for each product conversion, each node of the pairwise tree, and the final `fl{·}`, at the computed values. | `pairwise_error`, `pairwiseBound`, `pairwiseGroupSum_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
+| CDNA 2: `|exact − d|` is at most the effect of flushing subnormal inputs, plus one `flBound` for each product conversion, each pairwise sum, and the final `fl{·}`, at the computed values. | `pairwise_error`, `pairwiseBound`, `pairwiseGroupSum_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
 | CDNA 3: `|exact − d|` is at most the error of `S_acc` in its branch of Algorithm 1 or 2, plus half an ulp of `S_acc`. | `aligned_error`, `alignedBound`, `alignedAccumulation_abs_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
 | An inner product is within the sum of its blocks' bounds of `c` plus all products. | `dotBits_error_bound`, `correctRounding_dot_error` | [MC/Contract.lean](MC/Contract.lean) |
 
@@ -72,9 +72,9 @@ exponent `e_a + e_b`.
 | What it says | Lean name | File |
 | --- | --- | --- |
 | SFMA and CDNA 1: `|exact − d| ≤ 2^-24 A + 2^-150`. | `correctRounding_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
-| CDNA 3: `|exact − d| ≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149`. Products are denormalised, so `2^(e_max)` can exceed every `|p_ℓ|` and the alignment term is measured against it. | `aligned_apriori`, `alignedAccumulation_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
+| CDNA 3: `|exact − d| ≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149`. Products are kept in denormalized form, so `2^(e_max)` can exceed every `|p_ℓ|` and the alignment term is measured against it. | `aligned_apriori`, `alignedAccumulation_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
 | CDNA 2 (`N_FMA ≤ 4`): `|exact − d| ≤ |exact − exact'| + 2^-21 A' + 2^-120`, with `exact'`, `A'` those of the flushed inputs. | `pairwise_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
-| A pairwise tree of height `h` is within `((1 + 2^-24)^h − 1) Σ|x| + κ_h η` of the exact sum of its leaves. | `pairwiseGroupSum_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
+| A balanced pairwise sum of depth `h` is within `((1 + 2^-24)^h − 1) Σ|x| + κ_h η` of the exact sum of its terms. | `pairwiseGroupSum_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
 
 ## Monotonicity in `c`
 
@@ -85,7 +85,7 @@ On NVIDIA Tensor Cores any term holding the alignment exponent, a product or `c`
 | For the same `a` and `b`, a larger `c` never gives a smaller `d`, on every configuration of the paper. | `evalBlock_c_monotone`, `paper_models_monotone` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
 | The same for inner products of any length. | `dotBits_c_monotone` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
 | CDNA 3's late addition is monotone in `c` within each branch and across the switch at `e_c = e_max`. | `lateSum_mono` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
-| RNE, flushing, and normalisation followed by RD are monotone. | `rneValue_mono`, `flushValue_mono`, `normaliseRD_mono` | [Numerics/RoundingError.lean](Numerics/RoundingError.lean), [MC/Monotonicity.lean](MC/Monotonicity.lean) |
+| RNE, flushing, and normalization followed by RD are monotone. | `rneValue_mono`, `flushValue_mono`, `normalizeRD_mono` | [Numerics/RoundingError.lean](Numerics/RoundingError.lean), [MC/Monotonicity.lean](MC/Monotonicity.lean) |
 
 ## Monotonicity in the products
 
@@ -108,8 +108,8 @@ On NVIDIA Tensor Cores any term holding the alignment exponent, a product or `c`
 
 | What it says | Lean name | File |
 | --- | --- | --- |
-| Every accepted block on every profile satisfies `BlockContract`: right shape, decoded operands with significands below 2 (products below 4), `S_acc` below the overflow threshold, `d = fl{S_acc}` finite and within `flBound` of `S_acc`, and nearest-even where subnormals are supported. | `evalBlock_contract` | [MC/Contract.lean](MC/Contract.lean) |
-| Each profile's bundle, with its output error bound (`error`) and its bound from the inputs alone (`apriori`): SFMA and CDNA 1 round the exact sum to nearest (`CorrectRoundingContract`); CDNA 2 evaluates the pairwise tree (`PairwiseContract`); CDNA 3 computes Algorithm 1 or 2 with its error bounds and register width (`AlignedContract`). | `sfmaF32_contract`, `cdna1F16_contract`, …, `cdna3FP8_contract` | [MC/Contract.lean](MC/Contract.lean) |
+| Every accepted block on every model satisfies `BlockContract`: right shape, decoded operands with significands below 2 (products below 4), `S_acc` below the overflow threshold, `d = fl{S_acc}` finite and within `flBound` of `S_acc`, and nearest-even where subnormals are supported. | `evalBlock_contract` | [MC/Contract.lean](MC/Contract.lean) |
+| Each model's bundle, with its output error bound (`error`) and its bound from the inputs alone (`apriori`): SFMA and CDNA 1 round the exact sum to nearest (`CorrectRoundingContract`); CDNA 2 evaluates the pairwise sums (`PairwiseContract`); CDNA 3 computes Algorithm 1 or 2 with its error bounds and register width (`AlignedContract`). | `sfmaF32_contract`, `cdna1F16_contract`, …, `cdna3FP8_contract` | [MC/Contract.lean](MC/Contract.lean) |
 | An inner product is the last output of its run of blocks; the blocks are linked through the words they pass on. | `dotBits_eq_runBlocks`, `runBlocks_chain` | [MC/Chain.lean](MC/Chain.lean) |
 | Any property of accepted blocks holds for every block of an inner product, and the initial `c` plus every block's products equal the output plus every block's residual. | `runBlocks_all`, `dotBits_blocks`, `dotBits_residual_ledger` | [MC/Chain.lean](MC/Chain.lean), [MC/Contract.lean](MC/Contract.lean) |
 
@@ -137,8 +137,8 @@ mathlib and FloatLib.
 
 | What it says | Lean name | File |
 | --- | --- | --- |
-| For every profile and any input words, a block of the FloatLib implementation gives the same observation (finite word, infinity, NaN) as `blockOutcome`, and an inner product of any length the same as `dotOutcome`. | `MCFloat.Equivalence.block_agree`, `dot_agree` | [Equivalence/Block.lean](../floatlib-port/MCFloat/Equivalence/Block.lean), [Equivalence/Dot.lean](../floatlib-port/MCFloat/Equivalence/Dot.lean) |
-| Every profile's contract (with its output error bound) and the chaining theorems hold for the FloatLib implementation: a finite FloatLib output is FloatLib's own `fl{S_acc}` (on SFMA and CDNA 1, FloatLib's nearest-even rounding of the exact sum), and a finite FloatLib inner product is a run of linked blocks satisfying the contracts. | `MCFloat.Equivalence.floatlib_contract`, `floatlib_cdna1F16`, …, `floatlib_dot_blocks`, `floatlib_dot_error`, `floatlib_dot_exact_error`, `floatlib_c_monotone` | [Contracts.lean](../floatlib-port/MCFloat/Contracts.lean) |
+| For every model and any input words, a block of the FloatLib implementation gives the same observation (finite word, infinity, NaN) as `blockOutcome`, and an inner product of any length the same as `dotOutcome`. | `MCFloat.Equivalence.block_agree`, `dot_agree` | [Equivalence/Block.lean](../floatlib-port/MCFloat/Equivalence/Block.lean), [Equivalence/Dot.lean](../floatlib-port/MCFloat/Equivalence/Dot.lean) |
+| Every model's contract (with its output error bound) and the chaining theorems hold for the FloatLib implementation: a finite FloatLib output is FloatLib's own `fl{S_acc}` (on SFMA and CDNA 1, FloatLib's nearest-even rounding of the exact sum), and a finite FloatLib inner product is a run of linked blocks satisfying the contracts. | `MCFloat.Equivalence.floatlib_contract`, `floatlib_cdna1F16`, …, `floatlib_dot_blocks`, `floatlib_dot_error`, `floatlib_dot_exact_error`, `floatlib_c_monotone` | [Contracts.lean](../floatlib-port/MCFloat/Contracts.lean) |
 | FloatLib's binary32 round-to-nearest-even of any rational is `rne32`'s word, with `±∞` exactly where `rne32` overflows. | `MCFloat.Equivalence.round32_bits` | [Equivalence/Rounding.lean](../floatlib-port/MCFloat/Equivalence/Rounding.lean) |
 
 ## Not proved
@@ -208,7 +208,7 @@ open MatrixCore
 #check @lateSum_mono
 #check @rneValue_mono
 #check @flushValue_mono
-#check @normaliseRD_mono
+#check @normalizeRD_mono
 #check @correctRounding_exact_monotone
 #check @correctRounding_product_monotone
 #check @runBlocks_correctRounding_monotone

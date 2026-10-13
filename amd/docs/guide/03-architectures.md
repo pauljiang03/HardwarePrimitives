@@ -1,7 +1,7 @@
 # The three architectures
 
 Each section gives the block semantics in the paper's terms, the Lean definitions, and the
-theorems that characterise them. The final step is always `d = fl{S_acc}`, RNE into binary32.
+theorems that characterize them. The final step is always `d = fl{S_acc}`, RNE into binary32.
 
 ## fp32 inputs on CDNA 1, 2 and 3: SFMA
 
@@ -34,7 +34,8 @@ groups of 4 (fp16, bf16 _1k):   d = fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}
 groups of 2 (bf16):             d = fl{c + fl{p₁ + p₂}}
 ```
 
-`pairwiseSum` implements the balanced tree; `pairwiseSum_four` and `pairwiseSum_two` state the
+`pairwiseSum` implements these pairwise sums, with `pairwiseGroupSum` for the balanced sum of a
+group; `pairwiseSum_four` and `pairwiseSum_two` state the
 formulas above for the model, and `flValue_true` states what flushing does. Product conversion
 and every pairwise sum can overflow to an infinity, which `blockOutcome` propagates with binary32
 special-value arithmetic (so `p₁ = 2^128, p₂ = −2^128` gives NaN, as observed).
@@ -54,22 +55,22 @@ if e_max ≥ e_c:
     S_acc = S_{p_i,sum} + s′_c
 else:
     S′_{p_i,sum} = S_{p_i,sum} shifted right by e_c − e_max, RD to 32 fractional bits
-    S_acc = S′_{p_i,sum} + s_c, normalised (subnormal-aware), RD to 31 fractional bits
+    S_acc = S′_{p_i,sum} + s_c, normalized (subnormal-aware), RD to 31 fractional bits
 d = fl{S_acc}
 ```
 
-Products are kept denormalised (`s_p ∈ [0, 4)`), and a product with `|p_ℓ| ≥ 2^128` is an
+Products are kept in denormalized form (`s_p ∈ [0, 4)`), and a product with `|p_ℓ| ≥ 2^128` is an
 infinity before accumulation. XF32 truncates each binary32 input to ten fraction bits and uses
 `N_FMA = 4`.
 
-In Lean: `productSum` (with `alignedSum`), `cExp`, `shiftedC`, `shiftedSum`, `normaliseRD`, and
+In Lean: `productSum` (with `alignedSum`), `cExp`, `shiftedC`, `shiftedSum`, `normalizeRD`, and
 `lateSum`; `alignedAccumulation` composes them.
 
 ### binary8: Algorithm 2 (`odd_even_grouping`)
 
 Odd- and even-indexed products (`p₁, p₃, …` and `p₂, p₄, …`) are aligned to their own maximum
 exponents and truncated to 24 fractional bits. The sum with the smaller exponent is shifted to
-`e_max` and RD to 24 fractional bits, and the two are added without normalisation. `c` is then
+`e_max` and RD to 24 fractional bits, and the two are added without normalization. `c` is then
 added as in Algorithm 1, except that `s′_c = 0` once `e_max − e_c > 25`. Any combination of
 fp8-E4M3 and fp8-E5M2 FNUZ operands is allowed; `N_FMA = 16`.
 

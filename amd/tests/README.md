@@ -8,7 +8,7 @@ the proofs use.
 
 [Paper/CDNA1.lean](MatrixCoreTests/Paper/CDNA1.lean), [CDNA2.lean](MatrixCoreTests/Paper/CDNA2.lean)
 and [CDNA3.lean](MatrixCoreTests/Paper/CDNA3.lean) contain every test vector of the paper's
-Section 4, in order, each with the output the paper reports for the hardware. Parameterised
+Section 4, in order, each with the output the paper reports for the hardware. Parameterized
 families (for example `j = 24 … 32`) are checked for every listed value.
 
 Inputs are written by decoded value. [Support.lean](MatrixCoreTests/Support.lean) encodes each

@@ -70,7 +70,7 @@ On CDNA 3 each aligned product is an integer number of grid steps (`alignedBits`
 `evalBlockMachine w` adds them in `w`-bit wrapping registers, and `evalBlockMachine_eq` proves it
 gives the model's output for every input at 30 bits (fp16, bf16), 29 (XF32) and 31 (binary8).
 
-For downstream proofs, each profile has a contract (`cdna1F16_contract`, …, `cdna3FP8_contract`)
+For downstream proofs, each model has a contract (`cdna1F16_contract`, …, `cdna3FP8_contract`)
 bundling what is proved about one block, including its output error bound, and `dotBits_blocks`
 carries any of them to every block of an inner product, together with the loss accounting of the
 whole inner product; `dotBits_error_bound` sums the blocks' error bounds.
@@ -88,7 +88,7 @@ alone (`correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori`), and th
 | Import / directory | What belongs here |
 | --- | --- |
 | [`MatrixCore.Numerics`](MatrixCore/Numerics.lean) | Exact arithmetic, Table 1 formats, decoding, fixed-point alignment (truncation and RD), binary32 RNE and its correctness and uniqueness |
-| [`MatrixCore.MC`](MatrixCore/MC.lean) | Profiles, block stages, evaluation, special values, chaining, the fixed-width accumulator, and their theorems |
+| [`MatrixCore.MC`](MatrixCore/MC.lean) | Models of the variants, block stages, evaluation, special values, chaining, the fixed-width accumulator, and their theorems |
 | [`MatrixCore.Specification`](MatrixCore/Specification.lean) | Independent transcription of the paper's algorithms and its equivalence with the model |
 | [`tests/`](tests/README.md) | The paper's test vectors and the trust audit |
 | [`examples/`](examples/) | Checked worked examples |
@@ -104,15 +104,15 @@ alone (`correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori`), and th
   hardware. Where the paper's prose and its Algorithm 1 disagree at one point, the test records
   the algorithm's result and the note explains it ([paper notes](docs/paper-notes.md)).
 * The model equals an independently written transcription of the paper's algorithms on every
-  path, CDNA 1, 2 and 3, for every input
+  variant, CDNA 1, 2 and 3, for every input
   ([`Spec.blockBits_eq_spec`](MatrixCore/Specification/Equivalence.lean),
   [`Spec.pairwise_eq_spec`](MatrixCore/Specification/Pairwise.lean)).
 * It agrees with the authors' MATLAB models on 600,000 random inner products across all ten
-  profiles, once two special-value lines and one unread flag in the MATLAB code are corrected; the
+  models, once two special-value lines and one unread flag in the MATLAB code are corrected; the
   remaining two differences are paper vectors where the Lean model, not the MATLAB model, returns
   the reported hardware result ([differential testing](docs/differential.md)).
 * A second implementation written on FloatLib (its formats, classification and binary32
-  rounding) gives the same observed result as this model for every input of every profile:
+  rounding) gives the same observed result as this model for every input of every model:
   finite word, infinity or NaN ([FloatLib implementation](floatlib-port/README.md)).
 * All theorems use only Lean's standard axioms; the audit checks this and that the specification
   shares no definitions with the implementation.

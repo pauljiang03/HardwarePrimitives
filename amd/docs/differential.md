@@ -1,7 +1,7 @@
 # Differential testing against the MATLAB models
 
 `scripts/matlab_diff.py` compares the Lean model with the authors' MATLAB Tensor Core v0.6
-matrix-core models (`MI100MC.m`, `MI210MC.m`, `MI300AMC.m`, engine
+matrix-core models (`MI100MC.m`, `MI210MC.m`, `MI300AMC.m`, and the generalized model
 `models/tools/Generic_BFMA_TC.m`, commit `79143bd`) on random and targeted inputs.
 
 ```sh
@@ -23,7 +23,7 @@ up to five mismatching inputs per run.
   values; XF32 inputs arrive already truncated to tf19, as CPFloat would deliver them.
 * **Octave.** Four functions behave differently from MATLAB in ways that change the model's
   results (`string`, `fma`, `bitshift` by 64 or more bits, `dot` of empty vectors);
-  `scripts/matlab/shims` restores MATLAB's behaviour without changing the model files
+  `scripts/matlab/shims` restores MATLAB's behavior without changing the model files
   ([paper notes](paper-notes.md#running-the-matlab-models-in-gnu-octave)).
 * **Inputs**, as in the paper's Section 5, with the paper's inner dimensions `k`:
   * `normal`: exponent-mantissa sampling, significands uniform in `(−2, 2)` and exponents uniform
@@ -41,10 +41,10 @@ up to five mismatching inputs per run.
 
 ## Results
 
-20,000 cases per profile and sampling scheme (seed 1): 600,000 random inner products, plus 85 of
+20,000 cases per model and sampling scheme (seed 1): 600,000 random inner products, plus 85 of
 the paper's targeted vectors. Mismatches per variant:
 
-| Profile | `k` | shipped | `rdfix` | `patched` |
+| Model | `k` | shipped | `rdfix` | `patched` |
 | --- | --- | --- | --- | --- |
 | CDNA 1 fp16 | 16 | 0 / 60,000 | — | — |
 | CDNA 1 bf16 | 8 | 0 / 60,000 | — | — |
@@ -65,11 +65,11 @@ Every mismatch is accounted for:
   `c`. Random bits give bf16 and tf19 products beyond `2^128` often; every such case agrees once
   the two lines are corrected.
 * **The two remaining cases** are the paper's bf16 vectors that test the subnormal-aware
-  normalisation (`c = 2^-127 − 2^-140, p₁ + ⋯ = 2^-140 + 2^-150 + 2^-158` and
+  normalization (`c = 2^-127 − 2^-140, p₁ + ⋯ = 2^-140 + 2^-150 + 2^-158` and
   `c = 0, p₁ = 2^-150, p₂ = 2^-158`). There the MATLAB model keeps 32 fractional bits below
   `2^-126`, and the Lean model returns the outputs the paper reports for the hardware.
 
 With the two MATLAB defects corrected, the Lean model and the MATLAB model agree on all 600,000
-random inner products on every CDNA path the MATLAB model implements (it has no fp32 SFMA and no
+random inner products on every CDNA variant the MATLAB model implements (it has no fp32 SFMA and no
 mixed fp8 formats), and the Lean model alone matches the paper's hardware results on the two
-normalisation vectors.
+normalization vectors.

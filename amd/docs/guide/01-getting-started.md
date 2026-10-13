@@ -11,7 +11,7 @@ test vector of the paper is checked by kernel evaluation during the build.
 
 ## Evaluate a block
 
-A block has the vectors `a`, `b` (`N_FMA` words each, in the profile's input formats) and the
+A block has the vectors `a`, `b` (`N_FMA` words each, in the model's input formats) and the
 binary32 word `c`. `blockBits` returns the binary32 word `d` or a `ModelError`:
 
 ```lean
@@ -45,8 +45,8 @@ example : blockBits x = .ok 0x3F800000 := by decide +kernel
 
 ## Longer inner products and MFMA
 
-An instruction with inner dimension `k` evaluates each element in `⌈k / N_FMA⌉` blocks, padding with
-zeros, each block's `d` becoming the next block's `c`:
+An instruction with inner dimension `k` evaluates each element in `⌈k / N_FMA⌉` blocks, completing
+the last block with zero products, each block's `d` becoming the next block's `c`:
 
 ```lean
 import MatrixCore
@@ -75,7 +75,7 @@ represents exactly, and `none` otherwise. The tests build every input this way
 | Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Numerics/Format.lean](../../MatrixCore/Numerics/Format.lean) |
 | Truncation and RD | `truncGrid`, `truncFrac`, `rdGrid`, `rdFrac` | [Numerics/Grid.lean](../../MatrixCore/Numerics/Grid.lean) |
 | `fl{·}` | `rne32`, `fl32`, `normExp` | [Numerics/Round32.lean](../../MatrixCore/Numerics/Round32.lean) |
-| Profiles | `Model`, `Accumulation`, `cdna1F16`, …, `Architecture.profile` | [MC/Defs.lean](../../MatrixCore/MC/Defs.lean), [MC/Profiles.lean](../../MatrixCore/MC/Models.lean) |
+| Models | `Model`, `Accumulation`, `cdna1F16`, …, `Architecture.model` | [MC/Defs.lean](../../MatrixCore/MC/Defs.lean), [MC/Models.lean](../../MatrixCore/MC/Models.lean) |
 | Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [MC/Stages.lean](../../MatrixCore/MC/Stages.lean) |
 | Evaluation | `evalBlock`, `blockBits`, `accumulate` | [MC/Eval.lean](../../MatrixCore/MC/Eval.lean) |
 | Special values | `blockOutcome`, `Outcome`, `XVal` | [MC/Special.lean](../../MatrixCore/MC/Special.lean) |
@@ -88,6 +88,6 @@ represents exactly, and `none` otherwise. The tests build every input this way
 | Monotonicity in the products | `correctRounding_exact_monotone`, `ProductNonmonotone`, `cdna3F16_nonmonotonic`, … | [MC/ProductMonotonicity.lean](../../MatrixCore/MC/ProductMonotonicity.lean) |
 | Exact inner products | `exactDot`, `runBlocks_products`, `dotBits_exact_error` | [MC/InnerProduct.lean](../../MatrixCore/MC/InnerProduct.lean) |
 | `D = AB + C` | `mfma_entry`, `mfma_finite`, `mfma_error` | [MC/MFMA.lean](../../MatrixCore/MC/MFMA.lean) |
-| Per-profile contracts | `BlockContract`, `CorrectRoundingContract`, `PairwiseContract`, `AlignedContract`, `cdna1F16_contract`, …, `dotBits_blocks` | [MC/Contract.lean](../../MatrixCore/MC/Contract.lean) |
+| Per-model contracts | `BlockContract`, `CorrectRoundingContract`, `PairwiseContract`, `AlignedContract`, `cdna1F16_contract`, …, `dotBits_blocks` | [MC/Contract.lean](../../MatrixCore/MC/Contract.lean) |
 | Fixed-width accumulation | `alignedBits`, `machineAccumulate`, `evalBlockMachine` | [MC/Accumulator.lean](../../MatrixCore/MC/Accumulator.lean) |
 | Integer sums and list lemmas | `sumZ`, `magnitudeSum`, `truncBits`, `rdBits`; `mapM_length_option`, `mem_zipWith'`, `sumQ_perm` | [Numerics/Sum.lean](../../MatrixCore/Numerics/Sum.lean), [Numerics/Lists.lean](../../MatrixCore/Numerics/Lists.lean) |

@@ -56,9 +56,9 @@ A successful module may print nothing. Lean elaborates and checks its definition
 | --- | --- |
 | [TC/Cases.lean](TensorCoreTests/TC/Cases.lean) | Named unnormalized-product/alignment traces and snapshot observations |
 | [TC/Monotonicity.lean](TensorCoreTests/TC/Monotonicity.lean) | V100/Ampere/Hopper family theorems, thresholds, and witness-range boundaries |
-| [TC/Features.lean](TensorCoreTests/TC/Features.lean) | Canonical alignment, floors, padding and machine-refinement witnesses |
-| [TC/Instruction.lean](TensorCoreTests/TC/Instruction.lean) | Ordered instruction groups, input width, and group-order examples |
-| [TC/Composition.lean](TensorCoreTests/TC/Composition.lean) | Encoded group residual ledger and cancellation correction |
+| [TC/Features.lean](TensorCoreTests/TC/Features.lean) | Canonical alignment, minimum alignment exponents, extra alignment bits and machine-refinement witnesses |
+| [TC/Instruction.lean](TensorCoreTests/TC/Instruction.lean) | Instruction variants with their block FMAs in order, input width, and block-order examples |
+| [TC/Composition.lean](TensorCoreTests/TC/Composition.lean) | Encoded residual ledger of chained block FMAs and cancellation correction |
 | [TC/Datapath.lean](TensorCoreTests/TC/Datapath.lean) | Bitvector datapath words: alignment loss, overflow, subnormal output, −0, and input errors |
 | [EFT/EFT.lean](TensorCoreTests/EFT/EFT.lean) | Low parts, overlap, scalar acceptance/rejection, and unsafe-unchecked counterexamples |
 | [EFT/EncodedEFT.lean](TensorCoreTests/EFT/EncodedEFT.lean) | Encoded Algorithm 1 results and supplied-D/domain behavior |
@@ -66,7 +66,7 @@ A successful module may print nothing. Lean elaborates and checks its definition
 | [EFT/MachineSplit.lean](TensorCoreTests/EFT/MachineSplit.lean) | Fixed-width splitting boundaries |
 | [EFT/BoundedEFT.lean](TensorCoreTests/EFT/BoundedEFT.lean) | Bounded-backend results and range boundaries |
 | [EFT/NativeEFT.lean](TensorCoreTests/EFT/NativeEFT.lean) | Native FP32 scalar fold and bounded algorithm preservation |
-| [Specification/NegativeControls.lean](TensorCoreTests/Specification/NegativeControls.lean) | Wrong normalization, alignment, floors, order, and zero-sign alternatives |
+| [Specification/NegativeControls.lean](TensorCoreTests/Specification/NegativeControls.lean) | Wrong normalization, alignment, minimum alignment exponents, order, and zero-sign alternatives |
 | [Specification/Audit.lean](TensorCoreTests/Specification/Audit.lean) | Compiled dependency independence of the mathematical specification |
 
 The test root also includes binary rounding, canonical-format, public-domain, directed-rounding, and flowback modules. [What is proven](../TensorCore/THEOREMS.md) links the general production results that these witnesses exercise.
@@ -81,7 +81,7 @@ Checking `lake env lean FILE` does not call `main`. To execute `main`, use `lake
 python3 scripts/check_eft_coverage.py
 ```
 
-Its path is:
+Its data flow is:
 
 ```text
 Python case generator / recorded vectors
@@ -94,7 +94,7 @@ Python case generator / recorded vectors
 
 Rational diagnostics use `numerator/denominator` strings. Python parses them with `fractions.Fraction` and compares them exactly. Words are integers, so a one-bit difference or signed-zero difference remains visible. The harness checks process success and record counts before accepting comparisons.
 
-[examples/InstructionGroups.lean](../examples/InstructionGroups.lean) is another IO adapter. `python3 scripts/check_instruction_groups.py` generates 99 encoded cases and compares the Lean instruction outputs with an independent exact-arithmetic oracle applied in group order. The cases cover all 16 positions, populated groups, reversed group order, signed zeros, subnormals, and cancellation. This check runs entirely in software.
+[examples/InstructionGroups.lean](../examples/InstructionGroups.lean) is another IO adapter. `python3 scripts/check_instruction_groups.py` generates 99 encoded cases and compares the Lean instruction outputs with an independent exact-arithmetic oracle applied block FMA by block FMA. The cases cover all 16 positions, populated block FMAs, reversed block order, signed zeros, subnormals, and cancellation. This check runs entirely in software.
 
 ## 5. Run a compiled Lean executable
 
@@ -115,10 +115,10 @@ The command encodes four `2^-12 · 2^-12` products, with C and supplied D both `
 | Executable | Input and purpose |
 | --- | --- |
 | `tc_trace` | V100 FP16 hexadecimal words, or `--file`/`--round-file` batches; full trace observations |
-| `tc_features` | Decimal commands for formats, profiles, generic groups, and rounding |
+| `tc_features` | Decimal commands for formats, models, generic block FMAs, and rounding |
 | `tc_eft_reference` | Generic FP16/BF16/packed-TF32 block, rounding, and perturbation-family commands |
-| `tc_bounded_eft` | Named profile blocks and fixed-workspace rounding; bounded/native scalar execution |
-| `tc_lean_eft_check` | JSON Lines on stdin; compares bounded and native scalar execution paths |
+| `tc_bounded_eft` | Blocks of the named variants and fixed-workspace rounding; bounded/native scalar execution |
+| `tc_lean_eft_check` | JSON Lines on stdin; compares bounded and native scalar execution |
 
 For the last adapter, one request is:
 
@@ -128,12 +128,12 @@ For the last adapter, one request is:
 
 The encoded request adds FP32 `1.0` to `0.0`. Decoding the returned results gives:
 
-| Execution path | FP32 value |
+| Execution | FP32 value |
 | --- | --- |
 | Reference | `1.0` |
 | Native | `1.0` |
 
-The [executable reference](../docs/reference.md) specifies word widths, profile names, packed/register TF32 conventions, and command formats. Lean checks proofs during elaboration; compiled execution evaluates the functions with proofs erased. Numerical comparisons additionally check the compiled path.
+The [executable reference](../docs/reference.md) specifies word widths, variant names, packed/register TF32 conventions, and command formats. Lean checks proofs during elaboration; compiled execution evaluates the functions with proofs erased. Numerical comparisons additionally check the compiled code.
 
 ## 6. Run independent comparisons and trust audits
 
@@ -147,15 +147,15 @@ python3 scripts/check_axioms.py
 python3 scripts/check_docs.py
 ```
 
-`validate.py` and the feature scripts compare traces/rounding with independent exact arithmetic and recorded GPU words. `check_eft.py` runs scalar coverage, instruction-group comparisons, pinned paper generators, and the bounded EFT comparisons. `check_lean_eft.py` compares native scalar folds with an ordered-encoding rounding oracle.
+`validate.py` and the feature scripts compare traces/rounding with independent exact arithmetic and recorded GPU words. `check_eft.py` runs scalar coverage, instruction-variant comparisons, pinned paper generators, and the bounded EFT comparisons. `check_lean_eft.py` compares native scalar folds with an ordered-encoding rounding oracle.
 
-The Accurate Models paper's recorded inputs and expected outputs are under [`vendor/matlab-tensor-core-v0.5/model_validation/`](../vendor/matlab-tensor-core-v0.5/model_validation/), with hashes in [`vendor/SOURCES.json`](../vendor/SOURCES.json). Both implementations replay all 35,000 rows: V100/A100/H100 FP16 and A100/H100 BF16/TF32, 5,000 per group. The files contain the published A/B/C inputs and D outputs.
+The Accurate Models paper's recorded inputs and expected outputs are under [`vendor/matlab-tensor-core-v0.5/model_validation/`](../vendor/matlab-tensor-core-v0.5/model_validation/), with hashes in [`vendor/SOURCES.json`](../vendor/SOURCES.json). Both implementations replay all 35,000 rows: V100/A100/H100 FP16 and A100/H100 BF16/TF32, 5,000 per variant. The files contain the published A/B/C inputs and D outputs.
 
 Follow one recorded V100 row through the implementation:
 
 1. [check_device.py](../scripts/check_device.py) reads A/B/C and converts the FP32-stored operand values exactly to FP16 words. D is reserved as the expected output.
 2. [Main/Trace.lean](../Main/Trace.lean) parses the words into `BlockInput` and calls the [snapshot adapter](TensorCoreTests/TC/Cases.lean).
-3. The adapter calls `evalBlock` in [TC/Block.lean](../TensorCore/TC/Block.lean), which performs decoding, exact unnormalized multiplication, grid selection, signed truncation, accumulation, and rounding to FP32.
+3. The adapter calls `evalBlock` in [TC/Block.lean](../TensorCore/TC/Block.lean), which performs decoding, exact multiplication with the products kept in denormalized form, grid selection, signed truncation, accumulation, and rounding to FP32.
 4. Python compares the returned `bits` with the recorded D word and fails on any mismatch. D is never supplied to this model calculation.
 
 The first published V100 row can be run directly:
@@ -168,7 +168,7 @@ python3 scripts/check_device.py
 
 The JSON reports `bits` as an integer whose hexadecimal representation is `3f9b7dec`, matching the first recorded D. Its alignment exponent `alignExp` is `-1` and grid exponent `alignGridExponent` is `-24`. The final command compares all 5,000 V100 rows.
 
-The semantic proof is a separate guarantee: [`IndependentSpec.supported_eq_spec`](../TensorCore/TC/Specification/Supported.lean) equates the executable evaluator with the independent mathematical specification for every input of each supported profile, including rejection. `python3 scripts/check_independent_spec.py` checks this development and its dependency-independence controls. [What is proven](../TensorCore/THEOREMS.md) identifies the non-monotonicity and EFT results and their premises.
+The semantic proof is a separate guarantee: [`IndependentSpec.supported_eq_spec`](../TensorCore/TC/Specification/Supported.lean) equates the executable evaluator with the independent mathematical specification for every input of each supported variant, including rejection. `python3 scripts/check_independent_spec.py` checks this development and its dependency-independence controls. [What is proven](../TensorCore/THEOREMS.md) identifies the non-monotonicity and EFT results and their premises.
 
 The universal proofs concern the defined finite-domain model under their stated hypotheses. Agreement with recorded GPU outputs covers those recorded inputs; correspondence between the specification, the paper, and physical hardware remains a separate specification question.
 

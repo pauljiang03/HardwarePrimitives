@@ -10,5 +10,5 @@
 7. [FloatLib implementation](../floatlib-port/README.md): a second implementation on FloatLib
    and its equivalence proof.
 
-[Paper notes](paper-notes.md) records modelling choices the paper leaves open, the points where
+[Paper notes](paper-notes.md) records modeling choices the paper leaves open, the points where
 the regression suite and the paper's prose differ, and differences from the MATLAB models.

@@ -5,9 +5,9 @@ arXiv:2609.14845 (TeX source of v2), and, for clarification only, the authors' M
 Core v0.6 (`models/MI100MC.m`, `MI210MC.m`, `MI300AMC.m`, `models/tools/Generic_BFMA_TC.m`,
 commit `79143bd`). Where the two differ, the formalization follows the paper.
 
-## Modelling choices the paper leaves open
+## Modeling choices the paper leaves open
 
-* **NaN.** The GPUs return a NaN with a negative sign; its payload is not characterised, so the
+* **NaN.** The GPUs return a NaN with a negative sign; its payload is not characterized, so the
   model reports `Outcome.nan` without a word.
 * **Zero signs.** An exact zero `S_acc` gives `+0`. A nonzero `S_acc` that rounds or flushes to
   zero keeps its sign. The paper does not test zero signs.
@@ -51,13 +51,13 @@ These were found by reading the source and confirmed by running the MATLAB model
 against the Lean model ([differential testing](differential.md)).
 
 * **The RD of `S_acc` is not executed in v0.6.** `Generic_BFMA_TC.m` reads the CDNA 3
-  normalisation-aware RD flag only if the field `rd_borrow_carry` exists (line 54), but
+  normalization-aware RD flag only if the field `rd_borrow_carry` exists (line 54), but
   `MI300AMC.m` sets `rd_norm_aware` (line 60). The RD at lines 614–623 therefore never runs, and
   `S_acc` keeps 32 fractional bits until the final RNE. Five of the paper's fp16 vectors that
   depend on this step give a different result in the shipped model, for example
   `c = 2 − 2^-22, p₁ = 2^-22, p₂ = 2^-23 + 2^-32`, where the hardware (and the Lean model) give
   `2` and the MATLAB model gives `2 + 2^-22`. With the field set, all five agree.
-* **Subnormal-aware normalisation.** With the RD enabled, the model keeps the leading 32 bits
+* **Subnormal-aware normalization.** With the RD enabled, the model keeps the leading 32 bits
   of the integer `S_acc`. Below `2^-126` that is 32 fractional bits relative to `−126`, while the
   paper's hardware results require 31. Two of the paper's bf16 vectors differ:
   `c = 2^-127 − 2^-140, p₁ + ⋯ = 2^-140 + 2^-150 + 2^-158` (hardware `2^-127`, MATLAB
@@ -70,17 +70,17 @@ against the Lean model ([differential testing](differential.md)).
   `isnan(c)`), so a NaN produced by an earlier block of a chained inner product is lost.
 * **CDNA 2 bf16 group size.** `MI210MC.m` uses `fma = 4` for every bf16 instruction; the paper
   reports a group size of `2` without the `_1k` suffix. The formalization has both
-  (`cdna2BF16`, `cdna2BF16_1k`), and the differential test runs the MATLAB engine with each.
+  (`cdna2BF16`, `cdna2BF16_1k`), and the differential test runs the MATLAB model with each.
 * **fp8 parameters by name.** `GEMM.m` maps the name `fp8` to E5M2 parameters while
   `fpformatinfo` maps `fp8` to E4M3.
-* **Mixed fp8 formats.** The MATLAB engine takes one input format for `a` and `b`, so mixed
+* **Mixed fp8 formats.** The MATLAB model takes one input format for `a` and `b`, so mixed
   E4M3 × E5M2 blocks are not compared.
 
 ## Running the MATLAB models in GNU Octave
 
 The paper states that the models also run in GNU Octave. Four differences between Octave and
-MATLAB affect `Generic_BFMA_TC.m`; the differential test supplies MATLAB's behaviour through
-small functions on the Octave path (`scripts/matlab/shims`), without changing the model files:
+MATLAB affect `Generic_BFMA_TC.m`; the differential test supplies MATLAB's behavior through
+small functions on Octave's load path (`scripts/matlab/shims`), without changing the model files:
 
 * `string` (used to hold the aligned bit strings of the CDNA 1 accumulator) does not exist;
 * `fma` (used for every CDNA 2 addition) does not exist;

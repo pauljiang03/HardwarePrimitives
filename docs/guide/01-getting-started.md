@@ -24,7 +24,7 @@ The worked file prints encoded results. Their decoded FP32 values are:
 | Import | Contents |
 | --- | --- |
 | `TensorCore.Numerics` | Finite representations, exact arithmetic, encoding and rounding |
-| `TensorCore.TC` | TC stages, profiles, specification, accumulator-width proofs, error bounds, and non-monotonicity |
+| `TensorCore.TC` | TC stages, the models of the variants, independent specification, accumulator-width proofs, error bounds, and non-monotonicity |
 | `TensorCore.EFT` | Reference EFT and its scalar/chosen-grid conditions |
 | `TensorCore.Kernels.EFT` | Bounded workspace operations, correction, and refinement |
 | `TensorCoreTests` | Production library plus the complete regression and trust-check environment |
@@ -33,7 +33,7 @@ The production imports do not load `TensorCoreTests`. Tests have their own sourc
 
 ## Encoded input, executable result, and proof
 
-A `BlockInput p` contains a list of encoded operand pairs and an encoded FP32 accumulator. `p` determines the input word type and expected group size. Hexadecimal literals below denote bit patterns:
+A `BlockInput p` contains a list of encoded operand pairs and an encoded FP32 accumulator. The model `p` determines the input word type and the FMA size, the number of products in the block FMA. Hexadecimal literals below denote bit patterns:
 
 ```lean
 import TensorCore.TC
@@ -60,7 +60,7 @@ import TensorCore.TC.StageResiduals
 
 open TensorCore
 
-example {p : Profile} {x : BlockInput p} {t : BlockTrace}
+example {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) :
     exactDot x = some (t.output.value + t.residual) :=
   evalBlock_residual_identity h
@@ -75,7 +75,7 @@ Definitions and proofs are grouped by their mathematical role:
 | Source | Contents |
 | --- | --- |
 | [TensorCore/Numerics/](../../TensorCore/Numerics/) | Exact arithmetic, finite encodings, and rounding contracts |
-| [TensorCore/TC/](../../TensorCore/TC/) | Profiles, block evaluation, independent specification, and model properties |
+| [TensorCore/TC/](../../TensorCore/TC/) | Models of the variants, block evaluation, independent specification, and model properties |
 | [TensorCore/EFT/](../../TensorCore/EFT/) | Extraction, scalar conditions, and reference Algorithm 1 |
 | [TensorCore/Kernels/EFT/](../../TensorCore/Kernels/EFT/) | Bounded EFT operations and refinement proofs |
 | [TensorCore/Scalar/](../../TensorCore/Scalar/) | IEEE operations and native FP32 addition proofs |

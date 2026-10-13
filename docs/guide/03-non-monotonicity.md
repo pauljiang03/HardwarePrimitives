@@ -1,6 +1,6 @@
 # Non-monotonicity
 
-A decrease in C can select a finer common alignment grid. Products that truncate to zero on the coarser grid can contribute on the finer grid, causing the model's output to increase. The construction in this chapter uses four products of `2^-12 · 2^-12 = 2^-24` on the V100 profile.
+A decrease in C can select a finer common alignment grid. Products that truncate to zero on the coarser grid can contribute on the finer grid, causing the model's output to increase. The construction in this chapter uses four products of `2^-12 · 2^-12 = 2^-24` on the V100 model.
 
 ```sh
 lake env lean examples/NonMonotonicity.lean
@@ -38,7 +38,7 @@ example : ((evalBlock before).toOption.map fun t => t.output.bits) = some 0x3f80
   decide +kernel
 ```
 
-This checks a concrete encoded counterexample. The general family theorem is [nonmonotone_encoded](../../TensorCore/TC/Monotonicity.lean): for K products of `2^-(24+p)`, lowering C from one to its predecessor increases the output exactly when `K ≥ 3·2^p`, under the construction's factorization, exponent, floor, and range hypotheses.
+This checks a concrete encoded counterexample. The general family theorem is [nonmonotone_encoded](../../TensorCore/TC/Monotonicity.lean): for K products of `2^-(24+p)`, lowering C from one to its predecessor increases the output exactly when `K ≥ 3·2^p`, under the construction's factorization, exponent, minimum alignment exponent, and range hypotheses.
 
 [nonmonotone_range_encoded](../../TensorCore/TC/MonotonicityRange.lean) extends the result to `C_j = 1 - j·2^-24`, with explicit bounds on j and a formula for the witness range and maximal output. These are family results; their theorem parameters state the permitted inputs.
 
@@ -46,4 +46,4 @@ This checks a concrete encoded counterexample. The general family theorem is [no
 
 The complete worked file also executes EFT before and after the perturbation. Both corrected values are `1.0000002384185791015625 = 1 + 2^-22`. Before the decrease, the exact sum is `1 + 4·2^-24`, which is already representable. After the decrease, it is `1 + 3·2^-24`, exactly halfway between `1 + 2^-23` and `1 + 2^-22`. Nearest-even rounding selects the upper endpoint because its final significand bit is zero. Thus the exact sums differ by `2^-24` but round to the same FP32 value. See [the EFT chapter](04-eft.md) for that correction.
 
-The architecture-family regression witnesses live in [tests/TensorCoreTests/TC/Monotonicity.lean](../../tests/TensorCoreTests/TC/Monotonicity.lean). Run them individually with `lake env lean tests/TensorCoreTests/TC/Monotonicity.lean` after building.
+The regression witnesses for each architecture family live in [tests/TensorCoreTests/TC/Monotonicity.lean](../../tests/TensorCoreTests/TC/Monotonicity.lean). Run them individually with `lake env lean tests/TensorCoreTests/TC/Monotonicity.lean` after building.

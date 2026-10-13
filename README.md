@@ -43,15 +43,15 @@ The calculation succeeds with the FP32 value `4.0`. It prints the encoded result
 | Import / directory | What belongs here |
 | --- | --- |
 | [`TensorCore.Numerics`](TensorCore/Numerics.lean) | Exact arithmetic, finite representations, encodings, and rounding contracts |
-| [`TensorCore.TC`](TensorCore/TC.lean) | TC profiles, alignment, accumulation, normalization and final rounding, model specification, error and non-monotonicity theory |
+| [`TensorCore.TC`](TensorCore/TC.lean) | Tensor Core models (the numerical features of each variant), alignment, accumulation, normalization and final rounding, independent specification, error and non-monotonicity theory |
 | [`TensorCore.EFT`](TensorCore/EFT.lean) | Reference extraction, scalar preconditions, chosen-grid conditions, and Algorithm 1 |
 | [`TensorCore.Kernels`](TensorCore/Kernels.lean) | The bitvector Tensor Core datapath, bounded 576-bit EFT execution, and their equivalence proofs |
-| [`TensorCore.Scalar`](TensorCore/Scalar.lean) | Native FP32 addition proof support used by the bounded EFT path |
+| [`TensorCore.Scalar`](TensorCore/Scalar.lean) | Native FP32 addition proof support used by the bounded EFT execution |
 | [`Main/`](Main/) | Command-line entry points that call the library and print results for test comparisons |
 | [`tests/`](tests/README.md) | Separate `TensorCoreTests` regression modules and executable-test walkthrough |
 | [`examples/`](examples/README.md) | Checked worked examples and Lean batch adapters |
 | [`amd/`](amd/README.md) | Matrix-Core: the AMD matrix-core (CDNA 1–3) formalization of *Accurate Models of AMD Matrix Cores*, a standalone Lake project with its own FloatLib implementation |
-| [`ozaki/`](ozaki/README.md) | The Ozaki schemes (Ozaki-I, Ozaki-II, and ADP/ESC) on the Tensor Core and Matrix-Core models, with correctly rounded variants of all three; a standalone Lake project that requires both |
+| [`ozaki/`](ozaki/README.md) | The Ozaki schemes (Ozaki-I, Ozaki-II, and ADP/ESC) on the Tensor Core and Matrix-Core models, with correctly rounded versions of all three; a standalone Lake project that requires both |
 | [`floatlib-port/`](floatlib-port/README.md) | Independent FloatLib implementation and equivalence proofs, with its own Lake project |
 | [`docs/`](docs/README.md) | Numbered guide, command reference, and trust boundaries |
 | [`scripts/`](scripts/) | Validation runners, exact-arithmetic oracles, and proof audits |
@@ -80,7 +80,7 @@ python3 scripts/check_clean_build.py
 
 This builds a fresh snapshot, audits theorem dependencies, checks every worked Lean file and documentation example, and compares executable results with independent exact-arithmetic oracles and recorded hardware vectors. See [the test walkthrough](tests/README.md) for individual checks and their failure behavior.
 
-The supported paths use FP16, BF16, or TF32 operands and FP32 outputs; the final rounding is truncation, as in *Accurate Models*. Any value TC-EFT returns is the exact sum correctly rounded to FP32, and it returns one exactly when that rounded sum is finite. Its fast FP32 path is taken whenever its check passes; otherwise a 576-bit exact path gives the answer. The non-monotonicity theorems cover specified families of encoded inputs. Hardware comparisons replay 35,000 recorded GPU measurements, which do not exercise alignment floors, zero or subnormal operands, TF32's wide exponent range, or the H100 TF32 K = 8 path; the proofs concern the formal model under their stated hypotheses. Software checks require neither MATLAB nor CUDA. The scripts refuse to run under `python -O`, and rerunning them on unchanged sources leaves `git status` clean.
+The supported variants use FP16, BF16, or TF32 input formats and the FP32 output format; the final rounding is truncation, as in *Accurate Models*. Any value TC-EFT returns is the exact sum correctly rounded to FP32, and it returns one exactly when that rounded sum is finite. Its fast FP32 path is taken whenever its check passes; otherwise a 576-bit exact fallback gives the answer. The non-monotonicity theorems cover specified families of encoded inputs. Hardware comparisons replay 35,000 recorded GPU measurements, which do not exercise the minimum alignment exponent, zero or subnormal operands, TF32's wide exponent range, or the H100 TF32 variant with FMA size K = 8; the proofs concern the formal model under their stated hypotheses. Software checks require neither MATLAB nor CUDA. The scripts refuse to run under `python -O`, and rerunning them on unchanged sources leaves `git status` clean.
 
 [What is proven](TensorCore/THEOREMS.md) · [What is tested](https://pauljiang03.github.io/TC-EFT/proofs/tested/) · [Executable reference](docs/reference.md) · [Trust and style](docs/style.md)
 

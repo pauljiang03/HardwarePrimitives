@@ -10,7 +10,7 @@ paper's fixed-point language rather than the model's grid operations:
 * "align to `e_max` and truncate to `F` fractional bits" as the integer
   `⌊M · 2^(e_p − f − (e_max − F))⌋` with the sign restored (`Spec.alignTrunc`);
 * "shift and RD to `k` fractional bits" as a floor division by a power of two (`Spec.shiftRD`);
-* the subnormal-aware normalisation from the bit length of the integer `S_acc`
+* the subnormal-aware normalization from the bit length of the integer `S_acc`
   (`Spec.shiftedBranch`);
 * Algorithms 1 and 2 (`Spec.algorithm1`, `Spec.algorithm2`, with `Spec.lateC` for lines 3–11);
 * the exact sum of CDNA 1;
@@ -21,7 +21,7 @@ paper's fixed-point language rather than the model's grid operations:
   (`Spec.RoundsNearestEven`), with the overflow threshold stated separately (`Spec.overflows`).
 
 `Spec.Result S a b c w` (and `Spec.PairwiseResult` for CDNA 2) says that `w` is the block
-output for the words `a`, `b`, `c`. The parameters of each path are transcribed from the paper
+output for the words `a`, `b`, `c`. The parameters of each variant are transcribed from the paper
 (`Spec.cdna3F16`, `Spec.cdna3FP8`, `Spec.cdna2BF16_1k`, …).
 
 ## Equivalence
@@ -50,7 +50,7 @@ it detects a deliberately planted implementation dependency.
 
 For CDNA 2, `Spec.pairwise_eq_spec` states the same for `Spec.PairwiseResult`; its proof
 identifies the specification's `fl{·}` with the model's (`Spec.fl_iff`, `Spec.flWord_iff`) and
-unfolds the model's pairwise tree (`pairwiseSum_four`, `pairwiseSum_two`).
+unfolds the model's pairwise sums (`pairwiseSum_four`, `pairwiseSum_two`).
 
 ```lean
 import MatrixCore
@@ -65,5 +65,5 @@ example (x : BlockInput cdna2F16) (w : F32) :
 
 ## Scope
 
-The specification covers every path of the paper: the SFMA, CDNA 1 fp16/bf16, CDNA 2
+The specification covers every variant in the paper: the SFMA, CDNA 1 fp16/bf16, CDNA 2
 fp16/bf16/bf16 `_1k`, and CDNA 3 fp16/bf16/XF32/fp8 (any mix of E4M3 and E5M2).
