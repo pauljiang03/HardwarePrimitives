@@ -58,7 +58,8 @@ website.
 | Completeness for chains and for terms with additions: two terms are equivalent exactly when their normal forms agree (V100, A100, H100 fp16 and CDNA 3 fp16: rigid; CDNA 1 fp16: correctly rounded trees; CDNA 2 fp16: binary summation trees) | Proved in Lean on every input, with kernel-checked fingerprint tables |
 | Completeness for chains (A100 and H100 bf16 and tf32, CDNA 1 bf16) | Proved in Lean on every input |
 | Completeness for terms with additions (A100 and H100 bf16 and tf32, SFMA) | Proved in Lean on inputs whose products are multiples of `2^-149` |
-| Completeness for terms on CDNA 1 bf16, CDNA 2 bf16, CDNA 3 bf16, xf32 and fp8, and off the binary32 grid on the bf16 and tf32 Tensor Cores and SFMA | Enumeration only ([prototype](prototype/README.md)) |
+| Completeness for terms on CDNA 1 bf16 (not all separated), CDNA 2 bf16 and CDNA 3 bf16, and off the binary32 grid on the bf16 Tensor Cores and SFMA | Enumeration only ([prototype](prototype/README.md)) |
+| Completeness on CDNA 3 xf32 and fp8, and for tf32 terms off the binary32 grid | Not yet covered |
 | Reduction of completeness to supports of at most 3 products | Proved in Lean (an ordered partition is determined by its pairwise patterns; a tree by its restrictions to triples of leaves); exhaustive for chains over up to 6 products and terms over 4 |
 | An fp16 Tensor Core block never returns `−0`; neither does any Tensor Core block whose products are multiples of `2^-149` | Proved in Lean |
 | Base witnesses on CDNA 1, 2 and 3; one-instruction swap witnesses on V100, A100, CDNA 1–3 | Kernel-checked in Lean |

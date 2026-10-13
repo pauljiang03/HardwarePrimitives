@@ -29,7 +29,8 @@ FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a blo
 | The same for chains on A100 and H100 bf16 and tf32 and on CDNA 1 bf16, and for terms on A100 and H100 bf16 and tf32 and on SFMA | Proved in Lean (terms: on inputs whose products are multiples of `2^-149`) |
 | Separating inputs on CDNA 1, 2 and 3; one instruction is not one rounding on V100, A100 and CDNA 1–3 | Kernel-checked in Lean |
 | The laws and normal forms on every modeled variant | Random testing; exhaustive enumeration over 2, 3 and 4 products |
-| Distinct normal forms always differ on some input (completeness), on the other variants | Checked exhaustively over 2, 3 and 4 products |
+| Distinct normal forms always differ on some input (completeness), on the other bf16 variants | Checked exhaustively over 2 and 3 products (CDNA 1 bf16 terms: not all separated) |
+| Completeness on CDNA 3 xf32, fp8, and tf32 terms off the binary32 grid | Not yet covered |
 | The CDNA 1 merge laws and the CDNA 2 `c`-split law | Proved in Lean, on every input |
 | How far apart two schedules can be: structural bound, divergence of two schedules, shared work | Proved in Lean for any matrix multiplier, with block contracts for V100, A100, H100, SFMA, CDNA 1, CDNA 2 and CDNA 3 |
 | Inside the exact region (small integer operands) every schedule agrees | Proved in Lean on every Tensor Core model and on CDNA 1, 2 and 3 |
@@ -347,7 +348,8 @@ instantiated as follows.
 | A100, H100 bf16; A100, H100 tf32 (wmma and mma) | Completeness proved, every input | Proved on inputs whose products are multiples of `2^-149` |
 | SFMA | Proved on inputs whose products are multiples of `2^-149` | Same |
 | CDNA 1 bf16 | Completeness proved, every input | Enumeration only |
-| CDNA 2 bf16, CDNA 3 bf16, xf32, fp8 | Enumeration only | Enumeration only |
+| CDNA 2 bf16 (with and without `_1k`), CDNA 3 bf16 | Enumeration only | Enumeration only |
+| CDNA 3 xf32, fp8 | Not yet covered | Not yet covered |
 
 On the fp16 models the result is an equivalence: two terms over the same products give the same
 word on every input exactly when their normal forms agree ([`MMAlgebra.TC.v100_term_equiv_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/TermComplete.lean#L226),
