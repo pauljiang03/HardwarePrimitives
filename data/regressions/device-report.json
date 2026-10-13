@@ -15,7 +15,7 @@
     "output_loss": 1326,
     "both_losses": 833,
     "mixed_signs": 4689,
-    "denormalised_product": 4704,
+    "denormalized_product": 4704,
     "eta_from_c_only": 647,
     "corrected_differs_from_device": 1885
   },

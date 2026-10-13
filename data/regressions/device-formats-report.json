@@ -1,7 +1,7 @@
 {
   "A100-bf16": {
     "descriptor": "a100-bf16",
-    "profile": "bf16Fp32Profile 8 1 (-132)",
+    "profile": "bf16Fp32Model 8 1 (-132)",
     "products": 8,
     "vectors": 5000,
     "model_errors": 0,
@@ -12,7 +12,7 @@
   },
   "A100-tf32": {
     "descriptor": "a100-tf32",
-    "profile": "tf32Fp32Profile 4 1 (-132)",
+    "profile": "tf32Fp32Model 4 1 (-132)",
     "products": 4,
     "vectors": 5000,
     "model_errors": 0,
@@ -23,7 +23,7 @@
   },
   "H100-bf16": {
     "descriptor": "hopper-bf16",
-    "profile": "bf16Fp32Profile 16 2 (-133)",
+    "profile": "bf16Fp32Model 16 2 (-133)",
     "products": 16,
     "vectors": 5000,
     "model_errors": 0,
@@ -34,7 +34,7 @@
   },
   "H100-tf32": {
     "descriptor": "hopper-tf32-wmma",
-    "profile": "tf32Fp32Profile 4 2 (-133)",
+    "profile": "tf32Fp32Model 4 2 (-133)",
     "products": 4,
     "vectors": 5000,
     "model_errors": 0,
@@ -43,6 +43,6 @@
     "descriptor_profile_disagreements": 0,
     "zero_or_subnormal_operands_or_c": 0
   },
-  "status": "Descriptor and proved-profile replay; the alignment floors are not exercised by these rows",
-  "method": "One descriptor and one profile evaluation per row, bitwise comparison with the device output and with each other; no new GPU measurements"
+  "status": "Descriptor and proved-model replay; the minimum alignment exponents are not exercised by these rows",
+  "method": "One descriptor and one model evaluation per row, bitwise comparison with the device output and with each other; no new GPU measurements"
 }

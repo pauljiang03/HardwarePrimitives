@@ -54,7 +54,7 @@ FP32 = (8, 23, 127, False)
 E4M3 = (4, 3, 8, True)
 E5M2 = (5, 2, 16, True)
 
-# profile: (a format, b format, k, normal exponent range, subnormal exponent range, xf32)
+# model: (a format, b format, k, normal exponent range, subnormal exponent range, xf32)
 PROFILES = {
     "cdna1F16": (FP16, FP16, 16, (-14, 15), (-24, -14), False),
     "cdna1BF16": (BF16, BF16, 8, (-126, 63), (-133, -126), False),
@@ -233,7 +233,7 @@ def classify_matlab(h):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", type=int, default=2000, help="cases per profile and regime")
+    ap.add_argument("--cases", type=int, default=2000, help="cases per model and regime")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--profiles", default=",".join(PROFILES))
     args = ap.parse_args()

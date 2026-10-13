@@ -137,7 +137,7 @@ def main():
         key = f"{case['cohort']}/{case['device']}"
         tally = totals.setdefault(key, dict(cases=0, model_rejections=0, scalar_accepted=0,
                                           corrected_changed=0, unchecked_mismatches=0,
-                                          tighter_support_budget_passes=0, failures=Counter()))
+                                          tighter_support_bound_passes=0, failures=Counter()))
         tally['cases'] += 1
         oracle = reference(case['words'], case['k'], case['extra'], None)
         record = {**case, **out}
@@ -165,7 +165,7 @@ def main():
             parts = [Q(q) for q in out['low_parts']]
             support, mag = low_support(parts)
             tighter_pass = mag < 2**24 and (support is None or -149 <= support <= 104)
-            tally['tighter_support_budget_passes'] += tighter_pass
+            tally['tighter_support_bound_passes'] += tighter_pass
             # The Lean predicate uses the lowest bit actually set, as this independent oracle does.
             bit_checks = {'lowest_bit_min', 'lowest_bit_max', 'low_bits_on_grid', 'low_bits_sum_below_2pow24'}
             if not (bit_checks & set(out['failed'])) != tighter_pass:

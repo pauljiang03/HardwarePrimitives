@@ -7,11 +7,11 @@
     "A100": 30,
     "H100": 27
   },
-  "scope": "16-position FP16/FP32 instruction paths, ordered group accumulation, zeros, subnormals, and cancellation",
-  "oracle": "Lean instruction outputs compared with independent exact rational arithmetic per ordered normalization group",
+  "scope": "16-position FP16/FP32 instruction variants, ordered accumulation of block FMAs, zeros, subnormals, and cancellation",
+  "oracle": "Lean instruction outputs compared with independent exact rational arithmetic per ordered block FMA",
   "source_sha256": {
-    "scripts/check_instruction_groups.py": "1ce23bdbe31af2caa154f4cf576f2ef1223dc7a8aa4ee9730778b312759ca939",
-    "scripts/check_features.py": "50f38c002188ab64c6316a75f0b715a2a0211ef704dac7e33816769c45dfb2c4",
-    "examples/InstructionGroups.lean": "2fef9eb156a9edf8eb90331f0fcecdf2bc5ff5fdf60ceafeeb7ac56f5e13f8d5"
+    "scripts/check_instruction_groups.py": "86178ed6ff03fb37578acfa5662867c405935087f10699153add32c9f3d0c469",
+    "scripts/check_features.py": "f26861526237b81b45a8ffd7b788dedd2cbac599dd5770732807c28b186e91b4",
+    "examples/InstructionGroups.lean": "c3c768a255c62bdd44579ee7a20328fb9254e37f03e35055bef0cdffe3964703"
   }
 }

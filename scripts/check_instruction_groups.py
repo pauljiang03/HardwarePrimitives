@@ -28,7 +28,7 @@ def vectors():
             pairs = [(0, 0)] * 16
             pairs[group*k:(group+1)*k] = [(0x3c00, 0x3c00)] * k
             yield row(f'group_{group}', pairs)
-        # All ordered group pairs; the two orderings have the same exact ideal.
+        # All ordered pairs of block FMAs; the two orderings have the same exact ideal.
         for first in range(16 // k):
             for later in range(first + 1, 16 // k):
                 for reverse in [False, True]:
@@ -86,8 +86,8 @@ def main():
     report = dict(status='passed', cases=len(inputs), mismatches=0,
                   profiles={profile: sum(v['profile'] == profile for v in inputs)
                             for profile in PROFILES},
-                  scope='16-position FP16/FP32 instruction paths, ordered group accumulation, zeros, subnormals, and cancellation',
-                  oracle='Lean instruction outputs compared with independent exact rational arithmetic per ordered normalization group',
+                  scope='16-position FP16/FP32 instruction variants, ordered accumulation of block FMAs, zeros, subnormals, and cancellation',
+                  oracle='Lean instruction outputs compared with independent exact rational arithmetic per ordered block FMA',
                   source_sha256={name: hashlib.sha256((ROOT/name).read_bytes()).hexdigest()
                                  for name in ['scripts/check_instruction_groups.py',
                                               'scripts/check_features.py',

@@ -2,8 +2,8 @@
 """Record the outputs of the Z3 ADP model on small test matrices.
 
 The Z3 model of NVIDIA's ADP (`ozaki-NVIDIA/adp.py` of a local clone)
-emulates binary64 GEMM on an INT8 engine with ESC-driven slicing, and falls back to native
-binary64 GEMM for Inf/NaN inputs or when emulation would be uneconomic. This script imports
+emulates binary64 GEMM on an INT8 matrix multiplier with ESC-driven slicing, and falls back to
+native binary64 GEMM for Inf/NaN inputs or when emulation would be uneconomic. This script imports
 `adp.py` and the data generators of `tests.py` from an unmodified clone, runs `adp.adp` with the
 default configuration (block 2, zeros as -inf, remapped slices, speed ratio 100) on a few small
 cases, and prints every input and output as a binary64 bit pattern, with the path, the matrix

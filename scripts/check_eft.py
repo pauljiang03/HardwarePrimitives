@@ -80,7 +80,7 @@ def main():
     for source in sources:
         assert not re.search(r'\b(sorry|admit|axiom|native_decide|ofReduceBool|skipKernelTC)\b', source.read_text()), source
     report = dict(status='passed', commands=results, scanned_lean_sources=len(sources),
-                  bounded_scope='Complete eight-path encoded EFT: bounded decoding, signed extraction/overlap, guards, scalar and 576-bit exact consolidation, direct FP32 rounding; universal finite-input correctness, success/range, reference refinement, and source-level operation budgets',
+                  bounded_scope='Complete eight-variant encoded EFT: bounded decoding, signed extraction/overlap, guards, scalar and 576-bit exact consolidation, direct FP32 rounding; universal finite-input correctness, success/range, reference refinement, and source-level operation counts',
                   bounded_checks=json.loads((ROOT/'data/regressions/bounded-eft-report.json').read_text()),
                   instruction_group_checks=json.loads((ROOT/'data/regressions/instruction-groups-report.json').read_text()),
                   incomplete=['Optimized machine lowering and performance comparison'])

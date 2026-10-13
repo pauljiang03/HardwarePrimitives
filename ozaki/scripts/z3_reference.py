@@ -2,8 +2,8 @@
 """Record the outputs of the Z3 Ozaki models on their own test matrices.
 
 The Z3 models (`ozaki1/ozaki1.py` and `ozaki2/ozaki2.py` of a local clone)
-emulate a binary32 4x4 GEMM on an fp16-input engine. This script imports both modules from an
-unmodified clone, regenerates their two test cases exactly as their `main()` does
+emulate a binary32 4x4 GEMM on a matrix multiplier with fp16 inputs. This script imports both
+modules from an unmodified clone, regenerates their two test cases exactly as their `main()` does
 (`random.Random(2026)`, exponent spreads 1 and 6), runs `ozaki1_gemm` (four slices) and
 `ozaki2_gemm` (four moduli), and prints every input and output as a binary32 bit pattern.
 

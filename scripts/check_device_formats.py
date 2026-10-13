@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the published A100 and H100 BF16 and TF32 vectors through the InvocationSpec descriptors and through the proved BF16 and TF32 profiles."""
+"""Replay the published A100 and H100 BF16 and TF32 vectors through the InvocationSpec descriptors and through the proved BF16 and TF32 models."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 from pathlib import Path
@@ -60,7 +60,7 @@ def main():
         profile_mismatches = [(i, t.get('bits'), d) for i, (t, d) in enumerate(zip(ptraces, d_words))
                               if t.get('bits') != d]
         disagreements = sum(t.get('bits') != u.get('bits') for t, u in zip(traces, ptraces))
-        report[f'{gpu}-{fmt}'] = dict(descriptor=profile, profile=f'{fmt}Fp32Profile {k} {extra} ({floor})',
+        report[f'{gpu}-{fmt}'] = dict(descriptor=profile, profile=f'{fmt}Fp32Model {k} {extra} ({floor})',
                                      products=k, vectors=n,
                                      model_errors=errors, bit_mismatches=len(mismatches) - errors,
                                      profile_bit_mismatches=len(profile_mismatches),
@@ -68,9 +68,9 @@ def main():
                                      zero_or_subnormal_operands_or_c=special)
         failures += [(gpu, fmt, *m) for m in mismatches]
         failures += [(gpu, fmt + '-profile', *m) for m in profile_mismatches]
-    report['status'] = ('Descriptor and proved-profile replay; the alignment floors are not '
+    report['status'] = ('Descriptor and proved-model replay; the minimum alignment exponents are not '
                         'exercised by these rows')
-    report['method'] = ('One descriptor and one profile evaluation per row, bitwise comparison with the '
+    report['method'] = ('One descriptor and one model evaluation per row, bitwise comparison with the '
                         'device output and with each other; no new GPU measurements')
     (ROOT / 'data/regressions/device-formats-report.json').write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))

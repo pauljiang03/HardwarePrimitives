@@ -1,7 +1,7 @@
 function driver(model_dir, infile, outfile, variant)
 % Evaluate inner products with the MATLAB Tensor Core v0.6 matrix-core model.
 %
-% Each input line is: profile k a_1 ... a_k b_1 ... b_k c, with values as hexadecimal binary64
+% Each input line is: model k a_1 ... a_k b_1 ... b_k c, with values as hexadecimal binary64
 % (num2hex) words. Blocks are chained as in models/tools/GEMM.m: the vectors are padded with
 % zeros to a multiple of N_FMA and each block's output is the next block's c. The output line is
 % the hexadecimal binary64 word of d.

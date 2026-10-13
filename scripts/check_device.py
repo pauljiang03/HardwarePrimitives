@@ -90,7 +90,7 @@ def main():
 
     mismatches, errors = [], 0
     exercised = dict(alignment_loss=0, output_loss=0, both_losses=0, mixed_signs=0,
-                     denormalised_product=0, eta_from_c_only=0, corrected_differs_from_device=0)
+                     denormalized_product=0, eta_from_c_only=0, corrected_differs_from_device=0)
     for i, (t, d, row) in enumerate(zip(traces, d_words, rows)):
         if 'error' in t:
             errors += 1
@@ -106,7 +106,7 @@ def main():
         exercised['mixed_signs'] += len({c > 0 for c in t['coefficients'] if c}) > 1
         words = [int(w, 16) for w in row.split()]
         sig = lambda h: (h & 1023) if (h >> 10) & 31 == 0 else 1024 + (h & 1023)
-        exercised['denormalised_product'] += any(
+        exercised['denormalized_product'] += any(
             sig(words[k]) * sig(words[k + 1]) >= 2 ** 21 for k in range(0, 8, 2))
         c_scale = ((words[8] >> 23) & 255) - 127
         exercised['eta_from_c_only'] += (t['alignExp'] is not None and t['alignExp'] == c_scale

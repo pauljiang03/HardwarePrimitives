@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""How often does the check of correctly rounded Ozaki-I and Ozaki-II settle an entry?
+"""How often does the rounding test of correctly rounded Ozaki-I and Ozaki-II succeed on an entry?
 
 A CPU simulation of the correctly rounded schemes of `Ozaki/Correct.lean`, in exact arithmetic.
 For one output entry `x . y` each scheme computes an exact value `H` and a proved bound
 `B >= |x . y - H|`, and accepts when `H - B` and `H + B` round to the same value (`roundEnclosure`,
-`roundingTest`); otherwise it tries the next enclosure and finally takes the exact path. The engine is
-exact (the Lean proofs show it is on slices and residues), so the slice and residue products are
-computed exactly here; every `H`, `B`, `x . y` is an exact dyadic rational, rounded with round to
-nearest even (`roundRNE`) by integer arithmetic.
+`roundingTest`); otherwise it tries the next enclosure and finally takes the exact fallback. The
+matrix multiplier is exact (the Lean proofs show it is on slices and residues), so the slice and
+residue products are computed exactly here; every `H`, `B`, `x . y` is an exact dyadic rational,
+rounded with round to nearest even (`roundRNE`) by integer arithmetic.
 
 Ozaki-I (`Ozaki/Split.lean`, `Ozaki/Ozaki1.lean`): `b = 11`, slices by round to nearest even on the
 grid `2^(ceil(log2 max|r|) - b)` of what is left (`split`, `sliceGrid`), the `s(s+1)/2` slice products
@@ -16,36 +16,38 @@ grid `2^(ceil(log2 max|r|) - b)` of what is left (`split`, `sliceGrid`), the `s(
 * `normwise`   `(s+1) k 2^(E+F-s(b+1))`                (`exactTerms_error`, `ozaki1Bound`);
 * `entrywise`  `(s+1) sum_i min(2|x_i y_i|, 2^(E+F-s(b+1)))` (`exactTerms_error_sharp`);
 * `overlap`    `(s+1) N 2^(E+F-s(b+1))`, `N` the support overlap (`exactTerms_error_overlap`,
-               `ozaki1BoundZ`; one extra engine product per entry);
-* `normwise_w96`, `overlap_w96`: the same with a `W = 96`-bit window accumulator
+               `ozaki1BoundZ`; one extra product on the matrix multiplier per entry);
+* `normwise_w96`, `overlap_w96`: the same with a `W = 96`-bit truncated sum
                (`Ozaki/TruncatedSum.lean` `ozaki1TruncatedEnclosure`, `ozaki1TruncatedEnclosureZ`).
 
-Exact path (`ozaki1ExactFallback`): all `s_e^2` slice products, `s_e` the smallest `s >= 1` leaving no
-residual in `x` or `y` (`residualsVanish`). Slice products of one split are prefixes of the next
-(`split_prefix`), so the model reuses them: checking at `ss = [5, 6]` and falling back costs
-`21 + s_e^2 - (reused pairs)` engine products.
+Exact fallback (`ozaki1ExactFallback`): all `s_e^2` slice products, `s_e` the smallest `s >= 1`
+leaving no residual in `x` or `y` (`residualsVanish`). Slice products of one split are prefixes of
+the next (`split_prefix`), so the model reuses them: testing at `ss = [5, 6]` and falling back
+costs `21 + s_e^2 - (reused pairs)` products on the matrix multiplier.
 
 Ozaki-II (`Ozaki/Ozaki2.lean`): shift to `P` bits and truncate (`scaleShift`, `scaleTrunc`), one
-engine product per modulus, CRT reconstruction (exact when `2 k 4^P < M`), with the moduli
-`fp64Moduli` of `Ozaki/BoundedChecked2.lean` (greedy pairwise coprime moduli <= 4096, extended to 13
-and 14) and `P = ozaki2Bits k M`. Bounds:
+product on the matrix multiplier per modulus, CRT reconstruction (exact when `2 k 4^P < M`), with
+the moduli `fp64Moduli` of `Ozaki/BoundedChecked2.lean` (greedy pairwise coprime moduli <= 4096,
+extended to 13 and 14) and `P = ozaki2Bits k M`. Bounds:
 
 * `rational`  `max|x - x~| sum|y| + max|y - y~| sum|x~|` (`ozaki2Bound`, `dot_approx_error`);
 * `integer`   `K 2^(-s_x-s_y)`, `K = boundK` (`Ozaki/BoundedOzaki2.lean`, `ozaki2K`).
 
-Exact path: Ozaki-I's (`ozaki2CRE`). Configurations are tried in order (12, 13, 14 moduli for
+Exact fallback: Ozaki-I's (`ozaki2CRE`). Configurations are tried in order (12, 13, 14 moduli for
 binary64; 6, 7, 8 for binary32); a new `P` changes the scaled integers, so nothing is reused.
 
-The cost model counts engine products (one low-precision dot product of length `k`) per entry; it
-is not GPU time. Every entry is also checked: `|x . y - H| <= B` for every enclosure, and every
-settled result equals the rounding of the exact product (both must never fail).
+The cost model counts products on the matrix multiplier (one low-precision dot product of length
+`k`) per entry; it is not GPU time. Every entry is also checked: `|x . y - H| <= B` for every
+enclosure, and every result the rounding test accepts equals the rounding of the exact product
+(both must never fail).
 
 With `--rules`, each configuration also tries the slice counts of the rule for correct rounding
 (`Ozaki/SliceRuleCR.lean` `slicesForCR`, `Ozaki/Adaptive.lean` `crSlices`): from
 `s0 = slicesFor b (t + ceil(log2 k))`, the lists `[s0, s0+1]` and `[s0, s0+1, s0+2]`, with `t` the
 output precision; every list also reports the adaptive shortcut (`cost_mean_adaptive`,
-`ozaki1CRA`: straight to the exact path when `s_e^2` is at most the first check's cost). The results
-go to `data/fallback-sim-rules.json` unless `--out` is given; the plain run's file is untouched.
+`ozaki1CRA`: straight to the exact fallback when `s_e^2` is at most the first test's cost). The
+results go to `data/fallback-sim-rules.json` unless `--out` is given; the plain run's file is
+untouched.
 
 Usage (numpy from the local uv cache, no network):
 
@@ -66,7 +68,7 @@ from itertools import accumulate
 import numpy as np
 
 SLICE_BITS = 11          # b: slices are b-bit integers, |q| <= 2^b (Split.lean)
-WINDOW_BITS = 96         # W of Window.lean
+WINDOW_BITS = 96         # W of TruncatedSum.lean
 MODULUS_CAP = 4096       # moduli <= 2^(b+1)
 FORMATS = {'binary64': (53, -1022, 1023), 'binary32': (24, -126, 127)}
 LIMB = 20                # limb width for the exact Ozaki-II integer products
@@ -574,7 +576,7 @@ def process_block(mode, Xv, Yv, fmt_name, cfg, rec, stats, nvalidate):
     nE = len(entries)
     stats['time_slice'] += time.time() - t0
 
-    # Ozaki-I slice products: the triangle t + u < smax and the exact path's t < s_x, u < s_y.
+    # Ozaki-I slice products: the triangle t + u < smax and the exact fallback's t < s_x, u < s_y.
     t0 = time.time()
     mx, my = max(X.sv), max(Y.sv)
     pairs = {(t, u) for t in range(smax) for u in range(smax - t)}
@@ -658,7 +660,7 @@ def process_block(mode, Xv, Yv, fmt_name, cfg, rec, stats, nvalidate):
         oz2.append((sx, sy, N2))
     stats['time_oz2'] += time.time() - t0
 
-    # Per entry: exact value, Ozaki-I and Ozaki-II enclosures, checks.
+    # Per entry: exact value, Ozaki-I and Ozaki-II enclosures, rounding tests.
     t0 = time.time()
     for e, (i, j) in enumerate(entries):
         g, h = X.G[i], Y.G[j]
@@ -716,7 +718,7 @@ def process_block(mode, Xv, Yv, fmt_name, cfg, rec, stats, nvalidate):
         rec['repr'].append(rep)
         rec['kappa'].append(math.inf if zero else sabs[e] / abs(float(dy_frac(v))))
 
-        # Triangle sums, exact (H) and in the window (Window.lean), by anti-diagonals.
+        # Triangle sums, exact (H) and truncated (TruncatedSum.lean), by anti-diagonals.
         q = E + F - WINDOW_BITS
         Hs, Ws, Ns = [0], [0], [0]
         H = WS = nzt = 0
@@ -827,7 +829,7 @@ def summarize(rec, cfg):
     for ss in cfg['ss_lists']:
         key = ','.join(map(str, ss))
         sl = ss[-1]
-        # reuse[e]: pairs t + u < sl with t, u < s_e, already computed by the checks.
+        # reuse[e]: pairs t + u < sl with t, u < s_e, already computed by the rounding tests.
         reuse = np.array([sum(1 for t in range(sl) for u in range(sl - t)
                               if t < s and u < s) for s in range(smax_e + 1)])
         o1[key] = {}
@@ -843,8 +845,8 @@ def summarize(rec, cfg):
             cost = np.where(fb, tri(sl) + base - reuse[se], tris[np.maximum(settle, 0)]) + extra
             cost_noreuse = np.where(fb, cum_noreuse[-1] + base,
                                     cum_noreuse[np.maximum(settle, 0)]) + extra
-            # Adaptive: s_e is known after splitting; go straight to the exact path when it is
-            # no dearer than the first check.
+            # Adaptive: s_e is known after splitting; go straight to the exact fallback when it is
+            # no dearer than the first test.
             direct = base <= tri(ss[0]) + extra
             cost_adapt = np.where(direct, base, cost)
             wl = np.array(rec['wide1'][bound][sl])
@@ -884,7 +886,7 @@ def summarize(rec, cfg):
     out['ozaki1'] = o1
     out['ozaki2'] = o2
     # How often the enclosure's H is already the exact product (Ozaki-II: the truncation dropped
-    # nothing, so B = 0 and the check settles whatever the rounding boundary).
+    # nothing, so B = 0 and the rounding test succeeds whatever the rounding boundary).
     out['ozaki1_H_exact_frac'] = {str(s): frac(np.array(rec['hex1'][s]), n)
                                   for s in cfg['s_check']}
     out['ozaki2_H_exact_frac'] = {str(cnt): frac(np.array(rec['hex2'][c]), n)
@@ -1044,10 +1046,10 @@ def print_summary(data):
         ssa = ','.join(map(str, st['ss_lists'][0]))
         ssb = ','.join(map(str, st['ss_lists'][1]))
         s1, s2 = st['ss_lists'][0]
-        print(f'\n### {fmt_name}: Ozaki-I, ss = [{ssa}] (% of entries settled at s={s1} / s={s2} / '
-              f'exact path)\n')
-        print('| data | k | kappa p50 | normwise | entrywise | zero-aware | s_e (fallback) | '
-              'cost / exact path (normwise, zero-aware) |')
+        print(f'\n### {fmt_name}: Ozaki-I, ss = [{ssa}] (% of entries decided at s={s1} / s={s2} / '
+              f'exact fallback)\n')
+        print('| data | k | kappa p50 | normwise | entrywise | nonzero-position | s_e (fallback) | '
+              'cost / exact fallback (normwise, nonzero-position) |')
         print('|---|---|---|---|---|---|---|---|')
         for r in rows:
             o = r['ozaki1'][ssa]
@@ -1063,9 +1065,9 @@ def print_summary(data):
                   f" | {sef if sef is not None else '-'} | "
                   f"{o['normwise']['cost_mean']:.1f} / {o['overlap']['cost_mean']:.1f} vs "
                   f"{r['exact_path_cost_mean']:.1f} |")
-        print(f'\n### {fmt_name}: Ozaki-I, ss = [{ssb}], exact-path % (normwise / entrywise / '
-              f'zero-aware / zero-aware + W=96 window) and mean cost\n')
-        print('| data | k | exact % | cost (normwise / zero-aware) | adaptive cost (zero-aware) | exact path |')
+        print(f'\n### {fmt_name}: Ozaki-I, ss = [{ssb}], exact-fallback % (normwise / entrywise / '
+              f'nonzero-position / nonzero-position + W=96 truncated sum) and mean cost\n')
+        print('| data | k | exact % | cost (normwise / nonzero-position) | adaptive cost (nonzero-position) | exact fallback |')
         print('|---|---|---|---|---|---|')
         for r in rows:
             o = r['ozaki1'][ssb]
@@ -1075,8 +1077,8 @@ def print_summary(data):
                   f"{o['overlap']['cost_mean']:.1f} | {o['overlap']['cost_mean_adaptive']:.1f} | "
                   f"{r['exact_path_cost_mean']:.1f} |")
         counts = [c['moduli_count'] for c in rows[0]['ozaki2_configs']]
-        print(f'\n### {fmt_name}: Ozaki-II, {counts} moduli in turn (% settled at each / exact path)\n')
-        print('| data | k | P | rational bound | integer bound (boundK) | cost (rational) vs exact path |')
+        print(f'\n### {fmt_name}: Ozaki-II, {counts} moduli in turn (% decided at each / exact fallback)\n')
+        print('| data | k | P | rational bound | integer bound (boundK) | cost (rational) vs exact fallback |')
         print('|---|---|---|---|---|---|')
         for r in rows:
             o = r['ozaki2']
@@ -1088,7 +1090,7 @@ def print_summary(data):
             Ps = ','.join(str(c['P']) for c in r['ozaki2_configs'])
             print(f"| {r['dataset']} | {r['k']} | {Ps} | " + ' | '.join(cells) +
                   f" | {o['rational']['cost_mean']:.1f} vs {r['exact_path_cost_mean']:.1f} |")
-        print(f'\n### {fmt_name}: what the fallbacks are (Ozaki-I ss = [{ssa}], zero-aware bound; '
+        print(f'\n### {fmt_name}: what the fallbacks are (Ozaki-I ss = [{ssa}], nonzero-position bound; '
               f'Ozaki-II rational)\n')
         print('| data | k | O-I fallbacks | zero | tie | near | wide | H exact | O-II fallbacks | '
               'zero | tie | near | wide |')

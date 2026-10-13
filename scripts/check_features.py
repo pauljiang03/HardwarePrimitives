@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent exact checks for canonical FP16 -> FP32 groups."""
+"""Independent exact checks for canonical FP16 -> FP32 block FMAs."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 from fractions import Fraction as Q
@@ -88,11 +88,11 @@ def main():
     for name, expected in pins['sha256'].items():
         assert hashlib.sha256((ROOT / 'vendor/matlab-tensor-core-v0.5' / name).read_bytes()).hexdigest() == expected, name
     cases = []
-    # Include arbitrary, non-hardware block sizes and extra-bit counts.
+    # Include arbitrary, non-hardware FMA sizes and numbers of extra alignment bits.
     configs = [(0, 0, None), (0, 2, -133), (0, 0, 4), (4, 0, None), (8, 1, -132), (16, 2, -133)]
     configs += [(k, e, f) for k in [1, 3, 7, 17, 37, 64]
                 for e in [0, 1, 2, 5, 9, 24] for f in [None, -132, 4]]
-    # The proved conservative threshold, including its largest permitted floor.
+    # The proved conservative threshold, including its largest permitted minimum alignment exponent.
     configs += [(k, 253, f) for k in [1, 17, 64] for f in [None, 127]]
     configs += [(k, 156, f) for k in [1, 17, 64] for f in [None, 30]]
     boundary16 = [0, 0x8000, 1, 0x8001, 0x3ff, 0x83ff, 0x400, 0x8400,
@@ -114,7 +114,7 @@ def main():
             samples.append(words + [RNG.choice(boundary32)])
         for words in samples:
             cases.append((k, extra, floor, words))
-    # Distinguish extra alignment bits and preserve unnormalized factorization.
+    # Distinguish extra alignment bits and preserve the products' denormalized factorization.
     for extra in [0, 1, 2, 9]:
         cases.append((4, extra, None, [0x3c00,0x3c00,0xc00,0xc00,0xc00,0xc00,0,0,0]))
     for extra in [104, 156, 253, 257]:
@@ -153,7 +153,7 @@ def main():
         losses['alignment'] += alignment
         losses['output'] += output
         losses['both'] += alignment and output
-    # Published canonical device vectors, each row one source-defined group.
+    # Published canonical device vectors, each row one source-defined block FMA.
     from check_device import read_hex_rows, read_bin, fp32_word_to_fp16
     device_reports = []
     for gpu, k, extra, floor in [('V100',4,0,None),('A100',8,1,-132),('H100',16,2,-133)]:

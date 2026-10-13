@@ -3,7 +3,7 @@
   "theorem": "TensorCore.IndependentSpec.supported_eq_spec",
   "generic_theorem": "TensorCore.IndependentSpec.evalBlock_eq_spec",
   "supported_paths": 8,
-  "scope": "FP16/BF16/packed-TF32 inputs; FP32 c/output; finite reference domain; one group and ordered group lists",
+  "scope": "FP16/BF16/packed-TF32 inputs; FP32 c/output; finite reference domain; one block FMA and ordered lists of block FMAs",
   "all_encoded_inputs_including_rejections": true,
   "independent_validity_success_proved": true,
   "signed_zero_bit_uniqueness_proved": true,
@@ -17,9 +17,9 @@
   "semantic_negative_controls": [
     "premature_product_normalization",
     "per_term_ieee_rtz_alignment",
-    "ampere_bf16_floor_removal",
-    "hopper_bf16_floor_removal",
-    "group_reversal"
+    "ampere_bf16_eAlignMin_removal",
+    "hopper_bf16_eAlignMin_removal",
+    "block_reversal"
   ],
   "boundary_controls": [
     "negative_underflow_signed_zero",
@@ -32,19 +32,19 @@
     "Quot.sound"
   ],
   "source_sha256": {
-    "TensorCore/TC/Specification/Composition.lean": "185adb998a5da522ae7153474c9101e28d08dda4e78fbe41586a6a5d37fb1868",
-    "TensorCore/TC/Specification/Defs.lean": "b4eaeb4ca6abab4af9c44be210b821ced3cc479a0ad341313e861470f7dbaf1f",
-    "TensorCore/TC/Specification/Equivalence.lean": "ca0271b2d567d26578920072bd859b4895e39ad619693e258e9cae914d7c9137",
-    "TensorCore/TC/Specification/Profiles.lean": "c9e7a653f03c0b563ebb96a804ffb8117e5757a9edbe3cc07e94e99b7db5ad0f",
+    "TensorCore/TC/Specification/Composition.lean": "8da1d7b1cee2f7834f3647f39df142fe5e09b50d896c48f2b6b6eb6140449a75",
+    "TensorCore/TC/Specification/Defs.lean": "44586e3118eb37b87c496a49530cd6b4745833acb7414e9bfa2d1b133adfbee5",
+    "TensorCore/TC/Specification/Equivalence.lean": "aff8d08c0e41f882f176133f56f0a2120605fd8a9b80c325a5517e2ae2f72315",
     "TensorCore/TC/Specification/Rounding.lean": "45e7d023148299a4489c4977d7804b48e0ae59be53afee89cedbbdc5bb246fbc",
-    "TensorCore/TC/Specification/Schedule.lean": "30f0c310fc132faaa33e1e6998b700aa0e4349b93e2542595a6b48dfcb06726d",
-    "TensorCore/TC/Specification/Stages.lean": "c1d651e64a644be5b6afbb4b6475be307d2dd98c855b4d5cd80ed0b2d6d59607",
-    "TensorCore/TC/Specification/Supported.lean": "bb1d44155450f0b093d6fca4b18d5bd2e7b6a50809ad7be140e730164a848cf4",
-    "tests/TensorCoreTests/Specification/Audit.lean": "54934f572c27d84e5a874cfbf9a6430be706e60af63c5a2c21614a24c0ca3b13",
-    "tests/TensorCoreTests/Specification/NegativeControls.lean": "ff2b835f384a55b41cd9ffe11a826a4da78a563504caff6c4e367995b7602c82",
+    "TensorCore/TC/Specification/Schedule.lean": "4dec9a0111ed1d378231a60bca4d04b9cdcb4ce972d602f36b7865f1ca08aad5",
+    "TensorCore/TC/Specification/Stages.lean": "54cc1160bb8d7fc5aade17aa5a263674fb0b0163b6f5ccc6e21cff1a7773a174",
+    "TensorCore/TC/Specification/Supported.lean": "c51b868a0d7137f0c49ce7f10ae72bc900b5f5ecc730dd725228516dc8767c2d",
+    "TensorCore/TC/Specification/Variants.lean": "7c1f473a62aceb90217a372486877e89dbe095714268b8644d03f81c83ab050c",
+    "tests/TensorCoreTests/Specification/Audit.lean": "7f7242f5b3f4379ba82855ed522e02b325df3e5182138de2e240fbb5add5a573",
+    "tests/TensorCoreTests/Specification/NegativeControls.lean": "939d0ef3c24e0cb656126c9a464e07e554d6388702f9d03e5d1c820823aa32b4",
     "scripts/lean/IndependentSpecAudit.lean": "c9a6896917135ba8d477194d0e14bab0219391b1cab262e4f252be09db783cfe",
-    "examples/IndependentSpecification.lean": "51a07efc18e3cecb89be976abe81f0db485de7eef69352571233bf70fc028692",
-    "scripts/check_independent_spec.py": "0f43bfd50a3ffa165b8879d8143cb1ebeadddcb3aefc20ad4376d20cb824c475"
+    "examples/IndependentSpecification.lean": "354ce3e2043828f054d4e7dd3577e02dddc788495deb348eaefa89d81e60c93f",
+    "scripts/check_independent_spec.py": "e20be88b83d7f48f410e49fea507c464a8eafad8b5b3a912ab53a3b1a1abd0f6"
   },
   "limitations": [
     "Paper-to-formula correspondence remains a human review obligation",
