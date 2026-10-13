@@ -1,9 +1,25 @@
 ---
 title: Overview
-description: What TC-EFT models, what it proves, and how the parts fit together.
+description: What MMAlgebra models, what it proves, and how the parts fit together.
 ---
 
-TC-EFT is a Lean 4 library about the arithmetic of NVIDIA Tensor Cores (TCs).
+MMAlgebra is a Lean 4 development about the arithmetic of GPU matrix
+multipliers and the software built on them. It verifies the boundary between
+the two: what NVIDIA Tensor Cores and AMD matrix cores actually compute, what
+software can rely on, and which changes to the software leave the result bit
+for bit the same. It has three parts, each building on the one before:
+
+1. **Hardware semantics.** Models of the block FMAs of [NVIDIA Tensor
+   Cores](/MMAlgebra/model/) and [AMD matrix cores](/MMAlgebra/amd/), with
+   their error bounds, non-monotonicity and TC-EFT.
+2. **Emulation.** The [Ozaki schemes](/MMAlgebra/ozaki/), proved on both models,
+   with correctly rounded variants.
+3. **Schedules.** An algebra of reduction schedules that decides which ways of
+   computing a matrix product give identical bits on each architecture (in
+   progress).
+
+## The Tensor Core model
+
 A Tensor Core instruction computes `D = C + Σ aᵢ·bᵢ` with block FMAs, each of
 which adds a small number of low-precision products in a single multi-term
 addition. It is **not** an IEEE fused dot product. The products are exact,
@@ -13,27 +29,26 @@ grid. The sum is then truncated to FP32. Because of this, the output
 can be less accurate than the input precision suggests, and it can be
 **non-monotone**: making `C` smaller can make `D` larger.
 
-The library has three layers:
+This part has three layers:
 
-1. **[A model of the Tensor Core](/TC-EFT/model/).** An executable function,
+1. **[A model of the Tensor Core](/MMAlgebra/model/).** An executable function,
    `evalBlock`, maps encoded input words to an FP32 output word for one block
    FMA. It follows the hardware model of Khattak and Mikaitis,
    *[Accurate Models of NVIDIA Tensor Cores](https://arxiv.org/html/2512.07004v4)*,
    and uses exact integers and rationals throughout. It does not rely on
    floating-point hardware or rounding libraries.
-2. **[Properties of that model](/TC-EFT/properties/error-bounds/).** Proved
+2. **[Properties of that model](/MMAlgebra/properties/error-bounds/).** Proved
    facts: the accepted input domain, an error bound split into alignment loss
    and final-rounding loss, exactness of fixed-width accumulators, and a
    characterization of non-monotonicity.
-3. **[TC-EFT](/TC-EFT/properties/eft/).** An error-free transformation that
+3. **[TC-EFT](/MMAlgebra/properties/eft/).** An error-free transformation that
    takes the encoded inputs and any finite FP32 output `D`, recovers what
    alignment discarded, and returns the correctly rounded exact sum when its
    preconditions hold. There is a reference version and a bounded 576-bit
    workspace version, and they are proved to agree.
 
-The same repository also models **AMD matrix cores**, the MFMA instructions
-of CDNA 1, 2 and 3, in a separate library; see [the AMD model at a
-glance](/TC-EFT/amd/). The [Ozaki schemes](/TC-EFT/ozaki/) are proved on both.
+The AMD model of the MFMA instructions of CDNA 1, 2 and 3 is a separate
+library; see [the AMD model at a glance](/MMAlgebra/amd/).
 
 ## Why a Lean model?
 
@@ -48,13 +63,13 @@ definition, so:
   EFT correctness are Lean theorems about the *same* definition that the tests
   execute.
 - **It is cross-checked.** An [independent
-  specification](/TC-EFT/model/specification/), written from *Accurate Models* without
+  specification](/MMAlgebra/model/specification/), written from *Accurate Models* without
   importing the implementation, is proved to agree with `evalBlock` on every
-  encoded input. A [bitvector datapath](/TC-EFT/model/datapath/) with
+  encoded input. A [bitvector datapath](/MMAlgebra/model/datapath/) with
   fixed-width registers, and a second implementation built on
-  [FloatLib](/TC-EFT/proofs/floatlib/), are also proved equivalent.
+  [FloatLib](/MMAlgebra/proofs/floatlib/), are also proved equivalent.
 - **It is validated.** Recorded GPU outputs are [replayed bit for
-  bit](/TC-EFT/model/validation/).
+  bit](/MMAlgebra/model/validation/).
 
 ## Two papers
 
@@ -67,7 +82,7 @@ The site cites two papers, and always names which one it means:
   (Table 3), and the recorded GPU validation vectors. The Lean
   specification `IndependentSpec` is a transcription of this paper.
 - **The TC-EFT paper**: *TC-EFT: Characterizing and Correcting Tensor Core
-  Arithmetic* (under submission). The source of the **worst-case error and non-monotonicity
+  Arithmetic* (manuscript). The source of the **worst-case error and non-monotonicity
   results** (Section III) and the **TC-EFT algorithm** (Section IV,
   Algorithm 1). Theorem, lemma and equation numbers such as Theorem III.4,
   Lemma IV.2 and inequality (17) refer to this paper, and
@@ -103,12 +118,12 @@ hypotheses. The link from the model to real GPUs comes from replaying
 recorded measurements and from *Accurate Models*, which the definitions follow.
 It is evidence, not a proof. The supported variants have FP16, BF16, or TF32
 input formats and FP32 `C` and output. See [Modeling scope and
-limits](/TC-EFT/model/scope/) and [What is tested](/TC-EFT/proofs/tested/).
+limits](/MMAlgebra/model/scope/) and [What is tested](/MMAlgebra/proofs/tested/).
 
 ## Start exploring
 
-- [The model at a glance](/TC-EFT/model/): the whole pipeline on one page.
-- [The AMD model at a glance](/TC-EFT/amd/): the matrix-core model of CDNA 1, 2 and 3.
-- [Quick start](/TC-EFT/quick-start/): build the project and run the examples.
-- [What is proven](/TC-EFT/proofs/theorems/): the headline results and where they live.
-- [Source on GitHub](https://github.com/pauljiang03/TC-EFT).
+- [The model at a glance](/MMAlgebra/model/): the whole pipeline on one page.
+- [The AMD model at a glance](/MMAlgebra/amd/): the matrix-core model of CDNA 1, 2 and 3.
+- [Quick start](/MMAlgebra/quick-start/): build the project and run the examples.
+- [What is proven](/MMAlgebra/proofs/theorems/): the headline results and where they live.
+- [Source on GitHub](https://github.com/pauljiang03/MMAlgebra).

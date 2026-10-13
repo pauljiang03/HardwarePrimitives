@@ -10,7 +10,7 @@ minimum normal exponent).
 
 ## Formats
 
-A [`Format`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/Defs.lean#L7)
+A [`Format`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Defs.lean#L7)
 is a triple of stored mantissa bits, exponent bits, and bias:
 
 ```lean
@@ -48,7 +48,7 @@ FP16 `1.5` is significand `1536`, exponent `0`, 10 mantissa bits:
 `1536 · 2^(0 − 10) = 1.5`. `value` recovers the rational exactly,
 and alignment reads `exponent`.
 
-[`classifyNat`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/Encoding.lean#L8)
+[`classifyNat`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Encoding.lean#L8)
 implements standard IEEE field extraction:
 
 ```lean
@@ -73,9 +73,9 @@ Points to note:
   format's minimum exponent, with a small significand.
 - **Zero** decodes to `⟨0, 0, 0⟩`. Its sign is discarded on input. Because the
   significand is zero, zero never takes part in choosing the
-  [alignment exponent](/TC-EFT/model/alignment/).
+  [alignment exponent](/MMAlgebra/model/alignment/).
 - **Infinity and NaN** map to `none` through
-  [`Classification.finite`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/Encoding.lean#L23),
+  [`Classification.finite`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Encoding.lean#L23),
   and the block is rejected with `ModelError.nonfiniteInput`. The model covers
   finite arithmetic only.
 
@@ -106,19 +106,19 @@ ignored. The model separates the two concerns:
 
 - `tf19 : Format` is the 19-bit value format (1 sign, 8 exponent, 10 mantissa
   bits) that the block model uses.
-- [`tf32Register`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/Format.lean#L51)
+- [`tf32Register`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Format.lean#L51)
   is an `OperandEncoding` whose 32-bit words must have 13 zero low bits.
   `tf32Unpack` extracts the 19 value bits.
 
 The theorem
-[`tf32_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Specification/Supported.lean#L47)
+[`tf32_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L47)
 proves that, on register words whose low 13 bits are zero, the register-level
 invocation gives the same bits as the *Accurate Models* specification (`IndependentSpec`). Words whose low
 bits are not zero are rejected rather than silently masked.
 
 ## Proved properties of the encoding layer
 
-- [`signedFiniteBinaryBijection`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/Binary/SignedBijection.lean#L130):
+- [`signedFiniteBinaryBijection`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Binary/SignedBijection.lean#L130):
   finite encodings correspond one to one with representable values paired
   with a zero sign. Subnormals and both zeros are included, and both inverse
   laws are proved.

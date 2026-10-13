@@ -34,5 +34,5 @@ description: What the Lean Tensor Core model covers and what it deliberately lea
   explicitly chained block FMAs. How a full GEMM is split across warps and
   instructions is outside the model.
 - **Hardware correspondence** is evidence, not proof. See [hardware
-  validation](/TC-EFT/model/validation/) for which features the measured
+  validation](/MMAlgebra/model/validation/) for which features the measured
   data exercises.

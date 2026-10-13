@@ -9,7 +9,7 @@ The Tensor Core matrix multiplier is exact while the products of one call total 
 with `11`-bit slices a dot product may have only four terms. Split-K lifts the limit: chunks of
 `2^(24 − 2b)` terms (four for `11`-bit slices, `256` for `8`-bit) each run on Tensor Core blocks,
 and the integer chunk results are added exactly. In hardware the chunk results are read out and
-accumulated in an integer register; `tcSplitKReg` does that in TC-EFT's fixed-width two's-complement
+accumulated in an integer register; `tcSplitKReg` does that in `TensorCore`'s fixed-width two's-complement
 register, which is exact while the products total less than `2^(w−1)` (`2^63` for `w = 64`).
 
 With split-K every theorem of the schemes holds for every inner dimension:
@@ -45,7 +45,7 @@ theorem tcSplitK_exactOn {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn
 
 /-! ## The chunk results in a fixed-width integer register -/
 
-/-- Add integer-valued chunk results in TC-EFT's `w`-bit two's-complement register. -/
+/-- Add integer-valued chunk results in `TensorCore`'s `w`-bit two's-complement register. -/
 def regSum (w : ℕ) (vs : List ℚ) : Option ℚ := do
   let zs ← vs.mapM toInt?
   pure ((machineAccumulate w 0 zs).toInt : ℚ)

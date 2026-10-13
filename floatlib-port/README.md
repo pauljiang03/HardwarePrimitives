@@ -1,6 +1,6 @@
 # FP32-output tensor-core arithmetic with FloatLib
 
-This is an independent Lean project inside `TC-EFT`. It implements the FP32-output TC block model and the reference TC-EFT algorithm using FloatLib. Its executable runtime imports no `TensorCore` modules. A separate proof layer imports hash-checked copies of the parent definitions to prove universal equivalence. The project uses its own toolchain, Lake configuration, and build artifacts.
+This is an independent Lean project inside `MMAlgebra`. It implements the FP32-output TC block model and the reference TC-EFT algorithm using FloatLib. Its executable runtime imports no `TensorCore` modules. A separate proof layer imports hash-checked copies of the parent definitions to prove universal equivalence. The project uses its own toolchain, Lake configuration, and build artifacts.
 
 Start with the [folder guide](FOLDER_GUIDE.md) for the project layout, what the correctness claims mean, how transferred proofs work, and the verification commands.
 
@@ -10,7 +10,7 @@ Lean: **4.34.0**; the parent project uses its own separate toolchain. The commit
 
 ## Build and run
 
-Install [elan](https://github.com/leanprover/elan), Git, and Python 3. A complete source ZIP or clone works; TC-EFT's Git history is unnecessary. Git is used by Lake to fetch pinned dependencies. No third-party Python packages, MATLAB, CUDA, or GPU are required for these checks. The first build needs network access to fetch Lean, FloatLib, mathlib, and their dependencies. Expect several GB of dependency/build storage.
+Install [elan](https://github.com/leanprover/elan), Git, and Python 3. A complete source ZIP or clone works; the Git history is unnecessary. Git is used by Lake to fetch pinned dependencies. No third-party Python packages, MATLAB, CUDA, or GPU are required for these checks. The first build needs network access to fetch Lean, FloatLib, mathlib, and their dependencies. Expect several GB of dependency/build storage.
 
 From the repository root:
 

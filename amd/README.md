@@ -5,8 +5,8 @@ CDNA 1, CDNA 2 and CDNA 3 GPUs). It follows Khattak, Mikaitis and Graziani, *Acc
 AMD Matrix Cores* ([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)), and uses the paper's
 notation throughout. Executable calculations and correctness proofs use the same definitions.
 
-Matrix-Core lives in the `amd/` folder of the TC-EFT repository, as a standalone Lake project: it
-has its own numerical foundation and does not depend on TC-EFT, the NVIDIA Tensor Core
+Matrix-Core lives in the `amd/` folder of the MMAlgebra repository, as a standalone Lake project: it
+has its own numerical foundation and does not depend on `TensorCore`, the NVIDIA Tensor Core
 formalization in the rest of the [repository](../README.md).
 
 Start with the [guide](docs/README.md). It maps the paper's notation to Lean, describes each

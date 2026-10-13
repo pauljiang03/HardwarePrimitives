@@ -42,7 +42,7 @@ So the error is less than
 
 Each of the `K + 1` terms loses less than one grid step, and truncation to FP32
 loses less than one output ulp. The bound uses only quantities in the trace,
-and [`evalBlock_success_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/AcceptedDomain.lean#L35)
+and [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L35)
 says exactly when it applies.
 
 The alignment term depends on η, the **largest** exponent in the block FMA, not
@@ -54,6 +54,6 @@ recover.
 ## Chains
 
 For chained block FMAs,
-[`runBlocks_residual_ledger`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Composition.lean#L95)
+[`runBlocks_residual_ledger`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Composition.lean#L95)
 gives the same identity across the whole chain. The initial `C` plus every
 product equals the last output plus the sum of the residuals of all the blocks.

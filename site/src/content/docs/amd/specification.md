@@ -3,7 +3,7 @@ title: 4. Independent specification
 description: A second transcription of Accurate Models of AMD Matrix Cores, written in the paper's fixed-point language without the model's definitions, and proved equal to the model on every variant.
 ---
 
-[`Specification/Defs.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Defs.lean)
+[`Specification/Defs.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Specification/Defs.lean)
 is a second transcription of the paper. It uses only the standard library's
 integers and rationals, and it is written in the paper's fixed-point language
 rather than the model's grid operations:
@@ -43,12 +43,12 @@ example (x : BlockInput cdna3BF16) (w : F32) :
   Spec.blockBits_eq_spec Spec.supported_cdna3BF16 x w
 ```
 
-The proof ([`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L129)) bridges each operation,
+The proof ([`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L129)) bridges each operation,
 proves that the specification's Algorithms 1 and 2 compute the model's
 `S_acc`, and uses the uniqueness of the correctly rounded binary32 word
-([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L370)) to identify the output.
+([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L370)) to identify the output.
 
-For CDNA 2, [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161) states the same for
+For CDNA 2, [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161) states the same for
 `Spec.PairwiseResult`; its proof identifies the specification's `fl{·}` with
 the model's and unfolds the model's pairwise sum.
 
@@ -66,7 +66,7 @@ example (x : BlockInput cdna2F16) (w : F32) :
 ## Independence
 
 The audit
-([`tests/MatrixCoreTests/Audit.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/tests/MatrixCoreTests/Audit.lean))
+([`tests/MatrixCoreTests/Audit.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/tests/MatrixCoreTests/Audit.lean))
 checks that every declaration of the specification's module depends only on
 the standard library and the notation module, and that it detects a
 deliberately planted implementation dependency.

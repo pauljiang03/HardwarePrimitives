@@ -7,7 +7,7 @@ covers the same blocks: Khattak, Mikaitis and Graziani, *Accurate Models of AMD 
 that, for every input, it gives the same observed result as Matrix-Core.
 
 It is a separate Lake project (Lean 4.34.0, FloatLib `0d91825`, which brings in mathlib), so
-Matrix-Core itself stays free of mathlib. It follows the layout of TC-EFT's `floatlib-port/`.
+Matrix-Core itself stays free of mathlib. It follows the layout of the root project's `floatlib-port/`.
 
 ## Build and run
 

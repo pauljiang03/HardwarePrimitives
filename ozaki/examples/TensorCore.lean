@@ -77,7 +77,7 @@ example : crt z3Basis (z3Moduli.map fun m : ℕ => (123456789012 : ℤ) % (m : �
 
 /-! ## 6. ADP: Ozaki-I on an INT8 matrix multiplier
 
-A `53`-bit integer in seven remapped signed bytes, an INT32 dot product of bytes in TC-EFT's
+A `53`-bit integer in seven remapped signed bytes, an INT32 dot product of bytes in `TensorCore`'s
 fixed-width register, and binary64 emulation of `x · y` with `55`-bit fixed point. -/
 
 #eval ADP.remap 7 (2 ^ 53 - 1)

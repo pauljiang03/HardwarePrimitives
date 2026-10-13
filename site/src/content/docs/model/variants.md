@@ -43,7 +43,7 @@ def hopperF16F32 : Model := fp16Fp32Model 16 2 (some (-133))
 Most theorems are stated for **arbitrary** `K`, `p`, and minimum alignment
 exponent, and the named models are instances. Choosing parameters does not by itself establish that
 a GPU behaves that way. That link comes from the
-[hardware replay](/TC-EFT/model/validation/).
+[hardware replay](/MMAlgebra/model/validation/).
 
 The independent specification transcribes the same eight parameter sets on
 its own, as `IndependentSpec.parameters`. `supported_parameters` checks with `rfl`
@@ -51,7 +51,7 @@ that the two transcriptions match.
 
 ## Beyond one block: `InvocationSpec`
 
-[`InvocationSpec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Invocation.lean#L21)
+[`InvocationSpec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Invocation.lean#L21)
 is a more general description of a Tensor Core invocation. Models embed
 into it, and it can express variations the basic model cannot:
 

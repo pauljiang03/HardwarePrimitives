@@ -25,18 +25,18 @@ Then for each entry:
 
 1. **Rounding test.** If `H − B` and `H + B` round to the same float, so does `x · y`,
    which lies between them. Rounding to nearest is monotone; Lean proves it
-   from the nearest-value property alone ([`round_monotone`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L56),
-   [`round_eq_of_enclosure`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L72)).
+   from the nearest-value property alone ([`round_monotone`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L56),
+   [`round_eq_of_enclosure`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L72)).
 2. **Refine.** Otherwise try more slices, or more moduli, which shrinks `B`.
 3. **Exact fallback.** Otherwise compute `x · y` exactly, also on the matrix
    multiplier. Ozaki-I
    with all `s²` slice products and enough slices that nothing is left over is
-   exact ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L473)). Floats lie on a finite grid, so this always
+   exact ([`ozaki1Full_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L473)). Floats lie on a finite grid, so this always
    ends: at most `24` slices of `11` bits for binary32 inputs and `175` for
-   binary64 ([`split_residual_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L418)).
+   binary64 ([`split_residual_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L418)).
 
-The result is correctly rounded whichever step decides it ([`roundingTest_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L124),
-[`ozaki1CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L524), [`ozaki2CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L542), [`adpCRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L226)). The fallback is part of
+The result is correctly rounded whichever step decides it ([`roundingTest_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L124),
+[`ozaki1CRE_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L524), [`ozaki2CRE_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L542), [`adpCRE_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPFix.lean#L226)). The fallback is part of
 the method, not a failure: it is slower and never wrong.
 
 The test in step 1 is Ziv's rounding test, classical in correctly rounded
@@ -44,7 +44,7 @@ math libraries. What is new is using it as an early-exit test on Ozaki
 matrix products, with refinement and a proved exact fallback on the matrix
 multiplier,
 for all three schemes, machine-checked. See
-[Related work and novelty](/TC-EFT/ozaki/literature/) for the prior work
+[Related work and novelty](/MMAlgebra/ozaki/literature/) for the prior work
 closest to it.
 
 ## When the rounding test succeeds
@@ -52,8 +52,8 @@ closest to it.
 The rounding test succeeds on an entry whenever `x · y − 2B` and `x · y + 2B` round to
 the same value, in particular whenever `x · y` lies more than `2B` from every
 rounding boundary; at exactly `2B` an endpoint can be a tie that rounds the
-other way ([`roundEnclosure_of_margin`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L322),
-[`ozaki1Enclosure_succeeds`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L343)). Each extra slice of `11` bits divides `B` by
+other way ([`roundEnclosure_of_margin`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L322),
+[`ozaki1Enclosure_succeeds`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Correct.lean#L343)). Each extra slice of `11` bits divides `B` by
 about `2^12`. The fallback is needed for:
 
 - **exact ties**, results exactly halfway between two floats, which no
@@ -62,19 +62,19 @@ about `2^12`. The fallback is needed for:
   cancellation, where `B` is large compared with the result's spacing.
 
 **The rounding test succeeds at once on exact zeros.** The bound counts only
-the positions where both entries are nonzero ([`exactTerms_error_overlap`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L199)), so an entry whose
+the positions where both entries are nonzero ([`exactTerms_error_overlap`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/ZeroCheck.lean#L199)), so an entry whose
 products are all zero, such as sparse rows and columns with no shared
 nonzero, is decided by the first test with `0` and its IEEE sign
-([`supportOverlap_eq_zero_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L127), [`ozaki1CREZ_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L535),
-[`ozaki1CRWSZ_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ZeroCheck.lean#L831)). The count costs one extra dot product on the matrix multiplier per entry.
+([`supportOverlap_eq_zero_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/ZeroCheck.lean#L127), [`ozaki1CREZ_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/ZeroCheck.lean#L535),
+[`ozaki1CRWSZ_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/ZeroCheck.lean#L831)). The count costs one extra dot product on the matrix multiplier per entry.
 
 ### Measured at realistic sizes
 
 A CPU simulation follows the Lean definitions with exact arithmetic and an
 exact matrix multiplier, at `k` = 256, 1024 and 4096, on about 356,000 entries; every
 enclosure and every decided result was checked against the exact product
-([`scripts/fallback_sim.py`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/fallback_sim.py),
-[`data/fallback-sim.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/fallback-sim.json)).
+([`scripts/fallback_sim.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/scripts/fallback_sim.py),
+[`data/fallback-sim.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/data/fallback-sim.json)).
 For binary64 output, Ozaki-I with `11`-bit slices tried at `5` and then `6`:
 
 | Inputs | Entries reaching the exact fallback (`k` = 256 / 1024 / 4096) | Products on the matrix multiplier per entry vs the exact fallback alone (`k = 4096`) |
@@ -115,9 +115,9 @@ and columns.
 
 - **Slice counts that grow with `k`.** The first test uses the slice count
   for the target precision plus `⌈log₂ k⌉` bits; its bound is then at most
-  `max|x| max|y| 2^-t`, with no factor `k` ([`slicesForCR`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L60),
-  [`ozaki1Bound_le_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L64)). The schemes using it stay correctly rounded
-  ([`ozaki1CRK_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L61), [`ozaki1CRIK_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L87), [`tcOzaki1CRDKA_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/CRRules.lean#L65)). Rerun with the
+  `max|x| max|y| 2^-t`, with no factor `k` ([`slicesForCR`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L60),
+  [`ozaki1Bound_le_cr`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L64)). The schemes using it stay correctly rounded
+  ([`ozaki1CRK_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Adaptive.lean#L61), [`ozaki1CRIK_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Adaptive.lean#L87), [`tcOzaki1CRDKA_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/CRRules.lean#L65)). Rerun with the
   rule, the binary64 fallback rate drops to about `0 %` on uniform,
   wide-exponent and mildly ill-conditioned data (from up to 18 %), and to
   about 2 % at condition number `10^6` (from 100 %); at `10^10` a deeper list
@@ -127,19 +127,19 @@ and columns.
   fallback's slice count is known once the inputs are sliced; when its `s²`
   products cost no more than the first test's `s(s+1)/2`, the scheme takes it
   directly. It stays correctly rounded, never costs more, and costs only the
-  exact fallback when the shortcut applies ([`ozaki1CRA_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L128), [`ozaki1CRA_cost_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L236),
-  [`ozaki1CRA_cost_shortcut`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Adaptive.lean#L253)); on low-precision inputs that is 4–9
+  exact fallback when the shortcut applies ([`ozaki1CRA_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Adaptive.lean#L128), [`ozaki1CRA_cost_le`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Adaptive.lean#L236),
+  [`ozaki1CRA_cost_shortcut`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Adaptive.lean#L253)); on low-precision inputs that is 4–9
   products on the matrix multiplier instead of 21.
 
-([`data/fallback-sim-rules.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/fallback-sim-rules.json)
+([`data/fallback-sim-rules.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/data/fallback-sim-rules.json)
 has the rerun.)
 
 ### Per tile
 
 A GEMM computes each slice product for a whole tile at once, so what the early
 exit saves also depends on scheduling. A second simulation
-([`scripts/tile_sim.py`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/tile_sim.py),
-[`data/tile-sim.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/tile-sim.json)) runs full `256 × 256` GEMMs with
+([`scripts/tile_sim.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/scripts/tile_sim.py),
+[`data/tile-sim.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/data/tile-sim.json)) runs full `256 × 256` GEMMs with
 binary64 output at `k` = 256, 1024 and 4096, about two million entries, under
 three schedules:
 
@@ -165,10 +165,10 @@ are instruction counts, not GPU time.
 
 ### A test suite for real hardware
 
-[`scripts/targeted_validation.py`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/targeted_validation.py) and the
-Lean files in [`scripts/targeted/`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/targeted) produce
-[`data/targeted-validation.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/targeted-validation.json), summarized
-in [`data/targeted-validation.md`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/targeted-validation.md). It holds 140
+[`scripts/targeted_validation.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/scripts/targeted_validation.py) and the
+Lean files in [`scripts/targeted/`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/scripts/targeted) produce
+[`data/targeted-validation.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/data/targeted-validation.json), summarized
+in [`data/targeted-validation.md`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/data/targeted-validation.md). It holds 140
 cases, 85 for NVIDIA and 55 for AMD, whose predicted outputs distinguish the
 models' numerical features: full block FMAs, cancellation, two passes,
 non-monotonicity, minimum alignment exponents, signed zeros, subnormals, TF32
@@ -184,31 +184,31 @@ widths do not depend on the inputs' exponents.
 
 - **Slicing** works on significands and exponents with shifts, a
   round-half-even division and comparisons. It equals the slicing of the
-  proofs for every grid ([`splitInt_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceInt.lean#L582), [`splitInt_width`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceInt.lean#L605)).
+  proofs for every grid ([`splitInt_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceInt.lean#L582), [`splitInt_width`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceInt.lean#L605)).
 - **The rounding test** adds each scaled slice product, rounded down to `W`
   bits below the largest possible product, in a truncated sum whose register
-  never wraps ([`ozaki1Truncated_register`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TruncatedSum.lean#L150),
-  [`ozaki1CRW_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TruncatedSum.lean#L136)). The final round to nearest even is a few integer
-  comparisons ([`roundExact_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Bounded.lean#L635)).
+  never wraps ([`ozaki1Truncated_register`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/TruncatedSum.lean#L150),
+  [`ozaki1CRW_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/TruncatedSum.lean#L136)). The final round to nearest even is a few integer
+  comparisons ([`roundExact_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Bounded.lean#L635)).
 - **The exact fallback** decides the rounding of a sum of terms `v · 2^e` by
   a top-down summation. It adds, in a `W`-bit register, the parts of the terms
   within `W` bits below the current leading position, carries the sum to the
   next lower range only when cancellation has made it small, and jumps over
-  empty gaps ([`roundSumJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TopDownSummation.lean#L510)). It visits at most
+  empty gaps ([`roundSumJ_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/TopDownSummation.lean#L510)). It visits at most
   `n · bitlen(max |v|) + 1` ranges, whatever the exponents
-  ([`rangesJ_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TopDownSummation.lean#L437)).
+  ([`rangesJ_le`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/TopDownSummation.lean#L437)).
 - **The whole pipeline**, from `(significand, exponent)` inputs to the rounded
   result, is one integer function proved correctly rounded: for Ozaki-I
-  ([`ozaki1CRI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedInt.lean#L186)), Ozaki-II ([`ozaki2CRJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedOzaki2J.lean#L112)) and ADP-style slicing
-  ([`adpCRJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L34)), on both vendors (ADP on the Tensor Core side), with
-  signed-zero versions ([`ozaki1CRIS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedInt.lean#L332), [`ozaki2CRJS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedOzaki2J.lean#L174),
-  [`adpCRJS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L60)).
+  ([`ozaki1CRI_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedInt.lean#L186)), Ozaki-II ([`ozaki2CRJ_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedOzaki2J.lean#L112)) and ADP-style slicing
+  ([`adpCRJ_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L34)), on both vendors (ADP on the Tensor Core side), with
+  signed-zero versions ([`ozaki1CRIS_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedInt.lean#L332), [`ozaki2CRJS_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedOzaki2J.lean#L174),
+  [`adpCRJS_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L60)).
 
 **One theorem bounds every register.** A version of each pipeline with
 overflow checks guards every integer it computes: data against `2^R`, exponents and counters
 against `2^X`. Under explicit formulas for `R` and `X`, the checked version
 returns exactly what the unchecked one returns, so no register ever
-overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked.lean#L2183), [`ozaki2CRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedChecked2.lean#L665), [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434)):
+overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedChecked.lean#L2183), [`ozaki2CRJC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedChecked2.lean#L665), [`adpCRJC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434)):
 
 | Pipeline | Data bits `R` | Exponent and counter bits `X` |
 | --- | --- | --- |
@@ -220,10 +220,10 @@ overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/oza
 
 The guards cover the internal arithmetic of the matrix multipliers too: every
 chunk result and partial sum of split-K, and every partial sum of the 32-bit
-register of the INT8 matrix multiplier, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedMultipliers.lean#L52),
-[`int8DotC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8Checked.lean#L59)). The signed-zero pipelines have checked versions as well
-([`ozaki2CRJSC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedCheckedSigned.lean#L138), [`adpCRJSC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPCheckedSigned.lean#L27)); the tightened widths are
-[`ozaki1CRIC_binary64_tight`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedTight.lean#L38) and its siblings. Kernel-checked tests show the
+register of the INT8 matrix multiplier, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/CheckedMultipliers.lean#L52),
+[`int8DotC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Int8Checked.lean#L59)). The signed-zero pipelines have checked versions as well
+([`ozaki2CRJSC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/BoundedCheckedSigned.lean#L138), [`adpCRJSC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPCheckedSigned.lean#L27)); the tightened widths are
+[`ozaki1CRIC_binary64_tight`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/CheckedTight.lean#L38) and its siblings. Kernel-checked tests show the
 guards are real: at narrower widths the checked versions fail. Comparisons,
 signs, bit lengths and powers of two used as shift amounts are not guarded,
 as they create no new magnitude.
@@ -231,7 +231,7 @@ as they create no new magnitude.
 ## IEEE special values
 
 On IEEE data the specification is the exact dot product rounded once
-([`dotIEEE`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEDot.lean#L55)):
+([`dotIEEE`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/IEEEDot.lean#L55)):
 
 - NaN for a NaN input, a product `Inf · 0`, or opposite infinities;
 - `±Inf` for an infinite product or an overflowing sum;
@@ -243,23 +243,23 @@ IEEE 754 leaves a dot product's order and precision to the implementation;
 this is the "exact, then round once" reading. A wrapper handles the special
 inputs and takes the sign of an overflowing sum from the integer terms of the
 exact fallback; with it every correctly rounded version, rational or integer, meets the
-specification for every input ([`crIEEE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEDot.lean#L148), [`crIEEEI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEInt.lean#L105),
-[`tcOzaki1CRDI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEESchemes.lean#L60), [`mcOzaki1CRDI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/IEEESchemes.lean#L44)). Kernel tests cover the table of
+specification for every input ([`crIEEE_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/IEEEDot.lean#L148), [`crIEEEI_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/IEEEInt.lean#L105),
+[`tcOzaki1CRDI_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/IEEESchemes.lean#L60), [`mcOzaki1CRDI_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/IEEESchemes.lean#L44)). Kernel tests cover the table of
 cases on both vendors. On stored words, the decoding and the detection of
 infinities, NaN and zeros are themselves integer operations on the sign,
 exponent and significand fields, and agree with TensorCore's and
-MatrixCore's classifications ([`Ozaki.MC.decodeWord_decodeNat`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/IEEEWords.lean#L31),
-[`dotSpecialI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L177), [`crIEEEWord_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/IEEEWords.lean#L212), [`decodeWord_classifyNat`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEEWords.lean#L52)).
+MatrixCore's classifications ([`Ozaki.MC.decodeWord_decodeNat`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/IEEEWords.lean#L31),
+[`dotSpecialI_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/IEEEWords.lean#L177), [`crIEEEWord_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/IEEEWords.lean#L212), [`decodeWord_classifyNat`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/IEEEWords.lean#L52)).
 
 ## The same result on NVIDIA and AMD
 
 Every correctly rounded version rounds with a hardware-independent IEEE
 round to nearest even,
-proved for any binary format ([`roundRNE_nearest`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Binary.lean#L448)). The hardware libraries'
+proved for any binary format ([`roundRNE_nearest`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Binary.lean#L448)). The hardware libraries'
 own roundings compute the same values: TensorCore's up to the largest finite
-value, where it returns nothing above it ([`round32ValueTC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Rounding.lean#L136),
-[`fp64RoundTC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/IEEE.lean#L33)), and MatrixCore's on every input
-([`round32Value_eq_rne32Q`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/IEEE.lean#L38)). So on the two vendors' models the correctly
+value, where it returns nothing above it ([`round32ValueTC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Rounding.lean#L136),
+[`fp64RoundTC_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/IEEE.lean#L33)), and MatrixCore's on every input
+([`round32Value_eq_rne32Q`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/IEEE.lean#L38)). So on the two vendors' models the correctly
 rounded versions return the same value for the same inputs, even though the
 matrix multipliers underneath differ: the Tensor Core truncates and CDNA 3
 rounds.
@@ -271,7 +271,7 @@ rounds.
 - **In fixed-width integer registers:** slicing, the rounding test, the
   top-down summation of the exact fallback and the final rounding.
 - **Never on a Tensor Core:** the rounding test. A Tensor Core's output is not
-  monotone in its inputs ([non-monotonicity](/TC-EFT/properties/non-monotonicity/)),
+  monotone in its inputs ([non-monotonicity](/MMAlgebra/properties/non-monotonicity/)),
   and the rounding test relies on monotone rounding.
 
 ## What is not covered
@@ -280,5 +280,5 @@ rounds.
   and small test matrices.
 - The exactness of the matrix multiplier rests on the hardware models, which
   are validated against GPUs by measurement, not proved. ADP runs on an
-  idealized INT8 matrix multiplier ([issue #2](https://github.com/pauljiang03/TC-EFT/issues/2)).
+  idealized INT8 matrix multiplier ([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)).
 - NaN payloads and signalling NaNs.

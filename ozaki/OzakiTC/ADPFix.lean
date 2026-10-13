@@ -123,7 +123,7 @@ theorem adpSafe_accuracy {cfg : ADPConfig} {A B : List (List (BitVec 64))} {path
 
 /-! ## The exact fallback on the INT8 matrix multiplier -/
 
-/-- The INT8 matrix multiplier as a `MatrixMultiplier`: products accumulated in TC-EFT's 32-bit
+/-- The INT8 matrix multiplier as a `MatrixMultiplier`: products accumulated in `TensorCore`'s 32-bit
 register. -/
 def int8Multiplier : MatrixMultiplier := fun x y => some ((int8Dot 32 x y : ℤ) : ℚ)
 

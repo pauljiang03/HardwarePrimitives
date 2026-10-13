@@ -3,7 +3,7 @@ import Ozaki.CheckedMultipliers
 
 /-! # The INT8 matrix multiplier with its arithmetic guarded
 
-ADP's INT8 matrix multiplier (`int8Dot 32`, TC-EFT's fixed-width register) multiplies bytes and
+ADP's INT8 matrix multiplier (`int8Dot 32`, `TensorCore`'s fixed-width register) multiplies bytes and
 accumulates in a 32-bit register; split-K (`int8DotK`, `int8SplitK`) adds the chunk results. Here
 every integer of that arithmetic is guarded:
 

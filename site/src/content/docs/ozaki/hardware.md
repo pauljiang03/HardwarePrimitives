@@ -30,14 +30,14 @@ integer up to `2^24`.
 
 | Fact | Lean |
 | --- | --- |
-| A block of `b`-bit integers with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ`; so does a chain of blocks. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L185), [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L336) |
-| The matrix multiplier is exact on all eight NVIDIA variants (`b = 11` for fp16 and tf32, `8` for bf16). | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L195), [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
-| The same on the AMD SFMA and the CDNA 1, 2 and 3 fp16, bf16 and XF32 variants. | [`mcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326), [`cdna3F16_exactMultiplier`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Models.lean#L92) |
+| A block of `b`-bit integers with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ`; so does a chain of blocks. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L185), [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L336) |
+| The matrix multiplier is exact on all eight NVIDIA variants (`b = 11` for fp16 and tf32, `8` for bf16). | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L195), [`v100_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
+| The same on the AMD SFMA and the CDNA 1, 2 and 3 fp16, bf16 and XF32 variants. | [`mcMultiplier_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326), [`cdna3F16_exactMultiplier`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Models.lean#L92) |
 
 The model shows why the output, not the accumulator, sets this exactness
 bound. A Tensor Core adds a whole block FMA exactly and rounds once, so an A100 block is
 exact on products whose binary32 running sum is not
-([`a100_exact_where_binary32_is_not`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Limits.lean#L62)). A model that rounds every partial
+([`a100_exact_where_binary32_is_not`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Limits.lean#L62)). A model that rounds every partial
 sum, like the Z3 models' matrix multiplier, is stricter than the hardware.
 
 ## The exact condition, with cancellation
@@ -45,22 +45,22 @@ sum, like the Z3 models' matrix multiplier, is stricter than the hardware.
 The exactness bound `Σ|aᵢbᵢ| ≤ 2^24` is sufficient, not necessary. On the Tensor Core
 model a block of `b`-bit integers with `2b ≤ F` and an integer `c` with
 `|c| < 2^(F+1)` returns the exact sum whenever that sum is a binary32 value,
-however large the products are ([`Ozaki.TC.evalBlock_cancel`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Cancellation.lean#L70)). The
+however large the products are ([`Ozaki.TC.evalBlock_cancel`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L70)). The
 condition on the sum is also necessary
-([`evalBlock_exact_needs_binary32`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Cancellation.lean#L118)). For example:
+([`evalBlock_exact_needs_binary32`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L118)). For example:
 
 - eight products `±2^22` on A100 total `2^25` and return `0` exactly
-  ([`a100_cancel_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Cancellation.lean#L349));
+  ([`a100_cancel_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L349));
 - a full H100 block FMA of sixteen products does the same
-  ([`h100_cancel_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Cancellation.lean#L368)).
+  ([`h100_cancel_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L368)).
 
 The AMD architectures differ:
 
 - **CDNA 1 and CDNA 3:** exact whenever every product, `c` and the exact
   sum are within `2^24`.
 - **CDNA 2:** it adds binary32 products in pairwise sums, so every pairwise
-  sum must also be within `2^24` ([`Ozaki.MC.pairwiseGroupSum_cancel`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Cancellation.lean#L41),
-  [`pairwiseSumsBounded_of_bound`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Cancellation.lean#L66)). Cancellation inside one pairwise sum is free;
+  sum must also be within `2^24` ([`Ozaki.MC.pairwiseGroupSum_cancel`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Cancellation.lean#L41),
+  [`pairwiseSumsBounded_of_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Cancellation.lean#L66)). Cancellation inside one pairwise sum is free;
   cancellation across pairwise sums is not.
 
 This is the precise boundary, not a scheduling rule: the running sums are
@@ -71,14 +71,14 @@ are right, and why.
 
 - **Full block FMAs.** With `11`-bit slices, `k · 2^22 ≤ 2^24` allows four
   products, but A100 and H100 block FMAs take eight and sixteen. Seven products
-  `2047²` already lose a bit ([`a100_full_blockFMA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Limits.lean#L51)).
+  `2047²` already lose a bit ([`a100_full_blockFMA`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Limits.lean#L51)).
 - **NVIDIA and AMD fail differently.** Past the exactness bound the Tensor Core
   truncates and CDNA 3 rounds to nearest. The same seven products return
   `29331462` on the Tensor Core and `29331464` on CDNA 3, where the exact sum
-  is `29331463` ([`cdna3F16_full_blockFMA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Limits.lean#L34)). Configurations that rely on luck
+  is `29331463` ([`cdna3F16_full_blockFMA`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Limits.lean#L34)). Configurations that rely on luck
   give different wrong answers on the two vendors.
 - **The rounding test cannot run on a Tensor Core.** A Tensor Core's output
-  is not monotone in its inputs ([non-monotonicity](/TC-EFT/properties/non-monotonicity/)),
+  is not monotone in its inputs ([non-monotonicity](/MMAlgebra/properties/non-monotonicity/)),
   and the rounding test relies on monotone rounding, so it runs on exact
   values.
 
@@ -88,10 +88,10 @@ Run a block FMA once from `c = 0`, giving `D1`, the truncation of the exact sum
 `S`. Run it again from `c = −D1`. Because `c` takes part in alignment, the
 mechanism behind the non-monotonicity, the second pass is exact as long as
 `|D1| ≤ 2^(F+1)`, and it returns `S − D1`, so `D1 + D2 = S`
-([`twoPass_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L256)). `F` grows by one bit each time the FMA size doubles,
+([`twoPass_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/TwoPass.lean#L256)). `F` grows by one bit each time the FMA size doubles,
 so a full block FMA of `11`-bit products always fits. The two-pass matrix
-multiplier is exact for every length on all eight variants ([`tcMultiplier2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L404),
-[`h100F16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L474) and seven more).
+multiplier is exact for every length on all eight variants ([`tcMultiplier2_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/TwoPass.lean#L404),
+[`h100F16_exactOn2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/TwoPass.lean#L474) and seven more).
 
 This is the matrix-instruction analogue of the scalar TwoProdFMA, for a
 multi-term truncating adder. It needs the precise semantics: from "FP32
@@ -102,30 +102,30 @@ not the cheapest way to fill a block FMA, as the next section shows.
 
 - **SFMA and CDNA 1: it holds.** On the SFMA, whose block is one product, the
   two passes are exactly TwoProdFMA: `(2^24 − 1)²` comes back exact where one
-  pass rounds it ([`sfma_twoProd`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L642), [`mcTwoPass_exact_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L427)).
+  pass rounds it ([`sfma_twoProd`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L642), [`mcTwoPass_exact_cr`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L427)).
 - **CDNA 3: it holds.** Global alignment is exact for larger `c` than the
-  exactness bound assumed ([`alignedAccumulation_wide`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L85)), so the second pass recovers
+  exactness bound assumed ([`alignedAccumulation_wide`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L85)), so the second pass recovers
   what the final rounding lost: the full block FMA that one pass returns as
-  `29331464` comes back as `29331463` ([`cdna3F16_twoPass_full_blockFMA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L635),
-  [`mcTwoPass_exact_ga`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L440)). The two-pass matrix multiplier is exact for every
-  length ([`mcMultiplier2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L512)).
+  `29331464` comes back as `29331463` ([`cdna3F16_twoPass_full_blockFMA`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L635),
+  [`mcTwoPass_exact_ga`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L440)). The two-pass matrix multiplier is exact for every
+  length ([`mcMultiplier2_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L512)).
 - **CDNA 2: it fails in general.** Its pairwise sums round before `c` is
   added, so the second pass sees the same rounded pairwise sum; products `2^22` and
   `2^-14` return `2^22` on CDNA 2 and are recovered on CDNA 1
-  ([`cdna2_twoPass_fails`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L653)). For integer slices the pairwise sums never
+  ([`cdna2_twoPass_fails`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L653)). For integer slices the pairwise sums never
   round, so Ozaki is unaffected.
 
 A second pass is needed on AMD only on CDNA 3 fp16 and the SFMA: elsewhere
-full block FMAs of the widest slices fit the exactness bound ([`full_blockFMAs_fit`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L625)).
+full block FMAs of the widest slices fit the exactness bound ([`full_blockFMAs_fit`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/TwoPass.lean#L625)).
 
 ## Choosing slices, chunks and passes
 
 For each variant, the model gives every exact configuration: a slice width `b`
 up to the input format's limit, a chunk length, one or two passes. Each
-candidate is proved exact for every length ([`candidates_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/SplitChoice.lean#L118),
-[`mcCandidates_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/SplitChoice.lean#L48)). The cost counts block FMAs on the matrix multiplier for the
+candidate is proved exact for every length ([`candidates_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L118),
+[`mcCandidates_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L48)). The cost counts block FMAs on the matrix multiplier for the
 `s(s+1)/2` slice products of Ozaki-I, with the slice count from a stated
-normwise rule ([`slicesFor`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRule.lean#L25), [`slicing_term_le_maxAbs`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRule.lean#L30)). At `k = 1024`:
+normwise rule ([`slicesFor`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceRule.lean#L25), [`slicing_term_le_maxAbs`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceRule.lean#L30)). At `k = 1024`:
 
 | Variant | FP64: cheapest | `11`-bit, chunks of 4 | `11`-bit, two passes | binary32: cheapest |
 | --- | --- | --- | --- | --- |
@@ -136,11 +136,11 @@ normwise rule ([`slicesFor`](https://github.com/pauljiang03/TC-EFT/blob/main/oza
 | H100 tf32 `mma` | `b = 10`, 2688 | 3840 | 3840 | `b = 10`, 768 |
 | CDNA 3 fp16 | `b = 10`, 2688 | 3840 | — | `b = 10`, 768 |
 
-The theorems are [`h100F16_best`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/SplitChoice.lean#L186), [`cdna3F16_best`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/SplitChoice.lean#L92) and the others in
-[`OzakiTC/SplitChoice.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/SplitChoice.lean)
-and [`OzakiMC/SplitChoice.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/SplitChoice.lean).
+The theorems are [`h100F16_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L186), [`cdna3F16_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L92) and the others in
+[`OzakiTC/SplitChoice.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean)
+and [`OzakiMC/SplitChoice.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean).
 The chosen configurations are proved exact and correctly rounded
-([`h100F16_fp64CR10`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/SplitChoice.lean#L247), [`cdna3F16_fp64CR10`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/SplitChoice.lean#L113)).
+([`h100F16_fp64CR10`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L247), [`cdna3F16_fp64CR10`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L113)).
 
 Two findings:
 
@@ -158,17 +158,17 @@ Two findings:
 **Ozaki-II and ADP.** The same choice for Ozaki-II picks the fewest
 pairwise-coprime moduli up to `2^(b+1)` whose product covers `2k · 2^(2P)`,
 with `P` set so the truncation error meets the same target as Ozaki-I's slice
-rule ([`moduliFor_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ModuliRule.lean#L104)); every candidate is proved exact
-([`ozaki2Candidates_ok`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L61), [`mcRunCandidates_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L77)). In FP64 Ozaki-II is
+rule ([`moduliFor_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/ModuliRule.lean#L104)); every candidate is proved exact
+([`ozaki2Candidates_ok`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L61), [`mcRunCandidates_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L77)). In FP64 Ozaki-II is
 cheaper than Ozaki-I on every variant, by `1.4×` to `2×` in block FMAs
 (H100 fp16 at `k = 1024`: 768 against 1344; CDNA 3 fp16: 1536 against 2688;
-[`h100F16_best2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L110), [`cdna3F16_best12`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L135)); in binary32 they mostly tie. Two
+[`h100F16_best2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L110), [`cdna3F16_best12`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L135)); in binary32 they mostly tie. Two
 passes win only on the SFMA, for Ozaki-I. For ADP-style slicing the remap
-encoding is never worse than naive signed bytes ([`adpCost_remap_le_naive`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChoice.lean#L70)),
+encoding is never worse than naive signed bytes ([`adpCost_remap_le_naive`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChoice.lean#L70)),
 but when the fixed-point width is `7` mod `8` the floor encoding saves a slice
-([`adp_best`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChoice.lean#L82)). The chosen configurations are correctly rounded
-([`h100F16_fp64CR2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L147), [`cdna3F16_fp64CR2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L158), [`sfma_fp64CR2pass`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L172),
-[`adp_fp64CR_esc0`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChoice.lean#L96)).
+([`adp_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChoice.lean#L82)). The chosen configurations are correctly rounded
+([`h100F16_fp64CR2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L147), [`cdna3F16_fp64CR2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L158), [`sfma_fp64CR2pass`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L172),
+[`adp_fp64CR_esc0`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChoice.lean#L96)).
 
 The cost counts model instructions, not time: it leaves out slicing,
 Ozaki-II's reconstruction with integers of about `130` bits, memory traffic,
@@ -180,12 +180,12 @@ comparable with fp16 blocks without throughput figures.
 **With correct rounding's margin.** Correct rounding needs about
 `log₂ k + 2` more bits than the accuracy target: one more slice for Ozaki-I
 (`15` to `21` slice products) and one more modulus for Ozaki-II. With the
-margin included in both ([`moduliForCR_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L110), [`truncation_le_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L117)),
+margin included in both ([`moduliForCR_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L110), [`truncation_le_cr`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/SliceRuleCR.lean#L117)),
 Ozaki-II remains `1.75×` to `2.25×` cheaper than Ozaki-I for FP64 on every
 Tensor Core variant and AMD fp16, bf16 and XF32 variant (H100 fp16 at `k = 1024`: 832
-blocks against 1792; [`h100F16_bestCR`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Ozaki2ChoiceCR.lean#L75)), and `1.25×` to `1.5×` for binary32,
+blocks against 1792; [`h100F16_bestCR`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2ChoiceCR.lean#L75)), and `1.25×` to `1.5×` for binary32,
 except on the SFMA, where two-pass Ozaki-I wins. Any positive, pairwise-coprime
-moduli give a valid CRT basis ([`crtBasis_valid`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CRTValid.lean#L148)), so the chosen bases need
+moduli give a valid CRT basis ([`crtBasis_valid`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/CRTValid.lean#L148)), so the chosen bases need
 no case-by-case check.
 
 ## What is not modeled
@@ -194,6 +194,6 @@ no case-by-case check.
   fractional bits on H100, so conservative assumptions there are likely wrong
   and exact semantics would decide which configurations are possible.
 - **INT8 instructions**, out of scope for now on both vendors
-  ([issue #2](https://github.com/pauljiang03/TC-EFT/issues/2)). ADP runs on
+  ([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)). ADP runs on
   an idealized INT8 matrix multiplier.
 - **Blackwell.**

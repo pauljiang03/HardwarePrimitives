@@ -5,14 +5,14 @@ description: A second, separately written formalization of the Accurate Models T
 
 An executable model can be wrong in subtle ways: an off-by-one exponent, a
 truncation in the wrong direction, a mishandled subnormal. To guard against
-this, TC-EFT contains a **second formalization**, written independently,
+this, the project contains a **second formalization**, written independently,
 that follows *Accurate Models* (Khattak and Mikaitis) §4.1 (Figures 2, 3, 5
 and Table 3) as closely as possible. In Lean it is the `IndependentSpec`
 namespace, and the theorems relating it to the model end in `_eq_spec`. Lean proves the two agree on **every** encoded input.
 
 ## How the specification differs
 
-[`TensorCore/TC/Specification/Defs.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Specification/Defs.lean)
+[`TensorCore/TC/Specification/Defs.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Defs.lean)
 imports only Lean's standard library and a notation file. It shares no
 definitions with the implementation and is written in a different style:
 
@@ -62,7 +62,7 @@ theorem supported_eq_spec (variant : Variant) (x : BlockInput (implementationMod
 ## Checking independence
 
 Independence is checked mechanically. The audit in
-[`tests/TensorCoreTests/Specification/Audit.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/tests/TensorCoreTests/Specification/Audit.lean)
+[`tests/TensorCoreTests/Specification/Audit.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/tests/TensorCoreTests/Specification/Audit.lean)
 walks every constant used by the specification's types **and proof terms**,
 transitively, and fails if any comes from the implementation rather than
 `Init`, `Std`, or `Lean`. The recorded run audited 181 specification
@@ -75,4 +75,4 @@ The equality shows that the executable model **is** the *Accurate Models*
 model, as transcribed. Both rest on the same reading of *Accurate Models*.
 If that model differs from the hardware in some region, both formalizations inherit
 that difference. That risk is what the [hardware
-replay](/TC-EFT/model/validation/) addresses.
+replay](/MMAlgebra/model/validation/) addresses.

@@ -72,7 +72,7 @@ the bookkeeping differs.
 
 ## The stages
 
-[`TensorCore/Kernels/Datapath/Defs.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Defs.lean)
+[`TensorCore/Kernels/Datapath/Defs.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Defs.lean)
 follows the same five steps as the model:
 
 1. **Decode.** Bit-field extraction gives the sign, the significand with its
@@ -118,14 +118,14 @@ the stages:
 
 | Stage | Lean result | What it shows |
 | --- | --- | --- |
-| Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L48), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L97) | each decoder gives the model's decoded value |
-| Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's product in denormalized form |
-| Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
-| Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
-| Accumulate | [`Datapath.accumulate_toInt`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L126), [`Datapath.accumulator_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L121) | the accumulator's signed value is the model's exact sum; it never overflows |
-| Normalize and truncate | [`Datapath.normalize_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Normalize.lean#L182) | the bitvector normalizer is `round32 .truncate`, bit for bit |
+| Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L48), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L97) | each decoder gives the model's decoded value |
+| Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's product in denormalized form |
+| Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
+| Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
+| Accumulate | [`Datapath.accumulate_toInt`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Align.lean#L126), [`Datapath.accumulator_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L121) | the accumulator's signed value is the model's exact sum; it never overflows |
+| Normalize and truncate | [`Datapath.normalize_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Normalize.lean#L182) | the bitvector normalizer is `round32 .truncate`, bit for bit |
 
-[`Normalize.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Normalize.lean)
+[`Normalize.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Normalize.lean)
 proves `normalize_eq` for any accumulator width from 24 to 64 bits, so it
 does not depend on the model.
 
@@ -171,7 +171,7 @@ queries on one fixed model, through Lean's `bv_decide`.
 
 ## Tests
 
-[`tests/TensorCoreTests/TC/Datapath.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/tests/TensorCoreTests/TC/Datapath.lean)
+[`tests/TensorCoreTests/TC/Datapath.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/tests/TensorCoreTests/TC/Datapath.lean)
 checks concrete words with the kernel: four products of one, products lost
 below the grid, an out-of-range sum, a subnormal output, a negative sum that
 truncates to −0, and both input errors.

@@ -5,13 +5,13 @@ description: What is tested rather than proven, what is trusted, and what is ass
 
 This page separates what Lean proves from what is only tested, trusted, or
 assumed. The proven results themselves are listed on
-[What is proven](/TC-EFT/proofs/theorems/).
+[What is proven](/MMAlgebra/proofs/theorems/).
 
 ## Proven in Lean
 
 All model properties, EFT correctness, and refinement results, under the
 hypotheses stated in each theorem (see [What is
-proven](/TC-EFT/proofs/theorems/)). The development uses no `sorry` and no
+proven](/MMAlgebra/proofs/theorems/)). The development uses no `sorry` and no
 custom axioms. `scripts/check_axioms.py` audits every public theorem under
 the `TensorCore` namespace and allows only `propext`, `Classical.choice`, and
 `Quot.sound`. The recorded run audited 1,375 theorem roots.
@@ -28,7 +28,7 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
 ## Tested, not proved
 
 - **Agreement with GPUs**: on the 35,000 recorded measurements only, with the
-  [coverage gaps](/TC-EFT/model/validation/#what-the-rows-dont-cover) noted
+  [coverage gaps](/MMAlgebra/model/validation/#what-the-rows-dont-cover) noted
   there.
 - **Agreement with Python oracles**: exact-rational reimplementations of
   the same *Accurate Models* semantics.
@@ -43,7 +43,7 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
 - The Python harnesses that compare outputs. Their pass/fail rests largely on
   `assert`; every script refuses to run under `python -O` or `PYTHONOPTIMIZE`.
 - The authenticity of the vendored measurement files. They are pinned by
-  SHA-256 in [`vendor/SOURCES.json`](https://github.com/pauljiang03/TC-EFT/blob/main/vendor/SOURCES.json)
+  SHA-256 in [`vendor/SOURCES.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/vendor/SOURCES.json)
   but cannot be independently re-measured without GPUs.
 
 ## Assumed

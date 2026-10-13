@@ -1,6 +1,6 @@
 ---
 title: Non-monotonicity
-description: Lowering the accumulator input C can raise the Tensor Core output; TC-EFT proves exactly when.
+description: Lowering the accumulator input C can raise the Tensor Core output; Lean proves exactly when.
 ---
 
 In IEEE arithmetic with a fixed rounding mode, `x ≤ x'` implies
@@ -17,7 +17,7 @@ On the V100 model, take four products `2^-12 × 2^-12 = 2^-24`:
 | `1` | 0 | `2^-23` | none | `1` |
 | `1 − 2^-24` | −1 | `2^-24` | all four | `1 + 2^-23` |
 
-[The model at a glance](/TC-EFT/model/#a-worked-trace) walks through every
+[The model at a glance](/MMAlgebra/model/#a-worked-trace) walks through every
 stage of this example.
 
 ## The general family theorem
@@ -51,11 +51,11 @@ exactly 1. Lowering `C` to its FP32 predecessor `1 − 2^-24` makes the output
 | H100 | 16 | 2 | 12 | yes |
 
 Each row has a kernel-checked concrete witness in
-[`tests/TensorCoreTests/TC/Monotonicity.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/tests/TensorCoreTests/TC/Monotonicity.lean).
+[`tests/TensorCoreTests/TC/Monotonicity.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/tests/TensorCoreTests/TC/Monotonicity.lean).
 
 ## Larger perturbations
 
-[`nonmonotone_range_encoded`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/MonotonicityRange.lean#L265)
+[`nonmonotone_range_encoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MonotonicityRange.lean#L265)
 generalizes the result to `C = 1 − j·2^-24` for `1 ≤ j ≤ 2^23`. It gives the
 exact set of `j` for which the output exceeds 1, namely
 `j ≤ min(2^23, K/2^p − 2)`, a closed form for the output, and the largest
@@ -63,7 +63,7 @@ output in the family.
 
 ## Necessary and sufficient conditions in general
 
-[`flowback_necessary` and `flowback_sufficient`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Flowback.lean#L200)
+[`flowback_necessary` and `flowback_sufficient`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Flowback.lean#L200)
 cover arbitrary inputs. Call the products recovered by the finer grid the
 *flowback* ω, and the change in the aligned `C` term ΔA. An output increase
 **requires** `ω > ΔA`. The condition is **sufficient** when both

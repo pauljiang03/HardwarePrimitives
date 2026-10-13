@@ -138,7 +138,7 @@ binary32 tie through the exact fallback.
 tightened widths on the guarded matrix multipliers, including runs of the exact fallback alone, shows
 them failing with a `64`-bit data register or an `8`-bit exponent register, checks the signed
 checked versions, and shows
-the INT8 register refusing to wrap where TC-EFT's wraps.
+the INT8 register refusing to wrap where `TensorCore`'s wraps.
 
 ## Exact zeros
 

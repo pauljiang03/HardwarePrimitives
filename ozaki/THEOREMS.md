@@ -207,7 +207,7 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | **Correctly rounded** Ozaki-I and Ozaki-II on any variant whose matrix multiplier is exact; Ozaki-I with its exact fallback on Tensor Core block FMAs too, for binary32 inputs (`24` slices of `11` bits suffice). | | `Ozaki.TC.tcOzaki1CR_eq`, `Ozaki.TC.tcOzaki2CR_eq`, `Ozaki.TC.tcOzaki1CRE_eq`, `Ozaki.TC.v100_ozaki1CRE` | [OzakiTC/Correct.lean](OzakiTC/Correct.lean) |
 | **Two passes recover a full block FMA exactly**: pass 1 from `c = 0` gives `D1`, pass 2 from `c = −D1` gives `D2`, and `D1 + D2 = Σ aᵢbᵢ` whenever `K · 2^(2b) ≤ 2^(F+1)`; the matrix multiplier built on it is exact for every length, with full block FMAs on all eight variants (`11`-bit slices on fp16 and tf32, `8`-bit on bf16); Ozaki-I on it meets its error bound for every `k`. | | `Ozaki.TC.twoPass_exact`, `Ozaki.TC.tcMultiplier2_exactOn`, `Ozaki.TC.v100F16_exactOn2`, `Ozaki.TC.a100F16_exactOn2`, `Ozaki.TC.h100F16_exactOn2`, `Ozaki.TC.a100BF16_exactOn2`, `Ozaki.TC.h100BF16_exactOn2`, `Ozaki.TC.a100TF32_exactOn2`, `Ozaki.TC.h100TF32Wmma_exactOn2`, `Ozaki.TC.h100TF32Mma_exactOn2`, `Ozaki.TC.h100_ozaki1TP_error` | [OzakiTC/TwoPass.lean](OzakiTC/TwoPass.lean) |
 | fp16 holds `2048` but not `4095`; `12`-bit magnitudes exceed the exactness bound on V100; a full A100 block FMA of `11`-bit products can exceed it; an A100 block is exact where binary32 additions are not. | `I:[Z.5]` | `Ozaki.TC.fp16_not_4095`, `Ozaki.TC.v100_twelve_bit_magnitudes`, `Ozaki.TC.a100_full_blockFMA`, `Ozaki.TC.a100_exact_where_binary32_is_not` | [OzakiTC/Limits.lean](OzakiTC/Limits.lean) |
-| INT8 × INT8 → INT32 in a 32-bit wrapping register (TC-EFT's `machineAccumulate`) over exact integer products is exact on byte operands; a 16-bit register wraps. | `ADP:[Z.1]`, `ADP:[Z.2]` | `Ozaki.TC.int8Dot_bytes`, `Ozaki.TC.int8Dot_16_wraps` | [OzakiTC/Int8.lean](OzakiTC/Int8.lean) |
+| INT8 × INT8 → INT32 in a 32-bit wrapping register (`TensorCore`'s `machineAccumulate`) over exact integer products is exact on byte operands; a 16-bit register wraps. | `ADP:[Z.1]`, `ADP:[Z.2]` | `Ozaki.TC.int8Dot_bytes`, `Ozaki.TC.int8Dot_16_wraps` | [OzakiTC/Int8.lean](OzakiTC/Int8.lean) |
 | **INT8 accumulation semantics.** The wrapping register returns the exact dot product reduced to signed `w`-bit two's complement, so every accumulation order (any tree of wrapping additions over any permutation of the products) gives the same result; a saturating register, clamping after every addition in any grouping, is exact while the magnitudes stay in range. On ADP's operands wrapping, saturating and exact all agree. | | `Ozaki.TC.int8Dot_eq_wrap`, `Ozaki.TC.int8Dot_any_order`, `Ozaki.TC.satAccumulate_exact`, `Ozaki.TC.AddTree.satSum_exact`, `Ozaki.TC.int8_wrap_sat_exact` | [OzakiTC/Int8Semantics.lean](OzakiTC/Int8Semantics.lean) |
 | Ozaki-I on the INT8 matrix multiplier: the slice products recombine exactly to the fixed-point product, so the result is one binary64 rounding of it. | `ADP:[E.3]`, `ADP:[R.1]` | `Ozaki.TC.int8Recombine_eq`, `Ozaki.TC.int8Ozaki_eq` | [OzakiTC/Int8.lean](OzakiTC/Int8.lean) |
 | **Exactness with cancellation.** A block of `b`-bit integers with `2b ≤ F` and an integer `\|c\| < 2^(F+1)` returns the exact sum whenever that sum is a binary32 value, with no bound on `Σ\|aᵢbᵢ\|`; the condition on the sum is necessary. Chains and the matrix multiplier likewise, when the prefixes at block boundaries stay within `2^24`. Eight products `±2^22` on A100 and a full H100 block FMA of sixteen return `0`. | | `Ozaki.TC.evalBlock_cancel`, `Ozaki.TC.evalBlock_exact_needs_binary32`, `Ozaki.TC.runBlocks_cancel`, `Ozaki.TC.tcMultiplier_exactWhen`, `Ozaki.TC.a100_cancel_zero`, `Ozaki.TC.h100_cancel_zero` | [OzakiTC/Cancellation.lean](OzakiTC/Cancellation.lean) |
@@ -219,7 +219,7 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 
 `Ozaki.TC.adp` is the routine of the Z3 model `adp.py`, in its order: scan for non-finite inputs,
 matrix ESC (unbounded sends the product to native binary64), `W = 53 + ESC + 1`, the slice count,
-the heuristic `s² ≤ ratio`, then emulation on TC-EFT's INT8 matrix multiplier, or native binary64 otherwise. On
+the heuristic `s² ≤ ratio`, then emulation on `TensorCore`'s INT8 matrix multiplier, or native binary64 otherwise. On
 the five cases recorded from the unmodified Z3 model (three emulated, one sent to native binary64 by
 its ESC, one non-finite) it returns the same path and values ([tests](tests/README.md)).
 
@@ -283,10 +283,10 @@ theorem or a kernel-checked test.
 
 ## Not proved
 
-- That real GPUs behave like the models; see TC-EFT's and Matrix-Core's validation.
+- That real GPUs behave like the models; see the Tensor Core and matrix core validation.
 - FP8 variants: CDNA 3's `odd_even_grouping`, and no FP8 Tensor Core variant exists in `TensorCore`.
 - INT8 hardware semantics are out of scope for now, on both vendors
-  ([issue #2](https://github.com/pauljiang03/TC-EFT/issues/2)). ADP runs on an idealized INT8
+  ([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)). ADP runs on an idealized INT8
   matrix multiplier, the arithmetic of a wrapping (or saturating) INT32 register over exact integer products;
   its result does not depend on the accumulation order, but neither `TensorCore` nor `MatrixCore`
   models an INT8 instruction, and nothing is validated against INT8 hardware.

@@ -4,7 +4,7 @@ import Ozaki.Success
 /-! # The Tensor Core pipelines return a value
 
 The Z3 models check that no NaN or infinity ever appears (`[H.1]` of both models). On the Tensor
-Core model the schemes return `none` only when a binary32 rounding overflows, and TC-EFT's
+Core model the schemes return `none` only when a binary32 rounding overflows, and `TensorCore`'s
 binary32 converter succeeds on every value of magnitude at most `maxFinite32`
 (`round32Value_succeeds`). With an exact matrix multiplier:
 

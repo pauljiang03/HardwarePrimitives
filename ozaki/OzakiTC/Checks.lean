@@ -16,7 +16,7 @@ in binary32, and proves three lemmas about it (Ozaki-I `[Z.2]`, `[Z.3]`, `[Z.4]`
 
 The Tensor Core itself multiplies exactly and adds a whole block FMA exactly before one rounding
 (`evalBlock_int`, `runBlocks_int`); these lemmas are about the Z3 models' matrix multiplier, stated
-with TC-EFT's formats and roundings. -/
+with `TensorCore`'s formats and roundings. -/
 
 open TensorCore
 

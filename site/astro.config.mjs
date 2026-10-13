@@ -4,27 +4,27 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://pauljiang03.github.io',
-  base: '/TC-EFT',
+  base: '/MMAlgebra',
   trailingSlash: 'always',
   devToolbar: { enabled: false },
   // Old URLs (renamed pages) forward to their current pages.
   redirects: {
-    '/overview': '/TC-EFT/',
-    '/model/conversion': '/TC-EFT/model/normalization/',
-    '/proofs/trust': '/TC-EFT/proofs/tested/',
-    '/model/profiles': '/TC-EFT/model/variants/',
+    '/overview': '/MMAlgebra/',
+    '/model/conversion': '/MMAlgebra/model/normalization/',
+    '/proofs/trust': '/MMAlgebra/proofs/tested/',
+    '/model/profiles': '/MMAlgebra/model/variants/',
   },
   integrations: [
     starlight({
-      title: 'TC-EFT',
+      title: 'MMAlgebra',
       description:
-        'A Lean 4 model of NVIDIA Tensor Core block arithmetic, its non-monotonicity, and the TC-EFT correction algorithm.',
+        'Verified semantics of GPU matrix multipliers: models of NVIDIA Tensor Cores and AMD matrix cores, TC-EFT, Ozaki emulation with correct rounding, and the algebra of reduction schedules.',
       customCss: ['./src/styles/theme.css'],
       expressiveCode: {
         themes: ['github-dark-dimmed', 'github-light'],
         styleOverrides: { borderRadius: '2px', frames: { shadowColor: 'transparent' } },
       },
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/pauljiang03/TC-EFT' }],
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/pauljiang03/MMAlgebra' }],
       sidebar: [
         {
           label: 'Start here',

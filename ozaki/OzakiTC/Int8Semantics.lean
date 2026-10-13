@@ -2,7 +2,7 @@ import OzakiTC.Int8
 
 /-! # The INT8 matrix multiplier's accumulation: any order, wrapping or saturating
 
-The INT8 matrix multiplier (`int8Dot`) multiplies bytes exactly and adds the products in TC-EFT's
+The INT8 matrix multiplier (`int8Dot`) multiplies bytes exactly and adds the products in `TensorCore`'s
 `w`-bit two's-complement register (`machineAccumulate w`), one at a time in list order. An INT8
 matrix instruction adds its products in some internal order and grouping that the hardware does not
 document, and integer instructions come in two flavours: wrapping (`INT32` arithmetic modulo

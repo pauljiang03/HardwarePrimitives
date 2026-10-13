@@ -1,6 +1,6 @@
 # Guide to the FloatLib implementation
 
-`floatlib-port/` is an independent Lean project inside `TC-EFT`. It implements the paper's FP32-output Tensor Core block model and reference TC-EFT using FloatLib, and proves that its checked interfaces agree with the first-principles implementation. Its equivalence layer verifies the parent arithmetic and proof bodies against the pinned reference manifest.
+`floatlib-port/` is an independent Lean project inside `MMAlgebra`. It implements the paper's FP32-output Tensor Core block model and reference TC-EFT using FloatLib, and proves that its checked interfaces agree with the first-principles implementation. Its equivalence layer verifies the parent arithmetic and proof bodies against the pinned reference manifest.
 
 This guide explains the folder and the strength of its evidence. The [README](README.md) gives the detailed numerical behavior and executable commands. The [comparison document](COMPARISON.md) maps the arithmetic stages and paper statements to their Lean theorems.
 
@@ -67,7 +67,7 @@ The two implementations use the same executable scalar guard, based on the lowes
 
 ## How to build and verify
 
-Use a complete repository clone or source ZIP, since the scripts read the parent project's source and saved test data. TC-EFT's Git history is unnecessary. Install elan/Lean, Git and Python 3; Lake uses Git to fetch pinned dependencies. Initial dependency setup needs network access and several GB of storage. MATLAB, CUDA and a GPU are unnecessary for replaying the saved measurements.
+Use a complete repository clone or source ZIP, since the scripts read the parent project's source and saved test data. the Git history is unnecessary. Install elan/Lean, Git and Python 3; Lake uses Git to fetch pinned dependencies. Initial dependency setup needs network access and several GB of storage. MATLAB, CUDA and a GPU are unnecessary for replaying the saved measurements.
 
 From the repository root:
 

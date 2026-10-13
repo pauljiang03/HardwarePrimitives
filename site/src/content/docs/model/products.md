@@ -24,7 +24,7 @@ def denormalizedMul (a b : Decoded) : DenormalizedProduct :=
     a.mantissaBits + b.mantissaBits⟩
 ```
 
-[`denormalizedMul`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/DenormalizedProduct.lean#L25)
+[`denormalizedMul`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/DenormalizedProduct.lean#L25)
 multiplies the significands exactly (no bits dropped), adds exponents, and adds mantissa widths
 (an FP16 × FP16 product has 20 mantissa bits). Nothing is rounded. The value is exact:
 
@@ -44,7 +44,7 @@ def PreparedBlock.terms (b : PreparedBlock) : List DenormalizedProduct :=
 ```
 
 So `C` competes with the products for the
-[alignment exponent](/TC-EFT/model/alignment/), and it is truncated on the
+[alignment exponent](/MMAlgebra/model/alignment/), and it is truncated on the
 same grid. This is why changing `C` can change how the products are rounded.
 
 ## Why the denormalized form matters
@@ -80,5 +80,5 @@ theorem denormalizedMul_bounded (a b : Decoded) (ha : a.Bounded) (hb : b.Bounded
 
 Every product in denormalized form is less than `4 · 2^exponent` in magnitude, and `C` is less
 than `2 · 2^exponent`. After alignment, this gives each term at most `F + 2`
-magnitude bits. The [accumulator-width theorems](/TC-EFT/model/accumulation/)
+magnitude bits. The [accumulator-width theorems](/MMAlgebra/model/accumulation/)
 rely on that.

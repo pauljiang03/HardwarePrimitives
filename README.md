@@ -1,14 +1,22 @@
-# TC-EFT
+# MMAlgebra
 
-This Lean library formalizes Tensor Core (TC) block arithmetic, its non-monotonicity, and the TC-EFT correction algorithm under explicit preconditions. Executable calculations and correctness proofs use the same definitions. The TC model follows Khattak and Mikaitis, *Accurate Models of NVIDIA Tensor Cores* ([paper](https://arxiv.org/html/2512.07004v4)); the non-monotonicity results and the TC-EFT algorithm come from the TC-EFT paper (*TC-EFT: Characterizing and Correcting Tensor Core Arithmetic*). Lean names describe what each result states; docstrings cite the paper and number where one applies.
+MMAlgebra is a Lean 4 development about the arithmetic of GPU matrix multipliers and the software built on them. It verifies the boundary between the two: what NVIDIA Tensor Cores and AMD matrix cores actually compute, what software can rely on, and which changes to the software leave the result bit for bit the same. Executable calculations and correctness proofs use the same definitions.
+
+It has three parts, each building on the one before:
+
+1. **Hardware semantics.** Executable models of the block FMAs of NVIDIA Tensor Cores (Volta, Ampere and Hopper) and of AMD matrix cores (CDNA 1, 2 and 3), following Khattak and Mikaitis, *Accurate Models of NVIDIA Tensor Cores* ([paper](https://arxiv.org/html/2512.07004v4)) and *Accurate Models of AMD Matrix Cores* ([paper](https://arxiv.org/abs/2609.14845)). On top of the Tensor Core model: error bounds, a characterization of non-monotonicity, and TC-EFT, an error-free transformation that recovers the correctly rounded sum of a block FMA. The non-monotonicity results and the TC-EFT algorithm come from the TC-EFT paper (*TC-EFT: Characterizing and Correcting Tensor Core Arithmetic*). The root library `TensorCore` holds the Tensor Core model; [`amd/`](amd/README.md) holds the matrix core model.
+2. **Emulation.** [`ozaki/`](ozaki/README.md) proves the Ozaki schemes and NVIDIA's automatic dynamic precision on both models, with correctly rounded variants and integer pipelines of bounded width.
+3. **Schedules.** An algebra of reduction schedules that decides which ways of computing a matrix product give identical bits on each architecture (in progress).
+
+Lean names describe what each result states; docstrings cite the paper and number where one applies.
 
 Start with the [guide](docs/README.md). It follows a calculation from encoded input words through alignment and correction, then explains how to run the Lean tests and add cases.
 
-[Website](https://pauljiang03.github.io/TC-EFT/) · [Reviewer guide](ARTIFACT.md) · [Test walkthrough](tests/README.md) · [What is proven](TensorCore/THEOREMS.md) · [FloatLib implementation](floatlib-port/README.md)
+[Website](https://pauljiang03.github.io/MMAlgebra/) · [Reviewer guide](ARTIFACT.md) · [Test walkthrough](tests/README.md) · [What is proven](TensorCore/THEOREMS.md) · [AMD matrix cores](amd/README.md) · [Ozaki schemes](ozaki/README.md) · [FloatLib implementation](floatlib-port/README.md)
 
 ## Build and run
 
-Install [elan](https://github.com/leanprover/elan) and Python 3, use the pinned `lean-toolchain`, and run from this directory. A complete source ZIP works as well as a clone; TC-EFT's Git history is unnecessary. The FloatLib project also needs Git to fetch its pinned dependencies.
+Install [elan](https://github.com/leanprover/elan) and Python 3, use the pinned `lean-toolchain`, and run from this directory. A complete source ZIP works as well as a clone; the Git history is unnecessary. The FloatLib project also needs Git to fetch its pinned dependencies.
 
 ```sh
 lake build
@@ -82,8 +90,8 @@ This builds a fresh snapshot, audits theorem dependencies, checks every worked L
 
 The supported variants use FP16, BF16, or TF32 input formats and the FP32 output format; the final rounding is truncation, as in *Accurate Models*. Any value TC-EFT returns is the exact sum correctly rounded to FP32, and it returns one exactly when that rounded sum is finite. Its fast FP32 path is taken whenever its check passes; otherwise a 576-bit exact fallback gives the answer. The non-monotonicity theorems cover specified families of encoded inputs. Hardware comparisons replay 35,000 recorded GPU measurements, which do not exercise the minimum alignment exponent, zero or subnormal operands, TF32's wide exponent range, or the H100 TF32 variant with FMA size K = 8; the proofs concern the formal model under their stated hypotheses. Software checks require neither MATLAB nor CUDA. The scripts refuse to run under `python -O`, and rerunning them on unchanged sources leaves `git status` clean.
 
-[What is proven](TensorCore/THEOREMS.md) · [What is tested](https://pauljiang03.github.io/TC-EFT/proofs/tested/) · [Executable reference](docs/reference.md) · [Trust and style](docs/style.md)
+[What is proven](TensorCore/THEOREMS.md) · [What is tested](https://pauljiang03.github.io/MMAlgebra/proofs/tested/) · [Executable reference](docs/reference.md) · [Trust and style](docs/style.md)
 
 ## License
 
-TC-EFT's code and documentation are available under the [MIT license](LICENSE). Vendored materials retain their own notices, including the [BSD 2-Clause license](vendor/matlab-tensor-core-v0.5/LICENCE) for the Accurate Models code and recorded vectors. Downloaded dependencies retain their upstream licenses.
+MMAlgebra's code and documentation are available under the [MIT license](LICENSE). Vendored materials retain their own notices, including the [BSD 2-Clause license](vendor/matlab-tensor-core-v0.5/LICENCE) for the Accurate Models code and recorded vectors. Downloaded dependencies retain their upstream licenses.

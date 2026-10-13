@@ -11,7 +11,7 @@ model and comparing output words exactly.
 
 The vectors come from the validation suite of the MATLAB Tensor Core models
 (v0.5) that accompany *Accurate Models* (Khattak and Mikaitis), vendored with pinned hashes in
-[`vendor/matlab-tensor-core-v0.5/model_validation/`](https://github.com/pauljiang03/TC-EFT/tree/main/vendor/matlab-tensor-core-v0.5/model_validation).
+[`vendor/matlab-tensor-core-v0.5/model_validation/`](https://github.com/pauljiang03/MMAlgebra/tree/main/vendor/matlab-tensor-core-v0.5/model_validation).
 Each configuration has 5,000 rows of `a`, `b`, `c` inputs and the `d` output
 measured on the GPU.
 
@@ -29,9 +29,9 @@ measured on the GPU.
 The BF16 and TF32 rows are run through **both** the general `InvocationSpec`
 descriptor and the proved model. Both agree with the device and with each
 other. The results are recorded in
-[`data/regressions/device-report.json`](https://github.com/pauljiang03/TC-EFT/blob/main/data/regressions/device-report.json)
+[`data/regressions/device-report.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/data/regressions/device-report.json)
 and
-[`device-formats-report.json`](https://github.com/pauljiang03/TC-EFT/blob/main/data/regressions/device-formats-report.json).
+[`device-formats-report.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/data/regressions/device-formats-report.json).
 
 ```sh
 python3 scripts/check_features.py
@@ -56,7 +56,7 @@ hardware data**:
   about 113–128.
 
 These features rest on *Accurate Models* and on the
-[proofs](/TC-EFT/model/specification/), plus synthetic oracle cases, not on
+[proofs](/MMAlgebra/model/specification/), plus synthetic oracle cases, not on
 measurements.
 
 ## Independent software oracles

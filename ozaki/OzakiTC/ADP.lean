@@ -16,7 +16,7 @@ for binary64 GEMM on the INT8 matrix multiplier of `OzakiTC/Int8.lean`:
    `W` bits (`slicesNeeded`, `[B.2]`).
 4. **Heuristic (§5.3).** Emulate only when `s² ≤ cfg.speedRatio` (`[G.3]`), else native FP64.
 5. **Emulation.** Row-wise fixed point with shift `W − 1 − exp(row max)`, `s` remapped slices,
-   all `s²` INT8 products in TC-EFT's 32-bit register, exact recombination, and one binary64
+   all `s²` INT8 products in `TensorCore`'s 32-bit register, exact recombination, and one binary64
    round to nearest (`emulEntry`, through `int8Ozaki`).
 
 Native FP64 is `nativeDot fp64Round`: products and running sums rounded to binary64, as Python's

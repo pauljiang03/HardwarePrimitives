@@ -195,7 +195,7 @@ python3 scripts/check_equivalence.py
 
 These commands use the FloatLib project's own toolchain and executable. `check_all.py` builds universal equivalence proofs and runs source-independence/trust audits, paper cases, recorded-vector replay, and non-monotonicity boundaries. The direct comparator snapshots the current parent source and compares both implementations' observations and decoding results. [The folder guide](../floatlib-port/FOLDER_GUIDE.md) explains each field and comparator.
 
-A complete source ZIP works without TC-EFT's Git history. Reference preparation uses the bundled [pinned manifest](../floatlib-port/reference-manifest.json). Edge checks prepare a fresh source copy with no Git available, accept comment/whitespace edits, and reject arithmetic, string-literal, import, manifest, and dependency mutations. Git remains necessary for Lake's initial dependency downloads.
+A complete source ZIP works without the Git history. Reference preparation uses the bundled [pinned manifest](../floatlib-port/reference-manifest.json). Edge checks prepare a fresh source copy with no Git available, accept comment/whitespace edits, and reject arithmetic, string-literal, import, manifest, and dependency mutations. Git remains necessary for Lake's initial dependency downloads.
 
 ## Adding a regression
 

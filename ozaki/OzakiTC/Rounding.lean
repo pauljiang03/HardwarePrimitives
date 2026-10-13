@@ -8,7 +8,7 @@ with round to nearest even. `round32Value` is IEEE's binary32 round to nearest e
 (`Ozaki.rne32Q`), and `add32` the correctly rounded addition it induces. Both satisfy the standard
 model with a subnormal term: `|fl(q) − q| ≤ 2^-24 |q| + 2^-150` (`round32Value_within`).
 
-TensorCore's binary32 converter (`round32ValueTC`, and TC-EFT's addition `fp32Add`) computes the
+TensorCore's binary32 converter (`round32ValueTC`, and `TensorCore`'s addition `fp32Add`) computes the
 same value on every input of magnitude at most the largest finite value
 (`round32ValueTC_eq`): it is the same formula (`signedRounded_eq_rneU`). It differs only in
 overflow, returning no result above the largest finite value where IEEE rounds values below half an
@@ -153,7 +153,7 @@ theorem round32Value_of_TC {q v : ℚ} (h : round32ValueTC q = some v) : round32
     | some w => exact round32_range hw
   rw [← round32ValueTC_eq hr]; exact h
 
-/-- A sum TC-EFT's binary32 addition returns is IEEE's. -/
+/-- A sum `TensorCore`'s binary32 addition returns is IEEE's. -/
 theorem add32_of_fp32Add {a b v : ℚ} (h : fp32Add a b = some v) : add32 a b = some v := by
   rw [fp32Add_eq_addOfRound] at h
   exact round32Value_of_TC h

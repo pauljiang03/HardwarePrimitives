@@ -14,7 +14,7 @@ Small kernel-checked cases (`decide +kernel`) on the four binary64 entries of
 * checked ADP-style slicing on the guarded INT8 matrix multipliers at `259` and `17` bits, with a
   configuration and through the exact fallback;
 * the signed checked Ozaki-II and ADP on products that are all `−0` and that cancel;
-* the guarded INT8 register refuses to wrap where TC-EFT's register wraps, and the guarded split-K
+* the guarded INT8 register refuses to wrap where `TensorCore`'s register wraps, and the guarded split-K
   matrix multiplier fails a guard when its chunk results exceed the data register. -/
 
 open TensorCore Ozaki Ozaki.TC Ozaki.Checked OzakiTCTests.FinalPipelines
@@ -53,7 +53,7 @@ example : ozaki2CRJSC ⟨263, 17⟩ (v100SplitKC ⟨263, 17⟩) 53 (-1022) 1023 
 
 /-! ## The guarded matrix multipliers -/
 
-/-- Three products `2^30` total `3 · 2^30 > 2^31`: TC-EFT's 32-bit register wraps, the guarded one
+/-- Three products `2^30` total `3 · 2^30 > 2^31`: `TensorCore`'s 32-bit register wraps, the guarded one
 refuses. -/
 example : int8Dot 32 [2 ^ 15, 2 ^ 15, 2 ^ 15] [2 ^ 15, 2 ^ 15, 2 ^ 15] ≠ 3 * 2 ^ 30 ∧
     int8DotC ⟨64, 17⟩ [2 ^ 15, 2 ^ 15, 2 ^ 15] [2 ^ 15, 2 ^ 15, 2 ^ 15] = none := by

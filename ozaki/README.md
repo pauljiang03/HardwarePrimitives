@@ -1,4 +1,4 @@
-# Ozaki schemes on TC-EFT's Tensor Core and Matrix-Core models
+# Ozaki schemes on the Tensor Core and matrix core models
 
 This Lean project formalizes the Ozaki schemes for emulating a high-precision matrix product on a
 low-precision matrix multiplier, following a set of bit-precise Z3 models of the schemes (the "Z3
@@ -116,7 +116,7 @@ A call to the matrix multiplier is exact while its products total at most `2^24`
 bound, which allows only four terms of `11`-bit slices. Split-K cuts the inner dimension into chunks of `2^(24 − 2b)` terms (four for
 `11`-bit slices, `256` for `8`-bit), runs each chunk on the matrix multiplier, and adds the integer chunk
 results exactly; it is exact for every length (`Ozaki.chunked_exactOn`). On the Tensor Core model
-the chunk results can be accumulated in TC-EFT's fixed-width register, exact while the products
+the chunk results can be accumulated in `TensorCore`'s fixed-width register, exact while the products
 total less than `2^63` in a 64-bit register (`Ozaki.TC.tcSplitKReg_exactOn`).
 
 With split-K:
@@ -362,7 +362,7 @@ What changes from the Z3 models:
   `Ozaki.split_binary32_int`, `Ozaki.split_binary64_int`).
 * **INT8 matrix multipliers as fixed-width registers.** ADP's matrix multiplier is a 32-bit
   wrapping accumulator
-  (TC-EFT's `machineAccumulate 32`) over exact integer products. Its result is the exact sum
+  (`TensorCore`'s `machineAccumulate 32`) over exact integer products. Its result is the exact sum
   reduced modulo `2^32`, so it does not depend on the accumulation order, and a saturating
   register agrees with it on ADP's operands (`Ozaki.TC.int8Dot_any_order`,
   `Ozaki.TC.int8_wrap_sat_exact`); it is not validated against INT8 hardware. It is exact on byte
@@ -474,5 +474,5 @@ and `MatrixCore`. As in the Z3 models, the CRT residues and reconstruction are e
 arithmetic; Ozaki-I's power-of-two rescaling is proved exact when its exponent is in range
 (`Ozaki.TC.scaled_slice_product_exact`). Not covered: FP8 variants, and INT8 hardware semantics,
 which are out of scope for now on both vendors
-([issue #2](https://github.com/pauljiang03/TC-EFT/issues/2)): ADP runs on an idealized INT8
+([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)): ADP runs on an idealized INT8
 matrix multiplier. [THEOREMS.md](THEOREMS.md#not-proved) lists the rest.
