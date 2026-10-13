@@ -1,4 +1,5 @@
 import MMAlgebraMC.Contracts
+import MMAlgebra.Sub
 
 /-! # Completeness for terms on SFMA
 
@@ -58,28 +59,7 @@ theorem sfma_pval_onGrid (q : sfmaF32.a.Word × sfmaF32.b.Word) (hq : SfmaOK q) 
       exact (onGrid_mul gu gv).mono (by omega)
 
 /-- The SFMA machine on admissible operand pairs. -/
-def sfmaM : MMAlgebra.Machine SfmaIn F32 where
-  val := (mcMachine sfmaF32).val
-  pval q := (mcMachine sfmaF32).pval q.1
-  zero := 0
-  val_zero := (mcMachine sfmaF32).val_zero
-  block d ps := (mcMachine sfmaF32).block d (ps.map (Option.map Subtype.val))
-  add := (mcMachine sfmaF32).add
-
-theorem eval_sfmaM (p : ℕ → SfmaIn) (c h : F32) :
-    ∀ t : MMAlgebra.Term,
-      MMAlgebra.eval sfmaM p c h t = MMAlgebra.eval (mcMachine sfmaF32) (fun i => (p i).1) c h t
-  | .zero => rfl
-  | .init => rfl
-  | .hole => rfl
-  | .blk t I => by
-    simp only [MMAlgebra.eval, eval_sfmaM p c h t]
-    show _ = (Option.bind _ fun d => (mcMachine sfmaF32).block d (I.map (Option.map fun i => (p i).1)))
-    congr 1; funext d
-    show (mcMachine sfmaF32).block d ((I.map (Option.map p)).map (Option.map Subtype.val)) = _
-    rw [List.map_map]
-    congr 2; funext o; cases o <;> rfl
-  | .add t u => by simp only [MMAlgebra.eval, eval_sfmaM p c h t, eval_sfmaM p c h u]; rfl
+abbrev sfmaM : MMAlgebra.Machine SfmaIn F32 := (mcMachine sfmaF32).sub SfmaOK
 
 /-! ## The laws -/
 
@@ -182,31 +162,24 @@ theorem sfma_pass (d : F32) (hd : GoodW d) :
   rw [show (!sfmaF32.subnormals) = false from rfl, fl32_value_self hval hd.2]
   rfl
 
-/-- The laws of a rigid multiplier on SFMA, on admissible operand pairs. -/
-def sfmaAlg : MMAlgebra.RigidAlg sfmaM 1 where
-  z := ⟨(0, 0), Or.inl rfl⟩
+/-- The laws of a rigid multiplier for chains on SFMA. -/
+def sfmaLaws : MMAlgebra.RigidLaws (mcMachine sfmaF32) 1 where
+  z := (0, 0)
   good := GoodW
   slot := fun d ps qs h => by
-    show (mcMachine sfmaF32).block d (ps.map (Option.map Subtype.val)) =
-      (mcMachine sfmaF32).block d (qs.map (Option.map Subtype.val))
-    show (blockBits (P := sfmaF32) ⟨(slotPairs sfmaF32 (ps.map (Option.map Subtype.val))).map Prod.fst,
-      (slotPairs sfmaF32 (ps.map (Option.map Subtype.val))).map Prod.snd, d⟩).toOption =
-      (blockBits (P := sfmaF32) ⟨(slotPairs sfmaF32 (qs.map (Option.map Subtype.val))).map Prod.fst,
-      (slotPairs sfmaF32 (qs.map (Option.map Subtype.val))).map Prod.snd, d⟩).toOption
-    have e : ∀ rs : List (Option SfmaIn), slotPairs sfmaF32 (rs.map (Option.map Subtype.val)) =
-        (rs.map (·.getD ⟨(0, 0), Or.inl rfl⟩)).map Subtype.val := by
-      intro rs
-      unfold slotPairs
-      rw [List.map_map, List.map_map]
-      congr 1; funext o; cases o <;> rfl
-    rw [e ps, e qs, h]
-  perm := fun d _ _ h => mc_perm (Or.inl rfl) d (h.map _)
+    show (blockBits (P := sfmaF32) ⟨(slotPairs sfmaF32 ps).map Prod.fst,
+      (slotPairs sfmaF32 ps).map Prod.snd, d⟩).toOption =
+      (blockBits (P := sfmaF32) ⟨(slotPairs sfmaF32 qs).map Prod.fst,
+      (slotPairs sfmaF32 qs).map Prod.snd, d⟩).toOption
+    unfold slotPairs; rw [h]
+  perm := fun d _ _ h => mc_perm (Or.inl rfl) d h
   zero_good := mc_zero_good
-  pass := fun d hd => sfma_pass d hd
-  add_comm := mc_add_comm sfmaF32
-  add_zero := mc_add_zero sfmaF32
-  block_good := sfma_block_good
-  add_good := mc_add_good sfmaF32
+  pass := sfma_pass
+
+/-- The laws of a rigid multiplier on SFMA, on admissible operand pairs. -/
+def sfmaAlg : MMAlgebra.RigidAlg sfmaM 1 :=
+  MMAlgebra.RigidAlg.sub sfmaLaws SfmaOK (Or.inl rfl) (mc_add_comm sfmaF32) (mc_add_zero sfmaF32)
+    sfma_block_good (mc_add_good sfmaF32)
 
 /-! ## Fingerprint tables and theorems -/
 
@@ -246,7 +219,7 @@ theorem sfma_term_complete (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra.TermW
   obtain ⟨s, q, hs, hz, hq⟩ := MMAlgebra.rigid_term_complete_fits sfmaAlg sfmaIn2 sfmaIn3
     sfma_table2 sfma_table3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl hne
   refine ⟨s, fun i => (q i).1, hs, fun i hi => by show (q i).1 = (0, 0); rw [hz i hi]; rfl, fun i => (q i).2, ?_⟩
-  rw [← eval_sfmaM, ← eval_sfmaM]
+  rw [← MMAlgebra.eval_sub, ← MMAlgebra.eval_sub]
   exact hq
 
 /-- **SFMA: on admissible inputs, terms are equivalent exactly when their normal forms agree.** -/
@@ -266,7 +239,7 @@ theorem sfma_term_equiv_iff (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra.Term
     have e₂ := MMAlgebra.rigid_sound sfmaAlg (fun i => ⟨q i, hok i⟩) t₂ hw₂ n₂
     rw [h] at e₁
     have := e₁.trans e₂.symm
-    rw [eval_sfmaM, eval_sfmaM] at this
+    rw [MMAlgebra.eval_sub, MMAlgebra.eval_sub] at this
     exact this
 
 end MMAlgebra.MC

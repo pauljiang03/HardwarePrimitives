@@ -6,6 +6,7 @@ import MMAlgebraTC.ChainComplete
 import MMAlgebraTC.TermComplete
 import MMAlgebraTC.ChainVariants
 import MMAlgebraTC.Contract
+import MMAlgebraTC.TermVariants
 import MMAlgebraTC.OneRounding
 import MMAlgebraTC.Exact
 import MMAlgebraTC.ScheduleFreeExact
