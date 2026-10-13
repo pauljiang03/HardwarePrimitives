@@ -1,6 +1,8 @@
 import MMAlgebraTC.Block
 import MMAlgebraTC.Chain
 import MMAlgebraTC.Completeness
+import MMAlgebraTC.NegZero
+import MMAlgebraTC.ChainComplete
 import MMAlgebraTC.OneRounding
 import MMAlgebraTC.Exact
 import MMAlgebraTC.ScheduleFreeExact

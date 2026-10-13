@@ -1,6 +1,9 @@
 import MMAlgebra.Term
 import MMAlgebra.Divergence
 import MMAlgebra.Schedule
+import MMAlgebra.Partition
+import MMAlgebra.ChainComplete
+import MMAlgebra.LTree
 
 /-! # Reduction terms and their divergence, on any matrix multiplier
 
