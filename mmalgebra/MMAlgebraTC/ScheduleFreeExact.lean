@@ -1,4 +1,5 @@
 import OzakiTC
+import MMAlgebra.Term
 
 /-! # Every schedule is exact when the positive and negative products are each small
 
@@ -17,12 +18,6 @@ open Ozaki.TC
 namespace MMAlgebra.TC
 
 
-/-- The positive part of a value. -/
-def posPart (x : ℚ) : ℚ := if 0 ≤ x then x else 0
-
-/-- The magnitude of the negative part of a value. -/
-def negPart (x : ℚ) : ℚ := if 0 ≤ x then 0 else -x
-
 /-- `P`: the total of the positive products. -/
 def wordPos (p : Model) (ps : List (p.Word × p.Word)) : ℚ :=
   (ps.map fun q => posPart (wordValue p q.1 * wordValue p q.2)).sum
@@ -34,10 +29,6 @@ def wordNeg (p : Model) (ps : List (p.Word × p.Word)) : ℚ :=
 theorem abs_lt_of_bounds {x c : ℚ} (h1 : -c < x) (h2 : x < c) : Rat.abs x < c := by
   rw [abs_def]; split <;> grind
 
-theorem posPart_nonneg (x : ℚ) : 0 ≤ posPart x := by unfold posPart; split <;> grind
-theorem negPart_nonneg (x : ℚ) : 0 ≤ negPart x := by unfold negPart; split <;> grind
-theorem le_posPart (x : ℚ) : x ≤ posPart x := by unfold posPart; split <;> grind
-theorem neg_negPart_le (x : ℚ) : -negPart x ≤ x := by unfold negPart; split <;> grind
 
 /-- Every sub-list's sum lies in `[−N, P]` of the whole list. -/
 theorem sublist_bounds (p : Model) {l L : List (p.Word × p.Word)} (h : l.Sublist L) :

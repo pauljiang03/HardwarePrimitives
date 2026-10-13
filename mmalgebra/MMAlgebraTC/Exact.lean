@@ -9,10 +9,11 @@ import OzakiTC.Schemes
 `tcMachine p` is the Tensor Core model as a `MMAlgebra.Machine`: binary32 accumulator words,
 operand pairs, `evalBlock` for a block FMA (an empty slot is the zero pair), and binary32
 round-to-nearest-even addition. On integer operands of at most `b` bits (as in the Ozaki schemes),
-with an integer `c` and `|c| + Σ|aᵢbᵢ| < 2^24`, every block FMA and every addition of every term is
-exact (Ozaki's exactness theorem with cancellation, `Ozaki.TC.evalBlock_cancel_int`), so every
-term returns its exact value and any two terms over the same products return the same value
-(`eval_agree`). -/
+with an integer `c` and `|c| + Σ|aᵢbᵢ| ≤ 2^24`, every block FMA and every addition of every term is
+exact (Ozaki's exactness theorems, `Ozaki.TC.evalBlock_int`), so every term returns its exact
+value (`eval_int`) and any two terms over the same products return the same value
+(`eval_agree`). With cancellation it suffices that the positive inputs total below `2^24` and the
+negative inputs too (`eval_int_posneg`, from `Ozaki.TC.evalBlock_cancel_int`). -/
 
 open TensorCore Ozaki.TC
 
@@ -30,14 +31,6 @@ def tcMachine (p : Model) : MMAlgebra.Machine (p.Word × p.Word) F32 where
   val_zero := by decide +kernel
   block d ps := (blockOut (p := p) ⟨slotPairs p ps, d⟩).toOption
   add x y := round32 .nearestEven (value32D x + value32D y)
-
-/-- A term without holes whose blocks all have `K` slots. -/
-def TermWF (K : ℕ) : MMAlgebra.Term → Prop
-  | .zero => True
-  | .init => True
-  | .hole => False
-  | .blk t I => TermWF K t ∧ I.length = K
-  | .add t u => TermWF K t ∧ TermWF K u
 
 theorem intWord_zero {p : Model} {b : ℕ} (hh : HoldsInts p b) : IntWord p b (0 : p.Word) := by
   refine ⟨by rw [Model.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
@@ -112,13 +105,67 @@ theorem natAbs_le_of_abs_lt {z : ℤ} (h : Rat.abs (z : ℚ) < 2 ^ (24 : ℤ)) :
   have := Rat.natCast_lt_natCast.mp h
   omega
 
-/-- **Exact region.** Integer operands of at most `b` bits, an integer `c`, and a term whose
-products and `c` have total magnitude below `2^24`: the term evaluates to its exact value. -/
+theorem natAbs_le_of_abs_le {z : ℤ} (h : Rat.abs (z : ℚ) ≤ 2 ^ (24 : ℤ)) : z.natAbs ≤ 2 ^ 24 := by
+  rw [Ozaki.abs_intCast] at h
+  have h24 : (2 : ℚ) ^ (24 : ℤ) = ((2 ^ 24 : ℕ) : ℚ) := by decide
+  rw [h24] at h
+  exact Rat.natCast_le_natCast.mp h
+
+/-- The block's product magnitudes are the slots' product magnitudes. -/
+theorem wordDotAbs_slots {p : Model} {b : ℕ} (hh : HoldsInts p b) :
+    ∀ ps : List (Option (p.Word × p.Word)),
+      wordDotAbs p (slotPairs p ps) = (tcMachine p).slotAbs ps
+  | [] => by simp [wordDotAbs, slotPairs, MMAlgebra.Machine.slotAbs]
+  | o :: ps => by
+    have ih := wordDotAbs_slots hh ps
+    simp only [wordDotAbs, slotPairs, List.map_cons, List.sum_cons] at ih ⊢
+    rw [ih, (tcMachine p).slotAbs_cons]
+    cases o with
+    | none =>
+      show Rat.abs (wordValue p (0 : p.Word) * wordValue p (0 : p.Word)) + _ = _
+      rw [wordValue_zero hh]; simp
+    | some q => rfl
+
+/-- One block FMA within the magnitude bound returns the exact sum of its inputs: `|c| + Σ|aᵢbᵢ|`
+at most `2^24` (Ozaki's `evalBlock_int`). -/
+theorem block_int_le {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (q : ℕ → p.Word × p.Word) (hq : ∀ i, IntWord p b (q i).1 ∧ IntWord p b (q i).2)
+    {d : F32} {zd : ℤ} (hvd : value32 d = some (zd : ℚ)) (I : List (Option ℕ))
+    (hlen : I.length = p.nfma)
+    (hb : Rat.abs (zd : ℚ) + (tcMachine p).slotAbs (I.map (Option.map q)) ≤ 2 ^ (24 : ℤ)) :
+    ∃ (o : F32) (z : ℤ), (tcMachine p).block d (I.map (Option.map q)) = some o ∧
+      value32 o = some (z : ℚ) ∧ (z : ℚ) = zd + (tcMachine p).slotVal (I.map (Option.map q)) := by
+  have hops : ∀ r ∈ slotPairs p (I.map (Option.map q)), IntWord p b r.1 ∧ IntWord p b r.2 := by
+    intro r hr
+    simp only [slotPairs, List.map_map, List.mem_map] at hr
+    obtain ⟨o, _, rfl⟩ := hr
+    cases o with
+    | none => exact ⟨intWord_zero hh, intWord_zero hh⟩
+    | some i => exact hq i
+  have hslots := wordProducts_slots hh (I.map (Option.map q))
+  rw [← wordDotAbs_slots hh] at hb
+  have hl : (slotPairs p (I.map (Option.map q))).length = p.nfma := by
+    simp only [slotPairs, List.length_map]; exact hlen
+  obtain ⟨tr, htr, hval⟩ := Ozaki.TC.evalBlock_int
+    (x := (⟨slotPairs p (I.map (Option.map q)), d⟩ : BlockInput p)) hp hl hops hvd hb
+  obtain ⟨Z, hZ, _⟩ := wordProducts_int _ hops
+  refine ⟨tr.output.bits, zd + Z, ?_, ?_, ?_⟩
+  · have hbo : blockOut (p := p) ⟨slotPairs p (I.map (Option.map q)), d⟩ = .ok tr.output.bits := by
+      unfold blockOut; rw [htr]; rfl
+    show (blockOut (p := p) ⟨slotPairs p (I.map (Option.map q)), d⟩).toOption = _
+    rw [hbo]; rfl
+  · rw [value32_output, hval, hZ, Rat.intCast_add]
+  · rw [Rat.intCast_add, ← hZ, hslots]
+
+/-- **The exact region: every schedule computes the exact sum.** On integer operands of at most
+`b` bits (`2b ≤ F`), with an integer `c` and a term whose products and `c` have total magnitude at
+most `2^24`, any term (any chain, split-K, stream-K, grouping or order of block FMAs and binary32
+additions) evaluates to its exact value. -/
 theorem eval_int {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (q : ℕ → p.Word × p.Word) (hq : ∀ i, IntWord p b (q i).1 ∧ IntWord p b (q i).2)
     (c : F32) {zc : ℤ} (hc : value32 c = some (zc : ℚ)) :
     ∀ t : MMAlgebra.Term, TermWF p.nfma t →
-      MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t < 2 ^ (24 : ℤ) →
+      MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t ≤ 2 ^ (24 : ℤ) →
       ∃ (o : F32) (z : ℤ), MMAlgebra.eval (tcMachine p) q c c t = some o ∧
         value32 o = some (z : ℚ) ∧ (z : ℚ) = MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t
   | .zero, _, _ => ⟨0, 0, rfl, by decide +kernel, by simp [MMAlgebra.exact]⟩
@@ -128,17 +175,11 @@ theorem eval_int {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     obtain ⟨hwt, hlen⟩ := hwf
     have hsa := (tcMachine p).slotAbs_nonneg (I.map (Option.map q))
     have hm' : MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t +
-        (tcMachine p).slotAbs (I.map (Option.map q)) < 2 ^ (24 : ℤ) := hm
+        (tcMachine p).slotAbs (I.map (Option.map q)) ≤ 2 ^ (24 : ℤ) := hm
     obtain ⟨d, zd, hd, hvd, hzd⟩ := eval_int hp hh q hq c hc t hwt (by grind)
-    have hex := MMAlgebra.abs_exact_le (tcMachine p) q (zc : ℚ) 0 (.blk t I)
     have hext := MMAlgebra.abs_exact_le (tcMachine p) q (zc : ℚ) 0 t
-    rw [Ozaki.abs_zero] at hex hext
-    have hex' : Rat.abs (MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t +
-        (tcMachine p).slotVal (I.map (Option.map q))) ≤
-        MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t +
-          (tcMachine p).slotAbs (I.map (Option.map q)) := hex
-    obtain ⟨o, z, ho, hvo, hz⟩ := block_int hp hh q hq hvd I hlen
-      (by rw [hzd]; grind) (by rw [hzd]; grind)
+    rw [Ozaki.abs_zero] at hext
+    obtain ⟨o, z, ho, hvo, hz⟩ := block_int_le hp hh q hq hvd I hlen (by rw [hzd]; grind)
     refine ⟨o, z, ?_, hvo, ?_⟩
     · show (MMAlgebra.eval (tcMachine p) q c c t).bind _ = _
       rw [hd]; exact ho
@@ -148,7 +189,7 @@ theorem eval_int {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     have h1 := MMAlgebra.mag_nonneg (tcMachine p) q (Ozaki.abs_nonneg (zc : ℚ)) Rat.le_refl t
     have h2 := MMAlgebra.mag_nonneg (tcMachine p) q (Ozaki.abs_nonneg (zc : ℚ)) Rat.le_refl u
     have hm' : MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t +
-        MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 u < 2 ^ (24 : ℤ) := hm
+        MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 u ≤ 2 ^ (24 : ℤ) := hm
     obtain ⟨x, zx, hx, hvx, hzx⟩ := eval_int hp hh q hq c hc t hwt (by grind)
     obtain ⟨y, zy, hy, hvy, hzy⟩ := eval_int hp hh q hq c hc u hwu (by grind)
     have hex := MMAlgebra.abs_exact_le (tcMachine p) q (zc : ℚ) 0 (.add t u)
@@ -158,7 +199,71 @@ theorem eval_int {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
         MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t +
           MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 u := hex
     have hle : (zx + zy).natAbs ≤ 2 ^ 24 :=
-      natAbs_le_of_abs_lt (by rw [Rat.intCast_add, hzx, hzy]; grind)
+      natAbs_le_of_abs_le (by rw [Rat.intCast_add, hzx, hzy]; grind)
+    obtain ⟨w, hw, hvw⟩ := add_int p hvx hvy hle
+    refine ⟨w, zx + zy, ?_, hvw, ?_⟩
+    · show (MMAlgebra.eval (tcMachine p) q c c t).bind _ = _
+      rw [hx]; show (MMAlgebra.eval (tcMachine p) q c c u).bind _ = _
+      rw [hy]; exact hw
+    · rw [Rat.intCast_add, hzx, hzy]; rfl
+
+/-- **The exact region, with cancellation.** It suffices that the positive inputs (products and
+`c`) total below `2^24` and the negative inputs too: every partial sum of every schedule lies
+between the two totals, so every block FMA and every addition is exact. For sign-balanced data this
+allows up to twice the total magnitude of `eval_int`. -/
+theorem eval_int_posneg {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (q : ℕ → p.Word × p.Word) (hq : ∀ i, IntWord p b (q i).1 ∧ IntWord p b (q i).2)
+    (c : F32) {zc : ℤ} (hc : value32 c = some (zc : ℚ)) :
+    ∀ t : MMAlgebra.Term, TermWF p.nfma t →
+      MMAlgebra.posMag (tcMachine p) q (zc : ℚ) 0 t < 2 ^ (24 : ℤ) →
+      MMAlgebra.negMag (tcMachine p) q (zc : ℚ) 0 t < 2 ^ (24 : ℤ) →
+      ∃ (o : F32) (z : ℤ), MMAlgebra.eval (tcMachine p) q c c t = some o ∧
+        value32 o = some (z : ℚ) ∧ (z : ℚ) = MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t
+  | .zero, _, _, _ => ⟨0, 0, rfl, by decide +kernel, by simp [MMAlgebra.exact]⟩
+  | .init, _, _, _ => ⟨c, zc, rfl, hc, by simp [MMAlgebra.exact]⟩
+  | .hole, hwf, _, _ => absurd hwf (by simp [TermWF])
+  | .blk t I, hwf, hP, hN => by
+    obtain ⟨hwt, hlen⟩ := hwf
+    have hsp := (tcMachine p).slotPos_nonneg (I.map (Option.map q))
+    have hsn := (tcMachine p).slotNeg_nonneg (I.map (Option.map q))
+    have hP' : MMAlgebra.posMag (tcMachine p) q (zc : ℚ) 0 t +
+        (tcMachine p).slotPos (I.map (Option.map q)) < 2 ^ (24 : ℤ) := hP
+    have hN' : MMAlgebra.negMag (tcMachine p) q (zc : ℚ) 0 t +
+        (tcMachine p).slotNeg (I.map (Option.map q)) < 2 ^ (24 : ℤ) := hN
+    obtain ⟨d, zd, hd, hvd, hzd⟩ := eval_int_posneg hp hh q hq c hc t hwt (by grind) (by grind)
+    have ht := MMAlgebra.exact_bounds (tcMachine p) q (zc : ℚ) 0 t
+    have hbt := MMAlgebra.exact_bounds (tcMachine p) q (zc : ℚ) 0 (.blk t I)
+    have hbt' : -(MMAlgebra.negMag (tcMachine p) q (zc : ℚ) 0 t +
+        (tcMachine p).slotNeg (I.map (Option.map q))) ≤
+        MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t + (tcMachine p).slotVal (I.map (Option.map q)) ∧
+        MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t + (tcMachine p).slotVal (I.map (Option.map q)) ≤
+          MMAlgebra.posMag (tcMachine p) q (zc : ℚ) 0 t +
+            (tcMachine p).slotPos (I.map (Option.map q)) := hbt
+    obtain ⟨o, z, ho, hvo, hz⟩ := block_int hp hh q hq hvd I hlen
+      (by rw [hzd]; exact Ozaki.abs_lt_iff _ _ |>.mpr ⟨by grind, by grind⟩)
+      (by rw [hzd]; exact Ozaki.abs_le_iff _ _ |>.mpr ⟨by grind, by grind⟩)
+    refine ⟨o, z, ?_, hvo, ?_⟩
+    · show (MMAlgebra.eval (tcMachine p) q c c t).bind _ = _
+      rw [hd]; exact ho
+    · rw [hz, hzd]; rfl
+  | .add t u, hwf, hP, hN => by
+    obtain ⟨hwt, hwu⟩ := hwf
+    have hp1 := MMAlgebra.posMag_nonneg (tcMachine p) q (zc : ℚ) 0 t
+    have hp2 := MMAlgebra.posMag_nonneg (tcMachine p) q (zc : ℚ) 0 u
+    have hn1 := MMAlgebra.negMag_nonneg (tcMachine p) q (zc : ℚ) 0 t
+    have hn2 := MMAlgebra.negMag_nonneg (tcMachine p) q (zc : ℚ) 0 u
+    have hP' : MMAlgebra.posMag (tcMachine p) q (zc : ℚ) 0 t +
+        MMAlgebra.posMag (tcMachine p) q (zc : ℚ) 0 u < 2 ^ (24 : ℤ) := hP
+    have hN' : MMAlgebra.negMag (tcMachine p) q (zc : ℚ) 0 t +
+        MMAlgebra.negMag (tcMachine p) q (zc : ℚ) 0 u < 2 ^ (24 : ℤ) := hN
+    obtain ⟨x, zx, hx, hvx, hzx⟩ := eval_int_posneg hp hh q hq c hc t hwt (by grind) (by grind)
+    obtain ⟨y, zy, hy, hvy, hzy⟩ := eval_int_posneg hp hh q hq c hc u hwu (by grind) (by grind)
+    have hb1 := MMAlgebra.exact_bounds (tcMachine p) q (zc : ℚ) 0 t
+    have hb2 := MMAlgebra.exact_bounds (tcMachine p) q (zc : ℚ) 0 u
+    have hle : (zx + zy).natAbs ≤ 2 ^ 24 :=
+      natAbs_le_of_abs_lt (by
+        rw [Rat.intCast_add, hzx, hzy]
+        exact Ozaki.abs_lt_iff _ _ |>.mpr ⟨by grind, by grind⟩)
     obtain ⟨w, hw, hvw⟩ := add_int p hvx hvy hle
     refine ⟨w, zx + zy, ?_, hvw, ?_⟩
     · show (MMAlgebra.eval (tcMachine p) q c c t).bind _ = _
@@ -167,14 +272,14 @@ theorem eval_int {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     · rw [Rat.intCast_add, hzx, hzy]; rfl
 
 /-- **Every schedule agrees inside the exact region.** Two terms over the same products and `c`
-(equal exact values), each with total magnitude below `2^24`, on integer operands: both return
+(equal exact values), each with total magnitude at most `2^24`, on integer operands: both return
 the same binary32 value. -/
 theorem eval_agree {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
     (q : ℕ → p.Word × p.Word) (hq : ∀ i, IntWord p b (q i).1 ∧ IntWord p b (q i).2)
     (c : F32) {zc : ℤ} (hc : value32 c = some (zc : ℚ)) (t₁ t₂ : MMAlgebra.Term)
     (hw₁ : TermWF p.nfma t₁) (hw₂ : TermWF p.nfma t₂)
-    (hm₁ : MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t₁ < 2 ^ (24 : ℤ))
-    (hm₂ : MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t₂ < 2 ^ (24 : ℤ))
+    (hm₁ : MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t₁ ≤ 2 ^ (24 : ℤ))
+    (hm₂ : MMAlgebra.mag (tcMachine p) q (Rat.abs (zc : ℚ)) 0 t₂ ≤ 2 ^ (24 : ℤ))
     (hex : MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t₁ = MMAlgebra.exact (tcMachine p) q (zc : ℚ) 0 t₂) :
     ∃ o₁ o₂ : F32, MMAlgebra.eval (tcMachine p) q c c t₁ = some o₁ ∧
       MMAlgebra.eval (tcMachine p) q c c t₂ = some o₂ ∧ value32 o₁ = value32 o₂ := by
@@ -188,8 +293,8 @@ theorem v100_agree (q : ℕ → F16 × F16) (hq : ∀ i, IntWord v100F16F32 11 (
       IntWord v100F16F32 11 (q i).2)
     (c : F32) {zc : ℤ} (hc : value32 c = some (zc : ℚ)) (t₁ t₂ : MMAlgebra.Term)
     (hw₁ : TermWF 4 t₁) (hw₂ : TermWF 4 t₂)
-    (hm₁ : MMAlgebra.mag (tcMachine v100F16F32) q (Rat.abs (zc : ℚ)) 0 t₁ < 2 ^ (24 : ℤ))
-    (hm₂ : MMAlgebra.mag (tcMachine v100F16F32) q (Rat.abs (zc : ℚ)) 0 t₂ < 2 ^ (24 : ℤ))
+    (hm₁ : MMAlgebra.mag (tcMachine v100F16F32) q (Rat.abs (zc : ℚ)) 0 t₁ ≤ 2 ^ (24 : ℤ))
+    (hm₂ : MMAlgebra.mag (tcMachine v100F16F32) q (Rat.abs (zc : ℚ)) 0 t₂ ≤ 2 ^ (24 : ℤ))
     (hex : MMAlgebra.exact (tcMachine v100F16F32) q (zc : ℚ) 0 t₁ =
       MMAlgebra.exact (tcMachine v100F16F32) q (zc : ℚ) 0 t₂) :
     ∃ o₁ o₂ : F32, MMAlgebra.eval (tcMachine v100F16F32) q c c t₁ = some o₁ ∧

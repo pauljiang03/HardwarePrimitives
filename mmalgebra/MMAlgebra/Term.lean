@@ -142,4 +142,178 @@ theorem eval_subst (p : ℕ → α) (c h : β) {s : Term} {o : β} (hs : eval m 
   | .blk t I => by simp only [Term.subst, eval, eval_subst p c h hs t]
   | .add t u => by simp only [Term.subst, eval, eval_subst p c h hs t, eval_subst p c h hs u]
 
+/-! ## Leaves -/
+
+/-- The product indices of a term, in order, with repetitions. -/
+def Term.leaves : Term → List ℕ
+  | .zero => []
+  | .init => []
+  | .hole => []
+  | .blk t I => t.leaves ++ I.filterMap id
+  | .add t u => t.leaves ++ u.leaves
+
+/-- A term without holes whose blocks all have `K` slots. -/
+def TermWF (K : ℕ) : Term → Prop
+  | .zero => True
+  | .init => True
+  | .hole => False
+  | .blk t I => TermWF K t ∧ I.length = K
+  | .add t u => TermWF K t ∧ TermWF K u
+
+/-- A term without holes. -/
+def Term.NoHole : Term → Prop
+  | .zero => True
+  | .init => True
+  | .hole => False
+  | .blk t _ => t.NoHole
+  | .add t u => t.NoHole ∧ u.NoHole
+
+theorem TermWF.noHole {K : ℕ} : ∀ {t : Term}, TermWF K t → t.NoHole
+  | .zero, _ => trivial
+  | .init, _ => trivial
+  | .hole, h => h
+  | .blk t _, h => by
+    show t.NoHole
+    exact TermWF.noHole h.1
+  | .add t u, h => by
+    show t.NoHole ∧ u.NoHole
+    exact ⟨TermWF.noHole h.1, TermWF.noHole h.2⟩
+
+theorem slotVal_eq_leaves (p : ℕ → α) :
+    ∀ I : List (Option ℕ), m.slotVal (I.map (Option.map p)) = ((I.filterMap id).map (m.pval ∘ p)).sum
+  | [] => by simp [Machine.slotVal]
+  | o :: I => by
+    rw [List.map_cons, m.slotVal_cons, slotVal_eq_leaves p I]
+    cases o <;> simp [Rat.zero_add]
+
+theorem slotAbs_eq_leaves (p : ℕ → α) :
+    ∀ I : List (Option ℕ),
+      m.slotAbs (I.map (Option.map p)) = ((I.filterMap id).map fun i => Rat.abs (m.pval (p i))).sum
+  | [] => by simp [Machine.slotAbs]
+  | o :: I => by
+    rw [List.map_cons, m.slotAbs_cons, slotAbs_eq_leaves p I]
+    cases o <;> simp [Rat.zero_add]
+
+/-- With `c = 0`, the exact value of a term without holes is the sum of its products. -/
+theorem exact_eq_leaves (p : ℕ → α) (vh : ℚ) :
+    ∀ t : Term, t.NoHole → exact m p 0 vh t = (t.leaves.map (m.pval ∘ p)).sum
+  | .zero, _ => by simp [exact, Term.leaves]
+  | .init, _ => by simp [exact, Term.leaves]
+  | .hole, h => absurd h (by simp [Term.NoHole])
+  | .blk t I, h => by
+    simp only [exact, Term.leaves, List.map_append, List.sum_append, exact_eq_leaves p vh t h,
+      slotVal_eq_leaves]
+  | .add t u, h => by
+    simp only [exact, Term.leaves, List.map_append, List.sum_append, exact_eq_leaves p vh t h.1,
+      exact_eq_leaves p vh u h.2]
+
+/-- With `c = 0`, the magnitude of a term without holes is the sum of its products' magnitudes. -/
+theorem mag_eq_leaves (p : ℕ → α) (ah : ℚ) :
+    ∀ t : Term, t.NoHole → mag m p 0 ah t = (t.leaves.map fun i => Rat.abs (m.pval (p i))).sum
+  | .zero, _ => by simp [mag, Term.leaves]
+  | .init, _ => by simp [mag, Term.leaves]
+  | .hole, h => absurd h (by simp [Term.NoHole])
+  | .blk t I, h => by
+    simp only [mag, Term.leaves, List.map_append, List.sum_append, mag_eq_leaves p ah t h,
+      slotAbs_eq_leaves]
+  | .add t u, h => by
+    simp only [mag, Term.leaves, List.map_append, List.sum_append, mag_eq_leaves p ah t h.1,
+      mag_eq_leaves p ah u h.2]
+
+/-! ## Positive and negative parts -/
+
+/-- The positive part of a value. -/
+def posPart (x : ℚ) : ℚ := if 0 ≤ x then x else 0
+
+/-- The magnitude of the negative part of a value. -/
+def negPart (x : ℚ) : ℚ := if 0 ≤ x then 0 else -x
+
+theorem posPart_nonneg (x : ℚ) : 0 ≤ posPart x := by unfold posPart; split <;> grind
+theorem negPart_nonneg (x : ℚ) : 0 ≤ negPart x := by unfold negPart; split <;> grind
+theorem le_posPart (x : ℚ) : x ≤ posPart x := by unfold posPart; split <;> grind
+theorem neg_negPart_le (x : ℚ) : -negPart x ≤ x := by unfold negPart; split <;> grind
+
+/-- The total of the positive products in a list of slots. -/
+def Machine.slotPos (ps : List (Option α)) : ℚ := (ps.map fun o => posPart ((o.map m.pval).getD 0)).sum
+
+/-- The total magnitude of the negative products in a list of slots. -/
+def Machine.slotNeg (ps : List (Option α)) : ℚ := (ps.map fun o => negPart ((o.map m.pval).getD 0)).sum
+
+theorem Machine.slotPos_nonneg (ps : List (Option α)) : 0 ≤ m.slotPos ps := by
+  induction ps with
+  | nil => simp [Machine.slotPos]
+  | cons o ps ih =>
+    have := posPart_nonneg ((o.map m.pval).getD 0)
+    simp only [Machine.slotPos, List.map_cons, List.sum_cons] at ih ⊢; grind
+
+theorem Machine.slotNeg_nonneg (ps : List (Option α)) : 0 ≤ m.slotNeg ps := by
+  induction ps with
+  | nil => simp [Machine.slotNeg]
+  | cons o ps ih =>
+    have := negPart_nonneg ((o.map m.pval).getD 0)
+    simp only [Machine.slotNeg, List.map_cons, List.sum_cons] at ih ⊢; grind
+
+theorem Machine.slotVal_bounds (ps : List (Option α)) :
+    -m.slotNeg ps ≤ m.slotVal ps ∧ m.slotVal ps ≤ m.slotPos ps := by
+  induction ps with
+  | nil => simp [Machine.slotNeg, Machine.slotPos, Machine.slotVal]
+  | cons o ps ih =>
+    have h1 := le_posPart ((o.map m.pval).getD 0)
+    have h2 := neg_negPart_le ((o.map m.pval).getD 0)
+    simp only [Machine.slotNeg, Machine.slotPos, Machine.slotVal, List.map_cons, List.sum_cons]
+      at ih ⊢
+    constructor <;> grind
+
+/-- The total of the positive inputs of a term: its positive products, and `c` or the hole if
+positive. -/
+def posMag (p : ℕ → α) (vc vh : ℚ) : Term → ℚ
+  | .zero => 0
+  | .init => posPart vc
+  | .hole => posPart vh
+  | .blk t I => posMag p vc vh t + m.slotPos (I.map (Option.map p))
+  | .add t u => posMag p vc vh t + posMag p vc vh u
+
+/-- The total magnitude of the negative inputs of a term. -/
+def negMag (p : ℕ → α) (vc vh : ℚ) : Term → ℚ
+  | .zero => 0
+  | .init => negPart vc
+  | .hole => negPart vh
+  | .blk t I => negMag p vc vh t + m.slotNeg (I.map (Option.map p))
+  | .add t u => negMag p vc vh t + negMag p vc vh u
+
+theorem posMag_nonneg (p : ℕ → α) (vc vh : ℚ) : ∀ t : Term, 0 ≤ posMag m p vc vh t
+  | .zero => by simp [posMag]
+  | .init => posPart_nonneg vc
+  | .hole => posPart_nonneg vh
+  | .blk t I => by
+    have := posMag_nonneg p vc vh t; have := m.slotPos_nonneg (I.map (Option.map p))
+    simp only [posMag]; grind
+  | .add t u => by
+    have := posMag_nonneg p vc vh t; have := posMag_nonneg p vc vh u
+    simp only [posMag]; grind
+
+theorem negMag_nonneg (p : ℕ → α) (vc vh : ℚ) : ∀ t : Term, 0 ≤ negMag m p vc vh t
+  | .zero => by simp [negMag]
+  | .init => negPart_nonneg vc
+  | .hole => negPart_nonneg vh
+  | .blk t I => by
+    have := negMag_nonneg p vc vh t; have := m.slotNeg_nonneg (I.map (Option.map p))
+    simp only [negMag]; grind
+  | .add t u => by
+    have := negMag_nonneg p vc vh t; have := negMag_nonneg p vc vh u
+    simp only [negMag]; grind
+
+/-- The exact value of a term lies between minus its negative total and its positive total. -/
+theorem exact_bounds (p : ℕ → α) (vc vh : ℚ) :
+    ∀ t : Term, -negMag m p vc vh t ≤ exact m p vc vh t ∧ exact m p vc vh t ≤ posMag m p vc vh t
+  | .zero => by simp [exact, negMag, posMag]
+  | .init => by simp only [exact, negMag, posMag]; exact ⟨neg_negPart_le vc, le_posPart vc⟩
+  | .hole => by simp only [exact, negMag, posMag]; exact ⟨neg_negPart_le vh, le_posPart vh⟩
+  | .blk t I => by
+    have := exact_bounds p vc vh t; have := m.slotVal_bounds (I.map (Option.map p))
+    simp only [exact, negMag, posMag]; constructor <;> grind
+  | .add t u => by
+    have := exact_bounds p vc vh t; have := exact_bounds p vc vh u
+    simp only [exact, negMag, posMag]; constructor <;> grind
+
 end MMAlgebra

@@ -8,6 +8,7 @@ import MMAlgebraTC.Pinned
 import MMAlgebraTC.Anchored
 import MMAlgebraTC.PinnedDemo
 import MMAlgebraTC.SubnormalGamma
+import MMAlgebraTC.Bridge
 
 /-! # The reduction algebra on the NVIDIA Tensor Core model
 
@@ -20,4 +21,7 @@ operands whose total magnitude is below `2^24`, or whose positive and negative p
 below `2^24`, every schedule returns the exact sum. Pinned and anchored accumulation make every
 schedule agree outside the exact region too, on a fixed-point grid, with a kernel-checked
 demonstration on V100, A100 and H100; a remark shows that a subnormal factor breaks the classical
-`γ_n` bound of a block FMA. -/
+`γ_n` bound of a block FMA. The bridge to the Ozaki schemes: every schedule is an exact matrix
+multiplier, so Ozaki-I, Ozaki-II and their correctly rounded versions give the same bits under every
+schedule; and the three ways to make a result schedule-independent (the exact region, pinning,
+correct rounding). -/
