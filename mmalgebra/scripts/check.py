@@ -27,7 +27,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 PROTO = ROOT / 'prototype'
 DOCS = [ROOT / 'README.md', PROTO / 'README.md']
 BLOCK = re.compile(r'```lean\n(.*?)```', re.S)
-LIBS = ['MMAlgebraTC', 'MMAlgebraMC']
+LIBS = ['MMAlgebra', 'MMAlgebraTC', 'MMAlgebraMC']
 TESTS = ['MMAlgebraTCTests', 'MMAlgebraMCTests']
 # (script, arguments, recorded output); the slow ones run only with --slow.
 FAST = [('examples.py', [], 'examples.txt'),
@@ -39,7 +39,9 @@ FAST = [('examples.py', [], 'examples.txt'),
         ('laws.py', ['300'], 'laws.txt')]
 SLOW = [('terms4.py', [], 'terms4.txt'),
         ('classes.py', ['300'], 'classes.txt'),
-        ('terms.py', ['300'], 'terms.txt')]
+        ('terms.py', ['300'], 'terms.txt'),
+        ('divergence.py', [], 'divergence.txt'),
+        ('blas_programs.py', ['200', '800'], 'blas_programs.txt')]
 
 
 def run(cmd, what, cwd=ROOT):

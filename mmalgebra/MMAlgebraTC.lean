@@ -2,11 +2,13 @@ import MMAlgebraTC.Block
 import MMAlgebraTC.Chain
 import MMAlgebraTC.Completeness
 import MMAlgebraTC.OneRounding
+import MMAlgebraTC.Exact
 
 /-! # The reduction algebra on the NVIDIA Tensor Core model
 
 The laws of block FMAs that every GEMM schedule of one output entry obeys on the Tensor Core model
 of `TensorCore`: products in a block act as a multiset, zero products are invisible, and a chain on
 an input supported on a set of products equals the chain restricted to that set. With them,
-two-product completeness on the fp16 models of V100, A100 and H100, and witnesses that one WMMA
-`m16n16k16` instruction is not one rounding on V100 and A100. -/
+two-product completeness on the fp16 models of V100, A100 and H100, witnesses that one WMMA
+`m16n16k16` instruction is not one rounding on V100 and A100, and the exact region: on integer
+operands whose total magnitude is below `2^24`, every schedule returns the exact sum. -/

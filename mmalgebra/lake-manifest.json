@@ -3,6 +3,13 @@
  "packages":
  [{"type": "path",
    "scope": "",
+   "name": "ozaki",
+   "manifestFile": "lake-manifest.json",
+   "inherited": false,
+   "dir": "../ozaki",
+   "configFile": "lakefile.toml"},
+  {"type": "path",
+   "scope": "",
    "name": "matrixCore",
    "manifestFile": "lake-manifest.json",
    "inherited": false,

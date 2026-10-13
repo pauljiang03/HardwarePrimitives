@@ -33,4 +33,23 @@ theorem a100_block_boundary :
       0x40100000⟩ = .ok 0x40100001 := by
   decide +kernel
 
+/-- The products of the exact-region example: `2047 · 2047`, `2047 · 1000`, `−1000 · 3` and `3 · 3`. -/
+def exactPairs (i : ℕ) : F16 × F16 :=
+  [(0x67FF, 0x67FF), (0x67FF, 0x63D0), (0xE3D0, 0x4200), (0x4200, 0x4200)].getD i (0, 0)
+
+/-- **Inside the exact region every schedule agrees (V100).** Integer products and `c = 12345`,
+total magnitude `6,252,563 < 2^24`: one block from `c`, a split-K whose partials are added before
+`c`, and a reversed chain with `c` in the epilogue all return `6,246,563` (`0x4abea146`), the exact
+sum, as `MMAlgebra.TC.eval_agree` says of every schedule. -/
+theorem v100_exact_region :
+    MMAlgebra.eval (tcMachine v100F16F32) exactPairs 0x4640E400 0x4640E400
+        (.blk .init [some 0, some 1, some 2, some 3]) = some 0x4abea146 ∧
+    MMAlgebra.eval (tcMachine v100F16F32) exactPairs 0x4640E400 0x4640E400
+        (.add (.add (.blk .zero [some 0, some 1, none, none]) (.blk .zero [some 2, some 3, none, none]))
+          .init) = some 0x4abea146 ∧
+    MMAlgebra.eval (tcMachine v100F16F32) exactPairs 0x4640E400 0x4640E400
+        (.add (.blk (.blk (.blk (.blk .zero [some 3, none, none, none]) [some 2, none, none, none])
+          [some 1, none, none, none]) [some 0, none, none, none]) .init) = some 0x4abea146 := by
+  decide +kernel
+
 end MMAlgebraTCTests

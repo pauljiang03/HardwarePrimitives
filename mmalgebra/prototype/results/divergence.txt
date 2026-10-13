@@ -1,0 +1,37 @@
+Structural bound |t(x) - V(t)| <= E(t; x) on random inputs (k = 64, five programs,
+normal, subnormal and wide-exponent operands, random c including subnormals):
+  V100 fp16     300 evaluations, 0 violations
+  A100 fp16     300 evaluations, 0 violations
+  H100 fp16     300 evaluations, 0 violations
+  CDNA1 fp16    300 evaluations, 0 violations
+  CDNA2 fp16    300 evaluations, 0 violations
+  CDNA3 fp16    300 evaluations, 0 violations
+
+Worst |t1 - t2| / M found by search (k = 64, normal fp16 operands), against the bounds,
+in units of u = 2^-24. bound: E(t1) + E(t2) on the witness; shared: with shared
+subterms as exact leaves; rho: the constant form for normal operands.
+variant      pair                                             worst    shared     bound       rho worst/shared
+V100 fp16    no split / split-K 2                             64.00     99.00    291.00    195.00        0.646
+V100 fp16    no split / split-K 4 pairwise                    96.00    148.00    244.00    196.00        0.649
+V100 fp16    C in the first block / C in the epilogue        126.00    193.00    193.00    385.00        0.653
+V100 fp16    stream-K cut after 24 / after 16                 65.01    135.86    135.86    268.00        0.479
+A100 fp16    no split / split-K 2                             32.00     47.00    135.00     91.00        0.681
+A100 fp16    no split / split-K 4 pairwise                    54.00     70.00    114.00     92.00        0.771
+A100 fp16    C in the first block / C in the epilogue         64.00     89.00     89.00    177.00        0.719
+A100 fp16    stream-K cut after 24 / after 16                 25.72     66.07     67.67    125.00        0.389
+H100 fp16    no split / split-K 2                             18.00     24.00     66.00     45.00        0.750
+H100 fp16    no split / split-K 4 pairwise                    24.00     35.50     56.50     46.00        0.676
+H100 fp16    C in the first block / C in the epilogue         32.00     43.00     43.00     85.00        0.744
+H100 fp16    stream-K cut after 24 / after 16                 11.59     37.21     37.21     67.00        0.311
+CDNA1 fp16   no split / split-K 2                              5.40     11.00     27.00     19.00        0.491
+CDNA1 fp16   no split / split-K 4 pairwise                    12.00     16.00     24.00     20.00        0.750
+CDNA1 fp16   C in the first block / C in the epilogue         16.00     17.00     17.00     33.00        0.941
+CDNA1 fp16   stream-K cut after 24 / after 16                  2.00      6.00     14.00     26.00        0.333
+CDNA2 fp16   no split / split-K 2                              5.40     67.00    195.00    131.00        0.081
+CDNA2 fp16   no split / split-K 4 pairwise                    12.00    100.00    164.00    132.00        0.120
+CDNA2 fp16   C in the first block / C in the epilogue         16.00    129.00    129.00    257.00        0.124
+CDNA2 fp16   stream-K cut after 24 / after 16                  2.00     20.00     84.00    180.00        0.100
+CDNA3 fp16   no split / split-K 2                              4.00     11.00     51.00    115.00        0.364
+CDNA3 fp16   no split / split-K 4 pairwise                     6.00     16.00     48.00    116.00        0.375
+CDNA3 fp16   C in the first block / C in the epilogue          8.00     17.00     17.00    225.00        0.471
+CDNA3 fp16   stream-K cut after 24 / after 16                  2.00      6.00     38.00    158.00        0.333

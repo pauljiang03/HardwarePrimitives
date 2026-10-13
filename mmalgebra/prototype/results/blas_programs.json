@@ -1,0 +1,2341 @@
+[
+ {
+  "row": "V100 fp16: C in the first block FMA",
+  "equal": false,
+  "worst_u": 2039.752099826782,
+  "rho_u": 6145.56051978907,
+  "witness_bound_u": 3073.2791798978396,
+  "uniform": {
+   "share": 0.975,
+   "median_ulps": 9.0,
+   "p99_ulps": 263.0,
+   "max_ulps": 916.0,
+   "max_rel_u": 4.389619959960009
+  },
+  "normal": {
+   "share": 0.96,
+   "median_ulps": 10.0,
+   "p99_ulps": 2112.0,
+   "max_ulps": 13568.0,
+   "max_rel_u": 3.838340654177176
+  },
+  "llm": {
+   "share": 0.895,
+   "median_ulps": 4.0,
+   "p99_ulps": 167.0,
+   "max_ulps": 184.0,
+   "max_rel_u": 9.157538604986506
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 52.5,
+   "p99_ulps": 1932.0,
+   "max_ulps": 3772.0,
+   "max_rel_u": 0.6056222721954805
+  }
+ },
+ {
+  "row": "V100 fp16: split-K 2, partials added serially",
+  "equal": false,
+  "worst_u": 1019.8807368081024,
+  "rho_u": 3075.421355534265,
+  "witness_bound_u": 4611.076278848055,
+  "uniform": {
+   "share": 0.86,
+   "median_ulps": 4.0,
+   "p99_ulps": 416.0,
+   "max_ulps": 768.0,
+   "max_rel_u": 2.0933632395624993
+  },
+  "normal": {
+   "share": 0.855,
+   "median_ulps": 4.0,
+   "p99_ulps": 4096.0,
+   "max_ulps": 5696.0,
+   "max_rel_u": 1.8453877020756722
+  },
+  "llm": {
+   "share": 0.895,
+   "median_ulps": 6.0,
+   "p99_ulps": 216.0,
+   "max_ulps": 280.0,
+   "max_rel_u": 9.218228230030867
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 113.5,
+   "p99_ulps": 15488.0,
+   "max_ulps": 69888.0,
+   "max_rel_u": 1.0226150326354786
+  }
+ },
+ {
+  "row": "V100 fp16: split-K 4, serial",
+  "equal": false,
+  "worst_u": 1529.8166895248132,
+  "rho_u": 3077.3158758750715,
+  "witness_bound_u": 3845.0649065097637,
+  "uniform": {
+   "share": 0.9,
+   "median_ulps": 4.0,
+   "p99_ulps": 320.0,
+   "max_ulps": 832.0,
+   "max_rel_u": 2.946206104025532
+  },
+  "normal": {
+   "share": 0.92,
+   "median_ulps": 5.0,
+   "p99_ulps": 3648.0,
+   "max_ulps": 5120.0,
+   "max_rel_u": 2.165141273199575
+  },
+  "llm": {
+   "share": 0.93,
+   "median_ulps": 7.0,
+   "p99_ulps": 254.0,
+   "max_ulps": 276.0,
+   "max_rel_u": 12.290970973374488
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 140.0,
+   "p99_ulps": 14912.0,
+   "max_ulps": 55296.0,
+   "max_rel_u": 1.320818607669643
+  }
+ },
+ {
+  "row": "V100 fp16: split-K 4, pairwise",
+  "equal": false,
+  "worst_u": 1509.3162552324811,
+  "rho_u": 3076.3157841393486,
+  "witness_bound_u": 3843.4220356514757,
+  "uniform": {
+   "share": 0.91,
+   "median_ulps": 4.0,
+   "p99_ulps": 320.0,
+   "max_ulps": 832.0,
+   "max_rel_u": 2.946206104025532
+  },
+  "normal": {
+   "share": 0.93,
+   "median_ulps": 5.0,
+   "p99_ulps": 3648.0,
+   "max_ulps": 4096.0,
+   "max_rel_u": 2.165141273199575
+  },
+  "llm": {
+   "share": 0.945,
+   "median_ulps": 7.5,
+   "p99_ulps": 254.0,
+   "max_ulps": 276.0,
+   "max_rel_u": 12.290970973374488
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 144.0,
+   "p99_ulps": 14912.0,
+   "max_ulps": 53504.0,
+   "max_rel_u": 1.2733285004275885
+  }
+ },
+ {
+  "row": "V100 fp16: split-K 8, serial",
+  "equal": false,
+  "worst_u": 1776.052734791979,
+  "rho_u": 3081.289508601196,
+  "witness_bound_u": 3465.0556780569123,
+  "uniform": {
+   "share": 0.905,
+   "median_ulps": 5.0,
+   "p99_ulps": 352.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 2.946206104025532
+  },
+  "normal": {
+   "share": 0.925,
+   "median_ulps": 6.0,
+   "p99_ulps": 1024.0,
+   "max_ulps": 3648.0,
+   "max_rel_u": 2.2376953174516196
+  },
+  "llm": {
+   "share": 0.92,
+   "median_ulps": 8.0,
+   "p99_ulps": 240.0,
+   "max_ulps": 256.0,
+   "max_rel_u": 12.729934222423577
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 144.0,
+   "p99_ulps": 9088.0,
+   "max_ulps": 9472.0,
+   "max_rel_u": 0.9994613961807237
+  }
+ },
+ {
+  "row": "V100 fp16: split-K 8, pairwise",
+  "equal": false,
+  "worst_u": 1759.2000802549685,
+  "rho_u": 3077.2893241802394,
+  "witness_bound_u": 3460.4908631664175,
+  "uniform": {
+   "share": 0.9,
+   "median_ulps": 4.0,
+   "p99_ulps": 352.0,
+   "max_ulps": 1344.0,
+   "max_rel_u": 3.1917232793609926
+  },
+  "normal": {
+   "share": 0.935,
+   "median_ulps": 6.0,
+   "p99_ulps": 2048.0,
+   "max_ulps": 3136.0,
+   "max_rel_u": 2.2376953174516196
+  },
+  "llm": {
+   "share": 0.935,
+   "median_ulps": 8.0,
+   "p99_ulps": 236.0,
+   "max_ulps": 254.0,
+   "max_rel_u": 13.168897471472667
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 144.0,
+   "p99_ulps": 8640.0,
+   "max_ulps": 16640.0,
+   "max_rel_u": 1.02413945534568
+  }
+ },
+ {
+  "row": "V100 fp16: stream-K, cut after 384 products",
+  "equal": false,
+  "worst_u": 1267.71177041162,
+  "rho_u": 3843.4826067507956,
+  "witness_bound_u": 4226.892992106397,
+  "uniform": {
+   "share": 0.87,
+   "median_ulps": 4.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 2.2096545780191486
+  },
+  "normal": {
+   "share": 0.9,
+   "median_ulps": 4.0,
+   "p99_ulps": 4672.0,
+   "max_ulps": 6144.0,
+   "max_rel_u": 1.2382684982435512
+  },
+  "llm": {
+   "share": 0.87,
+   "median_ulps": 6.0,
+   "p99_ulps": 202.0,
+   "max_ulps": 312.0,
+   "max_rel_u": 12.290970973374488
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 124.0,
+   "p99_ulps": 13440.0,
+   "max_ulps": 110848.0,
+   "max_rel_u": 1.1444646890909724
+  }
+ },
+ {
+  "row": "V100 fp16: other BLOCK_K, tile shapes, k = 8 or 16 instructions",
+  "equal": true,
+  "worst_u": 0.0,
+  "rho_u": 0.0,
+  "uniform": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "normal": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "llm": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "cancel": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  }
+ },
+ {
+  "row": "V100 fp16: split-K 4, atomic adds, two arrival orders",
+  "equal": false,
+  "worst_u": 1.9995418757353598,
+  "rho_u": 8.000366934477066,
+  "witness_bound_u": 27.16811246544398,
+  "uniform": {
+   "share": 0.47,
+   "median_ulps": 0.0,
+   "p99_ulps": 16.0,
+   "max_ulps": 20.0,
+   "max_rel_u": 0.2302609113856395
+  },
+  "normal": {
+   "share": 0.525,
+   "median_ulps": 1.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 256.0,
+   "max_rel_u": 0.27680815531135083
+  },
+  "llm": {
+   "share": 0.505,
+   "median_ulps": 1.0,
+   "p99_ulps": 16.0,
+   "max_ulps": 23.0,
+   "max_rel_u": 1.1237083107287362
+  },
+  "cancel": {
+   "share": 0.745,
+   "median_ulps": 8.0,
+   "p99_ulps": 1024.0,
+   "max_ulps": 5888.0,
+   "max_rel_u": 0.07826573473966658
+  }
+ },
+ {
+  "row": "V100 fp16: CUDA-core fallback, sequential binary32 FMA",
+  "equal": false,
+  "worst_u": 2045.5377580984045,
+  "rho_u": 4098.311632608989,
+  "witness_bound_u": 4097.8487441599,
+  "uniform": {
+   "share": 0.945,
+   "median_ulps": 8.5,
+   "p99_ulps": 352.0,
+   "max_ulps": 2752.0,
+   "max_rel_u": 2.567651769053708
+  },
+  "normal": {
+   "share": 0.94,
+   "median_ulps": 7.5,
+   "p99_ulps": 3776.0,
+   "max_ulps": 24576.0,
+   "max_rel_u": 5.0348144642661445
+  },
+  "llm": {
+   "share": 0.955,
+   "median_ulps": 11.5,
+   "p99_ulps": 330.0,
+   "max_ulps": 400.0,
+   "max_rel_u": 15.363713716718111
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 158.5,
+   "p99_ulps": 9472.0,
+   "max_ulps": 90752.0,
+   "max_rel_u": 1.5053616090623247
+  }
+ },
+ {
+  "row": "A100 fp16: C in the first block FMA",
+  "equal": false,
+  "worst_u": 1013.5361344367428,
+  "rho_u": 2817.117328061165,
+  "witness_bound_u": 1409.322437316785,
+  "uniform": {
+   "share": 0.99,
+   "median_ulps": 25.0,
+   "p99_ulps": 968.0,
+   "max_ulps": 1944.0,
+   "max_rel_u": 4.703245033340163
+  },
+  "normal": {
+   "share": 0.995,
+   "median_ulps": 25.0,
+   "p99_ulps": 5264.0,
+   "max_ulps": 29824.0,
+   "max_rel_u": 8.37819745171625
+  },
+  "llm": {
+   "share": 0.91,
+   "median_ulps": 7.5,
+   "p99_ulps": 373.0,
+   "max_ulps": 499.0,
+   "max_rel_u": 9.539102713527612
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 42.0,
+   "p99_ulps": 2228.0,
+   "max_ulps": 3772.0,
+   "max_rel_u": 0.28379768039699566
+  }
+ },
+ {
+  "row": "A100 fp16: split-K 2, partials added serially",
+  "equal": false,
+  "worst_u": 509.9702416276091,
+  "rho_u": 1411.0884161431532,
+  "witness_bound_u": 2115.010449285074,
+  "uniform": {
+   "share": 0.96,
+   "median_ulps": 9.0,
+   "p99_ulps": 768.0,
+   "max_ulps": 1088.0,
+   "max_rel_u": 2.946206104025532
+  },
+  "normal": {
+   "share": 0.915,
+   "median_ulps": 7.0,
+   "p99_ulps": 4800.0,
+   "max_ulps": 12288.0,
+   "max_rel_u": 2.2820873201229794
+  },
+  "llm": {
+   "share": 0.915,
+   "median_ulps": 10.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 390.0,
+   "max_rel_u": 12.843580425079706
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 269.5,
+   "p99_ulps": 21072.0,
+   "max_ulps": 97024.0,
+   "max_rel_u": 2.2018922114355677
+  }
+ },
+ {
+  "row": "A100 fp16: split-K 4, serial",
+  "equal": false,
+  "worst_u": 714.4845955258323,
+  "rho_u": 1413.0662596058035,
+  "witness_bound_u": 1764.0177010684486,
+  "uniform": {
+   "share": 0.955,
+   "median_ulps": 12.0,
+   "p99_ulps": 832.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 3.6827576300319147
+  },
+  "normal": {
+   "share": 0.97,
+   "median_ulps": 10.0,
+   "p99_ulps": 6592.0,
+   "max_ulps": 20480.0,
+   "max_rel_u": 3.423130980184469
+  },
+  "llm": {
+   "share": 0.95,
+   "median_ulps": 14.0,
+   "p99_ulps": 204.0,
+   "max_ulps": 368.0,
+   "max_rel_u": 18.25140376195537
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 295.0,
+   "p99_ulps": 22928.0,
+   "max_ulps": 79360.0,
+   "max_rel_u": 2.1541547109166395
+  }
+ },
+ {
+  "row": "A100 fp16: split-K 4, pairwise",
+  "equal": false,
+  "worst_u": 787.7276835440265,
+  "rho_u": 1412.0662174644453,
+  "witness_bound_u": 1763.7075123883164,
+  "uniform": {
+   "share": 0.965,
+   "median_ulps": 12.0,
+   "p99_ulps": 832.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 3.6827576300319147
+  },
+  "normal": {
+   "share": 0.965,
+   "median_ulps": 10.0,
+   "p99_ulps": 6336.0,
+   "max_ulps": 20480.0,
+   "max_rel_u": 3.8034788668716324
+  },
+  "llm": {
+   "share": 0.955,
+   "median_ulps": 14.0,
+   "p99_ulps": 204.0,
+   "max_ulps": 368.0,
+   "max_rel_u": 18.25140376195537
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 293.0,
+   "p99_ulps": 23440.0,
+   "max_ulps": 80640.0,
+   "max_rel_u": 2.1064172103977112
+  }
+ },
+ {
+  "row": "A100 fp16: split-K 8, serial",
+  "equal": false,
+  "worst_u": 932.9810461429529,
+  "rho_u": 1417.060721842985,
+  "witness_bound_u": 1592.9489255824626,
+  "uniform": {
+   "share": 0.98,
+   "median_ulps": 13.0,
+   "p99_ulps": 1152.0,
+   "max_ulps": 1600.0,
+   "max_rel_u": 4.173791980702837
+  },
+  "normal": {
+   "share": 0.985,
+   "median_ulps": 11.0,
+   "p99_ulps": 5952.0,
+   "max_ulps": 22528.0,
+   "max_rel_u": 4.564174640245959
+  },
+  "llm": {
+   "share": 0.98,
+   "median_ulps": 15.5,
+   "p99_ulps": 204.0,
+   "max_ulps": 480.0,
+   "max_rel_u": 18.92738167906483
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 291.0,
+   "p99_ulps": 25488.0,
+   "max_ulps": 109312.0,
+   "max_rel_u": 2.368973463251817
+  }
+ },
+ {
+  "row": "A100 fp16: split-K 8, pairwise",
+  "equal": false,
+  "worst_u": 891.9467579197408,
+  "rho_u": 1413.0606366074624,
+  "witness_bound_u": 1589.01133468942,
+  "uniform": {
+   "share": 0.97,
+   "median_ulps": 13.0,
+   "p99_ulps": 1088.0,
+   "max_ulps": 1728.0,
+   "max_rel_u": 4.173791980702837
+  },
+  "normal": {
+   "share": 0.985,
+   "median_ulps": 11.0,
+   "p99_ulps": 5824.0,
+   "max_ulps": 21504.0,
+   "max_rel_u": 4.564174640245959
+  },
+  "llm": {
+   "share": 0.965,
+   "median_ulps": 15.0,
+   "p99_ulps": 200.0,
+   "max_ulps": 464.0,
+   "max_rel_u": 18.92738167906483
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 300.0,
+   "p99_ulps": 24976.0,
+   "max_ulps": 101120.0,
+   "max_rel_u": 2.4883172145491375
+  }
+ },
+ {
+  "row": "A100 fp16: stream-K, cut after 384 products",
+  "equal": false,
+  "worst_u": 666.9561001749225,
+  "rho_u": 1763.1012251733555,
+  "witness_bound_u": 1938.6925446996254,
+  "uniform": {
+   "share": 0.955,
+   "median_ulps": 8.0,
+   "p99_ulps": 768.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 3.4372404546964535
+  },
+  "normal": {
+   "share": 0.955,
+   "median_ulps": 8.0,
+   "p99_ulps": 4544.0,
+   "max_ulps": 20480.0,
+   "max_rel_u": 3.042783093497306
+  },
+  "llm": {
+   "share": 0.94,
+   "median_ulps": 11.0,
+   "p99_ulps": 312.0,
+   "max_ulps": 454.0,
+   "max_rel_u": 13.558766367879471
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 302.0,
+   "p99_ulps": 42576.0,
+   "max_ulps": 101120.0,
+   "max_rel_u": 3.061167220776277
+  }
+ },
+ {
+  "row": "A100 fp16: other BLOCK_K, tile shapes, k = 8 or 16 instructions",
+  "equal": true,
+  "worst_u": 0.0,
+  "rho_u": 0.0,
+  "uniform": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "normal": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "llm": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "cancel": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  }
+ },
+ {
+  "row": "A100 fp16: split-K 4, atomic adds, two arrival orders",
+  "equal": false,
+  "worst_u": 1.999969825754744,
+  "rho_u": 8.000168563656228,
+  "witness_bound_u": 8.00516850234567,
+  "uniform": {
+   "share": 0.475,
+   "median_ulps": 0.0,
+   "p99_ulps": 12.0,
+   "max_ulps": 64.0,
+   "max_rel_u": 0.18037743396090536
+  },
+  "normal": {
+   "share": 0.485,
+   "median_ulps": 0.0,
+   "p99_ulps": 48.0,
+   "max_ulps": 224.0,
+   "max_rel_u": 0.3839926052597849
+  },
+  "llm": {
+   "share": 0.5,
+   "median_ulps": 0.5,
+   "p99_ulps": 12.0,
+   "max_ulps": 32.0,
+   "max_rel_u": 0.6812431334346097
+  },
+  "cancel": {
+   "share": 0.735,
+   "median_ulps": 8.0,
+   "p99_ulps": 2048.0,
+   "max_ulps": 5376.0,
+   "max_rel_u": 0.10182041571495125
+  }
+ },
+ {
+  "row": "A100 fp16: CUDA-core fallback, sequential binary32 FMA",
+  "equal": false,
+  "worst_u": 1023.5398698729132,
+  "rho_u": 2434.08998714737,
+  "witness_bound_u": 2433.5401123722454,
+  "uniform": {
+   "share": 0.975,
+   "median_ulps": 14.0,
+   "p99_ulps": 960.0,
+   "max_ulps": 3072.0,
+   "max_rel_u": 4.3663375845589245
+  },
+  "normal": {
+   "share": 0.965,
+   "median_ulps": 12.0,
+   "p99_ulps": 4672.0,
+   "max_ulps": 43008.0,
+   "max_rel_u": 6.340136732779589
+  },
+  "llm": {
+   "share": 0.98,
+   "median_ulps": 16.0,
+   "p99_ulps": 292.0,
+   "max_ulps": 464.0,
+   "max_rel_u": 18.16784676373452
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 268.0,
+   "p99_ulps": 22384.0,
+   "max_ulps": 39296.0,
+   "max_rel_u": 2.7419226860559442
+  }
+ },
+ {
+  "row": "H100 fp16: C in the first block FMA",
+  "equal": false,
+  "worst_u": 509.98452764711004,
+  "rho_u": 1345.0265363313508,
+  "witness_bound_u": 673.0130632792286,
+  "uniform": {
+   "share": 0.965,
+   "median_ulps": 18.0,
+   "p99_ulps": 1264.0,
+   "max_ulps": 1718.0,
+   "max_rel_u": 3.3490033412890248
+  },
+  "normal": {
+   "share": 0.96,
+   "median_ulps": 19.0,
+   "p99_ulps": 3032.0,
+   "max_ulps": 23168.0,
+   "max_rel_u": 5.898934940494095
+  },
+  "llm": {
+   "share": 0.895,
+   "median_ulps": 6.0,
+   "p99_ulps": 291.0,
+   "max_ulps": 426.0,
+   "max_rel_u": 5.341897519575462
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 31.0,
+   "p99_ulps": 1140.0,
+   "max_ulps": 3772.0,
+   "max_rel_u": 0.2315080489646629
+  }
+ },
+ {
+  "row": "H100 fp16: split-K 2, partials added serially",
+  "equal": false,
+  "worst_u": 255.74262677473146,
+  "rho_u": 675.0200976195916,
+  "witness_bound_u": 1010.9847111636919,
+  "uniform": {
+   "share": 0.93,
+   "median_ulps": 7.0,
+   "p99_ulps": 960.0,
+   "max_ulps": 1088.0,
+   "max_rel_u": 1.6686877951046721
+  },
+  "normal": {
+   "share": 0.925,
+   "median_ulps": 6.0,
+   "p99_ulps": 5440.0,
+   "max_ulps": 6144.0,
+   "max_rel_u": 1.6782714880887148
+  },
+  "llm": {
+   "share": 0.91,
+   "median_ulps": 7.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 286.0,
+   "max_rel_u": 6.661543813369324
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 205.0,
+   "p99_ulps": 13344.0,
+   "max_ulps": 43904.0,
+   "max_rel_u": 1.470671168672437
+  }
+ },
+ {
+  "row": "H100 fp16: split-K 4, serial",
+  "equal": false,
+  "worst_u": 399.6825901351455,
+  "rho_u": 677.0150509575726,
+  "witness_bound_u": 842.1655572149541,
+  "uniform": {
+   "share": 0.965,
+   "median_ulps": 9.0,
+   "p99_ulps": 1088.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 2.2096545780191486
+  },
+  "normal": {
+   "share": 0.96,
+   "median_ulps": 8.0,
+   "p99_ulps": 6592.0,
+   "max_ulps": 12288.0,
+   "max_rel_u": 2.61064453702689
+  },
+  "llm": {
+   "share": 0.97,
+   "median_ulps": 10.0,
+   "p99_ulps": 182.0,
+   "max_ulps": 208.0,
+   "max_rel_u": 10.295113166116227
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 203.5,
+   "p99_ulps": 16288.0,
+   "max_ulps": 34176.0,
+   "max_rel_u": 1.5813047046895
+  }
+ },
+ {
+  "row": "H100 fp16: split-K 4, pairwise",
+  "equal": false,
+  "worst_u": 399.9537880886849,
+  "rho_u": 676.0150307514002,
+  "witness_bound_u": 843.9644689328057,
+  "uniform": {
+   "share": 0.97,
+   "median_ulps": 9.0,
+   "p99_ulps": 1088.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 2.0666896910306476
+  },
+  "normal": {
+   "share": 0.96,
+   "median_ulps": 8.0,
+   "p99_ulps": 6464.0,
+   "max_ulps": 12288.0,
+   "max_rel_u": 2.4241699272392547
+  },
+  "llm": {
+   "share": 0.97,
+   "median_ulps": 10.0,
+   "p99_ulps": 186.0,
+   "max_ulps": 224.0,
+   "max_rel_u": 10.295113166116227
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 203.5,
+   "p99_ulps": 16288.0,
+   "max_ulps": 35712.0,
+   "max_rel_u": 1.5813047046895
+  }
+ },
+ {
+  "row": "H100 fp16: split-K 8, serial",
+  "equal": false,
+  "worst_u": 439.80018426790264,
+  "rho_u": 681.0137905434125,
+  "witness_bound_u": 764.8749254552711,
+  "uniform": {
+   "share": 0.98,
+   "median_ulps": 10.0,
+   "p99_ulps": 1344.0,
+   "max_ulps": 1536.0,
+   "max_rel_u": 2.45517175335461
+  },
+  "normal": {
+   "share": 0.975,
+   "median_ulps": 9.0,
+   "p99_ulps": 6080.0,
+   "max_ulps": 16384.0,
+   "max_rel_u": 2.7971191468145244
+  },
+  "llm": {
+   "share": 0.98,
+   "median_ulps": 12.0,
+   "p99_ulps": 198.0,
+   "max_ulps": 240.0,
+   "max_rel_u": 12.717492734614163
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 224.0,
+   "p99_ulps": 18976.0,
+   "max_ulps": 48000.0,
+   "max_rel_u": 1.6529109554678922
+  }
+ },
+ {
+  "row": "H100 fp16: split-K 8, pairwise",
+  "equal": false,
+  "worst_u": 447.98649609622464,
+  "rho_u": 677.0137491775877,
+  "witness_bound_u": 761.00183077608,
+  "uniform": {
+   "share": 0.98,
+   "median_ulps": 10.0,
+   "p99_ulps": 1280.0,
+   "max_ulps": 1472.0,
+   "max_rel_u": 2.45517175335461
+  },
+  "normal": {
+   "share": 0.95,
+   "median_ulps": 9.0,
+   "p99_ulps": 5952.0,
+   "max_ulps": 15360.0,
+   "max_rel_u": 2.9835937566021595
+  },
+  "llm": {
+   "share": 0.975,
+   "median_ulps": 12.0,
+   "p99_ulps": 206.0,
+   "max_ulps": 240.0,
+   "max_rel_u": 12.717492734614163
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 226.5,
+   "p99_ulps": 18976.0,
+   "max_ulps": 43904.0,
+   "max_rel_u": 1.6767797057273566
+  }
+ },
+ {
+  "row": "H100 fp16: stream-K, cut after 384 products",
+  "equal": false,
+  "worst_u": 339.30900219013336,
+  "rho_u": 843.0229890650597,
+  "witness_bound_u": 925.8982262940538,
+  "uniform": {
+   "share": 0.955,
+   "median_ulps": 7.0,
+   "p99_ulps": 1088.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 1.9641374026836877
+  },
+  "normal": {
+   "share": 0.93,
+   "median_ulps": 6.0,
+   "p99_ulps": 5440.0,
+   "max_ulps": 12288.0,
+   "max_rel_u": 2.0512207076639846
+  },
+  "llm": {
+   "share": 0.94,
+   "median_ulps": 8.0,
+   "p99_ulps": 244.0,
+   "max_ulps": 366.0,
+   "max_rel_u": 9.689518273991743
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 235.5,
+   "p99_ulps": 32272.0,
+   "max_ulps": 39808.0,
+   "max_rel_u": 1.772254706765213
+  }
+ },
+ {
+  "row": "H100 fp16: other BLOCK_K, tile shapes, k = 8 or 16 instructions",
+  "equal": true,
+  "worst_u": 0.0,
+  "rho_u": 0.0,
+  "uniform": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "normal": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "llm": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "cancel": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  }
+ },
+ {
+  "row": "H100 fp16: split-K 4, atomic adds, two arrival orders",
+  "equal": false,
+  "worst_u": 1.9999850718551695,
+  "rho_u": 8.000080824281527,
+  "witness_bound_u": 24.001037157714837,
+  "uniform": {
+   "share": 0.535,
+   "median_ulps": 1.0,
+   "p99_ulps": 16.0,
+   "max_ulps": 40.0,
+   "max_rel_u": 0.2302609113856395
+  },
+  "normal": {
+   "share": 0.535,
+   "median_ulps": 1.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 128.0,
+   "max_rel_u": 0.27360298614155537
+  },
+  "llm": {
+   "share": 0.44,
+   "median_ulps": 0.0,
+   "p99_ulps": 8.0,
+   "max_ulps": 14.0,
+   "max_rel_u": 0.8163135217552902
+  },
+  "cancel": {
+   "share": 0.725,
+   "median_ulps": 8.0,
+   "p99_ulps": 2048.0,
+   "max_ulps": 5632.0,
+   "max_rel_u": 0.07636531178621343
+  }
+ },
+ {
+  "row": "H100 fp16: CUDA-core fallback, sequential binary32 FMA",
+  "equal": false,
+  "worst_u": 525.0894340714652,
+  "rho_u": 1698.044569346601,
+  "witness_bound_u": 1697.158308906631,
+  "uniform": {
+   "share": 0.95,
+   "median_ulps": 10.0,
+   "p99_ulps": 1152.0,
+   "max_ulps": 2816.0,
+   "max_rel_u": 3.7599018089257408
+  },
+  "normal": {
+   "share": 0.965,
+   "median_ulps": 11.0,
+   "p99_ulps": 4288.0,
+   "max_ulps": 34816.0,
+   "max_rel_u": 5.407763683841414
+  },
+  "llm": {
+   "share": 0.975,
+   "median_ulps": 13.0,
+   "p99_ulps": 212.0,
+   "max_ulps": 227.0,
+   "max_rel_u": 14.534277410987615
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 216.5,
+   "p99_ulps": 14880.0,
+   "max_ulps": 16768.0,
+   "max_rel_u": 1.9303851772341631
+  }
+ },
+ {
+  "row": "CDNA1 fp16: C in the first block FMA",
+  "equal": false,
+  "worst_u": 253.99614709879754,
+  "rho_u": 513.0039062697521,
+  "witness_bound_u": 257.0019601463313,
+  "uniform": {
+   "share": 0.905,
+   "median_ulps": 4.0,
+   "p99_ulps": 212.0,
+   "max_ulps": 464.0,
+   "max_rel_u": 1.3777931273537651
+  },
+  "normal": {
+   "share": 0.945,
+   "median_ulps": 4.0,
+   "p99_ulps": 740.0,
+   "max_ulps": 1776.0,
+   "max_rel_u": 1.7077452157339703
+  },
+  "llm": {
+   "share": 0.795,
+   "median_ulps": 2.0,
+   "p99_ulps": 91.0,
+   "max_ulps": 94.0,
+   "max_rel_u": 2.670948759787731
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 33.5,
+   "p99_ulps": 1452.0,
+   "max_ulps": 12612.0,
+   "max_rel_u": 0.4569000552160374
+  }
+ },
+ {
+  "row": "CDNA1 fp16: split-K 2, partials added serially",
+  "equal": false,
+  "worst_u": 127.99807392682993,
+  "rho_u": 259.0029679116365,
+  "witness_bound_u": 386.9995760220316,
+  "uniform": {
+   "share": 0.785,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 320.0,
+   "max_rel_u": 1.3604326741485009
+  },
+  "normal": {
+   "share": 0.8,
+   "median_ulps": 2.0,
+   "p99_ulps": 2752.0,
+   "max_ulps": 3072.0,
+   "max_rel_u": 1.0806649670343011
+  },
+  "llm": {
+   "share": 0.78,
+   "median_ulps": 2.0,
+   "p99_ulps": 39.0,
+   "max_ulps": 46.0,
+   "max_rel_u": 3.379889585547291
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 68.0,
+   "p99_ulps": 2688.0,
+   "max_ulps": 33920.0,
+   "max_rel_u": 0.6026745671526259
+  }
+ },
+ {
+  "row": "CDNA1 fp16: split-K 4, serial",
+  "equal": false,
+  "worst_u": 127.99871153221683,
+  "rho_u": 261.00223578119454,
+  "witness_bound_u": 325.00048462387485,
+  "uniform": {
+   "share": 0.81,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 448.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.8,
+   "median_ulps": 2.0,
+   "p99_ulps": 192.0,
+   "max_ulps": 768.0,
+   "max_rel_u": 1.0806649670343011
+  },
+  "llm": {
+   "share": 0.82,
+   "median_ulps": 2.0,
+   "p99_ulps": 48.0,
+   "max_ulps": 48.0,
+   "max_rel_u": 2.732095475031028
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 73.0,
+   "p99_ulps": 6720.0,
+   "max_ulps": 8576.0,
+   "max_rel_u": 0.4968545340156511
+  }
+ },
+ {
+  "row": "CDNA1 fp16: split-K 4, pairwise",
+  "equal": false,
+  "worst_u": 191.99710294960707,
+  "rho_u": 260.00222797295584,
+  "witness_bound_u": 323.99968844729295,
+  "uniform": {
+   "share": 0.8,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 512.0,
+   "max_rel_u": 1.2367569764986373
+  },
+  "normal": {
+   "share": 0.8,
+   "median_ulps": 2.0,
+   "p99_ulps": 192.0,
+   "max_ulps": 768.0,
+   "max_rel_u": 1.0806649670343011
+  },
+  "llm": {
+   "share": 0.845,
+   "median_ulps": 2.5,
+   "p99_ulps": 48.0,
+   "max_ulps": 48.0,
+   "max_rel_u": 3.0736074094099064
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 72.0,
+   "p99_ulps": 6720.0,
+   "max_ulps": 7040.0,
+   "max_rel_u": 0.4968545340156511
+  }
+ },
+ {
+  "row": "CDNA1 fp16: split-K 8, serial",
+  "equal": false,
+  "worst_u": 223.77810752686395,
+  "rho_u": 265.0020539861696,
+  "witness_bound_u": 296.9998150784621,
+  "uniform": {
+   "share": 0.815,
+   "median_ulps": 3.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 384.0,
+   "max_rel_u": 0.9894055811989098
+  },
+  "normal": {
+   "share": 0.83,
+   "median_ulps": 2.0,
+   "p99_ulps": 384.0,
+   "max_ulps": 3072.0,
+   "max_rel_u": 1.0838821390254243
+  },
+  "llm": {
+   "share": 0.85,
+   "median_ulps": 3.0,
+   "p99_ulps": 58.0,
+   "max_ulps": 80.0,
+   "max_rel_u": 2.6278923705495005
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 71.5,
+   "p99_ulps": 6720.0,
+   "max_ulps": 8064.0,
+   "max_rel_u": 0.4699841268062817
+  }
+ },
+ {
+  "row": "CDNA1 fp16: split-K 8, pairwise",
+  "equal": false,
+  "worst_u": 149.33182871265564,
+  "rho_u": 261.0020374160445,
+  "witness_bound_u": 293.00055346933067,
+  "uniform": {
+   "share": 0.815,
+   "median_ulps": 3.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 448.0,
+   "max_rel_u": 1.1130812788487734
+  },
+  "normal": {
+   "share": 0.84,
+   "median_ulps": 2.0,
+   "p99_ulps": 512.0,
+   "max_ulps": 4096.0,
+   "max_rel_u": 1.0806649670343011
+  },
+  "llm": {
+   "share": 0.88,
+   "median_ulps": 3.0,
+   "p99_ulps": 58.0,
+   "max_ulps": 80.0,
+   "max_rel_u": 2.7160376803502593
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 77.0,
+   "p99_ulps": 7040.0,
+   "max_ulps": 7232.0,
+   "max_rel_u": 0.46200635198564716
+  }
+ },
+ {
+  "row": "CDNA1 fp16: stream-K, cut after 384 products",
+  "equal": false,
+  "worst_u": 159.84149746924103,
+  "rho_u": 323.00339325179203,
+  "witness_bound_u": 354.99990370172793,
+  "uniform": {
+   "share": 0.795,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 384.0,
+   "max_rel_u": 1.1130812788487734
+  },
+  "normal": {
+   "share": 0.795,
+   "median_ulps": 2.0,
+   "p99_ulps": 384.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 1.2607757948733513
+  },
+  "llm": {
+   "share": 0.8,
+   "median_ulps": 2.0,
+   "p99_ulps": 54.0,
+   "max_ulps": 72.0,
+   "max_rel_u": 2.796927741370179
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 66.0,
+   "p99_ulps": 3072.0,
+   "max_ulps": 14192.0,
+   "max_rel_u": 0.47262045279990217
+  }
+ },
+ {
+  "row": "CDNA1 fp16: other BLOCK_K, tile shapes, k = 8 or 16 instructions",
+  "equal": true,
+  "worst_u": 0.0,
+  "rho_u": 0.0,
+  "uniform": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "normal": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "llm": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "cancel": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  }
+ },
+ {
+  "row": "CDNA1 fp16: split-K 4, atomic adds, two arrival orders",
+  "equal": false,
+  "worst_u": 1.9999422270343752,
+  "rho_u": 8.000031232893917,
+  "witness_bound_u": 134.99838771702665,
+  "uniform": {
+   "share": 0.475,
+   "median_ulps": 0.0,
+   "p99_ulps": 24.0,
+   "max_ulps": 32.0,
+   "max_rel_u": 0.24283302242654367
+  },
+  "normal": {
+   "share": 0.455,
+   "median_ulps": 0.0,
+   "p99_ulps": 64.0,
+   "max_ulps": 256.0,
+   "max_rel_u": 0.19813915871796203
+  },
+  "llm": {
+   "share": 0.375,
+   "median_ulps": 0.0,
+   "p99_ulps": 22.0,
+   "max_ulps": 32.0,
+   "max_rel_u": 1.1237083107287362
+  },
+  "cancel": {
+   "share": 0.7,
+   "median_ulps": 8.0,
+   "p99_ulps": 512.0,
+   "max_ulps": 2560.0,
+   "max_rel_u": 0.11872526810513646
+  }
+ },
+ {
+  "row": "CDNA1 fp16: CUDA-core fallback, sequential binary32 FMA",
+  "equal": false,
+  "worst_u": 511.2349578042666,
+  "rho_u": 1282.0332419176987,
+  "witness_bound_u": 1282.014884377636,
+  "uniform": {
+   "share": 0.905,
+   "median_ulps": 4.0,
+   "p99_ulps": 704.0,
+   "max_ulps": 1344.0,
+   "max_rel_u": 1.4299284658908034
+  },
+  "normal": {
+   "share": 0.9,
+   "median_ulps": 5.0,
+   "p99_ulps": 1856.0,
+   "max_ulps": 13312.0,
+   "max_rel_u": 2.4241699272392547
+  },
+  "llm": {
+   "share": 0.94,
+   "median_ulps": 6.0,
+   "p99_ulps": 77.0,
+   "max_ulps": 90.0,
+   "max_rel_u": 6.759779171094582
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 140.0,
+   "p99_ulps": 9728.0,
+   "max_ulps": 30208.0,
+   "max_rel_u": 1.039139008805083
+  }
+ },
+ {
+  "row": "CDNA2 fp16: C in the first block FMA",
+  "equal": false,
+  "worst_u": 253.99614698370397,
+  "rho_u": 4097.249155569165,
+  "witness_bound_u": 2049.1246264744636,
+  "uniform": {
+   "share": 0.91,
+   "median_ulps": 4.0,
+   "p99_ulps": 406.0,
+   "max_ulps": 472.0,
+   "max_rel_u": 1.8370575031383536
+  },
+  "normal": {
+   "share": 0.93,
+   "median_ulps": 4.0,
+   "p99_ulps": 1120.0,
+   "max_ulps": 1408.0,
+   "max_rel_u": 1.401226843679155
+  },
+  "llm": {
+   "share": 0.84,
+   "median_ulps": 2.0,
+   "p99_ulps": 70.0,
+   "max_ulps": 99.0,
+   "max_rel_u": 2.420667133479969
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 34.5,
+   "p99_ulps": 3772.0,
+   "max_ulps": 4192.0,
+   "max_rel_u": 0.3039484871165461
+  }
+ },
+ {
+  "row": "CDNA2 fp16: split-K 2, partials added serially",
+  "equal": false,
+  "worst_u": 127.99807412384237,
+  "rho_u": 2051.187386823558,
+  "witness_bound_u": 3075.1326816535493,
+  "uniform": {
+   "share": 0.77,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 576.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.77,
+   "median_ulps": 2.0,
+   "p99_ulps": 896.0,
+   "max_ulps": 3072.0,
+   "max_rel_u": 0.9005541391952511
+  },
+  "llm": {
+   "share": 0.815,
+   "median_ulps": 2.0,
+   "p99_ulps": 54.0,
+   "max_ulps": 64.0,
+   "max_rel_u": 3.379889585547291
+  },
+  "cancel": {
+   "share": 0.975,
+   "median_ulps": 56.0,
+   "p99_ulps": 4864.0,
+   "max_ulps": 8704.0,
+   "max_rel_u": 0.4947328536327526
+  }
+ },
+ {
+  "row": "CDNA2 fp16: split-K 4, serial",
+  "equal": false,
+  "worst_u": 191.99711407884786,
+  "rho_u": 2053.1405087985113,
+  "witness_bound_u": 2565.1132228861156,
+  "uniform": {
+   "share": 0.805,
+   "median_ulps": 2.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 512.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.82,
+   "median_ulps": 2.0,
+   "p99_ulps": 384.0,
+   "max_ulps": 4096.0,
+   "max_rel_u": 1.0806649670343011
+  },
+  "llm": {
+   "share": 0.805,
+   "median_ulps": 2.0,
+   "p99_ulps": 52.0,
+   "max_ulps": 160.0,
+   "max_rel_u": 3.0736074094099064
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 60.5,
+   "p99_ulps": 5952.0,
+   "max_ulps": 10880.0,
+   "max_rel_u": 0.5313924417642338
+  }
+ },
+ {
+  "row": "CDNA2 fp16: split-K 4, pairwise",
+  "equal": false,
+  "worst_u": 127.99871123045376,
+  "rho_u": 2052.140447582682,
+  "witness_bound_u": 2564.119587905517,
+  "uniform": {
+   "share": 0.8,
+   "median_ulps": 2.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 576.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.81,
+   "median_ulps": 2.0,
+   "p99_ulps": 384.0,
+   "max_ulps": 4096.0,
+   "max_rel_u": 0.9005541391952511
+  },
+  "llm": {
+   "share": 0.82,
+   "median_ulps": 2.0,
+   "p99_ulps": 52.0,
+   "max_ulps": 176.0,
+   "max_rel_u": 3.0736074094099064
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 65.0,
+   "p99_ulps": 5952.0,
+   "max_ulps": 10880.0,
+   "max_rel_u": 0.5313924417642338
+  }
+ },
+ {
+  "row": "CDNA2 fp16: split-K 8, serial",
+  "equal": false,
+  "worst_u": 223.99665950200975,
+  "rho_u": 2057.1287909444654,
+  "witness_bound_u": 2313.1094542015167,
+  "uniform": {
+   "share": 0.825,
+   "median_ulps": 2.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 576.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.82,
+   "median_ulps": 2.0,
+   "p99_ulps": 768.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 1.0806649670343011
+  },
+  "llm": {
+   "share": 0.84,
+   "median_ulps": 2.0,
+   "p99_ulps": 150.0,
+   "max_ulps": 176.0,
+   "max_rel_u": 3.1807497791529538
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 78.5,
+   "p99_ulps": 4864.0,
+   "max_ulps": 10368.0,
+   "max_rel_u": 0.6976333873048245
+  }
+ },
+ {
+  "row": "CDNA2 fp16: split-K 8, pairwise",
+  "equal": false,
+  "worst_u": 223.77809244125882,
+  "rho_u": 2053.1286675609767,
+  "witness_bound_u": 2309.1093007394707,
+  "uniform": {
+   "share": 0.845,
+   "median_ulps": 2.0,
+   "p99_ulps": 256.0,
+   "max_ulps": 576.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.85,
+   "median_ulps": 2.0,
+   "p99_ulps": 640.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 1.2607757948733513
+  },
+  "llm": {
+   "share": 0.885,
+   "median_ulps": 2.0,
+   "p99_ulps": 190.0,
+   "max_ulps": 224.0,
+   "max_rel_u": 2.7360609402911003
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 78.0,
+   "p99_ulps": 4864.0,
+   "max_ulps": 9344.0,
+   "max_rel_u": 0.674571126567475
+  }
+ },
+ {
+  "row": "CDNA2 fp16: stream-K, cut after 384 products",
+  "equal": false,
+  "worst_u": 159.99761145247723,
+  "rho_u": 2563.2146092253824,
+  "witness_bound_u": 2819.1235087799173,
+  "uniform": {
+   "share": 0.795,
+   "median_ulps": 2.0,
+   "p99_ulps": 68.0,
+   "max_ulps": 576.0,
+   "max_rel_u": 1.148160939461471
+  },
+  "normal": {
+   "share": 0.77,
+   "median_ulps": 2.0,
+   "p99_ulps": 384.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 0.9005541391952511
+  },
+  "llm": {
+   "share": 0.81,
+   "median_ulps": 2.0,
+   "p99_ulps": 96.0,
+   "max_ulps": 112.0,
+   "max_rel_u": 3.0736074094099064
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 62.0,
+   "p99_ulps": 3584.0,
+   "max_ulps": 15168.0,
+   "max_rel_u": 0.5077749999080456
+  }
+ },
+ {
+  "row": "CDNA2 fp16: other BLOCK_K, tile shapes, k = 8 or 16 instructions",
+  "equal": true,
+  "worst_u": 0.0,
+  "rho_u": 0.0,
+  "uniform": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "normal": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "llm": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "cancel": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  }
+ },
+ {
+  "row": "CDNA2 fp16: split-K 4, atomic adds, two arrival orders",
+  "equal": false,
+  "worst_u": 1.999539448039592,
+  "rho_u": 8.000244859569714,
+  "witness_bound_u": 19.11659828528316,
+  "uniform": {
+   "share": 0.485,
+   "median_ulps": 0.0,
+   "p99_ulps": 12.0,
+   "max_ulps": 20.0,
+   "max_rel_u": 0.12705216216203707
+  },
+  "normal": {
+   "share": 0.445,
+   "median_ulps": 0.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 256.0,
+   "max_rel_u": 0.19813915871796203
+  },
+  "llm": {
+   "share": 0.495,
+   "median_ulps": 0.0,
+   "p99_ulps": 16.0,
+   "max_ulps": 20.0,
+   "max_rel_u": 0.6812431334346097
+  },
+  "cancel": {
+   "share": 0.705,
+   "median_ulps": 8.0,
+   "p99_ulps": 768.0,
+   "max_ulps": 5376.0,
+   "max_rel_u": 0.11872526810513646
+  }
+ },
+ {
+  "row": "CDNA2 fp16: CUDA-core fallback, sequential binary32 FMA",
+  "equal": false,
+  "worst_u": 1021.9416713263582,
+  "rho_u": 3074.1559199768194,
+  "witness_bound_u": 3074.067956268874,
+  "uniform": {
+   "share": 0.905,
+   "median_ulps": 5.0,
+   "p99_ulps": 832.0,
+   "max_ulps": 1472.0,
+   "max_rel_u": 3.062619464329482
+  },
+  "normal": {
+   "share": 0.9,
+   "median_ulps": 4.0,
+   "p99_ulps": 2560.0,
+   "max_ulps": 20480.0,
+   "max_rel_u": 2.4241699272392547
+  },
+  "llm": {
+   "share": 0.995,
+   "median_ulps": 139.0,
+   "p99_ulps": 15540.0,
+   "max_ulps": 28544.0,
+   "max_rel_u": 1868.315515834902
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 137.0,
+   "p99_ulps": 10880.0,
+   "max_ulps": 37760.0,
+   "max_rel_u": 0.9202014114117301
+  }
+ },
+ {
+  "row": "CDNA3 fp16: C in the first block FMA",
+  "equal": false,
+  "worst_u": 78.5399412656914,
+  "rho_u": 3585.1900243619366,
+  "witness_bound_u": 256.7978751030588,
+  "uniform": {
+   "share": 0.82,
+   "median_ulps": 3.0,
+   "p99_ulps": 42.0,
+   "max_ulps": 70.0,
+   "max_rel_u": 0.7610045086412106
+  },
+  "normal": {
+   "share": 0.87,
+   "median_ulps": 3.0,
+   "p99_ulps": 664.0,
+   "max_ulps": 704.0,
+   "max_rel_u": 1.0920964467756429
+  },
+  "llm": {
+   "share": 0.76,
+   "median_ulps": 1.0,
+   "p99_ulps": 37.0,
+   "max_ulps": 178.0,
+   "max_rel_u": 2.8542576627770218
+  },
+  "cancel": {
+   "share": 0.98,
+   "median_ulps": 27.0,
+   "p99_ulps": 1952.0,
+   "max_ulps": 3772.0,
+   "max_rel_u": 0.19233944044290152
+  }
+ },
+ {
+  "row": "CDNA3 fp16: split-K 2, partials added serially",
+  "equal": false,
+  "worst_u": 63.99952015959572,
+  "rho_u": 1795.1431333617331,
+  "witness_bound_u": 411.00112018629426,
+  "uniform": {
+   "share": 0.73,
+   "median_ulps": 1.0,
+   "p99_ulps": 64.0,
+   "max_ulps": 64.0,
+   "max_rel_u": 0.5838438120393115
+  },
+  "normal": {
+   "share": 0.715,
+   "median_ulps": 1.0,
+   "p99_ulps": 1024.0,
+   "max_ulps": 1344.0,
+   "max_rel_u": 0.5753117907981713
+  },
+  "llm": {
+   "share": 0.78,
+   "median_ulps": 2.0,
+   "p99_ulps": 33.0,
+   "max_ulps": 49.0,
+   "max_rel_u": 3.371124932186209
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 39.5,
+   "p99_ulps": 1968.0,
+   "max_ulps": 2944.0,
+   "max_rel_u": 0.4854888568596585
+  }
+ },
+ {
+  "row": "CDNA3 fp16: split-K 4, serial",
+  "equal": false,
+  "worst_u": 53.95086330943985,
+  "rho_u": 1797.1072427759598,
+  "witness_bound_u": 348.83637641804125,
+  "uniform": {
+   "share": 0.715,
+   "median_ulps": 2.0,
+   "p99_ulps": 64.0,
+   "max_ulps": 192.0,
+   "max_rel_u": 0.8173813368550361
+  },
+  "normal": {
+   "share": 0.795,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 1216.0,
+   "max_rel_u": 0.5881018926561805
+  },
+  "llm": {
+   "share": 0.765,
+   "median_ulps": 2.0,
+   "p99_ulps": 32.0,
+   "max_ulps": 73.0,
+   "max_rel_u": 4.494833242914945
+  },
+  "cancel": {
+   "share": 0.98,
+   "median_ulps": 48.5,
+   "p99_ulps": 4192.0,
+   "max_ulps": 19584.0,
+   "max_rel_u": 0.32389969796431894
+  }
+ },
+ {
+  "row": "CDNA3 fp16: split-K 4, pairwise",
+  "equal": false,
+  "worst_u": 59.812378492157954,
+  "rho_u": 1796.1071891899708,
+  "witness_bound_u": 335.49960676820103,
+  "uniform": {
+   "share": 0.71,
+   "median_ulps": 2.0,
+   "p99_ulps": 32.0,
+   "max_ulps": 192.0,
+   "max_rel_u": 0.8173813368550361
+  },
+  "normal": {
+   "share": 0.785,
+   "median_ulps": 2.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 1344.0,
+   "max_rel_u": 0.5881018926561805
+  },
+  "llm": {
+   "share": 0.775,
+   "median_ulps": 2.0,
+   "p99_ulps": 32.0,
+   "max_ulps": 77.0,
+   "max_rel_u": 4.494833242914945
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 50.0,
+   "p99_ulps": 4192.0,
+   "max_ulps": 17536.0,
+   "max_rel_u": 0.3130629389586663
+  }
+ },
+ {
+  "row": "CDNA3 fp16: split-K 8, serial",
+  "equal": false,
+  "worst_u": 111.99915812654419,
+  "rho_u": 1801.0982716444362,
+  "witness_bound_u": 321.00094725772993,
+  "uniform": {
+   "share": 0.705,
+   "median_ulps": 2.0,
+   "p99_ulps": 32.0,
+   "max_ulps": 64.0,
+   "max_rel_u": 0.7006125744471737
+  },
+  "normal": {
+   "share": 0.765,
+   "median_ulps": 2.0,
+   "p99_ulps": 960.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 0.5881018926561805
+  },
+  "llm": {
+   "share": 0.805,
+   "median_ulps": 2.0,
+   "p99_ulps": 36.0,
+   "max_ulps": 47.0,
+   "max_rel_u": 4.494833242914945
+  },
+  "cancel": {
+   "share": 0.99,
+   "median_ulps": 48.0,
+   "p99_ulps": 11248.0,
+   "max_ulps": 23680.0,
+   "max_rel_u": 0.30915088975432115
+  }
+ },
+ {
+  "row": "CDNA3 fp16: split-K 8, pairwise",
+  "equal": false,
+  "worst_u": 111.99915482810616,
+  "rho_u": 1797.0981635201938,
+  "witness_bound_u": 317.0009463137449,
+  "uniform": {
+   "share": 0.69,
+   "median_ulps": 2.0,
+   "p99_ulps": 32.0,
+   "max_ulps": 32.0,
+   "max_rel_u": 0.7006125744471737
+  },
+  "normal": {
+   "share": 0.76,
+   "median_ulps": 2.0,
+   "p99_ulps": 832.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 0.7841358568749074
+  },
+  "llm": {
+   "share": 0.77,
+   "median_ulps": 2.0,
+   "p99_ulps": 42.0,
+   "max_ulps": 49.0,
+   "max_rel_u": 4.494833242914945
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 49.0,
+   "p99_ulps": 8432.0,
+   "max_ulps": 21632.0,
+   "max_rel_u": 0.4007511533852311
+  }
+ },
+ {
+  "row": "CDNA3 fp16: stream-K, cut after 384 products",
+  "equal": false,
+  "worst_u": 53.49350602667376,
+  "rho_u": 2243.163881975278,
+  "witness_bound_u": 376.7503525524776,
+  "uniform": {
+   "share": 0.695,
+   "median_ulps": 1.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 192.0,
+   "max_rel_u": 0.7006125744471737
+  },
+  "normal": {
+   "share": 0.745,
+   "median_ulps": 1.0,
+   "p99_ulps": 1024.0,
+   "max_ulps": 1088.0,
+   "max_rel_u": 0.7881900995695247
+  },
+  "llm": {
+   "share": 0.76,
+   "median_ulps": 2.0,
+   "p99_ulps": 36.0,
+   "max_ulps": 49.0,
+   "max_rel_u": 3.932979087550577
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 48.0,
+   "p99_ulps": 5360.0,
+   "max_ulps": 17536.0,
+   "max_rel_u": 0.4854888568596585
+  }
+ },
+ {
+  "row": "CDNA3 fp16: other BLOCK_K, tile shapes, k = 8 or 16 instructions",
+  "equal": true,
+  "worst_u": 0.0,
+  "rho_u": 0.0,
+  "uniform": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "normal": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "llm": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  },
+  "cancel": {
+   "share": 0.0,
+   "median_ulps": 0.0,
+   "p99_ulps": 0.0,
+   "max_ulps": 0.0,
+   "max_rel_u": 0.0
+  }
+ },
+ {
+  "row": "CDNA3 fp16: split-K 4, atomic adds, two arrival orders",
+  "equal": false,
+  "worst_u": 1.9999851230377168,
+  "rho_u": 8.000214341084808,
+  "witness_bound_u": 31.0003054783517,
+  "uniform": {
+   "share": 0.475,
+   "median_ulps": 0.0,
+   "p99_ulps": 20.0,
+   "max_ulps": 24.0,
+   "max_rel_u": 0.24719771223237727
+  },
+  "normal": {
+   "share": 0.455,
+   "median_ulps": 0.0,
+   "p99_ulps": 128.0,
+   "max_ulps": 224.0,
+   "max_rel_u": 0.1936697333038397
+  },
+  "llm": {
+   "share": 0.425,
+   "median_ulps": 0.0,
+   "p99_ulps": 24.0,
+   "max_ulps": 32.0,
+   "max_rel_u": 0.649706762561633
+  },
+  "cancel": {
+   "share": 0.665,
+   "median_ulps": 8.0,
+   "p99_ulps": 2048.0,
+   "max_ulps": 6144.0,
+   "max_rel_u": 0.09968925345458286
+  }
+ },
+ {
+  "row": "CDNA3 fp16: CUDA-core fallback, sequential binary32 FMA",
+  "equal": false,
+  "worst_u": 1015.9408605082077,
+  "rho_u": 2818.1263467429303,
+  "witness_bound_u": 1293.9954422077851,
+  "uniform": {
+   "share": 0.905,
+   "median_ulps": 4.0,
+   "p99_ulps": 192.0,
+   "max_ulps": 1344.0,
+   "max_rel_u": 1.5646249513662767
+  },
+  "normal": {
+   "share": 0.915,
+   "median_ulps": 4.0,
+   "p99_ulps": 896.0,
+   "max_ulps": 18432.0,
+   "max_rel_u": 1.6782714880887148
+  },
+  "llm": {
+   "share": 0.915,
+   "median_ulps": 6.0,
+   "p99_ulps": 110.0,
+   "max_ulps": 144.0,
+   "max_rel_u": 8.111735005313498
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 119.5,
+   "p99_ulps": 15328.0,
+   "max_ulps": 50688.0,
+   "max_rel_u": 1.1044631665160007
+  }
+ },
+ {
+  "row": "A100 fp16 against H100 fp16, same program",
+  "equal": false,
+  "worst_u": 545.7770135188294,
+  "rho_u": 2082.0719941872303,
+  "witness_bound_u": 2077.396985511093,
+  "uniform": {
+   "share": 0.86,
+   "median_ulps": 4.0,
+   "p99_ulps": 192.0,
+   "max_ulps": 256.0,
+   "max_rel_u": 1.7186202273482267
+  },
+  "normal": {
+   "share": 0.915,
+   "median_ulps": 3.0,
+   "p99_ulps": 1792.0,
+   "max_ulps": 8192.0,
+   "max_rel_u": 2.2820873201229794
+  },
+  "llm": {
+   "share": 0.91,
+   "median_ulps": 6.0,
+   "p99_ulps": 152.0,
+   "max_ulps": 304.0,
+   "max_rel_u": 11.49162459086079
+  },
+  "cancel": {
+   "share": 0.98,
+   "median_ulps": 91.0,
+   "p99_ulps": 8960.0,
+   "max_ulps": 36736.0,
+   "max_rel_u": 0.8115375088217811
+  }
+ },
+ {
+  "row": "V100 fp16 against A100 fp16, same program",
+  "equal": false,
+  "worst_u": 1021.075340649439,
+  "rho_u": 4482.339057449619,
+  "witness_bound_u": 4480.2987643201195,
+  "uniform": {
+   "share": 0.95,
+   "median_ulps": 12.0,
+   "p99_ulps": 320.0,
+   "max_ulps": 1152.0,
+   "max_rel_u": 3.1400448593437487
+  },
+  "normal": {
+   "share": 0.97,
+   "median_ulps": 10.5,
+   "p99_ulps": 8448.0,
+   "max_ulps": 18432.0,
+   "max_rel_u": 3.981054993138654
+  },
+  "llm": {
+   "share": 0.97,
+   "median_ulps": 18.0,
+   "p99_ulps": 416.0,
+   "max_ulps": 424.0,
+   "max_rel_u": 16.45942908457091
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 217.0,
+   "p99_ulps": 20368.0,
+   "max_ulps": 130048.0,
+   "max_rel_u": 1.7707846633499824
+  }
+ },
+ {
+  "row": "A100 fp16 against CDNA3 fp16, same program",
+  "equal": false,
+  "worst_u": 1017.8847938021212,
+  "rho_u": 3202.15377158356,
+  "witness_bound_u": 1677.964520780401,
+  "uniform": {
+   "share": 0.975,
+   "median_ulps": 14.5,
+   "p99_ulps": 1152.0,
+   "max_ulps": 1728.0,
+   "max_rel_u": 4.664826331373758
+  },
+  "normal": {
+   "share": 0.95,
+   "median_ulps": 12.0,
+   "p99_ulps": 5504.0,
+   "max_ulps": 24576.0,
+   "max_rel_u": 4.661865244690874
+  },
+  "llm": {
+   "share": 0.975,
+   "median_ulps": 17.0,
+   "p99_ulps": 224.0,
+   "max_ulps": 608.0,
+   "max_rel_u": 22.30727126461212
+  },
+  "cancel": {
+   "share": 0.985,
+   "median_ulps": 285.5,
+   "p99_ulps": 23680.0,
+   "max_ulps": 89984.0,
+   "max_rel_u": 2.4316289326829104
+  }
+ },
+ {
+  "row": "H100 fp16 against CDNA3 fp16, same program",
+  "equal": false,
+  "worst_u": 516.4730838885474,
+  "rho_u": 2466.108353782791,
+  "witness_bound_u": 936.8852687702673,
+  "uniform": {
+   "share": 0.985,
+   "median_ulps": 12.0,
+   "p99_ulps": 1344.0,
+   "max_ulps": 1472.0,
+   "max_rel_u": 2.946206104025532
+  },
+  "normal": {
+   "share": 0.96,
+   "median_ulps": 10.0,
+   "p99_ulps": 5120.0,
+   "max_ulps": 16384.0,
+   "max_rel_u": 3.7294921957526994
+  },
+  "llm": {
+   "share": 0.985,
+   "median_ulps": 13.0,
+   "p99_ulps": 164.0,
+   "max_ulps": 304.0,
+   "max_rel_u": 14.534277410987615
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 219.0,
+   "p99_ulps": 21632.0,
+   "max_ulps": 53248.0,
+   "max_rel_u": 1.620091423861129
+  }
+ },
+ {
+  "row": "A100 fp16 against CDNA1 fp16, same program",
+  "equal": false,
+  "worst_u": 1022.1674925896443,
+  "rho_u": 1666.0606667583281,
+  "witness_bound_u": 1664.5569481380992,
+  "uniform": {
+   "share": 0.985,
+   "median_ulps": 14.0,
+   "p99_ulps": 1664.0,
+   "max_ulps": 1728.0,
+   "max_rel_u": 4.173791980702837
+  },
+  "normal": {
+   "share": 0.97,
+   "median_ulps": 11.5,
+   "p99_ulps": 6528.0,
+   "max_ulps": 29696.0,
+   "max_rel_u": 4.877469625614409
+  },
+  "llm": {
+   "share": 0.98,
+   "median_ulps": 17.0,
+   "p99_ulps": 202.0,
+   "max_ulps": 528.0,
+   "max_rel_u": 20.955315430393203
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 294.5,
+   "p99_ulps": 21440.0,
+   "max_ulps": 69504.0,
+   "max_rel_u": 2.1839906487409695
+  }
+ },
+ {
+  "row": "A100 fp16 against CDNA2 fp16, same program",
+  "equal": false,
+  "worst_u": 1023.8824708571892,
+  "rho_u": 3458.1833448174493,
+  "witness_bound_u": 3457.9852336003205,
+  "uniform": {
+   "share": 0.98,
+   "median_ulps": 18.0,
+   "p99_ulps": 1600.0,
+   "max_ulps": 1792.0,
+   "max_rel_u": 4.419309156038297
+  },
+  "normal": {
+   "share": 0.965,
+   "median_ulps": 11.5,
+   "p99_ulps": 7232.0,
+   "max_ulps": 22528.0,
+   "max_rel_u": 4.564174640245959
+  },
+  "llm": {
+   "share": 0.995,
+   "median_ulps": 130.5,
+   "p99_ulps": 15454.0,
+   "max_ulps": 28532.0,
+   "max_rel_u": 1865.461258172125
+  },
+  "cancel": {
+   "share": 1.0,
+   "median_ulps": 266.5,
+   "p99_ulps": 27136.0,
+   "max_ulps": 77056.0,
+   "max_rel_u": 2.27349846221396
+  }
+ },
+ {
+  "row": "CDNA2 fp16 against CDNA3 fp16, same program",
+  "equal": false,
+  "worst_u": 193.33796800963208,
+  "rho_u": 3842.2197044130094,
+  "witness_bound_u": 2309.469505770993,
+  "uniform": {
+   "share": 0.86,
+   "median_ulps": 4.0,
+   "p99_ulps": 640.0,
+   "max_ulps": 755.0,
+   "max_rel_u": 3.2929593669988106
+  },
+  "normal": {
+   "share": 0.82,
+   "median_ulps": 3.0,
+   "p99_ulps": 1728.0,
+   "max_ulps": 2048.0,
+   "max_rel_u": 1.604743636696364
+  },
+  "llm": {
+   "share": 0.995,
+   "median_ulps": 134.0,
+   "p99_ulps": 15512.0,
+   "max_ulps": 28520.0,
+   "max_rel_u": 1866.27676036149
+  },
+  "cancel": {
+   "share": 0.995,
+   "median_ulps": 75.0,
+   "p99_ulps": 10672.0,
+   "max_ulps": 12928.0,
+   "max_rel_u": 0.7279026045225958
+  }
+ }
+]

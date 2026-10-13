@@ -1,10 +1,13 @@
 import MMAlgebraMC.Chain
 import MMAlgebraMC.Witnesses
 import MMAlgebraMC.OneRounding
+import MMAlgebraMC.Exact
+import MMAlgebraMC.Bound
 
 /-! # The reduction algebra on the AMD matrix-core model
 
 Kernel-checked witnesses on the CDNA 1, 2 and 3 fp16 models of `MatrixCore`: inputs that separate
 the summation trees of three products on CDNA 1 and CDNA 2 and the block patterns of two products
-on CDNA 3, and inputs on which exchanging two products inside one `k = 16` MFMA instruction changes
-the output. -/
+on CDNA 3, inputs on which exchanging two products inside one `k = 16` MFMA instruction changes
+the output, the exact region (every schedule returns the exact sum on small integer operands), and
+a machine-checked divergence bound for the correctly rounded models (SFMA, CDNA 1). -/

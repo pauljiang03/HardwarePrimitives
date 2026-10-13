@@ -33,11 +33,17 @@ with accumulator input `t`, each slot a product index or `None` for a zero pair)
 | [`config_study.py`](config_study.py) | Ten split-K, stream-K and C-placement configurations of a `k = 64` GEMM: their bitwise classes per variant | [`results/config_study.txt`](results/config_study.txt) |
 | [`oneround.py`](oneround.py) | The abstraction "one MMA instruction is one rounding" against the models | [`results/oneround.txt`](results/oneround.txt) |
 | [`examples.py`](examples.py) | Every concrete input and output cited in the documentation, with decoded values | [`results/examples.txt`](results/examples.txt) |
+| [`divergence.py`](divergence.py) | How far apart two schedules can be: the structural error bound of a term from the per-block theorems, the divergence bound of two terms (with shared subterms as exact leaves), a check of the bound on random inputs, and an adversarial search for the worst `\|t₁ − t₂\| / M` at `k = 64` | [`results/divergence.txt`](results/divergence.txt) |
+| [`blas_programs.py`](blas_programs.py) `200 800` | How different BLAS programs can be: ten modeled GEMM programs for `k = 1024` on six GPU models, against a reference and across GPUs, with bitwise equality, the bound, the searched worst case, and typical differences on uniform, normal, LLM-like and near-cancelling data | [`results/blas_programs.txt`](results/blas_programs.txt) |
 | [`witness_search.py`](witness_search.py), [`wsearch2.py`](wsearch2.py) | Search for one input that separates every chain pattern at once (used to find the Lean witnesses; slow) | |
 
 From `mmalgebra/`, `python3 scripts/check.py --prototype` reruns the fast scripts and compares
-their output with the recorded files; `--slow` adds `terms4.py`, `classes.py` and `terms.py`, which
-take a few minutes each.
+their output with the recorded files; `--slow` adds `terms4.py`, `classes.py`, `terms.py`,
+`divergence.py` and `blas_programs.py`, which take from a few seconds to a few minutes each and use
+up to twelve processes.
+
+The programs of `blas_programs.py` are modeled: the internals of cuBLAS and rocBLAS are not
+public, and which program a library runs for a given shape would have to be probed on GPUs.
 
 ## Variants and families
 

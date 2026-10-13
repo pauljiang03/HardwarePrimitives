@@ -28,6 +28,14 @@ A100 and CDNA 1–3) and incomplete (one `k = 16` instruction equals two `k = 8`
 those models); and a decision procedure returns either a proof of equivalence or a separating input
 checked on the model.
 
+When two schedules are not equivalent, a structural error bound, built from the per-block error
+theorems of the models, bounds how far apart they can be, `|t₁ − t₂| ≤ E(t₁) + E(t₂)`, and work
+the two schedules share does not count. Inside the exact region (small integer operands, as in the
+Ozaki schemes) every schedule returns the exact sum. An adversarial search shows the bound is tight
+within a factor of about three on most models, and a study of modeled BLAS programs (split-K,
+stream-K, the placement of `C`, a CUDA-core fallback, and six GPUs) gives worst cases and typical
+differences.
+
 The full explanation, with the laws per architecture, concrete witnesses, the decision procedure,
 applications to batch invariance and reproducible autotuning, a plan for Triton, and the open
 problems, is on the [MMAlgebra page](https://pauljiang03.github.io/TC-EFT/mmalgebra/) of the
@@ -44,12 +52,15 @@ website.
 | Reduction of completeness to supports of at most 3 products | Exhaustive for chains over up to 6 products and terms over 4 |
 | CDNA 1 merge law and CDNA 2 `c`-split law | Tested; not yet proved in Lean |
 | Full completeness | Two lemmas missing in Lean: an ordered block partition is determined by its pairwise patterns, and an fp16 block started from `+0` never returns `−0` |
+| How far apart two schedules can be: structural bound, divergence, shared work | Proved for any matrix multiplier with a binary32 addition; instantiated for SFMA and CDNA 1; the Tensor Core, CDNA 2 and CDNA 3 block constants derived on paper and checked numerically |
+| Inside the exact region (integer operands, `\|c\| + Σ\|aᵢbᵢ\| < 2^24`) every schedule returns the exact sum | Proved on every Tensor Core model and on CDNA 1, 2 and 3 |
+| How different modeled BLAS programs are (bounds, worst cases, typical differences) | Prototype study ([`blas_programs.py`](prototype/blas_programs.py)) |
 
 ## Build and run
 
 `mmalgebra/` is a standalone Lake project that requires the two models by path (`..` and
-`../amd`), like [`ozaki/`](../ozaki/README.md); all three use Lean 4.33.1. Build the models in
-their own directories first, then, from this directory:
+`../amd`) and the Ozaki project (`../ozaki`), whose exactness theorems it builds on; all use Lean
+4.33.1. Build the models and `ozaki/` in their own directories first, then, from this directory:
 
 ```sh
 lake build
@@ -58,10 +69,11 @@ python3 scripts/check.py --prototype      # also rerun the prototype and compare
 python3 scripts/check.py --port           # also validate the Python port against Lean
 ```
 
-`lake build` builds the two libraries and the two test libraries; the test libraries kernel-check
-the worked examples and audit the axioms (only `propext`, `Classical.choice` and `Quot.sound`).
-`TensorCore` and `MatrixCore` cannot be imported into the same file, so the Tensor Core and
-matrix-core parts are separate libraries.
+`lake build` builds the three libraries and the two test libraries; the test libraries
+kernel-check the worked examples and audit the axioms (only `propext`, `Classical.choice` and
+`Quot.sound`). `TensorCore` and `MatrixCore` cannot be imported into the same file, so the Tensor
+Core and matrix-core parts are separate libraries, and the hardware-independent theory uses Lean's
+rationals directly so that it can be imported beside either.
 
 A block FMA on V100 depends on its products only as a multiset, while moving a block boundary
 changes the result. Products `x = 1.5 × 1.5` and `y = z = 2^-12 × 2^-11 = 2^-23`: one block holding
@@ -86,8 +98,9 @@ example : blockOut (p := v100F16F32)
 
 | Import / directory | What belongs here |
 | --- | --- |
-| [`MMAlgebraTC`](MMAlgebraTC.lean) | The Tensor Core side: the multiset and zero laws of one block FMA ([`Block`](MMAlgebraTC/Block.lean)), chains and restriction to a support ([`Chain`](MMAlgebraTC/Chain.lean)), two-product completeness ([`Completeness`](MMAlgebraTC/Completeness.lean)), and the WMMA swap witnesses ([`OneRounding`](MMAlgebraTC/OneRounding.lean)). |
-| [`MMAlgebraMC`](MMAlgebraMC.lean) | The matrix-core side: chains of MFMA blocks, base witnesses on CDNA 1, 2 and 3 ([`Witnesses`](MMAlgebraMC/Witnesses.lean)), and the MFMA swap witnesses ([`OneRounding`](MMAlgebraMC/OneRounding.lean)). |
+| [`MMAlgebra`](MMAlgebra.lean) | Hardware-independent: reduction terms and their evaluation on any matrix multiplier ([`Term`](MMAlgebra/Term.lean)), the structural error bound, the divergence of two schedules and the shared-work bound ([`Divergence`](MMAlgebra/Divergence.lean)). |
+| [`MMAlgebraTC`](MMAlgebraTC.lean) | The Tensor Core side: the multiset and zero laws of one block FMA ([`Block`](MMAlgebraTC/Block.lean)), chains and restriction to a support ([`Chain`](MMAlgebraTC/Chain.lean)), two-product completeness ([`Completeness`](MMAlgebraTC/Completeness.lean)), the WMMA swap witnesses ([`OneRounding`](MMAlgebraTC/OneRounding.lean)), and the exact region ([`Exact`](MMAlgebraTC/Exact.lean)). |
+| [`MMAlgebraMC`](MMAlgebraMC.lean) | The matrix-core side: chains of MFMA blocks, base witnesses on CDNA 1, 2 and 3 ([`Witnesses`](MMAlgebraMC/Witnesses.lean)), the MFMA swap witnesses ([`OneRounding`](MMAlgebraMC/OneRounding.lean)), the exact region ([`Exact`](MMAlgebraMC/Exact.lean)), and the divergence bound of the correctly rounded models ([`Bound`](MMAlgebraMC/Bound.lean)). |
 | [`tests/`](tests/) | Kernel-checked worked examples and the axiom audits. |
-| [`prototype/`](prototype/README.md) | The Python port of both models, the enumerations and random tests of the laws, the decision procedure, the configuration study, and their recorded outputs. |
+| [`prototype/`](prototype/README.md) | The Python port of both models, the enumerations and random tests of the laws, the decision procedure, the configuration study, the divergence bounds and worst-case search, the study of modeled BLAS programs, and their recorded outputs. |
 | [`scripts/check.py`](scripts/check.py) | Validation. |

@@ -1,6 +1,6 @@
 name = "mmalgebra"
 version = "0.1.0"
-defaultTargets = ["MMAlgebraTC", "MMAlgebraMC", "MMAlgebraTCTests", "MMAlgebraMCTests"]
+defaultTargets = ["MMAlgebra", "MMAlgebraTC", "MMAlgebraMC", "MMAlgebraTCTests", "MMAlgebraMCTests"]
 
 [leanOptions]
 pp.unicode.fun = true
@@ -12,6 +12,14 @@ path = ".."
 [[require]]
 name = "matrixCore"
 path = "../amd"
+
+[[require]]
+name = "ozaki"
+path = "../ozaki"
+
+[[lean_lib]]
+name = "MMAlgebra"
+globs = ["MMAlgebra", "MMAlgebra.*"]
 
 [[lean_lib]]
 name = "MMAlgebraTC"
