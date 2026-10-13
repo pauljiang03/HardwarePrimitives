@@ -7,8 +7,9 @@ rounded to zero), and then the laws of a rigid multiplier fail for terms. On the
 are multiples of the binary32 grid every result is good again. `Machine.sub m P` is the machine `m`
 on the inputs satisfying `P`; `eval_sub`: it evaluates terms as `m` does. `RigidAlg.sub`: the laws of
 a rigid multiplier for chains on `m`, a commutative addition with `+0` as a unit, and good results
-on inputs satisfying `P` give the laws of a rigid multiplier for terms on `m.sub P`. Hardware-
-independent. -/
+on inputs satisfying `P` give the laws of a rigid multiplier for terms on `m.sub P`.
+`agree_of_good`: when a block holding a bad operand pair fails, two terms over the same products
+that agree on every input of good pairs agree on every input. Hardware-independent. -/
 
 local notation "ℕ" => Nat
 
@@ -66,5 +67,80 @@ def RigidAlg.sub {m : Machine α β} {K : ℕ} (L : RigidLaws m K) (P : α → P
   add_zero := add_zero
   block_good := block_good
   add_good := add_good
+
+/-! ## From good inputs to all inputs -/
+
+theorem eval_congr (m : Machine α β) {p q : ℕ → α} (c h : β) :
+    ∀ t : Term, (∀ i ∈ t.leaves, p i = q i) → eval m p c h t = eval m q c h t
+  | .zero, _ => rfl
+  | .init, _ => rfl
+  | .hole, _ => rfl
+  | .blk t I, hpq => by
+    have ht := eval_congr m c h t (fun i hi => hpq i (by simp [Term.leaves, hi]))
+    have hI : I.map (Option.map p) = I.map (Option.map q) := by
+      apply List.map_congr_left
+      intro o ho
+      cases o with
+      | none => rfl
+      | some i =>
+        have : i ∈ (Term.blk t I).leaves := by
+          simp only [Term.leaves, List.mem_append, List.mem_filterMap, id_eq]
+          exact Or.inr ⟨some i, ho, rfl⟩
+        simp [hpq i this]
+    simp only [eval, ht, hI]
+  | .add t u, hpq => by
+    simp only [eval,
+      eval_congr m c h t (fun i hi => hpq i (by simp [Term.leaves, hi])),
+      eval_congr m c h u (fun i hi => hpq i (by simp [Term.leaves, hi]))]
+
+/-- A term holding a product whose block fails evaluates to `none`. -/
+theorem eval_none_of_bad (m : Machine α β) (bad : α → Prop)
+    (hblk : ∀ d (ps : List (Option α)) a, some a ∈ ps → bad a → m.block d ps = none)
+    (p : ℕ → α) (c h : β) : ∀ t : Term, ∀ i ∈ t.leaves, bad (p i) → eval m p c h t = none
+  | .zero, i, hi, _ => by simp [Term.leaves] at hi
+  | .init, i, hi, _ => by simp [Term.leaves] at hi
+  | .hole, i, hi, _ => by simp [Term.leaves] at hi
+  | .blk t I, i, hi, hb => by
+    simp only [Term.leaves, List.mem_append, List.mem_filterMap, id_eq] at hi
+    simp only [eval]
+    rcases hi with hi | ⟨o, ho, rfl⟩
+    · rw [eval_none_of_bad m bad hblk p c h t i hi hb]; rfl
+    · cases eval m p c h t with
+      | none => rfl
+      | some d =>
+        exact hblk d _ (p i) (List.mem_map.mpr ⟨some i, ho, rfl⟩) hb
+  | .add t u, i, hi, hb => by
+    simp only [Term.leaves, List.mem_append] at hi
+    simp only [eval]
+    rcases hi with hi | hi
+    · rw [eval_none_of_bad m bad hblk p c h t i hi hb]; rfl
+    · cases eval m p c h t with
+      | none => rfl
+      | some x => rw [eval_none_of_bad m bad hblk p c h u i hi hb]; rfl
+
+/-- **From good inputs to all inputs.** If a block holding a bad operand pair fails and some pair
+is good, two terms over the same products that agree on every input of good pairs agree on every
+input. -/
+theorem agree_of_good (m : Machine α β) (bad : α → Prop)
+    (hblk : ∀ d (ps : List (Option α)) a, some a ∈ ps → bad a → m.block d ps = none)
+    (z : α) (hz : ¬ bad z) (c h : β) (t₁ t₂ : Term) (hl : ∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves)
+    (hg : ∀ p : ℕ → α, (∀ i, ¬ bad (p i)) → eval m p c h t₁ = eval m p c h t₂) (p : ℕ → α) :
+    eval m p c h t₁ = eval m p c h t₂ := by
+  by_cases hb : ∃ i ∈ t₁.leaves, bad (p i)
+  · obtain ⟨i, hi, hbi⟩ := hb
+    rw [eval_none_of_bad m bad hblk p c h t₁ i hi hbi,
+      eval_none_of_bad m bad hblk p c h t₂ i ((hl i).mp hi) hbi]
+  · have hb' : ∀ i ∈ t₁.leaves, ¬ bad (p i) := fun i hi hbi => hb ⟨i, hi, hbi⟩
+    classical
+    let p' : ℕ → α := fun i => if bad (p i) then z else p i
+    have e₁ : ∀ i ∈ t₁.leaves, p i = p' i := fun i hi => by simp [p', hb' i hi]
+    have e₂ : ∀ i ∈ t₂.leaves, p i = p' i := fun i hi => by simp [p', hb' i ((hl i).mpr hi)]
+    rw [eval_congr m c h t₁ e₁, eval_congr m c h t₂ e₂]
+    apply hg
+    intro i
+    simp only [p']
+    split
+    · exact hz
+    · assumption
 
 end MMAlgebra
