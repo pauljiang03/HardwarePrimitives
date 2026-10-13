@@ -4,7 +4,7 @@ import TensorCore.TC.Monotonicity
 
 namespace TensorCore
 
-/-- `c_j = 1 − j·2^-24` in decoded form: significand `2^24 − j` on unnormalized exponent `−1`. -/
+/-- `c_j = 1 − j·2^-24` in decoded form: significand `2^24 − j` on exponent `−1`. -/
 def belowDecoded (j : ℕ) : Decoded := ⟨((16777216 - j : ℕ) : ℤ), -1, 23⟩
 
 theorem belowDecoded_one : belowDecoded 1 = belowOneDecoded := rfl
@@ -50,11 +50,11 @@ theorem floor_natCast_mul_pow2_neg (N d : ℕ) :
 /-- Accumulator with `c_j`: every product is retained and `A_j = 1 + (K − j·2^p)·2^-(24+p)`, written as a natural coefficient on the grid `2^-(24+p)`. -/
 theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hj : j ≤ 2 ^ 23) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) (belowDecoded j)).accumulator =
       (((16777216 - j) * 2 ^ p + K : ℕ) : ℚ) * pow2 (-(24 + p)) := by
-  have hu := unnormalizedMul_significand_ne_zero da db p hval
+  have hu := denormalizedMul_significand_ne_zero da db p hval
   have hsig : (belowDecoded j).significand ≠ 0 := by
     show ((16777216 - j : ℕ) : ℤ) ≠ 0
     omega
@@ -63,7 +63,7 @@ theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Dec
       -(24 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change (belowDecoded j).unnormalizedExp - prof.alignFracBits = _
+    change (belowDecoded j).exponent - prof.alignFracBits = _
     rw [hF]
     simp only [belowDecoded]
     omega
@@ -79,7 +79,7 @@ theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Dec
       congr 2
       omega
     rw [h1, truncBits_of_grid]
-  have hp : truncBits (unnormalizedMul da db).value (-(24 + p)) = 1 := by
+  have hp : truncBits (denormalizedMul da db).value (-(24 + p)) = 1 := by
     rw [hval]
     have h1 : pow2 (-(24 + p)) = ((1 : ℤ) : ℚ) * pow2 (-(24 + p)) := by simp
     rw [h1, truncBits_of_grid]
@@ -92,7 +92,7 @@ theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Dec
 /-- TC-EFT Theorem III.5 on prepared blocks. -/
 theorem nonmonotone_range (prof : Model) (p K j : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
     ∃ t : BlockTrace,
       evalPrepared ⟨prof, List.replicate K (da, db), belowDecoded j⟩ = .ok t ∧
@@ -267,7 +267,7 @@ theorem nonmonotone_range_encoded (K p j : ℕ) (eAlignMin : Option ℤ)
     (a b : (fp16Fp32Model K p eAlignMin).Word) (da db : Decoded)
     (ha : (fp16Fp32Model K p eAlignMin).decode a = some da)
     (hb : (fp16Fp32Model K p eAlignMin).decode b = some db)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
     ∃ t : BlockTrace,
       evalBlock (⟨List.replicate K (a, b), BitVec.ofNat 32 (0x3f800000 - j)⟩ :

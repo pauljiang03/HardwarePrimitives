@@ -177,7 +177,7 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
     (hp : M.neab=p) (ha : ValidTerm a) (hb : ValidTerm b)
     (hf : ∀ f ∈ M.eAlignMin, f≤ -1)
     (hv : (a.mul b).value=TCFloat.pow2 (-(24+(p:Int))))
-    (hs : (a.mul b).unnormalizedExp≤ -1) (hK : K<2^(24+p)) (hj : 1≤j) (hj' : j≤2^23) :
+    (hs : (a.mul b).exponent≤ -1) (hK : K<2^(24+p)) (hj : 1≤j) (hj' : j≤2^23) :
     ∃ bits y,
       (Block.mk M (belowTerm j) (List.replicate K (a,b))).evaluate=some bits ∧
       TCFloat.value32 bits=some y ∧
@@ -186,8 +186,8 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
       y≤1+((K-2^p)/2^(p+1):Nat)*TCFloat.pow2 (-23) := by
   have hva : a.value=(project a).value := ha
   have hvb : b.value=(project b).value := hb
-  have hvs : (TensorCore.unnormalizedMul (project a) (project b)).value = TensorCore.pow2 (-(24+(p:Int))) := by
-    rw [TensorCore.unnormalizedProduct_value,← hva,← hvb,← TCFloat.mul_value,pow2_eq]
+  have hvs : (TensorCore.denormalizedMul (project a) (project b)).value = TensorCore.pow2 (-(24+(p:Int))) := by
+    rw [TensorCore.denormalizedProduct_value,← hva,← hvb,← TCFloat.mul_value,pow2_eq]
     exact hv
   obtain ⟨s,he,hi,hy,hu⟩ := TensorCore.nonmonotone_range (model M) p K j
     (project a) (project b) (by simp [model,hp]) hf hvs hs hK hj hj'

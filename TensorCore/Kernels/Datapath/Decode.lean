@@ -95,8 +95,8 @@ theorem fp32_exponent9_toNat (bits : F32) :
 
 /-- Decoding c gives the model's c term. -/
 theorem decodeC_spec (bits : F32) :
-    (decodeC bits).map Term.unnormalized =
-      (decode32 bits).map fun d => ⟨d.significand, d.unnormalizedExp, d.mantissaBits⟩ := by
+    (decodeC bits).map Term.denormalized =
+      (decode32 bits).map fun d => ⟨d.significand, d.exponent, d.mantissaBits⟩ := by
   have he := fp32_exponent9_toNat bits
   have hm := fp32_mantissaBits24_toNat bits
   by_cases ht : bits.toNat / 8388608 % 256 = 255 <;>
@@ -104,7 +104,7 @@ theorem decodeC_spec (bits : F32) :
     by_cases hzm : bits.toNat % 8388608 = 0 <;>
     by_cases hs : bits.toNat / 2147483648 = 0 <;>
     dsimp +instances only [decodeC, decode32, classify, fp32,
-      Option.map, Term.unnormalized, classifyNat] <;>
+      Option.map, Term.denormalized, classifyNat] <;>
     simp only [beq_iff_eq, BitVec.toNat_eq, he, hm] <;>
     simp_all [Classification.finite, BitVec.toNat_add, fp32_sign,
       bne_iff_ne] <;> omega

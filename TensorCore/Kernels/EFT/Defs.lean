@@ -14,7 +14,7 @@ structure Prepared where
   grid : Grid
   deriving Repr, DecidableEq
 
-/-- Select the common extraction grid from the unnormalized exponents. -/
+/-- Select the common extraction grid from the exponents. -/
 def selectedGrid (variant : Variant) (ts : List Term) (D : F32) : Grid :=
   let alignExp := ts.foldl (fun e t => if t.word.magnitude == 0 then e
     else if e ≤ t.biasedExp then t.biasedExp else e) variant.eAlignMin

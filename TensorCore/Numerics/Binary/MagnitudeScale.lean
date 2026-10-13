@@ -26,7 +26,7 @@ theorem decoded_normal_magnitude_lower (negative : Bool) (mantissa : ℕ) (f : �
 
 theorem classifyNat_scale_le_of_magnitude (f : Format) (n : ℕ) (d : Decoded)
     (hd : (classifyNat f n).finite = some d) (E : ℤ) (hE : f.emin ≤ E)
-    (hm : absQ d.value < pow2 (E + 1)) (hn : d.significand ≠ 0) : d.unnormalizedExp ≤ E := by
+    (hm : absQ d.value < pow2 (E + 1)) (hn : d.significand ≠ 0) : d.exponent ≤ E := by
   unfold classifyNat at hd
   dsimp only at hd
   split at hd

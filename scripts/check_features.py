@@ -179,7 +179,7 @@ def main():
         assert mismatch == 0, (gpu, mismatch, [(i,t,d) for i,(t,d) in enumerate(zip(device,dv)) if t.get('bits') != d][:3])
         device_reports.append(dict(gpu=gpu, products=k, extra_bits=extra, vectors=len(device),
                                    mismatches=mismatch, coverage=coverage))
-    report = dict(scope='Canonical FP16 products, FP32 c/output, unnormalized products, RTZ',
+    report = dict(scope='Canonical FP16 products, FP32 c/output, products in denormalized form, RTZ',
                   oracle='Exact rational arithmetic; FP32 output found by binary search over encodings',
                   configurations=len({c[:3] for c in cases}), cases=len(cases), rejected=rejected, mismatches=0,
                   K=sorted({c[0] for c in cases}), extra_bits=sorted({c[1] for c in cases}),

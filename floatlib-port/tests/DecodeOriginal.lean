@@ -13,6 +13,6 @@ def main (args : List String) : IO Unit := do
       match (classifyNat f n).finite with
       | none => IO.println "null"
       | some d => IO.println (Json.mkObj [
-          ("significand", toJson d.significand), ("scale", toJson d.unnormalizedExp),
+          ("significand", toJson d.significand), ("scale", toJson d.exponent),
           ("mantissaBits", toJson d.mantissaBits),
           ("value", toJson s!"{d.value.num}/{d.value.den}")]).compress

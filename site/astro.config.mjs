@@ -39,7 +39,7 @@ export default defineConfig({
           items: [
             { label: 'The model at a glance', slug: 'model' },
             { label: '1. Formats and decoding', slug: 'model/formats' },
-            { label: '2. Exact unnormalized products', slug: 'model/products' },
+            { label: '2. Exact products in denormalized form', slug: 'model/products' },
             { label: '3. Alignment', slug: 'model/alignment' },
             { label: '4. Accumulation', slug: 'model/accumulation' },
             { label: '5. Normalization and final rounding', slug: 'model/normalization' },

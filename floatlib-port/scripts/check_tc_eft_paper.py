@@ -97,7 +97,7 @@ def compare_block(case, out):
         assert 'error' not in model, (case['id'], model)
         assert model['bits'] == expected['bits'], (case['id'], 'alignment/output bits', model)
         assert Q(model['accumulator']) == Q(expected['accumulator']), (case['id'], 'accumulator')
-        assert model['alignExp'] == expected['alignExp'], (case['id'], 'unnormalized-exponent maximum')
+        assert model['alignExp'] == expected['alignExp'], (case['id'], 'exponent maximum')
         assert model['algorithm_bits'] == expected['corrected'], (case['id'], 'trace Algorithm 1')
         assert model['scalar_predicate'] == (model['scalar_bits'] is not None)
         if model['scalar_predicate']:

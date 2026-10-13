@@ -53,12 +53,12 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
   have hexact : blk.exactDot = zc + wordProducts p x.products := by
     unfold PreparedBlock.exactDot; rw [hprods, ← hblk]; simp only; rw [hdcv]
   -- every product term: exponent at most `F`, value a multiple of `2^g`
-  have hprod : ∀ q ∈ x.products, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
-      (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignFracBits ∧
-      ∃ k : ℤ, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 g := by
+  have hprod : ∀ q ∈ x.products, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
+      (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignFracBits ∧
+      ∃ k : ℤ, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 g := by
     intro q hq hnz
     obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hops q hq
-    simp only [unnormalizedMul] at hnz ⊢
+    simp only [denormalizedMul] at hnz ⊢
     have hn1 : (decodeD p q.1).significand ≠ 0 := fun h => hnz (by rw [h, Int.zero_mul])
     have hn2 : (decodeD p q.2).significand ≠ 0 := fun h => hnz (by rw [h, Int.mul_zero])
     obtain ⟨d1, hd1⟩ := Option.isSome_iff_exists.mp h1
@@ -78,12 +78,12 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
     refine ⟨by rw [hD1, hD2]; have := hp.align; omega, ?_⟩
     obtain ⟨k, hk⟩ := hpg q hq
     refine ⟨k, ?_⟩
-    have hv := unnormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
-    simp only [unnormalizedMul] at hv
+    have hv := denormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
+    simp only [denormalizedMul] at hv
     rw [hv]
     exact hk
-  have hterms : blk.terms = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ ::
-      x.products.map fun q => unnormalizedMul (decodeD p q.1) (decodeD p q.2) := by
+  have hterms : blk.terms = ⟨dc.significand, dc.exponent, dc.mantissaBits⟩ ::
+      x.products.map fun q => denormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
   have hprof : blk.model = p := by rw [← hblk]
   have hacc : blk.accumulator = blk.exactDot := by
@@ -97,7 +97,7 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
             (E := (g : ℤ) + p.alignFracBits)
             (by have := hp.wide; show (1 : ℤ) - 127 ≤ _; omega)
             (by rw [hdcv]; exact hcF) hnz
-          show dc.unnormalizedExp ≤ (g : ℤ) + blk.model.alignFracBits
+          show dc.exponent ≤ (g : ℤ) + blk.model.alignFracBits
           rw [hprof]; exact this
         · obtain ⟨k, hk⟩ := hcg
           exact ⟨k, by change dc.value = _; rw [hdcv, hk]⟩

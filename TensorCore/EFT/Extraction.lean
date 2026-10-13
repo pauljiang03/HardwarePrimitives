@@ -19,7 +19,7 @@ theorem lowPart_bound (t : BlockTrace) :
 /-- Theorem IV.5, overlap form: `S = D − ε_o + Σ εᵢ`. -/
 theorem overlap_recovery (t : BlockTrace) :
     t.block.exactDot = t.output.value - t.overlap + sumQ t.lowParts := by
-  have h := sum_stage_residuals (t.block.terms.map UnnormalizedProduct.value)
+  have h := sum_stage_residuals (t.block.terms.map DenormalizedProduct.value)
     (fun x => truncGrid x t.extractionExponent)
   rw [terms_value] at h
   simp only [List.map_map, Function.comp_def] at h
@@ -40,7 +40,7 @@ theorem accumulator_eq_retained (t : BlockTrace) :
   rw [accumulator_value]
   unfold BlockTrace.retainedSum BlockTrace.retainedLowParts BlockTrace.lowParts BlockTrace.coarse
   rw [List.map_map]
-  have hsplit : (fun x : UnnormalizedProduct => truncGrid x.value t.block.alignGridExponent) =
+  have hsplit : (fun x : DenormalizedProduct => truncGrid x.value t.block.alignGridExponent) =
       fun x => truncGrid x.value t.extractionExponent +
         truncGrid (x.value - truncGrid x.value t.extractionExponent) t.block.alignGridExponent := by
     funext x

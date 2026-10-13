@@ -6,8 +6,8 @@ The model evaluates one block FMA: K exact products plus an FP32 accumulator inp
 
 | Stage | Executable definitions | Mathematical role |
 | --- | --- | --- |
-| Decode | `prepare`, `prepareProducts`, `Model.decode` | Decode finite words and preserve unnormalized exponent/mantissa metadata |
-| Multiply | `unnormalizedMul`, `PreparedBlock.terms` | Form exact products and keep them in denormalized form, with the sum of the input exponents |
+| Decode | `prepare`, `prepareProducts`, `Model.decode` | Decode finite words and preserve exponent/mantissa metadata |
+| Multiply | `denormalizedMul`, `PreparedBlock.terms` | Form exact products and keep them in denormalized form, with the sum of the input exponents |
 | Select grid | `PreparedBlock.alignExp`, `alignGridExponent` | Take the largest exponent of a nonzero term, raise it to the minimum alignment exponent, and subtract the fractional bits kept after alignment |
 | Align | `truncBits`, `PreparedBlock.alignedBits` | Truncate each term's magnitude onto the common grid, keeping its sign |
 | Accumulate | `PreparedBlock.accumulator` | Sum the retained aligned bits exactly |
@@ -16,7 +16,7 @@ The model evaluates one block FMA: K exact products plus an FP32 accumulator inp
 
 Start with [Block.lean](../../TensorCore/TC/Block.lean), then follow [StageResiduals.lean](../../TensorCore/TC/StageResiduals.lean) and [ErrorBounds.lean](../../TensorCore/TC/ErrorBounds.lean). The [independent specification](../../TensorCore/TC/Specification/Defs.lean) uses separate mathematical definitions; its bridge proves equality of encoded results.
 
-The exponent of a product kept in denormalized form (its unnormalized exponent, the sum of the input exponents) matters even when two factorizations have the same product value. Normalizing the exact products instead can change the alignment grid and the answer. Zero terms do not choose the largest exponent; nonzero subnormal inputs keep their format's subnormal exponent.
+The exponent of a product kept in denormalized form (its exponent, the sum of the input exponents) matters even when two factorizations have the same product value. Normalizing the exact products instead can change the alignment grid and the answer. Zero terms do not choose the largest exponent; nonzero subnormal inputs keep their format's subnormal exponent.
 
 For the FP32 output format, alignment keeps `F = 23 + p` fractional bits. The selected variants are:
 

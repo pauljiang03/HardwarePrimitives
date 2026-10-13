@@ -17,7 +17,7 @@ structure Snapshot where
   bits : ℕ
   alignExp : Option ℤ
   qExponent : ℤ
-  unnormalizedExps : List ℤ
+  exponents : List ℤ
   alignedBits : List ℤ
   ideal : ℚ
   accumulator : ℚ
@@ -30,7 +30,7 @@ structure Snapshot where
 def snapshot {p : Model} (x : BlockInput p) : Except ModelError Snapshot := do
   let t ← evalBlock x
   return ⟨t.output.bits.toNat, t.block.alignExp, t.block.alignGridExponent,
-    t.block.products.map (fun (a, b) => (unnormalizedMul a b).unnormalizedExp),
+    t.block.products.map (fun (a, b) => (denormalizedMul a b).exponent),
     t.block.alignedBits, t.block.exactDot, t.block.accumulator,
     t.block.alignmentResiduals, t.outputResidual, t.residual,
     t.corrected.map BitVec.toNat⟩

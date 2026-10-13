@@ -11,7 +11,7 @@ theorem prepare_fp16_term_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
     ∀ t ∈ b.terms, t.significand ≠ 0 →
-      -149 ≤ t.unnormalizedExp - t.mantissaBits ∧ t.unnormalizedExp ≤ 127 := by
+      -149 ≤ t.exponent - t.mantissaBits ∧ t.exponent ≤ 127 := by
   unfold prepare at h
   cases hc : decode32 x.c with
   | none => simp [hc] at h
@@ -26,30 +26,30 @@ theorem prepare_fp16_term_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
       rcases ht with ht | ⟨pair, hpair, ht⟩
       · subst t
         have hm := classifyNat_metadata fp32 (by decide) x.c.toNat c hc hnz
-        change c.mantissaBits = 23 ∧ -126 ≤ c.unnormalizedExp ∧ c.unnormalizedExp ≤ 127 at hm
-        change -149 ≤ c.unnormalizedExp - c.mantissaBits ∧ c.unnormalizedExp ≤ 127
+        change c.mantissaBits = 23 ∧ -126 ≤ c.exponent ∧ c.exponent ≤ 127 at hm
+        change -149 ≤ c.exponent - c.mantissaBits ∧ c.exponent ≤ 127
         omega
       · subst t
         obtain ⟨w, _, ha, hb⟩ := prepareProducts_origin _ _ _ hp pair hpair
         have hnza : pair.1.significand ≠ 0 := by
-          intro hz; apply hnz; simp [unnormalizedMul, hz]
+          intro hz; apply hnz; simp [denormalizedMul, hz]
         have hnzb : pair.2.significand ≠ 0 := by
-          intro hz; apply hnz; simp [unnormalizedMul, hz]
+          intro hz; apply hnz; simp [denormalizedMul, hz]
         have hma := classifyNat_metadata fp16 (by decide) w.1.toNat pair.1 ha hnza
         have hmb := classifyNat_metadata fp16 (by decide) w.2.toNat pair.2 hb hnzb
-        change pair.1.mantissaBits = 10 ∧ -14 ≤ pair.1.unnormalizedExp ∧ pair.1.unnormalizedExp ≤ 15 at hma
-        change pair.2.mantissaBits = 10 ∧ -14 ≤ pair.2.unnormalizedExp ∧ pair.2.unnormalizedExp ≤ 15 at hmb
-        change -149 ≤ (pair.1.unnormalizedExp + pair.2.unnormalizedExp) -
+        change pair.1.mantissaBits = 10 ∧ -14 ≤ pair.1.exponent ∧ pair.1.exponent ≤ 15 at hma
+        change pair.2.mantissaBits = 10 ∧ -14 ≤ pair.2.exponent ∧ pair.2.exponent ≤ 15 at hmb
+        change -149 ≤ (pair.1.exponent + pair.2.exponent) -
           (pair.1.mantissaBits + pair.2.mantissaBits) ∧
-          pair.1.unnormalizedExp + pair.2.unnormalizedExp ≤ 127
+          pair.1.exponent + pair.2.exponent ≤ 127
         omega
 
 /-- FP16 products have much narrower scale/grid support than FP32 c. -/
 theorem prepare_fp16_products_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
-    ∀ t ∈ b.products.map (fun (a, b) => unnormalizedMul a b), t.significand ≠ 0 →
-      -48 ≤ t.unnormalizedExp - t.mantissaBits ∧ t.unnormalizedExp ≤ 30 := by
+    ∀ t ∈ b.products.map (fun (a, b) => denormalizedMul a b), t.significand ≠ 0 →
+      -48 ≤ t.exponent - t.mantissaBits ∧ t.exponent ≤ 30 := by
   unfold prepare at h
   cases hc : decode32 x.c with
   | none => simp [hc] at h
@@ -63,16 +63,16 @@ theorem prepare_fp16_products_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
       obtain ⟨pair, hpair, rfl⟩ := List.mem_map.mp ht
       obtain ⟨w, _, ha, hb⟩ := prepareProducts_origin _ _ _ hp pair hpair
       have hnza : pair.1.significand ≠ 0 := by
-        intro hz; apply hnz; simp [unnormalizedMul, hz]
+        intro hz; apply hnz; simp [denormalizedMul, hz]
       have hnzb : pair.2.significand ≠ 0 := by
-        intro hz; apply hnz; simp [unnormalizedMul, hz]
+        intro hz; apply hnz; simp [denormalizedMul, hz]
       have hma := classifyNat_metadata fp16 (by decide) w.1.toNat pair.1 ha hnza
       have hmb := classifyNat_metadata fp16 (by decide) w.2.toNat pair.2 hb hnzb
-      change pair.1.mantissaBits = 10 ∧ -14 ≤ pair.1.unnormalizedExp ∧ pair.1.unnormalizedExp ≤ 15 at hma
-      change pair.2.mantissaBits = 10 ∧ -14 ≤ pair.2.unnormalizedExp ∧ pair.2.unnormalizedExp ≤ 15 at hmb
-      change -48 ≤ (pair.1.unnormalizedExp + pair.2.unnormalizedExp) -
+      change pair.1.mantissaBits = 10 ∧ -14 ≤ pair.1.exponent ∧ pair.1.exponent ≤ 15 at hma
+      change pair.2.mantissaBits = 10 ∧ -14 ≤ pair.2.exponent ∧ pair.2.exponent ≤ 15 at hmb
+      change -48 ≤ (pair.1.exponent + pair.2.exponent) -
         (pair.1.mantissaBits + pair.2.mantissaBits) ∧
-        pair.1.unnormalizedExp + pair.2.unnormalizedExp ≤ 30
+        pair.1.exponent + pair.2.exponent ≤ 30
       omega
 
 /-- A sharper sufficient threshold for minimum alignment exponents of at most 30, which covers the models of all source variants. -/
@@ -87,7 +87,7 @@ theorem canonical_source_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
     intro f hmem
     have hf' := hf f (by simpa [hprof, fp16Fp32Model] using hmem)
     omega) (by intro t ht hnz; exact (hm t ht hnz).2)
-  have huc := alignExp_upper b (max b.c.unnormalizedExp 30) (by
+  have huc := alignExp_upper b (max b.c.exponent 30) (by
     intro f hmem
     have hf' := hf f (by simpa [hprof, fp16Fp32Model] using hmem)
     omega) (by
@@ -95,7 +95,7 @@ theorem canonical_source_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
       simp only [PreparedBlock.terms, List.mem_cons] at ht
       rcases ht with ht | ht
       · subst t
-        change b.c.unnormalizedExp ≤ max b.c.unnormalizedExp 30
+        change b.c.exponent ≤ max b.c.exponent 30
         omega
       · have hpt := (hpm t ht hnz).2
         omega)
@@ -110,8 +110,8 @@ theorem canonical_source_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
   rcases ht with ht | ht
   · subst t
     have hc := classifyNat_metadata fp32 (by decide) x.c.toNat b.c (prepare_c hp) hnz
-    change b.c.mantissaBits = 23 ∧ -126 ≤ b.c.unnormalizedExp ∧ b.c.unnormalizedExp ≤ 127 at hc
-    change alignExp - (23 + neab : ℕ) ≤ b.c.unnormalizedExp - b.c.mantissaBits
+    change b.c.mantissaBits = 23 ∧ -126 ≤ b.c.exponent ∧ b.c.exponent ≤ 127 at hc
+    change alignExp - (23 + neab : ℕ) ≤ b.c.exponent - b.c.mantissaBits
     omega
   · have hpt := (hpm t ht hnz).1
     omega

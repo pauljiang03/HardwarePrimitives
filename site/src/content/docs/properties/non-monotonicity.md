@@ -30,7 +30,7 @@ theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f �
     (a b : (fp16Fp32Model K p eAlignMin).Word) (da db : Decoded)
     (ha : (fp16Fp32Model K p eAlignMin).decode a = some da)
     (hb : (fp16Fp32Model K p eAlignMin).decode b = some db)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
       evalBlock ⟨List.replicate K (a, b), 0x3f800000⟩ = .ok t ∧
@@ -40,7 +40,7 @@ theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f �
 
 In words: take any FP16 model with FMA size `K`, `p` extra alignment bits,
 and a minimum alignment exponent, if any, of at most −1. Use `K` copies of a product whose exact value is
-`2^-(24+p)` and whose unnormalized exponent is at most −1. With `C = 1` the output is
+`2^-(24+p)` and whose exponent is at most −1. With `C = 1` the output is
 exactly 1. Lowering `C` to its FP32 predecessor `1 − 2^-24` makes the output
 **exceed 1 exactly when `K ≥ 3 · 2^p`**.
 

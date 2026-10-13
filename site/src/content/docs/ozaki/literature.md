@@ -160,8 +160,8 @@ credited here.
 ### Matrix-multiplier numerics and models
 
 - **Fasi, Higham, Mikaitis and Pranesh**, PeerJ CS 2021 (snippet,
-  [paper](https://peerj.com/articles/cs-330)): truncation, unnormalized
-  accumulation and the first observation of non-monotonicity. **Blanchard et
+  [paper](https://peerj.com/articles/cs-330)): truncation, accumulation
+  without normalization and the first observation of non-monotonicity. **Blanchard et
   al.**, SISC 2020 (snippet): block-FMA error analysis. **Mikaitis**, IEEE TC 2024
   ([arXiv:2304.01407](https://arxiv.org/abs/2304.01407), snippet): monotonicity
   of multi-term adders.

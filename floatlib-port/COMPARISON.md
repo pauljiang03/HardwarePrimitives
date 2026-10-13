@@ -33,7 +33,7 @@ The following equalities are proved under the stated representation invariants. 
 | Stage | Bridge theorem(s) |
 |---|---|
 | Format fields, finite decoding and metadata | `decode_project`, `decode_value`, `value32_eq` |
-| Exact multiplication and original-input sum | `unnormalizedTerm_mul`, `mul_valid`, `terms_eq`, `ideal_eq` |
+| Exact multiplication and original-input sum | `denormalizedTerm_mul`, `mul_valid`, `terms_eq`, `ideal_eq` |
 | Largest exponent of the nonzero terms, minimum alignment exponent and alignment grid | `alignment_eq`, `eta_eq`, `q_eq` |
 | Signed truncation, retained accumulator and alignment residuals | `truncCoeff_eq`, `truncGrid_eq`, `accumulator_eq`, `residuals_eq` |
 | Actual RTZ/RNE rounding, including ties, subnormals, signed underflow and finite-range rejection | `round32_eq` for **every rational input** and both modes |

@@ -28,7 +28,7 @@ theorem decodeProduct_value (variant : Variant) (pair : variant.model.Word × va
     | some b =>
       simp only [decodeProduct, ha, hb, Option.map_some, pure]
       exact congrArg some ((product_value (decodeFactor_bounds ha)
-        (decodeFactor_bounds hb)).trans (unnormalizedProduct_value _ _))
+        (decodeFactor_bounds hb)).trans (denormalizedProduct_value _ _))
 
 theorem decodeProduct_magnitude {variant : Variant} {pair : variant.model.Word × variant.model.Word}
     {t : Term} (h : decodeProduct variant pair = some t) : t.word.magnitude.toNat < 2 ^ 550 := by

@@ -30,7 +30,7 @@ def termWidth (variant : Variant) : ℕ := (alignBits variant).toNat + 2
 /-- The two's complement accumulator: an aligned term's width, the carry bits and a sign bit. -/
 def accWidth (variant : Variant) : ℕ := termWidth variant + carryBits variant + 1
 
-/-- A decoded input: sign, significand with its hidden bit, mantissa width, and unnormalized exponent biased by 128. -/
+/-- A decoded input: sign, significand with its hidden bit, mantissa width, and exponent biased by 128. -/
 structure Input where
   negative : Bool
   significand : BitVec 11
@@ -54,7 +54,7 @@ def decodeInput (kind : InputKind) (bits : F32) : Option Input :=
     else some ⟨negative, m, frac, offset + 1⟩
   else some ⟨negative, ((1 : BitVec 11) <<< f.mantissaBits) + m, frac, e + offset⟩
 
-/-- A product or c: sign, significand with `mantissaBits` bits after the binary point, and unnormalized exponent biased by 256. -/
+/-- A product or c: sign, significand with `mantissaBits` bits after the binary point, and exponent biased by 256. -/
 structure Term where
   negative : Bool
   significand : BitVec 24
@@ -83,7 +83,7 @@ def decodeTerm (variant : Variant) (pair : variant.model.Word × variant.model.W
   let b ← decodeInput variant.kind (pair.2.zeroExtend 32)
   return product a b
 
-/-- Largest unnormalized exponent of a nonzero term, raised to the minimum alignment exponent of the variant. -/
+/-- Largest exponent of a nonzero term, raised to the minimum alignment exponent of the variant. -/
 def alignExp (variant : Variant) (ts : List Term) : Exp :=
   ts.foldl (fun e t => if t.significand == 0 then e
     else if e ≤ t.biasedExp then t.biasedExp else e) (eAlignMin variant)

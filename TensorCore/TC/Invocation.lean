@@ -68,7 +68,7 @@ def PreparedInvocation.exactDot {p : InvocationSpec} (b : PreparedInvocation p) 
 def invocationIdeal {p : InvocationSpec} (x : InvocationInput p) : Option ℚ :=
   (prepareInvocation x).map PreparedInvocation.exactDot
 
-/-- Reuse the proved unnormalized-product/grid primitive. -/
+/-- Reuse the proved denormalized-product/grid primitive. -/
 def PreparedInvocation.alignedBlock {p : InvocationSpec} (b : PreparedInvocation p)
     (F : ℕ) (eAlignMin : Option ℤ) (includeC : Bool) : PreparedBlock :=
   ⟨⟨p.input.valueFormat.layout, p.nfma, F, eAlignMin⟩, b.products,

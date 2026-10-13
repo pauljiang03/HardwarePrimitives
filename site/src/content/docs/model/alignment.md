@@ -4,15 +4,15 @@ description: The alignment exponent η, the minimum alignment exponent, the grid
 ---
 
 Alignment is where a Tensor Core loses information, and it is the core of the
-model. All terms (`C` and the `K` unnormalized products) are put on one fixed-point
+model. All terms (`C` and the `K` products in denormalized form) are put on one fixed-point
 grid. Anything below the grid is discarded.
 
 ## Step 1: the alignment exponent η
 
 ```lean
 /-- A nonempty maximum ignores zero terms; none explicitly represents an all-zero block. -/
-def maxTermExp (ts : List UnnormalizedProduct) : Option ℤ :=
-  (ts.filterMap fun t => if t.significand = 0 then none else some t.unnormalizedExp).foldl
+def maxTermExp (ts : List DenormalizedProduct) : Option ℤ :=
+  (ts.filterMap fun t => if t.significand = 0 then none else some t.exponent).foldl
     (fun acc e => some (match acc with | none => e | some v => max v e)) none
 
 /-- The minimum alignment exponent only raises a nonempty maximum; an all-zero block stays `none`. -/
@@ -24,7 +24,7 @@ def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
   b.model.applyEAlignMin (maxTermExp b.terms)
 ```
 
-- η is the **largest unnormalized exponent among the nonzero terms**. Zero terms are
+- η is the **largest exponent among the nonzero terms**. Zero terms are
   skipped, so a zero product never coarsens the grid.
 - If every term is zero, η is `none`. The accumulator is then exactly zero
   and the output is `+0`.
@@ -90,7 +90,7 @@ first half of the [error bound](/TC-EFT/properties/error-bounds/).
 
 V100, `F = 23`, `C = 1.0`, one product `2^-24`:
 
-- η = max(unnormalized exponent of `C` = 0, unnormalized exponent of the product = −24) = 0.
+- η = max(exponent of `C` = 0, exponent of the product = −24) = 0.
 - Grid = `2^(0 − 23) = 2^-23`.
 - The product's only bit is at `2^-24`, below the grid's lowest bit `2^-23`,
   so all its bits are dropped and the product is lost.

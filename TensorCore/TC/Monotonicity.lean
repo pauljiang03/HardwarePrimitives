@@ -16,30 +16,30 @@ theorem belowOneDecoded_value : belowOneDecoded.value = 16777215 * pow2 (-24) :=
 
 /-- In the construction, the alignment exponent is C's exponent when no product's exponent exceeds it. -/
 theorem construction_alignExp (prof : Model) (K : ℕ) (da db c : Decoded)
-    (hc : c.significand ≠ 0) (_hu : (unnormalizedMul da db).significand ≠ 0)
-    (hs : (unnormalizedMul da db).unnormalizedExp ≤ c.unnormalizedExp) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ c.unnormalizedExp) :
-    (PreparedBlock.mk prof (List.replicate K (da, db)) c).alignExp = some c.unnormalizedExp := by
+    (hc : c.significand ≠ 0) (_hu : (denormalizedMul da db).significand ≠ 0)
+    (hs : (denormalizedMul da db).exponent ≤ c.exponent) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ c.exponent) :
+    (PreparedBlock.mk prof (List.replicate K (da, db)) c).alignExp = some c.exponent := by
   have hterms : (PreparedBlock.mk prof (List.replicate K (da, db)) c).terms =
-      ⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ :: List.replicate K (unnormalizedMul da db) := by
+      ⟨c.significand, c.exponent, c.mantissaBits⟩ :: List.replicate K (denormalizedMul da db) := by
     simp [PreparedBlock.terms, List.map_replicate]
-  have hmem : (⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ : UnnormalizedProduct) ∈
+  have hmem : (⟨c.significand, c.exponent, c.mantissaBits⟩ : DenormalizedProduct) ∈
       (PreparedBlock.mk prof (List.replicate K (da, db)) c).terms := by
     rw [hterms]; simp
   obtain ⟨e, he, hle⟩ := maxTermExp_term _ _ hmem hc
-  have hle' : c.unnormalizedExp ≤ e := hle
+  have hle' : c.exponent ≤ e := hle
   have hup := maxTermExp_upper (PreparedBlock.mk prof (List.replicate K (da, db)) c).terms
-    c.unnormalizedExp (by
+    c.exponent (by
       intro t ht _
       rw [hterms] at ht
       simp only [List.mem_cons, List.mem_replicate] at ht
       rcases ht with rfl | ⟨_, rfl⟩
       · exact Int.le_refl _
       · exact hs) e (by rw [he]; simp)
-  have heq : e = c.unnormalizedExp := by omega
+  have heq : e = c.exponent := by omega
   subst heq
   unfold PreparedBlock.alignExp
   rw [he]
-  show prof.applyEAlignMin (some c.unnormalizedExp) = some c.unnormalizedExp
+  show prof.applyEAlignMin (some c.exponent) = some c.exponent
   unfold Model.applyEAlignMin
   cases hf : prof.eAlignMin with
   | none => rfl
@@ -47,10 +47,10 @@ theorem construction_alignExp (prof : Model) (K : ℕ) (da db c : Decoded)
     have := hfl f (by rw [hf]; simp)
     simp [Int.max_eq_left this]
 
-theorem unnormalizedMul_significand_ne_zero (da db : Decoded) (p : ℕ)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) : (unnormalizedMul da db).significand ≠ 0 := by
+theorem denormalizedMul_significand_ne_zero (da db : Decoded) (p : ℕ)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) : (denormalizedMul da db).significand ≠ 0 := by
   intro h
-  unfold UnnormalizedProduct.value at hval
+  unfold DenormalizedProduct.value at hval
   rw [h] at hval
   have := pow2_pos (-(24 + p))
   simp at hval
@@ -59,17 +59,17 @@ theorem unnormalizedMul_significand_ne_zero (da db : Decoded) (p : ℕ)
 /-- Accumulator with `c = 1`: every product truncates to zero. -/
 theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1) :
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) oneDecoded).accumulator = 1 := by
-  have hu := unnormalizedMul_significand_ne_zero da db p hval
+  have hu := denormalizedMul_significand_ne_zero da db p hval
   have heta := construction_alignExp prof K da db oneDecoded (by decide) hu
-    (by change (unnormalizedMul da db).unnormalizedExp ≤ 0; omega)
+    (by change (denormalizedMul da db).exponent ≤ 0; omega)
     (by intro f hf; have := hfl f hf; change f ≤ 0; omega)
   have hq : (PreparedBlock.mk prof (List.replicate K (da, db)) oneDecoded).alignGridExponent =
       -(23 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change oneDecoded.unnormalizedExp - prof.alignFracBits = _
+    change oneDecoded.exponent - prof.alignFracBits = _
     rw [hF]
     simp only [oneDecoded]
     omega
@@ -82,7 +82,7 @@ theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded
       have : ((23 + p : ℕ) : ℤ) + -(23 + p) = 0 := by omega
       rw [this, pow2_zero]
     rw [h1, truncBits_of_grid]
-  have hp : truncBits (unnormalizedMul da db).value (-(23 + p)) = 0 := by
+  have hp : truncBits (denormalizedMul da db).value (-(23 + p)) = 0 := by
     rw [hval]
     unfold truncBits
     have hpos := pow2_pos (-(24 + p))
@@ -100,16 +100,16 @@ theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded
 /-- Accumulator with `c' = 1 − 2^-24`: every product is retained. -/
 theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1) :
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) belowOneDecoded).accumulator =
       ((16777215 * 2 ^ p + K : ℕ) : ℚ) * pow2 (-(24 + p)) := by
-  have hu := unnormalizedMul_significand_ne_zero da db p hval
+  have hu := denormalizedMul_significand_ne_zero da db p hval
   have heta := construction_alignExp prof K da db belowOneDecoded (by decide) hu hscale hfl
   have hq : (PreparedBlock.mk prof (List.replicate K (da, db)) belowOneDecoded).alignGridExponent =
       -(24 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change belowOneDecoded.unnormalizedExp - prof.alignFracBits = _
+    change belowOneDecoded.exponent - prof.alignFracBits = _
     rw [hF]
     simp only [belowOneDecoded]
     omega
@@ -124,7 +124,7 @@ theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decod
       rw [this]
       all_goals simp
     rw [h1, truncBits_of_grid]
-  have hp : truncBits (unnormalizedMul da db).value (-(24 + p)) = 1 := by
+  have hp : truncBits (denormalizedMul da db).value (-(24 + p)) = 1 := by
     rw [hval]
     have h1 : pow2 (-(24 + p)) = ((1 : ℤ) : ℚ) * pow2 (-(24 + p)) := by simp
     rw [h1, truncBits_of_grid]
@@ -137,7 +137,7 @@ theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decod
 /-- TC-EFT Theorem III.4. -/
 theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
       evalPrepared ⟨prof, List.replicate K (da, db), oneDecoded⟩ = .ok t ∧
@@ -274,7 +274,7 @@ theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f �
     (a b : (fp16Fp32Model K p eAlignMin).Word) (da db : Decoded)
     (ha : (fp16Fp32Model K p eAlignMin).decode a = some da)
     (hb : (fp16Fp32Model K p eAlignMin).decode b = some db)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
       evalBlock (⟨List.replicate K (a, b), 0x3f800000⟩ : BlockInput (fp16Fp32Model K p eAlignMin)) =

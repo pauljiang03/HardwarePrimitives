@@ -44,7 +44,7 @@ theorem prepareProducts_origin (p : Model) (xs : List (p.Word × p.Word))
 theorem prepare_fp16_terms_lower (K neab : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
-    ∀ t ∈ b.terms, t.significand ≠ 0 → -126 ≤ t.unnormalizedExp := by
+    ∀ t ∈ b.terms, t.significand ≠ 0 → -126 ≤ t.exponent := by
   unfold prepare at h
   cases hc : decode32 x.c with
   | none => simp [hc] at h
@@ -62,18 +62,18 @@ theorem prepare_fp16_terms_lower (K neab : ℕ) (eAlignMin : Option ℤ)
       · subst t
         obtain ⟨w, _, ha, hb⟩ := prepareProducts_origin _ _ _ hp pair hpair
         have hnza : pair.1.significand ≠ 0 := by
-          intro hz; apply hnz; simp [unnormalizedMul, hz]
+          intro hz; apply hnz; simp [denormalizedMul, hz]
         have hnzb : pair.2.significand ≠ 0 := by
-          intro hz; apply hnz; simp [unnormalizedMul, hz]
+          intro hz; apply hnz; simp [denormalizedMul, hz]
         have hla := classifyNat_scale_lower fp16 w.1.toNat pair.1 ha hnza
         have hlb := classifyNat_scale_lower fp16 w.2.toNat pair.2 hb hnzb
-        change -14 ≤ pair.1.unnormalizedExp at hla
-        change -14 ≤ pair.2.unnormalizedExp at hlb
-        change -126 ≤ pair.1.unnormalizedExp + pair.2.unnormalizedExp
+        change -14 ≤ pair.1.exponent at hla
+        change -14 ≤ pair.2.exponent at hlb
+        change -126 ≤ pair.1.exponent + pair.2.exponent
         omega
 
-theorem maxTermExp_lower (ts : List UnnormalizedProduct) (lower e : ℤ)
-    (h : ∀ t ∈ ts, t.significand ≠ 0 → lower ≤ t.unnormalizedExp)
+theorem maxTermExp_lower (ts : List DenormalizedProduct) (lower e : ℤ)
+    (h : ∀ t ∈ ts, t.significand ≠ 0 → lower ≤ t.exponent)
     (he : maxTermExp ts = some e) : lower ≤ e := by
   have hex : ∃ t ∈ ts, t.significand ≠ 0 := by
     by_cases hz : ∀ t ∈ ts, t.significand = 0

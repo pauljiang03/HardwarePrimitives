@@ -36,6 +36,11 @@
    "products"
   ],
   [
+   587,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
    770,
    "Model",
    "Profile"
@@ -77,6 +82,16 @@
   ]
  ],
  "TensorCore/EFT/Extraction.lean": [
+  [
+   110,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   280,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
   [
    1592,
    "Model",
@@ -122,6 +137,207 @@
    "hbudget"
   ]
  ],
+ "TensorCore/Numerics/Defs.lean": [
+  [
+   96,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   131,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   387,
+   "exponent",
+   "unnormalizedExp"
+  ]
+ ],
+ "TensorCore/Numerics/DenormalizedProduct.lean": [
+  [
+   3,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   8,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   19,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   25,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   43,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   50,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   58,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   72,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   76,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   87,
+   "denormalizedProduct_value",
+   "unnormalizedProduct_value"
+  ],
+  [
+   96,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   116,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   118,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   135,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   139,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   154,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   164,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   182,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   188,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   204,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   206,
+   "denormalizedMul_bounded",
+   "unnormalizedMul_bounded"
+  ],
+  [
+   229,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   245,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   253,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   387,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   400,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   404,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   408,
+   "denormalizedProduct_value",
+   "unnormalizedProduct_value"
+  ],
+  [
+   452,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   473,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   481,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   498,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   510,
+   "exponent",
+   "unnormalizedExp"
+  ]
+ ],
+ "TensorCore/Numerics/FormatProperties.lean": [
+  [
+   705,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   904,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   908,
+   "exponent",
+   "unnormalizedExp"
+  ]
+ ],
  "TensorCore/TC/AcceptedDomain.lean": [
   [
    256,
@@ -147,6 +363,41 @@
   ]
  ],
  "TensorCore/TC/AlignmentExponent.lean": [
+  [
+   248,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   253,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   283,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   315,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   402,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   441,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   474,
+   "exponent",
+   "unnormalizedExp"
+  ],
   [
    502,
    "model",
@@ -178,6 +429,21 @@
    "applyFloor"
   ],
   [
+   567,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   591,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   665,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
    824,
    "Model",
    "Profile"
@@ -188,6 +454,11 @@
    "Profile"
   ],
   [
+   1326,
+   "denormalizedMul_bounded",
+   "unnormalizedMul_bounded"
+  ],
+  [
    1368,
    "model",
    "profile"
@@ -196,6 +467,11 @@
    1370,
    "alignFracBits",
    "alignMantissaBits"
+  ],
+  [
+   1440,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
   ],
   [
    1516,
@@ -273,6 +549,16 @@
    "products"
   ],
   [
+   2200,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   2223,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    2313,
    "model",
    "profile"
@@ -281,6 +567,11 @@
    2315,
    "eAlignMin",
    "alignFloor"
+  ],
+  [
+   2339,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    2374,
@@ -355,6 +646,31 @@
    "Profile"
   ],
   [
+   258,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   272,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   295,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   304,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   331,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    378,
    "model",
    "profile"
@@ -393,6 +709,16 @@
    904,
    "Model",
    "Profile"
+  ],
+  [
+   973,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1017,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
   ]
  ],
  "TensorCore/TC/Canonical.lean": [
@@ -601,6 +927,11 @@
    "floor"
   ],
   [
+   439,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    475,
    "fp16Fp32Model",
    "fp16Fp32Profile"
@@ -614,6 +945,46 @@
    478,
    "eAlignMin",
    "floor"
+  ],
+  [
+   601,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   626,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   670,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   681,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   692,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   698,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   706,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   732,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    852,
@@ -837,12 +1208,32 @@
  ],
  "TensorCore/TC/ErrorBounds.lean": [
   [
+   478,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
    808,
    "Model",
    "Profile"
   ]
  ],
  "TensorCore/TC/ExactAlignment.lean": [
+  [
+   34,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   91,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   134,
+   "exponent",
+   "unnormalizedExp"
+  ],
   [
    154,
    "Model",
@@ -876,6 +1267,16 @@
    "floor"
   ],
   [
+   60,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   68,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    106,
    "fp16Fp32Model",
    "fp16Fp32Profile"
@@ -889,6 +1290,76 @@
    109,
    "eAlignMin",
    "floor"
+  ],
+  [
+   208,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   212,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   223,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   231,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   278,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   303,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   363,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   369,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   390,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   396,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   410,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   416,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   437,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   443,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    451,
@@ -916,6 +1387,21 @@
    "floor"
   ],
   [
+   504,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   520,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   528,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    566,
    "fp16Fp32Model",
    "fp16Fp32Profile"
@@ -929,6 +1415,56 @@
    569,
    "eAlignMin",
    "floor"
+  ],
+  [
+   662,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   687,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   747,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   753,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   774,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   780,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   794,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   800,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   821,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   827,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    832,
@@ -1006,9 +1542,24 @@
    "fp16Fp32Profile"
   ],
   [
+   984,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    1004,
    "fp16Fp32Model",
    "fp16Fp32Profile"
+  ],
+  [
+   1044,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   1051,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    1126,
@@ -1021,9 +1572,24 @@
    "fp16Fp32Profile"
   ],
   [
+   1210,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   1216,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    1227,
    "neab",
    "extra"
+  ],
+  [
+   1236,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    1259,
@@ -1573,6 +2139,16 @@
    "Profile"
   ],
   [
+   124,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   143,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
    165,
    "Model",
    "Profile"
@@ -1581,6 +2157,26 @@
    221,
    "Model",
    "Profile"
+  ],
+  [
+   313,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   323,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   339,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   349,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    1836,
@@ -1616,6 +2212,21 @@
    2432,
    "eAlignMin",
    "alignFloor"
+  ],
+  [
+   2443,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   2464,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   2469,
+   "exponent",
+   "unnormalizedExp"
   ]
  ],
  "TensorCore/TC/Invocation.lean": [
@@ -1789,14 +2400,89 @@
    "Profile"
   ],
   [
+   95,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   108,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   113,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   117,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    127,
    "eAlignMin",
    "alignFloor"
   ],
   [
+   133,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   160,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   195,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   208,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   236,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   243,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   295,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   328,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   391,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    409,
    "applyEAlignMin",
    "applyFloor"
+  ],
+  [
+   414,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   420,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    422,
@@ -1814,6 +2500,26 @@
    "alignFloor"
   ],
   [
+   464,
+   "denormalizedMul_significand_ne_zero",
+   "unnormalizedMul_significand_ne_zero"
+  ],
+  [
+   480,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   499,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   513,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
    545,
    "Model",
    "Profile"
@@ -1829,9 +2535,49 @@
    "alignFloor"
   ],
   [
+   589,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   610,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   615,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   650,
+   "denormalizedMul_significand_ne_zero",
+   "unnormalizedMul_significand_ne_zero"
+  ],
+  [
+   674,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   679,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   749,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    753,
    "alignFracBits",
    "alignMantissaBits"
+  ],
+  [
+   916,
+   "denormalizedMul",
+   "unnormalizedMul"
   ],
   [
    1075,
@@ -1849,9 +2595,39 @@
    "alignFloor"
   ],
   [
+   1119,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1140,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1145,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   1204,
+   "denormalizedMul_significand_ne_zero",
+   "unnormalizedMul_significand_ne_zero"
+  ],
+  [
+   1270,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    1274,
    "alignFracBits",
    "alignMantissaBits"
+  ],
+  [
+   1442,
+   "denormalizedMul",
+   "unnormalizedMul"
   ],
   [
    1558,
@@ -1867,6 +2643,21 @@
    1591,
    "eAlignMin",
    "alignFloor"
+  ],
+  [
+   1602,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1623,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1628,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    3169,
@@ -1907,6 +2698,21 @@
    3229,
    "eAlignMin",
    "floor"
+  ],
+  [
+   3242,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   3263,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   3268,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    3311,
@@ -1991,9 +2797,39 @@
    "alignFloor"
   ],
   [
+   645,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   666,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   671,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
+   746,
+   "denormalizedMul_significand_ne_zero",
+   "unnormalizedMul_significand_ne_zero"
+  ],
+  [
+   847,
+   "exponent",
+   "unnormalizedExp"
+  ],
+  [
    851,
    "alignFracBits",
    "alignMantissaBits"
+  ],
+  [
+   1030,
+   "denormalizedMul",
+   "unnormalizedMul"
   ],
   [
    1146,
@@ -2009,6 +2845,21 @@
    1180,
    "eAlignMin",
    "alignFloor"
+  ],
+  [
+   1191,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1212,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   1217,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    3402,
@@ -2049,6 +2900,21 @@
    3462,
    "eAlignMin",
    "floor"
+  ],
+  [
+   3475,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   3496,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   3501,
+   "exponent",
+   "unnormalizedExp"
   ],
   [
    3567,
@@ -2107,6 +2973,26 @@
   ]
  ],
  "TensorCore/TC/StageResiduals.lean": [
+  [
+   97,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
+  [
+   148,
+   "denormalizedMul",
+   "unnormalizedMul"
+  ],
+  [
+   183,
+   "denormalizedProduct_value",
+   "unnormalizedProduct_value"
+  ],
+  [
+   299,
+   "DenormalizedProduct",
+   "UnnormalizedProduct"
+  ],
   [
    566,
    "Model",

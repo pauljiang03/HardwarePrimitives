@@ -69,7 +69,7 @@ private theorem zero_bits (b : F32) (h : TensorCore.value32 b = some 0) :
   | some d =>
     have hv : d.value = 0 := by simpa [TensorCore.value32, hd] using h
     have hs : d.significand = 0 := by
-      have hp := pow2_pos (d.unnormalizedExp - d.mantissaBits)
+      have hp := pow2_pos (d.exponent - d.mantissaBits)
       unfold Decoded.value at hv
       have hc : (d.significand : ℚ) = 0 := by grind
       exact Rat.intCast_inj.mp (by simpa using hc)

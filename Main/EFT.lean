@@ -23,7 +23,7 @@ private def traceJson (t : BlockTrace) : Json := Json.mkObj [
   ("bits", toJson t.output.bits.toNat), ("alignExp", toJson t.block.alignExp),
   ("alignGridStep", toJson (qText (pow2 t.block.alignGridExponent))),
   ("accumulator", toJson (qText t.block.accumulator)),
-  ("terms", toJson (t.block.terms.map (qText ∘ UnnormalizedProduct.value))),
+  ("terms", toJson (t.block.terms.map (qText ∘ DenormalizedProduct.value))),
   ("aligned", toJson (t.block.terms.map fun x => qText (truncGrid x.value t.block.alignGridExponent))),
   ("alignment_residuals", toJson (t.block.alignmentResiduals.map qText)),
   ("output_residual", toJson (qText t.outputResidual)),

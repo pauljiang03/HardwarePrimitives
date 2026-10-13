@@ -36,11 +36,11 @@ namespace Ozaki.TC
 /-- The products of two `b`-bit integer words are integer terms of exponent at most `F`. -/
 theorem int_product_term {p : Model} {b : ℕ} (hp : IntExact p b) {q : p.Word × p.Word}
     (hq : IntWord p b q.1 ∧ IntWord p b q.2)
-    (hnz : (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0) :
-    (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignFracBits ∧
-      ∃ k : ℤ, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
+    (hnz : (denormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0) :
+    (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignFracBits ∧
+      ∃ k : ℤ, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
   obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hq
-  simp only [unnormalizedMul] at hnz ⊢
+  simp only [denormalizedMul] at hnz ⊢
   have hn1 : (decodeD p q.1).significand ≠ 0 := fun h => hnz (by rw [h, Int.zero_mul])
   have hn2 : (decodeD p q.2).significand ≠ 0 := fun h => hnz (by rw [h, Int.mul_zero])
   obtain ⟨d1, hd1⟩ := Option.isSome_iff_exists.mp h1
@@ -58,8 +58,8 @@ theorem int_product_term {p : Model} {b : ℕ} (hp : IntExact p b) {q : p.Word �
   have e2 := decode_exp_le (f := p.input) (w := q.2) (d := d2) hd2 hp.emin
     (by rw [← hD2]; unfold wordValue at hzb; rw [hzb]; exact hbnd zb hzb') (by rw [← hD2]; exact hn2)
   refine ⟨by rw [hD1, hD2]; have := hp.align; omega, za * zb, ?_⟩
-  have hv := unnormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
-  simp only [unnormalizedMul] at hv
+  have hv := denormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
+  simp only [denormalizedMul] at hv
   rw [hv, pow2_zero, Rat.mul_one, Rat.intCast_mul]
   unfold wordValue at hza hzb
   rw [hza, hzb]
@@ -87,8 +87,8 @@ theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInp
     rw [sumQ_eq, List.map_map]; rfl
   have hexact : blk.exactDot = zc + wordProducts p x.products := by
     unfold PreparedBlock.exactDot; rw [hprods, ← hblk]; simp only; rw [hdcv]
-  have hterms : blk.terms = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ ::
-      x.products.map fun q => unnormalizedMul (decodeD p q.1) (decodeD p q.2) := by
+  have hterms : blk.terms = ⟨dc.significand, dc.exponent, dc.mantissaBits⟩ ::
+      x.products.map fun q => denormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
   have hprof : blk.model = p := by rw [← hblk]
   have hbias : (1 : ℤ) - fp32.bias ≤ p.alignFracBits := by
@@ -103,7 +103,7 @@ theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInp
       · refine ⟨?_, zc, ?_⟩
         · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := p.alignFracBits)
             hbias (by rw [hdcv]; exact hcF) hnz
-          show dc.unnormalizedExp ≤ 0 + blk.model.alignFracBits
+          show dc.exponent ≤ 0 + blk.model.alignFracBits
           rw [hprof]; omega
         · change dc.value = _; rw [hdcv, pow2_zero, Rat.mul_one]
       · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht

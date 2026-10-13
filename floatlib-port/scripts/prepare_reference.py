@@ -80,6 +80,7 @@ def pinned_spelling(tokens, name):
 # Parent modules renamed after the pinned revision: current name -> pinned name.
 RENAMED_MODULES = {
     'TensorCore.Numerics.Binary.ResidualBound': 'TensorCore.Numerics.Binary.ResidualBudget',
+    'TensorCore.Numerics.DenormalizedProduct': 'TensorCore.Numerics.UnnormalizedProduct',
     'TensorCore.TC.CanonicalEAlignMin': 'TensorCore.TC.CanonicalFloor',
     'TensorCore.TC.ExtraAlignmentBits': 'TensorCore.TC.Padding',
     'TensorCore.TC.Models': 'TensorCore.TC.Profiles',

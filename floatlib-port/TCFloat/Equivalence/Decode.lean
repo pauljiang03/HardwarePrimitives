@@ -58,7 +58,7 @@ theorem decode_project (f : FloatFormat) (hf : f.isIEEE = true)
         FloatLib.Numerics.Dyadic.signedSignificand,TensorCore.Classification.finite]
       exact_mod_cast (Nat.one_le_iff_ne_zero.mpr he)
 
-/-- Successful FloatLib decode produces consistent unnormalized-exponent metadata. -/
+/-- Successful FloatLib decode produces consistent exponent metadata. -/
 theorem decode_value (f : FloatFormat) (hf : f.isIEEE = true)
     (n : Nat) (t : Term) (ht : decode f n = some t) :
     t.value = (project t).value := by

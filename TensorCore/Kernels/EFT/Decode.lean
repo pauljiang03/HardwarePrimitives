@@ -119,7 +119,7 @@ theorem product_grid {a b : Factor}
 theorem product_value {a b : Factor}
     (ha : 130 ≤ a.biasedExp.toNat ∧ a.biasedExp.toNat ≤ 383 ∧ a.mantissaBits.toNat ≤ 10)
     (hb : 130 ≤ b.biasedExp.toNat ∧ b.biasedExp.toNat ≤ 383 ∧ b.mantissaBits.toNat ≤ 10) :
-    (product a b).word.value = (unnormalizedMul a.decoded b.decoded).value := by
+    (product a b).word.value = (denormalizedMul a.decoded b.decoded).value := by
   have hg := product_grid ha hb
   have hm : ((multiplySignificands a.magnitude b.magnitude).zeroExtend 576).toNat =
       a.magnitude.toNat * b.magnitude.toNat := by
@@ -135,7 +135,7 @@ theorem product_value {a b : Factor}
         ((a.mantissaBits.toNat : ℤ) + b.mantissaBits.toNat) := by omega
   rw [he]
   cases ha' : a.negative <;> cases hb' : b.negative <;>
-    simp only [UnnormalizedProduct.value, unnormalizedMul, Factor.decoded, ha', hb', Bool.false_eq_true,
+    simp only [DenormalizedProduct.value, denormalizedMul, Factor.decoded, ha', hb', Bool.false_eq_true,
       if_false, if_true, bne_self_eq_false, bne_iff_ne, Bool.false_eq_true,
       Rat.intCast_mul, Rat.intCast_neg, Rat.intCast_natCast, Rat.natCast_mul] <;> grind
 

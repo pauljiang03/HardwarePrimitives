@@ -37,7 +37,7 @@ The Lean model implements these five steps directly.
 
 <div class="pipeline">
   <a href="/TC-EFT/model/formats/"><span class="n">01 · prepare</span><span class="t">Decode</span><span class="d"><code>BlockInput p</code> → <code>PreparedBlock</code></span></a>
-  <a href="/TC-EFT/model/products/"><span class="n">02 · unnormalizedMul</span><span class="t">Multiply</span><span class="d"><code>Decoded × Decoded</code> → <code>UnnormalizedProduct</code></span></a>
+  <a href="/TC-EFT/model/products/"><span class="n">02 · denormalizedMul</span><span class="t">Multiply</span><span class="d"><code>Decoded × Decoded</code> → <code>DenormalizedProduct</code></span></a>
   <a href="/TC-EFT/model/alignment/"><span class="n">03 · alignExp, truncBits</span><span class="t">Align</span><span class="d">grid <code>2^(η − F)</code>, truncate</span></a>
   <a href="/TC-EFT/model/accumulation/"><span class="n">04 · accumulator</span><span class="t">Accumulate</span><span class="d">exact <code>Σ bits · 2^(η−F)</code></span></a>
   <a href="/TC-EFT/model/normalization/"><span class="n">05 · round32</span><span class="t">Normalize &amp; round</span><span class="d">truncate → <code>F32</code></span></a>
@@ -58,9 +58,9 @@ structure BlockInput (p : Model) where
   products : List (p.Word × p.Word)   -- encoded (aᵢ, bᵢ) pairs
   c : F32                             -- encoded FP32 accumulator input
 
-def PreparedBlock.terms (b : PreparedBlock) : List UnnormalizedProduct :=
-  ⟨b.c.significand, b.c.unnormalizedExp, b.c.mantissaBits⟩ ::
-    b.products.map fun (a, b) => unnormalizedMul a b
+def PreparedBlock.terms (b : PreparedBlock) : List DenormalizedProduct :=
+  ⟨b.c.significand, b.c.exponent, b.c.mantissaBits⟩ ::
+    b.products.map fun (a, b) => denormalizedMul a b
 
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
   b.model.applyEAlignMin (maxTermExp b.terms)
@@ -93,10 +93,10 @@ def evalBlock {p : Model} (x : BlockInput p) : Except ModelError BlockTrace :=
 | Lean name | Meaning | In *Accurate Models* / its MATLAB code |
 | --- | --- | --- |
 | `significand` | The significand bits, hidden bit included, with the sign | significand (`a_sig`, `prod_sig`) |
-| `unnormalizedExp` | Exponent as the hardware sees it. For an input, its unbiased exponent (minimum normal exponent for subnormals). For a product, the sum of the input exponents: the product stays in denormalized form. | "sum of exponents"; products "remain denormalised" (`prod_exp`) |
-| `mantissaBits` | Mantissa width: how many low bits of the significand lie after the binary point. For a format or an input value, the stored mantissa width (10 for FP16). For a product, the sum of both inputs' widths (20 for FP16 × FP16). value = `significand · 2^(unnormalizedExp − mantissaBits)` | mantissa bits (`manBits`) |
-| `UnnormalizedProduct`, `unnormalizedMul` | An exact product kept in that denormalized form | `prod_sig`, `prod_exp` with `denorm_prd` |
-| `alignExp` (η) | Alignment exponent: largest `unnormalizedExp` of a nonzero term, raised to the minimum alignment exponent | maximum exponent, "capped from below" by `e_align^min` |
+| `exponent` | Exponent as the hardware sees it. For an input, its unbiased exponent (minimum normal exponent for subnormals). For a product, the sum of the input exponents: the product stays in denormalized form. | "sum of exponents"; products "remain denormalised" (`prod_exp`) |
+| `mantissaBits` | Mantissa width: how many low bits of the significand lie after the binary point. For a format or an input value, the stored mantissa width (10 for FP16). For a product, the sum of both inputs' widths (20 for FP16 × FP16). value = `significand · 2^(exponent − mantissaBits)` | mantissa bits (`manBits`) |
+| `DenormalizedProduct`, `denormalizedMul` | An exact product kept in that denormalized form | `prod_sig`, `prod_exp` with `denorm_prd` |
+| `alignExp` (η) | Alignment exponent: largest `exponent` of a nonzero term, raised to the minimum alignment exponent | maximum exponent, "capped from below" by `e_align^min` |
 | `alignFracBits` (F) | Fractional bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `n_eab` |
 | `alignGridExponent` | Exponent of the alignment grid step, `η − F` | |
 | `outputUlpExponent` | Exponent of one unit in the last place of the FP32 output | |
@@ -124,8 +124,8 @@ Here is the V100 model (`K = 4`, `F = 23`, no minimum alignment exponent) with f
 | Stage | `C = 1.0` (`0x3f800000`) | `C = 1 − 2^-24` (`0x3f7fffff`) |
 | --- | --- | --- |
 | Decode `C` | `1.000…0` (24 bits) × `2^0` | `1.111…1` (24 ones) × `2^-1` |
-| Each product | value `2^-24`, unnormalized exponent `−24` | same |
-| `η` = largest unnormalized exponent | `0` | `−1` |
+| Each product | value `2^-24`, exponent `−24` | same |
+| `η` = largest exponent | `0` | `−1` |
 | Grid `2^(η − F)` | `2^-23` | `2^-24` |
 | Bits of `C` kept | all 24 | all 24 |
 | Each product's single bit at `2^-24` | below the grid: dropped | on the grid: kept |
@@ -154,8 +154,8 @@ example : ((evalBlock before).toOption.map fun t => t.output.bits) = some 0x3f80
 
 Each stage has its own page:
 
-1. [Formats and decoding](/TC-EFT/model/formats/): IEEE classification, unnormalized exponents, subnormals, TF32 packing.
-2. [Exact unnormalized products](/TC-EFT/model/products/): why products are not normalized.
+1. [Formats and decoding](/TC-EFT/model/formats/): IEEE classification, exponents, subnormals, TF32 packing.
+2. [Exact products in denormalized form](/TC-EFT/model/products/): why products are not normalized.
 3. [Alignment](/TC-EFT/model/alignment/): `η`, the minimum alignment exponent, the grid, and truncation.
 4. [Accumulation](/TC-EFT/model/accumulation/): the exact sum and fixed-width registers.
 5. [Normalization and final rounding](/TC-EFT/model/normalization/): `round32`, range, signed zero.

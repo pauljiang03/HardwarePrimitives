@@ -16,7 +16,7 @@ def Term.Accepted (t : Term) : Prop := t.Valid ∧ (t.significand ≠ 0 → 1 �
 
 theorem product_spec {kind : InputKind} {x y : F32} {a b : Input}
     (ha : decodeInput kind x = some a) (hb : decodeInput kind y = some b) :
-    (product a b).unnormalized = unnormalizedMul a.decoded b.decoded ∧ (product a b).Accepted := by
+    (product a b).denormalized = denormalizedMul a.decoded b.decoded ∧ (product a b).Accepted := by
   obtain ⟨ha1, ha2, ha3, ha4⟩ := decodeInput_bounds ha
   obtain ⟨hb1, hb2, hb3, hb4⟩ := decodeInput_bounds hb
   have hmul : (multiplySignificands a.significand b.significand).toNat =
@@ -33,8 +33,8 @@ theorem product_spec {kind : InputKind} {x y : F32} {a b : Input}
   have hmb : (a.mantissaBits + b.mantissaBits).toNat = a.mantissaBits.toNat + b.mantissaBits.toNat := by
     rw [BitVec.toNat_add, Nat.mod_eq_of_lt (by change _ < 32; omega)]
   refine ⟨?_, ⟨?_, ?_⟩, ?_⟩
-  · simp only [Term.unnormalized, product, unnormalizedMul, Input.decoded, hmul, hexp, hmb,
-      UnnormalizedProduct.mk.injEq]
+  · simp only [Term.denormalized, product, denormalizedMul, Input.decoded, hmul, hexp, hmb,
+      DenormalizedProduct.mk.injEq]
     refine ⟨?_, by omega, by omega⟩
     cases a.negative <;> cases b.negative <;> simp [Int.neg_mul, Int.mul_neg]
   · simp only [product, hmul, hmb]
@@ -75,9 +75,9 @@ theorem decodeC_accepted {bits : F32} {c : Term} (h : decodeC bits = some c) : c
         omega
 
 theorem decodeTerm_spec (variant : Variant) (pair : variant.model.Word × variant.model.Word) :
-    (decodeTerm variant pair).map Term.unnormalized =
+    (decodeTerm variant pair).map Term.denormalized =
       ((do return (← variant.model.decode pair.1, ← variant.model.decode pair.2) :
-        Option (Decoded × Decoded))).map (fun (a, b) => unnormalizedMul a b) := by
+        Option (Decoded × Decoded))).map (fun (a, b) => denormalizedMul a b) := by
   rw [← decodeInput_model, ← decodeInput_model]
   cases ha : decodeInput variant.kind (pair.1.zeroExtend 32) with
   | none => simp [decodeTerm, ha]
@@ -119,7 +119,7 @@ theorem variant_alignment (variant : Variant) :
 
 /-- The bitvector accumulator, read on its grid, is the model's aligned accumulator. -/
 theorem accumulator_eq (variant : Variant) (ts : List Term) (b : PreparedBlock)
-    (hprof : b.model = variant.model) (hterms : b.terms = ts.map Term.unnormalized)
+    (hprof : b.model = variant.model) (hterms : b.terms = ts.map Term.denormalized)
     (hacc : ∀ t ∈ ts, t.Accepted) (hlen : ts.length = variant.model.nfma + 1) :
     ((accumulate variant (alignExp variant ts) ts).toInt : ℚ) *
       pow2 (((alignExp variant ts).toNat : ℤ) - 256 - (alignBits variant).toNat) = b.accumulator := by
@@ -129,23 +129,23 @@ theorem accumulator_eq (variant : Variant) (ts : List Term) (b : PreparedBlock)
   change ∀ t ∈ ts, t.significand ≠ 0 → t.biasedExp.toNat ≤ (alignExp variant ts).toNat at hA2
   change alignExp variant ts = eAlignMin variant ∨ ∃ t ∈ ts, t.significand ≠ 0 ∧ alignExp variant ts = t.biasedExp at hA3
   generalize hA : alignExp variant ts = A at hA1 hA2 hA3
-  have htr : ∀ t ∈ ts, truncBits t.unnormalized.value ((A.toNat : ℤ) - 256 - (alignBits variant).toNat) =
+  have htr : ∀ t ∈ ts, truncBits t.denormalized.value ((A.toNat : ℤ) - 256 - (alignBits variant).toNat) =
       if t.negative then -((t.aligned variant A).toNat : ℤ) else ((t.aligned variant A).toNat : ℤ) :=
     fun t ht => t.truncBits_eq variant A (hacc t ht).1 hF (hA2 t ht)
   rw [accumulate_toInt variant A ts hlen, ← List.map_congr_left htr]
-  have hsig : ∀ t : Term, t.unnormalized.significand = 0 ↔ t.significand = 0 := by
+  have hsig : ∀ t : Term, t.denormalized.significand = 0 ↔ t.significand = 0 := by
     intro t
     have : t.significand = 0 ↔ t.significand.toNat = 0 :=
       ⟨fun h => by rw [h]; rfl, fun h => BitVec.eq_of_toNat_eq (by rw [h]; rfl)⟩
     rw [this]
-    unfold Term.unnormalized
+    unfold Term.denormalized
     cases t.negative <;> simp
   unfold PreparedBlock.accumulator PreparedBlock.alignedBits
   rw [hterms, List.map_map]
   by_cases hall : ∀ t ∈ ts, t.significand = 0
-  · have hv : ∀ t ∈ ts, t.unnormalized.value = 0 := by
+  · have hv : ∀ t ∈ ts, t.denormalized.value = 0 := by
       intro t ht
-      simp [UnnormalizedProduct.value, (hsig t).mpr (hall t ht)]
+      simp [DenormalizedProduct.value, (hsig t).mpr (hall t ht)]
     rw [sumZ_map_zero _ _ (fun t ht => by rw [hv t ht, truncBits_zero]),
       sumZ_map_zero _ _ (fun t ht => by simp only [Function.comp, hv t ht, truncBits_zero])]
     simp
@@ -154,20 +154,20 @@ theorem accumulator_eq (variant : Variant) (ts : List Term) (b : PreparedBlock)
       intro h
       exact hall (fun t ht => Classical.byContradiction fun hz => h ⟨t, ht, hz⟩)
     obtain ⟨t0, ht0, hz0⟩ := hex
-    have hmem : t0.unnormalized ∈ b.terms := by rw [hterms]; exact List.mem_map_of_mem ht0
-    obtain ⟨m, hm, hm0⟩ := maxTermExp_term b.terms t0.unnormalized hmem (mt (hsig t0).mp hz0)
+    have hmem : t0.denormalized ∈ b.terms := by rw [hterms]; exact List.mem_map_of_mem ht0
+    obtain ⟨m, hm, hm0⟩ := maxTermExp_term b.terms t0.denormalized hmem (mt (hsig t0).mp hz0)
     have hup : m ≤ (A.toNat : ℤ) - 256 := by
       apply maxTermExp_upper b.terms _ _ m (by rw [hm]; rfl)
       intro u hu hnz
       rw [hterms] at hu
       obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hu
       have := hA2 t ht (mt (hsig t).mpr hnz)
-      simp only [Term.unnormalized]
+      simp only [Term.denormalized]
       omega
     have ht0E : (t0.biasedExp.toNat : ℤ) - 256 ≤ m := hm0
     have hlow : ∀ t ∈ ts, t.significand ≠ 0 → (t.biasedExp.toNat : ℤ) - 256 ≤ m := by
       intro t ht hnz
-      obtain ⟨m', hm', hle⟩ := maxTermExp_term b.terms t.unnormalized
+      obtain ⟨m', hm', hle⟩ := maxTermExp_term b.terms t.denormalized
         (by rw [hterms]; exact List.mem_map_of_mem ht) (mt (hsig t).mp hnz)
       rw [hm] at hm'
       cases Option.some.inj hm'
@@ -210,9 +210,9 @@ theorem evalBlock_eq (variant : Variant) (x : BlockInput variant.model) :
   unfold Datapath.evalBlock TensorCore.evalBlock
   by_cases hlen : x.products.length = variant.model.nfma
   · simp only [hlen, bne_self_eq_false, Bool.false_eq_true, if_false]
-    have hmap := mapM_project_eq (f := decodeTerm variant) (v := Term.unnormalized)
+    have hmap := mapM_project_eq (f := decodeTerm variant) (v := Term.denormalized)
       (g := fun (a, b) => do return (← variant.model.decode a, ← variant.model.decode b))
-      (w := fun (a, b) => unnormalizedMul a b)
+      (w := fun (a, b) => denormalizedMul a b)
       (fun pair => by rcases pair with ⟨a, b⟩; exact decodeTerm_spec variant (a, b)) x.products
     have hcmap := decodeC_spec x.c
     cases hc : decodeC x.c with
@@ -227,7 +227,7 @@ theorem evalBlock_eq (variant : Variant) (x : BlockInput variant.model) :
     | some c =>
       rw [hc] at hcmap
       obtain ⟨dc, hdc, hcs⟩ : ∃ dc, decode32 x.c = some dc ∧
-          c.unnormalized = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ := by
+          c.denormalized = ⟨dc.significand, dc.exponent, dc.mantissaBits⟩ := by
         cases hd : decode32 x.c with
         | none => rw [hd] at hcmap; simp at hcmap
         | some dc =>
@@ -260,7 +260,7 @@ theorem evalBlock_eq (variant : Variant) (x : BlockInput variant.model) :
           rw [hprep]
           dsimp only
           have hterms : (PreparedBlock.mk variant.model ds dc).terms =
-              (c :: ps).map Term.unnormalized := by
+              (c :: ps).map Term.denormalized := by
             simp only [PreparedBlock.terms, List.map_cons, hcs]
             rw [hmap]
           obtain ⟨hpl, hpa⟩ := mapM_bounds (fun _ _ h => decodeTerm_accepted h) hps

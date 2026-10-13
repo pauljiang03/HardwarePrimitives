@@ -10,7 +10,7 @@ def snapshotJson (x : BlockInput v100F16F32) : Json :=
   | .error e => Json.mkObj [("error", toJson (reprStr e))]
   | .ok s => Json.mkObj [
       ("bits", toJson s.bits), ("alignExp", toJson s.alignExp),
-      ("alignGridExponent", toJson s.qExponent), ("unnormalizedExps", toJson s.unnormalizedExps),
+      ("alignGridExponent", toJson s.qExponent), ("exponents", toJson s.exponents),
       ("coefficients", toJson s.alignedBits), ("ideal", toJson (ratText s.ideal)),
       ("accumulator", toJson (ratText s.accumulator)),
       ("alignmentResiduals", toJson (s.alignmentResiduals.map ratText)),

@@ -48,7 +48,7 @@ theorem sum_residual_bounds (ts : List ℚ) (e : ℤ) :
 
 theorem block_alignment_bound (b : PreparedBlock) :
     absQ (sumQ b.alignmentResiduals) < (b.terms.length : ℚ) * pow2 b.alignGridExponent := by
-  have h := (sum_residual_bounds (b.terms.map UnnormalizedProduct.value) b.alignGridExponent).2
+  have h := (sum_residual_bounds (b.terms.map DenormalizedProduct.value) b.alignGridExponent).2
     (by simp [PreparedBlock.terms])
   simpa [PreparedBlock.alignmentResiduals, List.map_map, Function.comp_def] using h
 

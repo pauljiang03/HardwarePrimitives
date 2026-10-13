@@ -8,7 +8,7 @@ import TensorCore.Numerics.EncodingProperties
 import TensorCore.Numerics.Exact
 import TensorCore.Numerics.Format
 import TensorCore.Numerics.FormatProperties
-import TensorCore.Numerics.UnnormalizedProduct
+import TensorCore.Numerics.DenormalizedProduct
 import TensorCore.Numerics.RoundOp
 import TensorCore.Numerics.RoundTrip
 import TensorCore.Numerics.Rounding

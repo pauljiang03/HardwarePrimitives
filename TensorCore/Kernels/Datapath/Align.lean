@@ -11,7 +11,7 @@ open EFMachine
 set_option exponentiation.threshold 1024
 
 /-- The product or c this term denotes. -/
-def Term.unnormalized (t : Term) : UnnormalizedProduct :=
+def Term.denormalized (t : Term) : DenormalizedProduct :=
   ⟨if t.negative then -(t.significand.toNat : ℤ) else t.significand.toNat,
     (t.biasedExp.toNat : ℤ) - 256, t.mantissaBits.toNat⟩
 
@@ -49,13 +49,13 @@ theorem truncBits_zero (e : ℤ) : truncBits 0 e = 0 := by
 theorem Term.truncBits_eq (variant : Variant) (e : Exp) (t : Term) (ht : t.Valid)
     (hF : 23 ≤ (alignBits variant).toNat)
     (he : t.significand ≠ 0 → t.biasedExp.toNat ≤ e.toNat) :
-    truncBits t.unnormalized.value ((e.toNat : ℤ) - 256 - (alignBits variant).toNat) =
+    truncBits t.denormalized.value ((e.toNat : ℤ) - 256 - (alignBits variant).toNat) =
       if t.negative then -((t.aligned variant e).toNat : ℤ) else ((t.aligned variant e).toNat : ℤ) := by
   rw [t.aligned_toNat variant e ht hF]
   by_cases hz : t.significand = 0
   · have h0 : t.significand.toNat = 0 := by rw [hz]; rfl
-    have hv : t.unnormalized.value = 0 := by
-      simp [Term.unnormalized, UnnormalizedProduct.value, h0]
+    have hv : t.denormalized.value = 0 := by
+      simp [Term.denormalized, DenormalizedProduct.value, h0]
     rw [hv, truncBits_zero, h0]
     cases t.negative <;> simp
   · have hle := he hz
@@ -86,11 +86,11 @@ theorem Term.truncBits_eq (variant : Variant) (e : Exp) (t : Term) (ht : t.Valid
         pow2 (((t.biasedExp.toNat : ℤ) - 256) - t.mantissaBits.toNat) :=
       Rat.mul_nonneg (Rat.natCast_nonneg) (Rat.le_of_lt (pow2_pos _))
     cases hs : t.negative
-    · simp only [Term.unnormalized, UnnormalizedProduct.value, hs, Bool.false_eq_true, if_false,
+    · simp only [Term.denormalized, DenormalizedProduct.value, hs, Bool.false_eq_true, if_false,
         Rat.intCast_natCast]
       unfold truncBits
       rw [if_neg (by grind), hq, floor_nat_div _ _ (Nat.two_pow_pos _)]
-    · simp only [Term.unnormalized, UnnormalizedProduct.value, hs, if_true, Rat.intCast_neg,
+    · simp only [Term.denormalized, DenormalizedProduct.value, hs, if_true, Rat.intCast_neg,
         Rat.intCast_natCast, Rat.neg_mul]
       unfold truncBits
       have hpos' : 0 < (t.significand.toNat : ℚ) *

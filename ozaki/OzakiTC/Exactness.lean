@@ -43,14 +43,14 @@ alignment exponent is at most `g + F`, alignment loses nothing. -/
 theorem accumulator_eq_exactDot_of_grid (b : PreparedBlock) (g : ℤ)
     (hfloor : ∀ f ∈ b.model.eAlignMin, f ≤ g + b.model.alignFracBits)
     (hterm : ∀ t ∈ b.terms, t.significand ≠ 0 →
-      t.unnormalizedExp ≤ g + b.model.alignFracBits ∧ ∃ k : ℤ, t.value = k * pow2 g) :
+      t.exponent ≤ g + b.model.alignFracBits ∧ ∃ k : ℤ, t.value = k * pow2 g) :
     b.accumulator = b.exactDot := by
   rw [accumulator_value, ← terms_value]
   congr 1
   apply List.map_congr_left
   intro t ht
   by_cases hz : t.significand = 0
-  · have hv : t.value = 0 := by simp [UnnormalizedProduct.value, hz]
+  · have hv : t.value = 0 := by simp [DenormalizedProduct.value, hz]
     rw [hv]; exact truncGrid_zero _
   · obtain ⟨_, k, hk⟩ := hterm t ht hz
     obtain ⟨e, he, _⟩ := alignExp_term b t ht hz
@@ -86,7 +86,7 @@ theorem int_finiteValue32 (z : ℤ) (h : z.natAbs ≤ 2 ^ 24) : FiniteValue32 (z
 /-- A finite word of a format whose value has magnitude below `2^(E+1)` has exponent at most `E`. -/
 theorem decode_exp_le {f : Format} {w : BitVec f.width} {d : Decoded}
     (hd : (classify f w).finite = some d) {E : ℤ} (hE : 1 - f.bias ≤ E)
-    (hm : Rat.abs d.value < 2 ^ (E + 1)) (hn : d.significand ≠ 0) : d.unnormalizedExp ≤ E :=
+    (hm : Rat.abs d.value < 2 ^ (E + 1)) (hn : d.significand ≠ 0) : d.exponent ≤ E :=
   classifyNat_scale_le_of_magnitude f w.toNat d hd E hE (by rw [absQ_eq]; exact hm) hn
 
 theorem intCast_eq_zero {z : ℤ} (h : (z : ℚ) = 0) : z = 0 :=
@@ -205,12 +205,12 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
   have hbound0 := wordDotAbs_nonneg p x.products
   have hzc : (zc.natAbs : ℚ) ≤ 2 ^ (24 : ℤ) := by rw [← abs_intCast]; grind
   -- every product term
-  have hprod : ∀ q ∈ x.products, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
-      (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignFracBits ∧
-      ∃ k : ℤ, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
+  have hprod : ∀ q ∈ x.products, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
+      (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignFracBits ∧
+      ∃ k : ℤ, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
     intro q hq hnz
     obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hops q hq
-    simp only [unnormalizedMul] at hnz ⊢
+    simp only [denormalizedMul] at hnz ⊢
     have hn1 : (decodeD p q.1).significand ≠ 0 := fun h => hnz (by rw [h, Int.zero_mul])
     have hn2 : (decodeD p q.2).significand ≠ 0 := fun h => hnz (by rw [h, Int.mul_zero])
     obtain ⟨d1, hd1⟩ := Option.isSome_iff_exists.mp h1
@@ -228,13 +228,13 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
     have e2 := decode_exp_le (f := p.input) (w := q.2) (d := d2) hd2 hp.emin
       (by rw [← hD2]; unfold wordValue at hzb; rw [hzb]; exact hbnd zb hzb') (by rw [← hD2]; exact hn2)
     refine ⟨by rw [hD1, hD2]; have := hp.align; omega, za * zb, ?_⟩
-    have hv := unnormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
-    simp only [unnormalizedMul] at hv
+    have hv := denormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
+    simp only [denormalizedMul] at hv
     rw [hv, pow2_zero, Rat.mul_one, Rat.intCast_mul]
     unfold wordValue at hza hzb
     rw [hza, hzb]
-  have hterms : blk.terms = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ ::
-      x.products.map fun q => unnormalizedMul (decodeD p q.1) (decodeD p q.2) := by
+  have hterms : blk.terms = ⟨dc.significand, dc.exponent, dc.mantissaBits⟩ ::
+      x.products.map fun q => denormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
   have hprof : blk.model = p := by rw [← hblk]
   -- two cases: `|c| < 2^24` (every term on the grid `2^0`), or `|c| = 2^24` and every product
@@ -251,7 +251,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
               (by rw [hdcv, abs_intCast]
                   have : ((zc.natAbs : ℕ) : ℚ) < ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_lt_natCast.mpr hsmall
                   rw [← two_pow_natCast] at this; exact this) hnz
-            show dc.unnormalizedExp ≤ 0 + blk.model.alignFracBits
+            show dc.exponent ≤ 0 + blk.model.alignFracBits
             rw [hprof]; have := hp.wide; omega
           · change dc.value = _; rw [hdcv, pow2_zero, Rat.mul_one]
         · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht
@@ -283,7 +283,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
         · refine ⟨?_, zc / 2, ?_⟩
           · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := 24) (by decide)
               (by rw [hdcv, abs_intCast, hceq, ← two_pow_natCast]; exact two_pow_lt (by omega)) hnz
-            show dc.unnormalizedExp ≤ 1 + blk.model.alignFracBits
+            show dc.exponent ≤ 1 + blk.model.alignFracBits
             rw [hprof]; have := hp.wide; omega
           · change dc.value = _
             rw [hdcv, pow2_one]
@@ -293,10 +293,10 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
         · exfalso
           obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht
           apply hnz
-          have hv := unnormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
-          have : (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = 0 := by
+          have hv := denormalizedProduct_value (decodeD p q.1) (decodeD p q.2)
+          have : (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = 0 := by
             rw [hv]; exact hzero q hq
-          unfold UnnormalizedProduct.value at this
+          unfold DenormalizedProduct.value at this
           rcases Rat.mul_eq_zero.mp this with h | h
           · exact intCast_eq_zero h
           · exact absurd h (Rat.ne_of_gt (pow2_pos _))

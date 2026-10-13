@@ -6,7 +6,7 @@ namespace TensorCore.EFMachine
 
 set_option exponentiation.threshold 1024
 
-/-- Specification of the maximum unnormalized exponent: zero terms are ignored, before any shift or normalization. -/
+/-- Specification of the maximum exponent: zero terms are ignored, before any shift or normalization. -/
 def maxBiasedExp (ts : List Term) (initial : ℕ) : ℕ :=
   ts.foldl (fun e t => if t.word.magnitude = 0 then e else max e t.biasedExp.toNat) initial
 
@@ -50,7 +50,7 @@ theorem outputGrid_spec (D : F32) :
     rw [Int.max_eq_left (by omega)]
     exact ⟨trivial, by omega, by omega⟩
 
-/-- Exact qE=max(qA,qD), with qA obtained from unnormalized exponents, not product magnitude. -/
+/-- Exact qE=max(qA,qD), with qA obtained from exponents, not product magnitude. -/
 theorem selectedGrid_spec (variant : Variant) (ts : List Term) (D : F32) :
     ((selectedGrid variant ts D).toNat : ℤ) - 272 =
       max ((maxBiasedExp ts variant.eAlignMin.toNat : ℤ) - 512 - variant.model.alignFracBits)

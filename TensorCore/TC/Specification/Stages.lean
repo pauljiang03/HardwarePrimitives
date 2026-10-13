@@ -10,8 +10,8 @@ namespace TensorCore.IndependentSpec
 def parametersOf (p : Model) : Parameters :=
   ⟨layoutOf p.input, p.nfma, p.alignFracBits, p.eAlignMin⟩
 def inputOf {p : Model} (x : BlockInput p) : Input (parametersOf p) := ⟨x.products, x.c⟩
-def termOf (d : Decoded) : Term := ⟨d.value, d.unnormalizedExp⟩
-def unnormalizedTermOf (t : UnnormalizedProduct) : Term := ⟨t.value, t.unnormalizedExp⟩
+def termOf (d : Decoded) : Term := ⟨d.value, d.exponent⟩
+def denormalizedTermOf (t : DenormalizedProduct) : Term := ⟨t.value, t.exponent⟩
 
 theorem decode_eq (f : Format) (n : ℕ) :
     decode (layoutOf f) n = ((classifyNat f n).finite).map termOf := by
@@ -36,17 +36,17 @@ theorem decode_eq (f : Format) (n : ℕ) :
         Rat.intCast_neg, Rat.intCast_natCast, Rat.intCast_one, Rat.one_mul, Rat.neg_mul, pow2]
 
 theorem product_eq (a b : Decoded) :
-    product (termOf a) (termOf b) = unnormalizedTermOf (unnormalizedMul a b) := by
-  change Term.mk (a.value * b.value) (a.unnormalizedExp + b.unnormalizedExp) =
-    Term.mk (unnormalizedMul a b).value (unnormalizedMul a b).unnormalizedExp
-  rw [unnormalizedProduct_value]
+    product (termOf a) (termOf b) = denormalizedTermOf (denormalizedMul a b) := by
+  change Term.mk (a.value * b.value) (a.exponent + b.exponent) =
+    Term.mk (denormalizedMul a b).value (denormalizedMul a b).exponent
+  rw [denormalizedProduct_value]
   rfl
 
 theorem decode_products_eq (p : Model) (ps : List (p.Word × p.Word)) :
     (ps.mapM fun (a, b) => do
       return product (← decode (layoutOf p.input) a.toNat)
         (← decode (layoutOf p.input) b.toNat)) =
-      (prepareProducts p ps).map (fun ds => ds.map fun (a, b) => unnormalizedTermOf (unnormalizedMul a b)) := by
+      (prepareProducts p ps).map (fun ds => ds.map fun (a, b) => denormalizedTermOf (denormalizedMul a b)) := by
   induction ps with
   | nil => rfl
   | cons ab rest ih =>
@@ -58,7 +58,7 @@ theorem decode_products_eq (p : Model) (ps : List (p.Word × p.Word)) :
 
 theorem terms_eq {p : Model} (x : BlockInput p) :
     terms (parametersOf p) (inputOf x) =
-      (prepare x).map (fun b => b.terms.map unnormalizedTermOf) := by
+      (prepare x).map (fun b => b.terms.map denormalizedTermOf) := by
   unfold terms inputOf parametersOf
   change (do
     let c ← decode (layoutOf fp32) x.c.toNat
@@ -70,15 +70,15 @@ theorem terms_eq {p : Model} (x : BlockInput p) :
   change (do
     let c ← (decode32 x.c).map termOf
     let ps ← (prepareProducts p x.products).map
-      (fun (ds : List (Decoded × Decoded)) => ds.map fun (a, b) => unnormalizedTermOf (unnormalizedMul a b))
+      (fun (ds : List (Decoded × Decoded)) => ds.map fun (a, b) => denormalizedTermOf (denormalizedMul a b))
     return c :: ps) = _
   unfold prepare
   cases decode32 x.c <;> cases prepareProducts p x.products <;>
-    simp [PreparedBlock.terms, List.map_map, termOf, unnormalizedTermOf, UnnormalizedProduct.value, Decoded.value]
+    simp [PreparedBlock.terms, List.map_map, termOf, denormalizedTermOf, DenormalizedProduct.value, Decoded.value]
 
-theorem unnormalizedProduct_value_zero (t : UnnormalizedProduct) : t.value = 0 ↔ t.significand = 0 := by
-  unfold UnnormalizedProduct.value
-  have hp := pow2_pos (t.unnormalizedExp - t.mantissaBits)
+theorem denormalizedProduct_value_zero (t : DenormalizedProduct) : t.value = 0 ↔ t.significand = 0 := by
+  unfold DenormalizedProduct.value
+  have hp := pow2_pos (t.exponent - t.mantissaBits)
   constructor
   · intro h
     have hcast : (t.significand : ℚ) = 0 := by grind
@@ -104,26 +104,26 @@ private theorem fold_max (es : List ℤ) (acc : Option ℤ) :
         joinExponent acc (some e) := by cases acc <;> rfl
     rw [he, join_assoc]
 
-theorem largestExponent_eq (ts : List UnnormalizedProduct) :
-    largestExponent (ts.map unnormalizedTermOf) = maxTermExp ts := by
+theorem largestExponent_eq (ts : List DenormalizedProduct) :
+    largestExponent (ts.map denormalizedTermOf) = maxTermExp ts := by
   unfold maxTermExp
-  have hf := fold_max (ts.filterMap fun t => if t.significand = 0 then none else some t.unnormalizedExp) none
+  have hf := fold_max (ts.filterMap fun t => if t.significand = 0 then none else some t.exponent) none
   refine Eq.trans ?_ hf.symm
   clear hf
-  change largestExponent (ts.map unnormalizedTermOf) =
-    (ts.filterMap fun t => if t.significand = 0 then none else some t.unnormalizedExp).foldr
+  change largestExponent (ts.map denormalizedTermOf) =
+    (ts.filterMap fun t => if t.significand = 0 then none else some t.exponent).foldr
       (fun e a => joinExponent (some e) a) none
   induction ts with
   | nil => rfl
   | cons t ts ih =>
     by_cases hz : t.significand = 0
-    · have hv := (unnormalizedProduct_value_zero t).mpr hz
-      simpa [largestExponent, unnormalizedTermOf, hz, hv] using ih
-    · have hv : t.value ≠ 0 := fun h => hz ((unnormalizedProduct_value_zero t).mp h)
-      simpa [largestExponent, unnormalizedTermOf, hz, hv] using congrArg (joinExponent (some t.unnormalizedExp)) ih
+    · have hv := (denormalizedProduct_value_zero t).mpr hz
+      simpa [largestExponent, denormalizedTermOf, hz, hv] using ih
+    · have hv : t.value ≠ 0 := fun h => hz ((denormalizedProduct_value_zero t).mp h)
+      simpa [largestExponent, denormalizedTermOf, hz, hv] using congrArg (joinExponent (some t.exponent)) ih
 
 theorem exponent_eq (b : PreparedBlock) :
-    exponent (parametersOf b.model) (b.terms.map unnormalizedTermOf) = b.alignExp := by
+    exponent (parametersOf b.model) (b.terms.map denormalizedTermOf) = b.alignExp := by
   unfold exponent PreparedBlock.alignExp
   rw [largestExponent_eq]
   cases maxTermExp b.terms <;> rfl
@@ -134,17 +134,17 @@ theorem coefficient_eq (v : ℚ) (e : ℤ) :
   split <;> simp
 
 theorem accumulated_eq (b : PreparedBlock) :
-    accumulated (parametersOf b.model) (b.terms.map unnormalizedTermOf) = b.accumulator := by
+    accumulated (parametersOf b.model) (b.terms.map denormalizedTermOf) = b.accumulator := by
   unfold accumulated
   rw [exponent_eq]
-  change ((b.terms.map unnormalizedTermOf).foldr (fun t z =>
+  change ((b.terms.map denormalizedTermOf).foldr (fun t z =>
       keptBits t.value ((2 : ℚ) ^ b.alignGridExponent) + z) 0 : ℤ) *
       (2 : ℚ) ^ b.alignGridExponent = _
   unfold PreparedBlock.accumulator PreparedBlock.alignedBits
   apply congrArg (fun z : ℤ => (z : ℚ) * pow2 b.alignGridExponent)
   induction b.terms with
   | nil => rfl
-  | cons t ts ih => simpa [unnormalizedTermOf, coefficient_eq, sumZ] using congrArg (truncBits t.value b.alignGridExponent + ·) ih
+  | cons t ts ih => simpa [denormalizedTermOf, coefficient_eq, sumZ] using congrArg (truncBits t.value b.alignGridExponent + ·) ih
 
 theorem valid_iff {p : Model} (x : BlockInput p) :
     Valid (parametersOf p) (inputOf x) ↔ ∃ t, evalBlock x = .ok t := by

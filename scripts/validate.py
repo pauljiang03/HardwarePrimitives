@@ -95,7 +95,7 @@ def block_oracle(words):
     residuals = [v - u for v, u in zip(values, aligned)]
     out_loss = acc - f32(bits)
     text = lambda q: f'{q.numerator}/{q.denominator}'
-    return dict(bits=bits, alignExp=eta, alignGridExponent=qe, unnormalizedExps=raw_scales,
+    return dict(bits=bits, alignExp=eta, alignGridExponent=qe, exponents=raw_scales,
                 coefficients=coeff, ideal=text(ideal), accumulator=text(acc),
                 alignmentResiduals=list(map(text, residuals)), outputResidual=text(out_loss),
                 residual=text(ideal - f32(bits)), correctedBits=round_oracle(ideal, True))

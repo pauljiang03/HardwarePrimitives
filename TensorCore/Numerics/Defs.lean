@@ -16,18 +16,18 @@ structure Format where
 abbrev F16 := BitVec 16
 abbrev F32 := BitVec 32
 
-/-- A finite value: `significand · 2^(unnormalizedExp − mantissaBits)`. -/
+/-- A finite value: `significand · 2^(exponent − mantissaBits)`. -/
 structure Decoded where
   /-- Signed integer significand, hidden bit included (e.g. `1.5` in FP16 is `1536`). -/
   significand : ℤ
   /-- Unbiased exponent as stored in the word; the minimum normal exponent for subnormals. -/
-  unnormalizedExp : ℤ
+  exponent : ℤ
   /-- Bits of `significand` after the binary point; the format's mantissa width for an input. -/
   mantissaBits : ℤ
   deriving Repr, DecidableEq
 
 def Decoded.value (x : Decoded) : ℚ :=
-  (x.significand : ℚ) * pow2 (x.unnormalizedExp - x.mantissaBits)
+  (x.significand : ℚ) * pow2 (x.exponent - x.mantissaBits)
 
 inductive Classification where
   | zero (negative : Bool)
@@ -53,7 +53,7 @@ def Format.maxFinite (f : Format) : ℚ :=
   ((2 ^ (f.mantissaBits + 1) - 1 : ℕ) : ℚ) * pow2 (f.emax - f.mantissaBits)
 
 /-- A decoded significand, including a subnormal, has magnitude below two. -/
-def Decoded.Bounded (d : Decoded) : Prop := absQ d.value < 2 * pow2 d.unnormalizedExp
+def Decoded.Bounded (d : Decoded) : Prop := absQ d.value < 2 * pow2 d.exponent
 
 /-- Arithmetic form of every finite FP32 value: an integer coefficient of magnitude below `2^24` on the quantum `2^(e-23)` with `-126 ≤ e ≤ 127`. -/
 def FiniteValue32 (z : ℚ) : Prop :=

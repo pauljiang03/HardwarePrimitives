@@ -18,7 +18,7 @@ def InputKind.format : InputKind → Format
 structure Factor where
   negative : Bool
   magnitude : BitVec 11
-  /-- Unnormalized exponent biased by 256, with zero's conventional unnormalized exponent 0. -/
+  /-- Exponent biased by 256, with zero's conventional exponent 0. -/
   biasedExp : Grid
   mantissaBits : Grid
   deriving Repr, DecidableEq
@@ -40,7 +40,7 @@ def decodeFactor (kind : InputKind) (bits : F32) : Option Factor :=
 
 structure Term where
   word : Word
-  /-- Unnormalized exponent biased by 512. -/
+  /-- Exponent biased by 512. -/
   biasedExp : Grid
   /-- Coefficient grid, biased by 272; this may differ for equal real products. -/
   support : Grid

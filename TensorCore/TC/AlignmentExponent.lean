@@ -31,14 +31,14 @@ private theorem fold_max_member (es : List ℤ) (acc : Option ℤ) (e : ℤ)
       | some v => exact fold_max_preserves xs (max v e) e (by omega)
     · exact ih (maxStep acc x) h
 
-theorem maxTermExp_term (ts : List UnnormalizedProduct) (t : UnnormalizedProduct)
+theorem maxTermExp_term (ts : List DenormalizedProduct) (t : DenormalizedProduct)
     (hmem : t ∈ ts) (hnz : t.significand ≠ 0) :
-    ∃ alignExp, maxTermExp ts = some alignExp ∧ t.unnormalizedExp ≤ alignExp := by
+    ∃ alignExp, maxTermExp ts = some alignExp ∧ t.exponent ≤ alignExp := by
   apply fold_max_member
   apply List.mem_filterMap.mpr
   exact ⟨t, hmem, by simp [hnz]⟩
 
-theorem maxTermExp_none (ts : List UnnormalizedProduct) :
+theorem maxTermExp_none (ts : List DenormalizedProduct) :
     maxTermExp ts = none ↔ ∀ t ∈ ts, t.significand = 0 := by
   constructor
   · intro h t ht
@@ -48,27 +48,27 @@ theorem maxTermExp_none (ts : List UnnormalizedProduct) :
       rw [h] at he
       contradiction
   · intro h
-    have hf : (ts.filterMap fun t => if t.significand = 0 then none else some t.unnormalizedExp) = [] := by
+    have hf : (ts.filterMap fun t => if t.significand = 0 then none else some t.exponent) = [] := by
       apply List.filterMap_eq_nil_iff.mpr
       intro t ht
       simp [h t ht]
     simp [maxTermExp, hf]
 
-theorem alignExp_term (b : PreparedBlock) (t : UnnormalizedProduct) (ht : t ∈ b.terms)
+theorem alignExp_term (b : PreparedBlock) (t : DenormalizedProduct) (ht : t ∈ b.terms)
     (hnz : t.significand ≠ 0) :
-    ∃ alignExp, b.alignExp = some alignExp ∧ t.unnormalizedExp ≤ alignExp := by
+    ∃ alignExp, b.alignExp = some alignExp ∧ t.exponent ≤ alignExp := by
   obtain ⟨e, he, hle⟩ := maxTermExp_term b.terms t ht hnz
   cases hf : b.model.eAlignMin with
   | none => exact ⟨e, by simp [PreparedBlock.alignExp, Model.applyEAlignMin, he, hf], hle⟩
   | some f => exact ⟨max e f, by simp [PreparedBlock.alignExp, Model.applyEAlignMin, he, hf], by omega⟩
 
-theorem aligned_term_coefficient_bound (t : UnnormalizedProduct) (alignExp : ℤ) (F : ℕ)
-    (ht : t.Bounded) (he : t.unnormalizedExp ≤ alignExp) :
+theorem aligned_term_coefficient_bound (t : DenormalizedProduct) (alignExp : ℤ) (F : ℕ)
+    (ht : t.Bounded) (he : t.exponent ≤ alignExp) :
     (truncBits t.value (alignExp - F)).natAbs < 2 ^ (F + 2) := by
   have hq := pow2_pos (alignExp - F)
   have hp := pow2_le_of_le he
   have hs := truncBits_abs_le t.value (alignExp - F)
-  have hb : absQ t.value < 4 * pow2 alignExp := by unfold UnnormalizedProduct.Bounded at ht; grind
+  have hb : absQ t.value < 4 * pow2 alignExp := by unfold DenormalizedProduct.Bounded at ht; grind
   have heq : ((2 ^ (F + 2) : ℕ) : ℚ) * pow2 (alignExp - F) = 4 * pow2 alignExp := by
     rw [← pow2_natCast, ← pow2_add]
     have he' : ((F + 2 : ℕ) : ℤ) + (alignExp - F) = alignExp + 2 := by omega
@@ -139,7 +139,7 @@ theorem prepare_terms_bounded {p : Model} {x : BlockInput p} {b : PreparedBlock}
         · subst t
           exact c_term_bounded c (classifyNat_bounded fp32 x.c.toNat c hc)
         · subst t
-          exact unnormalizedMul_bounded q.1 q.2 (hps.2 q hq).1 (hps.2 q hq).2
+          exact denormalizedMul_bounded q.1 q.2 (hps.2 q hq).1 (hps.2 q hq).2
 
 theorem prepared_coefficient_bound (b : PreparedBlock) (F : ℕ)
     (hF : b.model.alignFracBits = F) (ht : ∀ t ∈ b.terms, t.Bounded) :
@@ -147,7 +147,7 @@ theorem prepared_coefficient_bound (b : PreparedBlock) (F : ℕ)
   intro z hz
   obtain ⟨t, hmem, rfl⟩ := List.mem_map.mp hz
   by_cases hzero : t.significand = 0
-  · simp [UnnormalizedProduct.value, hzero, truncBits, Rat.div_def]
+  · simp [DenormalizedProduct.value, hzero, truncBits, Rat.div_def]
     exact Nat.two_pow_pos _
   · obtain ⟨alignExp, he, hle⟩ := alignExp_term b t hmem hzero
     have hq : b.alignGridExponent = alignExp - F := by
@@ -216,8 +216,8 @@ private theorem fold_max_upper (es : List ℤ) (acc : Option ℤ) (upper : ℤ)
     · intro e he
       exact hs e (by simp [he])
 
-theorem maxTermExp_upper (ts : List UnnormalizedProduct) (upper : ℤ)
-    (h : ∀ t ∈ ts, t.significand ≠ 0 → t.unnormalizedExp ≤ upper) :
+theorem maxTermExp_upper (ts : List DenormalizedProduct) (upper : ℤ)
+    (h : ∀ t ∈ ts, t.significand ≠ 0 → t.exponent ≤ upper) :
     ∀ e ∈ maxTermExp ts, e ≤ upper := by
   apply fold_max_upper
   · simp
@@ -231,7 +231,7 @@ theorem maxTermExp_upper (ts : List UnnormalizedProduct) (upper : ℤ)
 
 theorem alignExp_upper (b : PreparedBlock) (upper : ℤ)
     (hf : ∀ f ∈ b.model.eAlignMin, f ≤ upper)
-    (ht : ∀ t ∈ b.terms, t.significand ≠ 0 → t.unnormalizedExp ≤ upper) :
+    (ht : ∀ t ∈ b.terms, t.significand ≠ 0 → t.exponent ≤ upper) :
     ∀ e ∈ b.alignExp, e ≤ upper := by
   have hu := maxTermExp_upper b.terms upper ht
   intro alignExp he

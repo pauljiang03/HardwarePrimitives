@@ -5,7 +5,7 @@
       "bits": 1074790401,
       "alignExp": 0,
       "alignGridExponent": -23,
-      "unnormalizedExps": [
+      "exponents": [
         0,
         -23,
         -23,
@@ -38,7 +38,7 @@
       "bits": 1074790400,
       "alignExp": 1,
       "alignGridExponent": -22,
-      "unnormalizedExps": [
+      "exponents": [
         1,
         -23,
         -23,
@@ -71,7 +71,7 @@
       "bits": 1076889601,
       "alignExp": 0,
       "alignGridExponent": -23,
-      "unnormalizedExps": [
+      "exponents": [
         0,
         -3,
         -3,
@@ -104,7 +104,7 @@
       "bits": 1091043327,
       "alignExp": 0,
       "alignGridExponent": -23,
-      "unnormalizedExps": [
+      "exponents": [
         0,
         0,
         0,
@@ -137,7 +137,7 @@
       "bits": 0,
       "alignExp": null,
       "alignGridExponent": -23,
-      "unnormalizedExps": [
+      "exponents": [
         0,
         0,
         0,
@@ -170,7 +170,7 @@
       "bits": 662700032,
       "alignExp": -28,
       "alignGridExponent": -51,
-      "unnormalizedExps": [
+      "exponents": [
         -28,
         0,
         0,
@@ -203,7 +203,7 @@
       "bits": 1,
       "alignExp": -126,
       "alignGridExponent": -149,
-      "unnormalizedExps": [
+      "exponents": [
         0,
         0,
         0,
@@ -236,7 +236,7 @@
       "bits": 1151319632,
       "alignExp": 14,
       "alignGridExponent": -9,
-      "unnormalizedExps": [
+      "exponents": [
         14,
         11,
         5,

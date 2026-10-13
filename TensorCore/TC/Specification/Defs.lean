@@ -34,7 +34,7 @@ structure Term where
   exponent : ℤ
   deriving Repr, DecidableEq
 
-/-- IEEE fields, including the minimum-normal unnormalized exponent of subnormal inputs. -/
+/-- IEEE fields, including the minimum normal exponent of subnormal inputs. -/
 def decode (f : Layout) (word : ℕ) : Option Term :=
   let E := word / 2 ^ f.mantissaBits % 2 ^ f.exponent
   let M := word % 2 ^ f.mantissaBits
@@ -46,7 +46,7 @@ def decode (f : Layout) (word : ℕ) : Option Term :=
     let s : ℤ := if word / 2 ^ (f.mantissaBits + f.exponent) = 0 then 1 else -1
     some ⟨(s : ℚ) * (m : ℚ) * (2 : ℚ) ^ (e - f.mantissaBits), e⟩
 
-/-- Unnormalized exponents are added, even when the resulting significand is at least two. -/
+/-- Exponents are added, even when the resulting significand is at least two. -/
 def product (a b : Term) : Term := ⟨a.value * b.value, a.exponent + b.exponent⟩
 
 def terms (p : Parameters) (x : Input p) : Option (List Term) := do

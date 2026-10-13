@@ -14,7 +14,7 @@ theorem result_of_eval {p : Model} {x : BlockInput p} {t : BlockTrace}
   have hr := evalPrepared_output (evalBlock_evalPrepared h)
   have ha := accumulated_eq t.block
   rw [prepare_model hp] at ha
-  refine ⟨hv.1, t.block.terms.map unnormalizedTermOf, ?_, ?_, ?_⟩
+  refine ⟨hv.1, t.block.terms.map denormalizedTermOf, ?_, ?_, ?_⟩
   · rw [terms_eq, hp]; rfl
   · rw [ha]; exact round32_range hr
   · rw [ha]; exact round32_rounds _ _ hr

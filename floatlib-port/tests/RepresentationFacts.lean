@@ -5,7 +5,7 @@ namespace TCFloat.Comparison
 open FloatLib.Floats.Formats.BinaryInterchange
 
 def project (t : Term) : Int × Int × Int :=
-  (t.dyadic.signedSignificand,t.unnormalizedExp,t.mantissaBits)
+  (t.dyadic.signedSignificand,t.exponent,t.mantissaBits)
 
 def zeroPositive : Term := ⟨⟨false,0,0⟩,0,0⟩
 def zeroNegative : Term := ⟨⟨true,0,0⟩,0,0⟩
@@ -29,7 +29,7 @@ def inconsistentTerm : Term := ⟨⟨false,1,0⟩,0,23⟩
 theorem unrestricted_projection_changes_value :
     inconsistentTerm.value = 1 ∧
     (inconsistentTerm.dyadic.signedSignificand : ℚ) *
-      pow2 (inconsistentTerm.unnormalizedExp-inconsistentTerm.mantissaBits) ≠ inconsistentTerm.value := by
+      pow2 (inconsistentTerm.exponent-inconsistentTerm.mantissaBits) ≠ inconsistentTerm.value := by
   decide +kernel
 
 /-- `TensorCore.Finite32` requires bits/value consistency by a proof field; unchecked `Trace` permits inconsistent fields. -/

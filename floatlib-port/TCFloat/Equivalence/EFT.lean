@@ -146,7 +146,7 @@ theorem allZero_eq (b : Block) : (block b).allZeroTerms = b.terms.all (fun t => 
   congr 1
   funext t
   apply Bool.eq_iff_iff.mpr
-  simpa only [Function.comp_apply,beq_iff_eq] using unnormalizedTerm_zero t
+  simpa only [Function.comp_apply,beq_iff_eq] using denormalizedTerm_zero t
 
 def encodedResult : TensorCore.EncodedEFTResult → Option Nat × String
   | .allZero => (some 0,"allZero")

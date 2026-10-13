@@ -43,7 +43,7 @@ def h100 := fp16 16 2 (some (-133))
 
 structure Term where
   dyadic : ExactDyadic
-  unnormalizedExp : Int
+  exponent : Int
   mantissaBits : Int
 
 def Term.value (t : Term) : ℚ := t.dyadic.toRat
@@ -57,7 +57,7 @@ def decode (f : FloatFormat) (n : Nat) : Option Term := do
     return ⟨d, scale, f.fracWidth⟩
 
 def Term.mul (a b : Term) : Term :=
-  ⟨a.dyadic.mul b.dyadic, a.unnormalizedExp + b.unnormalizedExp, a.mantissaBits + b.mantissaBits⟩
+  ⟨a.dyadic.mul b.dyadic, a.exponent + b.exponent, a.mantissaBits + b.mantissaBits⟩
 
 structure Block where
   model : TCModel
@@ -79,7 +79,7 @@ def maxTermExp : List Term → Option Int
   | t :: ts =>
     let rest := maxTermExp ts
     if t.dyadic.significand = 0 then rest
-    else some (rest.map (max t.unnormalizedExp) |>.getD t.unnormalizedExp)
+    else some (rest.map (max t.exponent) |>.getD t.exponent)
 def Block.alignExp (b : Block) : Option Int :=
   (maxTermExp b.terms).map fun e => b.model.eAlignMin.map (max e) |>.getD e
 def Block.q (b : Block) : Int := b.alignExp.getD 0 - (23 + b.model.neab : Nat)

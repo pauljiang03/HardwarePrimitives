@@ -68,7 +68,7 @@ theorem operand_decode_bounded {s : OperandEncoding} {bits : s.Word} {d : Decode
 /-- A nonzero finite encoding has exponent at least the format's minimum normal exponent. -/
 theorem classifyNat_scale_lower (f : Format) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) (hnz : d.significand ≠ 0) :
-    1 - f.bias ≤ d.unnormalizedExp := by
+    1 - f.bias ≤ d.exponent := by
   unfold classifyNat at h
   dsimp only at h
   split at h
@@ -86,11 +86,11 @@ theorem classifyNat_scale_lower (f : Format) (n : ℕ) (d : Decoded)
       change 1 - f.bias ≤ ((n / 2 ^ f.mantissaBits % 2 ^ f.exponentBits : ℕ) : ℤ) - f.bias
       omega
 
-/-- Nonzero finite decoded values retain the format's mantissa width and bounded unnormalized exponent. -/
+/-- Nonzero finite decoded values retain the format's mantissa width and bounded exponent. -/
 theorem classifyNat_metadata (f : Format) (he : 2 ≤ f.exponentBits) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) (hnz : d.significand ≠ 0) :
-    d.mantissaBits = f.mantissaBits ∧ 1 - f.bias ≤ d.unnormalizedExp ∧
-      d.unnormalizedExp ≤ ((2 ^ f.exponentBits - 2 : ℕ) : ℤ) - f.bias := by
+    d.mantissaBits = f.mantissaBits ∧ 1 - f.bias ≤ d.exponent ∧
+      d.exponent ≤ ((2 ^ f.exponentBits - 2 : ℕ) : ℤ) - f.bias := by
   have hp : (2 : ℕ) ^ 2 ≤ 2 ^ f.exponentBits := Nat.pow_le_pow_right (by decide) he
   have hm := Nat.mod_lt (n / 2 ^ f.mantissaBits) (Nat.two_pow_pos f.exponentBits)
   unfold classifyNat at h

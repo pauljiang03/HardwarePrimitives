@@ -57,7 +57,7 @@ exponents before the output need 9 bits:
   as 127 from `C` alone. That is 261 values, more than 8 bits can hold.
 - Product exponents span more: two BF16 inputs near the maximum give 254.
 
-The datapath stores an input's unnormalized exponent biased by 128, so a
+The datapath stores an input's exponent biased by 128, so a
 product's exponent, the sum of two, is biased by 256, as is `C`'s. Every
 exponent fits in 9 bits. Normalization compares exponents before it
 subtracts, so no intermediate value leaves 9 bits either. *Accurate Models*
@@ -67,7 +67,7 @@ its reported ranges allow.
 *Accurate Models* writes a subnormal input with its normalized exponent, so it
 reports product exponents down to −266 for BF16 and −272 for TF32. The model
 here writes the same subnormal with exponent −126 and no hidden bit, so the
-same product has unnormalized exponent −252. The values are identical; only
+same product has exponent −252. The values are identical; only
 the bookkeeping differs.
 
 ## The stages
@@ -119,7 +119,7 @@ the stages:
 | Stage | Lean result | What it shows |
 | --- | --- | --- |
 | Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L48), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L97) | each decoder gives the model's decoded value |
-| Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's unnormalized product |
+| Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's product in denormalized form |
 | Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
 | Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
 | Accumulate | [`Datapath.accumulate_toInt`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L126), [`Datapath.accumulator_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L121) | the accumulator's signed value is the model's exact sum; it never overflows |

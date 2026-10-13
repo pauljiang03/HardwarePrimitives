@@ -39,7 +39,7 @@ theorem lowPart_bound (g : ExtractionGrid t) :
 
 theorem retained_add_low (g : ExtractionGrid t) :
     g.retainedSum + sumQ g.lowParts = t.block.exactDot := by
-  have h := sum_stage_residuals (t.block.terms.map UnnormalizedProduct.value)
+  have h := sum_stage_residuals (t.block.terms.map DenormalizedProduct.value)
     (fun x => truncGrid x g.exponent)
   rw [terms_value] at h
   simpa [retainedSum, coarse, lowParts, List.map_map, Function.comp_def] using h.symm
@@ -58,7 +58,7 @@ theorem accumulator_eq_retained (g : ExtractionGrid t) :
   rw [accumulator_value]
   unfold retainedSum retainedLowParts lowParts coarse
   rw [List.map_map]
-  have hsplit : (fun x : UnnormalizedProduct => truncGrid x.value t.block.alignGridExponent) =
+  have hsplit : (fun x : DenormalizedProduct => truncGrid x.value t.block.alignGridExponent) =
       fun x => truncGrid x.value g.exponent +
         truncGrid (x.value - truncGrid x.value g.exponent) t.block.alignGridExponent := by
     funext x

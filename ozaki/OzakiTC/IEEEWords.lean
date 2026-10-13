@@ -103,8 +103,8 @@ theorem classify_significand_ne_zero {f : Format} {n : ℕ} {d : Decoded}
 theorem value_sign {d : Decoded} (h : d.significand ≠ 0) :
     d.value ≠ 0 ∧ decide (d.value < 0) = decide (d.significand < 0) := by
   unfold Decoded.value
-  have hp := pow2_pos (d.unnormalizedExp - d.mantissaBits)
-  generalize pow2 (d.unnormalizedExp - d.mantissaBits) = P at hp
+  have hp := pow2_pos (d.exponent - d.mantissaBits)
+  generalize pow2 (d.exponent - d.mantissaBits) = P at hp
   refine ⟨?_, ?_⟩
   · intro h0
     rcases Rat.mul_eq_zero.mp h0 with h0 | h0

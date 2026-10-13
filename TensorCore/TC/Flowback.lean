@@ -16,8 +16,8 @@ def MonotoneInAccumulator (prof : Model) (products : List (Decoded × Decoded)) 
 /-- Definition III.3: the flowback `ω = Σᵢ (trunc_{q'A}(Tᵢ) − trunc_{qA}(Tᵢ))` of the products between the alignment grids selected by `c` and by `c'`. -/
 def flowback (prof : Model) (products : List (Decoded × Decoded)) (c c' : Decoded) : ℚ :=
   sumQ (products.map fun (a, b) =>
-    truncGrid (unnormalizedMul a b).value (PreparedBlock.mk prof products c').alignGridExponent -
-      truncGrid (unnormalizedMul a b).value (PreparedBlock.mk prof products c).alignGridExponent)
+    truncGrid (denormalizedMul a b).value (PreparedBlock.mk prof products c').alignGridExponent -
+      truncGrid (denormalizedMul a b).value (PreparedBlock.mk prof products c).alignGridExponent)
 
 /-- Definition III.3: `ΔA = trunc_{qA}(c) − trunc_{q'A}(c')`. -/
 def accumulatorShift (prof : Model) (products : List (Decoded × Decoded)) (c c' : Decoded) :
@@ -35,8 +35,8 @@ theorem perturbed_accumulator (prof : Model) (products : List (Decoded × Decode
   simp only [PreparedBlock.terms, List.map_cons, List.map_map, sumQ, Function.comp_def]
   unfold flowback accumulatorShift
   rw [sumQ_map_sub]
-  have hc : UnnormalizedProduct.value ⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ = c.value := rfl
-  have hc' : UnnormalizedProduct.value ⟨c'.significand, c'.unnormalizedExp, c'.mantissaBits⟩ = c'.value := rfl
+  have hc : DenormalizedProduct.value ⟨c.significand, c.exponent, c.mantissaBits⟩ = c.value := rfl
+  have hc' : DenormalizedProduct.value ⟨c'.significand, c'.exponent, c'.mantissaBits⟩ = c'.value := rfl
   rw [hc, hc']
   grind
 
@@ -241,7 +241,7 @@ theorem accumulatorShift_of_exact (prof : Model) (products : List (Decoded × De
 /-- Theorem III.4 as a failure of Definition III.2: the construction's products are not monotone in the accumulator input once `K ≥ 3·2^p`. -/
 theorem construction_not_monotone (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
+    (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hthr : 3 * 2 ^ p ≤ K) :
     ¬ MonotoneInAccumulator prof (List.replicate K (da, db)) := by
   intro hmono

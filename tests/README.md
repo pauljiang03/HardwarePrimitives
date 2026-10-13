@@ -54,7 +54,7 @@ A successful module may print nothing. Lean elaborates and checks its definition
 
 | Test area | Main contents |
 | --- | --- |
-| [TC/Cases.lean](TensorCoreTests/TC/Cases.lean) | Named unnormalized-product/alignment traces and snapshot observations |
+| [TC/Cases.lean](TensorCoreTests/TC/Cases.lean) | Named denormalized-product/alignment traces and snapshot observations |
 | [TC/Monotonicity.lean](TensorCoreTests/TC/Monotonicity.lean) | V100/Ampere/Hopper family theorems, thresholds, and witness-range boundaries |
 | [TC/Features.lean](TensorCoreTests/TC/Features.lean) | Canonical alignment, minimum alignment exponents, extra alignment bits and machine-refinement witnesses |
 | [TC/Instruction.lean](TensorCoreTests/TC/Instruction.lean) | Instruction variants with their block FMAs in order, input width, and block-order examples |

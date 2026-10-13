@@ -97,40 +97,40 @@ theorem zero_value_bits (c : F32) (d : Decoded) (hd : decode32 c = some d)
 theorem Decoded.value_ne_zero (d : Decoded) (h : d.significand ≠ 0) : d.value ≠ 0 := by
   intro h0
   unfold Decoded.value at h0
-  have hq := pow2_pos (d.unnormalizedExp - d.mantissaBits)
+  have hq := pow2_pos (d.exponent - d.mantissaBits)
   have hne := Rat.ne_of_gt hq
   have h1 : (d.significand : ℚ) = ((0 : ℤ) : ℚ) := by
     rw [Rat.intCast_zero]
-    calc (d.significand : ℚ) = (d.significand : ℚ) * pow2 (d.unnormalizedExp - d.mantissaBits) /
-          pow2 (d.unnormalizedExp - d.mantissaBits) := (Rat.mul_div_cancel hne).symm
-      _ = 0 / pow2 (d.unnormalizedExp - d.mantissaBits) := by rw [h0]
+    calc (d.significand : ℚ) = (d.significand : ℚ) * pow2 (d.exponent - d.mantissaBits) /
+          pow2 (d.exponent - d.mantissaBits) := (Rat.mul_div_cancel hne).symm
+      _ = 0 / pow2 (d.exponent - d.mantissaBits) := by rw [h0]
       _ = 0 := by rw [Rat.div_def, Rat.zero_mul]
   exact h (Rat.intCast_inj.mp h1)
 
-/-- With only zero products, the alignment exponent is the accumulator input's unnormalized exponent, whenever the minimum alignment exponent is at most `−126`. -/
+/-- With only zero products, the alignment exponent is the accumulator input's exponent, whenever the minimum alignment exponent is at most `−126`. -/
 theorem zero_products_alignExp (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126)
-    (c : Decoded) (hc : c.significand ≠ 0) (hlow : -126 ≤ c.unnormalizedExp) :
+    (c : Decoded) (hc : c.significand ≠ 0) (hlow : -126 ≤ c.exponent) :
     (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
-      (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).alignExp = some c.unnormalizedExp := by
+      (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).alignExp = some c.exponent := by
   have hterms : (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms =
-      ⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ :: List.replicate K ⟨0, 0, 0⟩ := by
-    simp [PreparedBlock.terms, List.map_replicate, unnormalizedMul]
-  have hmem : (⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ : UnnormalizedProduct) ∈
+      ⟨c.significand, c.exponent, c.mantissaBits⟩ :: List.replicate K ⟨0, 0, 0⟩ := by
+    simp [PreparedBlock.terms, List.map_replicate, denormalizedMul]
+  have hmem : (⟨c.significand, c.exponent, c.mantissaBits⟩ : DenormalizedProduct) ∈
       (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
         (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms := by
     rw [hterms]; simp
   obtain ⟨e, he, hle⟩ := maxTermExp_term _ _ hmem hc
-  have hle' : c.unnormalizedExp ≤ e := hle
+  have hle' : c.exponent ≤ e := hle
   have hup := maxTermExp_upper (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
-      (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms c.unnormalizedExp (by
+      (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms c.exponent (by
         intro t ht hnz
         rw [hterms] at ht
         simp only [List.mem_cons, List.mem_replicate] at ht
         rcases ht with rfl | ⟨_, rfl⟩
         · exact Int.le_refl _
         · exact absurd rfl hnz) e (by rw [he]; simp)
-  have heq : e = c.unnormalizedExp := by omega
+  have heq : e = c.exponent := by omega
   subst heq
   unfold PreparedBlock.alignExp
   rw [he]
@@ -141,7 +141,7 @@ theorem zero_products_alignExp (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : �
   | none => rfl
   | some f =>
     have := hfl f (by rw [hf]; simp)
-    simp [Int.max_eq_left (by omega : f ≤ c.unnormalizedExp)]
+    simp [Int.max_eq_left (by omega : f ≤ c.exponent)]
 
 /-- A block FMA whose products are all zero pairs returns its accumulator input unchanged, for every finite input other than `−0`. -/
 theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
@@ -161,9 +161,9 @@ theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
       (fp16Fp32Model K neab eAlignMin).nfma) = true := by simp [fp16Fp32Model]
   have hcoef := construction_alignedBits (fp16Fp32Model K neab eAlignMin) K ⟨0, 0, 0⟩ ⟨0, 0, 0⟩
     f.decoded
-  have hprod : ∀ q : ℤ, truncBits (unnormalizedMul ⟨0, 0, 0⟩ ⟨0, 0, 0⟩).value q = 0 := by
+  have hprod : ∀ q : ℤ, truncBits (denormalizedMul ⟨0, 0, 0⟩ ⟨0, 0, 0⟩).value q = 0 := by
     intro q
-    simp [unnormalizedMul, UnnormalizedProduct.value, truncBits, Rat.div_def]
+    simp [denormalizedMul, DenormalizedProduct.value, truncBits, Rat.div_def]
     all_goals decide +kernel
   have hacc : (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded).accumulator = f.value := by
@@ -178,7 +178,7 @@ theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
       unfold Finite32.value
       rw [hv]
       simp
-    · obtain ⟨hfrac, hlow⟩ : f.decoded.mantissaBits = 23 ∧ -126 ≤ f.decoded.unnormalizedExp := by
+    · obtain ⟨hfrac, hlow⟩ : f.decoded.mantissaBits = 23 ∧ -126 ≤ f.decoded.exponent := by
         rcases decode32_fields c f.decoded hc with ⟨_, _, h0⟩ | ⟨_, _, h0⟩ | ⟨hE1, _, h0⟩
         · rw [h0] at hsig; exact absurd rfl hsig
         · rw [h0]; exact ⟨rfl, Int.le_refl _⟩
@@ -186,19 +186,19 @@ theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
       have heta := zero_products_alignExp K neab eAlignMin hfl f.decoded hsig hlow
       have hq : (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
           (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded).alignGridExponent =
-          f.decoded.unnormalizedExp - ((23 + neab : ℕ) : ℤ) := by
+          f.decoded.exponent - ((23 + neab : ℕ) : ℤ) := by
         unfold PreparedBlock.alignGridExponent
         rw [heta]
         rfl
       rw [hq] at hcoef
       have hcval : f.decoded.value =
           ((f.decoded.significand * ((2 ^ neab : ℕ) : ℤ) : ℤ) : ℚ) *
-            pow2 (f.decoded.unnormalizedExp - ((23 + neab : ℕ) : ℤ)) := by
+            pow2 (f.decoded.exponent - ((23 + neab : ℕ) : ℤ)) := by
         unfold Decoded.value
         rw [hfrac, Rat.intCast_mul, Rat.intCast_natCast, ← pow2_natCast, Rat.mul_assoc, ← pow2_add]
         congr 2
         omega
-      have hcc : truncBits f.decoded.value (f.decoded.unnormalizedExp - ((23 + neab : ℕ) : ℤ)) =
+      have hcc : truncBits f.decoded.value (f.decoded.exponent - ((23 + neab : ℕ) : ℤ)) =
           f.decoded.significand * ((2 ^ neab : ℕ) : ℤ) := by
         rw [hcval, truncBits_of_grid]
       unfold PreparedBlock.accumulator

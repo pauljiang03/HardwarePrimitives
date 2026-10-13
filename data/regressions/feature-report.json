@@ -1,5 +1,5 @@
 {
-  "scope": "Canonical FP16 products, FP32 c/output, unnormalized products, RTZ",
+  "scope": "Canonical FP16 products, FP32 c/output, products in denormalized form, RTZ",
   "oracle": "Exact rational arithmetic; FP32 output found by binary search over encodings",
   "configurations": 132,
   "cases": 2033,
