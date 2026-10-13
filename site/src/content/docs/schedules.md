@@ -327,10 +327,12 @@ and the incoming accumulator exactly and rounds once, so the products inside one
 no order of their own, and the reduction order is the chain of instructions. Yang, Riasanovsky,
 Deng and Sarkar ([arXiv:2609.11356](https://arxiv.org/abs/2609.11356), September 2026) state this
 assumption for NVIDIA's fp16, bf16 and tf32 instructions (their Section 3.2.1) and report that
-their measurements, made on GB300, agree with it. Their setting is Blackwell, which the models here
-do not cover, so nothing below is a claim about their results. On the older architectures that the
-models do cover, V100, A100 and CDNA 1–3, the abstraction is both unsound and incomplete, because an
-instruction whose `k` exceeds the FMA size is a chain of block FMAs.
+their measurements agree with it. Their NVIDIA measurements are on Blackwell (GB300, GB200), which
+the models here do not cover, and on H100, where a `k = 16` instruction is a single block FMA and
+the abstraction matches the model. They do not state an instruction semantics for AMD's MFMA. So
+nothing below is a claim about their results. On V100, A100 and CDNA 1–3, the abstraction is both
+unsound and incomplete, because an instruction whose `k` exceeds the FMA size is a chain of block
+FMAs.
 
 **Unsound: it accepts a rewrite that changes the bits.** Exchange the products at `k = 0` and
 `k = 15` inside one `k = 16` instruction. A single rounding cannot see the change; a chain of
