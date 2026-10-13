@@ -1,6 +1,6 @@
 ---
 title: 'Schedules: the reduction algebra'
-description: The third part of MMAlgebra, the algebra of reduction schedules. For each modeled matrix multiplier, the exact laws under which two GEMM schedules give bitwise identical results, with proofs, completeness, concrete witnesses, a decision procedure, and a plan for Triton.
+description: The third part of MMAlgebra, the algebra of reduction schedules. For each modeled matrix multiplier, the exact laws under which two GEMM schedules give bitwise identical results, how far apart they can be, and how pinned accumulation makes every schedule agree, with proofs, concrete witnesses, a decision procedure, and a plan for Triton.
 ---
 
 The third part of MMAlgebra, the **reduction algebra**, answers one question for every matrix
@@ -32,6 +32,7 @@ FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a blo
 | The CDNA 1 merge law and the CDNA 2 `c`-split law | Tested; follow directly from the block formulas; not yet in Lean |
 | How far apart two schedules can be: structural bound, divergence of two schedules, shared work | Proved in Lean for any matrix multiplier, instantiated for SFMA and CDNA 1; other block constants derived on paper and checked numerically |
 | Inside the exact region (small integer operands) every schedule agrees | Proved in Lean on every Tensor Core model and on CDNA 1, 2 and 3 |
+| Pinned and anchored accumulation make every schedule agree on Tensor Cores (pinned also on CDNA 3), and fail on CDNA 1 and 2 | Proved in Lean; kernel-checked demonstration and counterexamples; simulated; not yet run on a GPU |
 | Decision procedure with separating inputs; Triton front end | Python prototype; Triton front end planned |
 
 The Lean development is the [`mmalgebra/`](https://github.com/pauljiang03/MMAlgebra/tree/main/mmalgebra)
@@ -402,7 +403,14 @@ model bound because, with normal operands, every term's magnitude is at least 2 
 its exponent, so `2^η ≤ A`, and the truncated output satisfies `ulp(D) ≤ 2^-23 |D| + 2^-149` with
 `|D| ≤ A`; CDNA 3 is the same with `2^(e_max) ≤ A`. With a subnormal factor, 2 to the power of a
 product's exponent can exceed its magnitude by a factor of up to `2^10` per subnormal fp16 factor,
-and the bound then uses the exponent itself.
+and the bound then uses the exponent itself. This matters in practice: error analyses often assume that a
+block of `n` terms is within `γ_n Σ|aᵢbᵢ|` of its exact sum, with `γ_n = nu/(1 − nu)`, as if each
+addition rounded with unit roundoff `u`. With one subnormal fp16 factor, which sets the block's
+alignment while contributing little to its value, a block exceeds that bound by up to 99 times on
+V100, 20 times on A100 and 5 times on H100 in a search over the model, and a kernel-checked V100
+block exceeds it by more than 50 times ([`MMAlgebra.TC.SubnormalRemark.v100_subnormal_exceeds_gamma`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/SubnormalGamma.lean#L28)).
+The model's own bound, stated with the alignment exponent, remains valid; a checker that assumed
+`γ_n` would not be.
 
 A block's accumulator input is a computed value, so its magnitude is at most the magnitude of its
 subterm plus that subterm's error. The bound therefore composes over the term:
@@ -437,7 +445,13 @@ result. This is the hinge of the whole picture: inside the exact region every sc
 and outside it, by completeness, the schedules that the laws do not equate disagree on some input.
 For example, products `2047·2047`, `2047·1000`, `−1000·3` and `3·3` with `c = 12345` give
 `6,246,563` under one block from `c`, a split-K whose partials are added before `c`, and a
-reversed chain with `c` in the epilogue alike.
+reversed chain with `c` in the epilogue alike. The total magnitude is more than needed: every
+running value of every order and grouping of the products is the sum of some of them, so it lies
+between minus the total of the negative products and the total of the positive ones. On the Tensor
+Core model every schedule is therefore exact as soon as the positive products and the negative
+products each total below `2^24` ([`MMAlgebra.TC.runBlocks_exact_of_posneg`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/ScheduleFreeExact.lean#L69),
+[`MMAlgebra.TC.schedules_agree_of_posneg`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/ScheduleFreeExact.lean#L94)); for sign-balanced data that allows up to twice the
+usual total.
 
 In Lean, the composition is proved once for any matrix multiplier with a binary32 addition
 ([`MMAlgebra.eval_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160)), and
@@ -546,6 +560,175 @@ testing, in the manner of FPRev, needs GPU access and is future work. The study 
 inputs at one size; the worst cases are lower bounds from a heuristic search, and the bounds
 assume normal operands. The full results, including uniform and near-cancelling data and the 99th
 percentiles, are in the prototype's recorded output.
+
+## Making every schedule agree: pinned and anchored accumulation
+
+The algebra says that on Tensor Cores and CDNA 3 only identical schedules reproduce, and the bounds
+say how far apart the others can be. Both statements are about the native arithmetic. If a kernel
+may add a few products of its own, every schedule can be made to agree, on Tensor Cores and CDNA 3,
+at little or no cost, by making the hardware's truncation work on a grid that does not move. This
+part is proved on the models and simulated on them; it has not yet been run on a GPU.
+
+### The idea
+
+A Tensor Core block FMA truncates every term toward zero on the grid `2^(η − F)`, where `η` is the
+largest exponent of a nonzero term in the block. Two things make the result depend on the
+schedule: `η` moves with the running value and with the products that share the block, and the
+final truncation of the sum depends on the binade of the result. Both can be pinned down.
+
+- **Pinned accumulation.** Put a cancelling pair of products `+2^α` and `−2^α` in every block FMA,
+  and keep every other product, and the running value, at or below exponent `α`. Then `η = α` in
+  every block, every product is truncated to the same grid `2^g` with `g = α − F`, and the pair
+  cancels exactly. As long as the running value stays below `2^(g + 24)`, the sum is a binary32
+  value and the final truncation loses nothing. Each block adds exactly `Σ trunc_g(aᵢbᵢ)`, and a
+  chain returns `c₀ + Σ trunc_g(aᵢbᵢ)` over all its products: a fixed function of the multiset of
+  products. Every order, every grouping into blocks, and every split-K gives the same bits, since
+  the partial results are on the grid and add exactly in binary32. With the same `g`, V100, A100
+  and H100 compute the same function. So does CDNA 3: it aligns the products among themselves, to
+  their largest exponent with 24 fractional bits, which the pin fixes at `α`, and then adds a `c`
+  on the grid without loss; there `g = α − 24`.
+- **Anchored accumulation.** Start the accumulator at `1.5·2^α` instead of `0`, and subtract it at
+  the end. While the running value stays in `[2^α, 2^(α+1))`, every block aligns to `α`, the
+  exponent of its accumulator, truncates each product to `2^(α − F)`, and its final truncation is
+  a floor on `2^(α − 23)`, which commutes with adding the on-grid accumulator. Each block then adds
+  an increment that depends on its own products alone, and a chain returns the anchor plus the sum
+  of the increments: every order of the blocks, and every split-K at block boundaries, gives the
+  same bits, and no product slot is spent. On V100, where `F = 23`, the floor is the identity, so
+  the increment is again a sum over products.
+
+The constructions rest on exactly the features that make these matrix multipliers rigid:
+truncation toward zero, and an alignment grid set by one exponent. CDNA 1 and CDNA 2 round to
+nearest inside a block, so the position of the rounding moves with the running value, and neither
+construction works there. CDNA 3 adds `c` after aligning the products among themselves, so an
+anchor in `c` does not fix the alignment, while a pin among the products does.
+
+| Model | Pinned | Anchored |
+| --- | --- | --- |
+| V100, A100, H100 | proved ([`MMAlgebra.TC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L214)) | proved, block by block ([`MMAlgebra.TC.runBlocks_anchored`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L150)) |
+| CDNA 3 | proved ([`MMAlgebra.MC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Pinned.lean#L195)) | fails ([`MMAlgebra.MC.PinnedCases.cdna3_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L83)) |
+| CDNA 1 | fails ([`MMAlgebra.MC.PinnedCases.cdna1_pinned_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L43)) | fails ([`MMAlgebra.MC.PinnedCases.cdna1_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L31)) |
+| CDNA 2 | fails ([`MMAlgebra.MC.PinnedCases.cdna2_pinned_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L70)) | fails ([`MMAlgebra.MC.PinnedCases.cdna2_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L55)) |
+
+Each failure is a kernel-checked pair of block orders whose outputs differ in the last place. A
+kernel-checked demonstration on the Tensor Cores uses 28 fp16 products with values between about
+`−4` and `4`:
+
+| Chain | Output |
+| --- | --- |
+| H100, native, two block FMAs in one order | `−3.86069369…` (`0xc077159b`) |
+| H100, native, the other order | `−3.86069393…` (`0xc077159c`) |
+| H100, pinned, both orders (pin `±2^10`, grid `2^-15`) | `−3.86065674` (`0xc0771500`) |
+| A100, pinned, five blocks of six products in two orders (pin `±2^9`) | `−3.86065674` (`0xc0771500`) |
+| V100, pinned, fourteen blocks of two products in two orders (pin `±2^8`) | `−3.86065674` (`0xc0771500`) |
+
+The pinned value is the exact sum of the 28 products, each truncated toward zero to a multiple of
+`2^-15` ([`MMAlgebra.TC.PinnedDemo.h100_native_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/PinnedDemo.lean#L70),
+[`MMAlgebra.TC.PinnedDemo.pinned_agree_v100_a100_h100`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/PinnedDemo.lean#L78)). In simulation, eleven schedules of
+`k = 1024` products (sequential, split-K by 2, 3, 4 and 8, and six random stream-K partitions
+combined in random order) gave up to 11 distinct native results per entry, and exactly one
+anchored result on every Tensor Core model, fp16 and bf16 (two or three on CDNA 1 to 3). Pinned
+accumulation at `k = 1680` gave the same bits on V100 (anchored, at the same grid), A100, H100 and
+CDNA 3 in all 40 fp16 cases, and on A100, H100 and CDNA 3 in all 40 bf16 cases, always equal to the
+truncated sum.
+
+### The algorithm
+
+1. **A bound per entry.** Compute `β = ‖aᵢ‖·‖bⱼ‖` for each output entry. By Cauchy–Schwarz it
+   bounds every partial sum of every schedule; it costs `O((m + n)k)` and does not depend on the
+   batch.
+2. **Pinned.** Choose `g = ⌈log₂ β⌉ + 1 − 24`, so that every partial sum stays below `2^(g + 24)`,
+   and `α = g + F` for each GPU (`g + 25` on H100, `g + 24` on A100 and CDNA 3, `g + 23` on V100);
+   with normal operands every product's exponent is then below `α`. Put one pin pair `±2^α` in every block FMA; on A100, whose `k = 16` instruction is two blocks of
+   eight, that means one pair in each half. Start from `0`. Partial results of a split-K add
+   exactly in binary32.
+3. **Anchored.** Start at `1.5·2^E`, with `E` chosen from `β` so that the running value stays in
+   its binade, and subtract the anchor exactly at the end. The anchor must sit inside the MMA
+   accumulator, as the `C` operand of the first instruction of the chain, not in a library's
+   `β·C` epilogue, which adds it after the reduction.
+4. **Bias correction (optional).** Truncation toward zero shortens each product by half a grid step
+   on average; adding `2^(g−1)` times the number of positive products minus the number of negative
+   ones removes most of that bias, deterministically.
+
+The cost: anchored accumulation spends no slots, so it runs at full speed; pinned accumulation
+spends two of the `K` slots of every block FMA, `16/14 = 1.14×` on H100 and `8/6 = 1.33×` on A100
+and CDNA 3. On V100 a pin pair would take half of each four-slot block, but there anchoring
+already computes the same function product by product. The norms add `O((m + n)k)` work.
+
+### Accuracy, honestly
+
+The result is fixed point: the grid is set in advance from `β`, not from the running value. The
+table gives `log₂` of the median relative error against the exact product, for fp16 inputs on the
+H100 model (30 entries each, 10 at `k = 16384`):
+
+| Data | `k` | Native | Pinned | Pinned with bias correction |
+| --- | ---: | ---: | ---: | ---: |
+| Normal | 1024 | −19.6 | −13.5 | −15.2 |
+| Normal | 4096 | −17.4 | −11.3 | −12.0 |
+| Normal | 16384 | −15.4 | −9.6 | −10.9 |
+| LLM-like | 4096 | −18.1 | −11.5 | −12.3 |
+| Uniform on `[0, 1)`, same sign | 4096 | −15.4 | −11.0 | −18.1 |
+| Strongly correlated rows | 4096 | −15.6 | −11.3 | −18.5 |
+| Log-normal magnitudes, random sign | 4096 | −17.6 | −10.3 | −11.4 |
+
+On random-sign data the grid must cover `‖a‖·‖b‖`, which exceeds `|a·b|` by about `√k`, so about
+`½·log₂ k` bits are lost: six at `k = 4096`, which is the gap in the table (about `2^-11` to
+`2^-13` against about `2^-17` natively). On same-sign data the slack is small, the loss comes from
+the truncation bias, and with the correction pinned accumulation is more accurate than native.
+Anchored accumulation is less accurate (on H100 at `k = 4096`, `2^-7.7` on normal data, `2^-11.5`
+with its correction). Against the usual portable exact option, per-vector INT8 quantization with
+an exact integer dot product, pinned accumulation of bf16 inputs is 5 to 9 bits more accurate on
+normal and LLM-like data at `k = 1024` and `4096` (at `4096`, `2^-11.2` and `2^-12.0` against
+`2^-6.1` and `2^-4.8`), and 3 to 6 bits at `k = 16384`; on same-sign data INT8 does as well as
+pinned accumulation with its bias correction. Rounded to BF16, pinned results differ from the correctly
+rounded BF16 value by one unit in the last place in some entries (up to a third of them at
+`k = 4096` on log-normal data), where native results almost never do.
+
+**Why fixed point is unavoidable.** A floating-point accumulator rounds on a grid that follows the
+running value, and the running value depends on the schedule; that is exactly what makes native
+results schedule-dependent. A result that is the same under every schedule, computed with a single
+accumulator, cannot use a grid that depends on partial sums, so the grid must be fixed in advance
+from a bound on every partial sum of every schedule: the scheme is fixed point. Recovering accuracy
+needs more than one accumulator, as in reproducible summation, where Demmel and Nguyen pre-round
+every summand to grids set from a bound on the maximum and ReproBLAS keeps a few binned
+accumulators ([ReproBLAS](https://bebop.cs.berkeley.edu/reproblas/)); on a matrix multiplier that
+costs extra GEMMs. Two mitigations follow:
+
+- **Two folds.** Split `A = A₁ + A₂` and `B = B₁ + B₂`, with `A₁` and `B₁` rounded to a coarse grid
+  so that `A₁B₁` is exact under pinning, and compute `A₁B₁ + A₁B₂ + A₂B` with three pinned GEMMs.
+  On H100 with bf16 inputs at `k = 1024` this recovers native accuracy on normal data (`2^-20.5`
+  against `2^-20.2`), and at `k = 4096` it gains four bits over one pinned GEMM (`2^-16.0` against
+  `2^-12.0`, native `2^-18.1`); on LLM-like data the gain is smaller.
+- **Selective pinning.** Pin only the products whose results must reproduce across schedules or
+  GPUs, and leave the rest native.
+
+### When it is worth it
+
+| Option | Cost | Same bits under | Accuracy at `k = 4096` (normal data) |
+| --- | --- | --- | --- |
+| Native | `1×` | one schedule on one GPU | about `2^-17` |
+| Anchored | `1.0×`, plus the norms | every schedule on one Tensor Core model | about `2^-7` to `2^-12` |
+| Pinned | `1.14–1.33×` | every schedule on V100, A100, H100 and CDNA 3 | about `2^-11` to `2^-12` |
+| Pinned with three GEMMs | about `3.4×` | the same | about `2^-15` to `2^-16` |
+| Correctly rounded Ozaki | `4–9×` for low-precision inputs | every schedule on every modeled GPU, both vendors | correctly rounded |
+
+The cost is manageable where the outputs are rounded to BF16 or FP16 anyway, as in inference, so
+that the fixed-point loss mostly disappears in the output rounding; for verifiable or consensus
+inference across GPUs and vendors, where agreement is the requirement; and for regression testing
+across platforms. It is a deal breaker for training reductions with `k` of `10^5` to `10^6`, where
+eight to ten bits would be lost on random-sign data; for HPC accuracy requirements; for entries
+dominated by cancellation, where `|a·b|` is far below `‖a‖·‖b‖`; and for determinism on a single
+GPU, where batch-invariant kernels with a fixed schedule already reproduce at full FP32 accuracy.
+The costs are model counts of block FMAs, or of calls to the matrix multiplier, not GPU time; the
+correctly rounded Ozaki figures come from the [correct-rounding page](/MMAlgebra/ozaki/correct-rounding/).
+The accuracy ranges cover the corrected and uncorrected variants on the H100 and A100 models.
+
+In Lean: [`MMAlgebra.TC.evalBlock_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L147) (one pinned block adds exactly the truncated products),
+[`MMAlgebra.TC.truncSum_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L56) (the pin pair adds nothing), [`MMAlgebra.TC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L214),
+[`MMAlgebra.TC.pinned_schedule_free`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L259) and [`MMAlgebra.TC.pinned_splitK`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L273) on the Tensor Core
+models; [`MMAlgebra.TC.evalBlock_anchored`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L63), [`MMAlgebra.TC.runBlocks_anchored`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L150) and
+[`MMAlgebra.TC.anchored_blocks_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L182) for anchoring; [`MMAlgebra.MC.evalBlock_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Pinned.lean#L117) and
+[`MMAlgebra.MC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Pinned.lean#L195) on CDNA 3, where the conditions on each block's accumulator are
+derived along the chain rather than assumed.
 
 ## Applications and value
 
@@ -666,6 +849,9 @@ for any two that do not, an input that shows it.
   closed forms for chains and split-K.
 - **Real libraries.** Which programs cuBLAS and rocBLAS run for which shapes, probed on GPUs by
   testing, so that the modeled programs can be replaced by measured ones.
+- **Pinned and anchored accumulation on GPUs.** A first kernel, with a pin pair in each half of
+  A100's `k = 16` instruction, to confirm the models' prediction on hardware; a multi-fold variant
+  for accuracy; selective pinning.
 - **Extremes of the formats.** CDNA 1 bf16 terms with additions near binary32's underflow
   threshold are not fully classified, and FP8 is not covered (CDNA 3's FP8 blocks group odd and
   even products separately and depend on positions).
@@ -698,6 +884,11 @@ for any two that do not, an input that shows it.
 | Inside the exact region every schedule agrees | Proved; kernel-checked example | [`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172), [`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44) |
 | The composed bound on the Tensor Cores, CDNA 2 and CDNA 3; worst cases and tightness | 1,800 random evaluations with no violation; adversarial search, witnesses checked on the model | [`divergence.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/divergence.py) |
 | How different BLAS programs are | Modeled programs, `k = 1024`, 200 entries on each of four kinds of data | [`blas_programs.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/blas_programs.py) |
+| Every schedule is exact when the positive and the negative products each total below `2^24` | Proved | [`MMAlgebra.TC.runBlocks_exact_of_posneg`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/ScheduleFreeExact.lean#L69), [`MMAlgebra.TC.schedules_agree_of_posneg`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/ScheduleFreeExact.lean#L94) |
+| Pinned accumulation on the Tensor Core models and on CDNA 3; anchored accumulation on the Tensor Core models | Proved | [`MMAlgebra.TC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L214), [`MMAlgebra.TC.pinned_schedule_free`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L259), [`MMAlgebra.TC.pinned_splitK`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L273), [`MMAlgebra.TC.runBlocks_anchored`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L150), [`MMAlgebra.TC.anchored_blocks_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L182), [`MMAlgebra.MC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Pinned.lean#L195) |
+| The 28-product demonstration; pinning and anchoring fail on CDNA 1 and 2, anchoring on CDNA 3 | Kernel-checked | [`MMAlgebra.TC.PinnedDemo.pinned_agree_v100_a100_h100`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/PinnedDemo.lean#L78), [`MMAlgebra.MC.PinnedCases.cdna1_pinned_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L43), [`MMAlgebra.MC.PinnedCases.cdna2_pinned_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L70), [`MMAlgebra.MC.PinnedCases.cdna3_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L83) |
+| A subnormal factor breaks the `γ_n` bound of a block FMA | Kernel-checked on V100; searched on V100, A100, H100 | [`MMAlgebra.TC.SubnormalRemark.v100_subnormal_exceeds_gamma`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/SubnormalGamma.lean#L28), [`subnormal_gamma.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/subnormal_gamma.py) |
+| Pinned and anchored accumulation: schedules, GPUs, accuracy, cost | Simulated with a fast integer port of the models (3,600 blocks checked against the validated port) | [`pinned_sim.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/pinned_sim.py), [`anchor_sim.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/anchor_sim.py), [`pinned_acc.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/pinned_acc.py), [`anchored_acc.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/anchored_acc.py), [`portable_cmp.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/portable_cmp.py), [`pinned3.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/pinned3.py) |
 | The Python port computes the Lean models' output words | 1,800 random blocks on 12 variants, bit for bit | [`validate_port.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/validate_port.py) |
 | The models match the hardware | Replayed measurements and published vectors; assumed beyond them | [NVIDIA validation](/MMAlgebra/model/validation/), [AMD validation](/MMAlgebra/amd/validation/) |
 
