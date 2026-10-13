@@ -470,6 +470,7 @@ theorem term_complete (F : NormalForm N E) {m : Machine α β} {K : ℕ} {z : α
     (t₁ t₂ : Term) (hw₁ : TermWF K t₁) (hw₂ : TermWF K t₂) (n₁ : t₁.leaves.Nodup)
     (n₂ : t₂.leaves.Nodup) (hl : ∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) (hne : F.nf t₁ ≠ F.nf t₂) :
     ∃ (s : List ℕ) (q : ℕ → α), s.length ≤ 3 ∧ (∀ i, i ∉ s → q i = z) ∧
+      (∃ p, Adm p ∧ ∀ i, q i = z ∨ q i = p i) ∧
       eval m q m.zero m.zero t₁ ≠ eval m q m.zero m.zero t₂ := by
   obtain ⟨U₁, hU₁⟩ : ∃ U, F.nf t₁ = some U := by
     cases h : F.nf t₁ with
@@ -513,7 +514,8 @@ theorem term_complete (F : NormalForm N E) {m : Machine α β} {K : ℕ} {z : α
     intro i; rw [hl₁, hl₂, List.mem_filter, List.mem_filter, hl i]
   obtain ⟨p, hadm, hp⟩ :=
     base _ _ (termWF_restrict S hw₁) (termWF_restrict S hw₂) nr₁ nr₂ hlen hl' hne'
-  refine ⟨s, mask z S p, hs, fun i hi => by simp [mask, S, hi], ?_⟩
+  refine ⟨s, mask z S p, hs, fun i hi => by simp [mask, S, hi],
+    ⟨p, hadm, fun i => by unfold mask; split <;> simp⟩, ?_⟩
   rw [eval_mask hz, eval_mask hz, sound _ (termWF_restrict S hw₁) nr₁ p hadm,
     sound _ (termWF_restrict S hw₂) nr₂ p hadm]
   exact hp

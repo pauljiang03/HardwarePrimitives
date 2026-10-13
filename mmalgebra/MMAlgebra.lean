@@ -7,6 +7,7 @@ import MMAlgebra.LTree
 import MMAlgebra.TermComplete
 import MMAlgebra.Shapes
 import MMAlgebra.Rigid
+import MMAlgebra.Rounded
 
 /-! # Reduction terms and their divergence, on any matrix multiplier
 

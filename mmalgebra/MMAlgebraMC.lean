@@ -9,6 +9,7 @@ import MMAlgebraMC.Bridge
 import MMAlgebraMC.Words
 import MMAlgebraMC.Blocks
 import MMAlgebraMC.RigidMC
+import MMAlgebraMC.RoundedMC
 
 /-! # The reduction algebra on the AMD matrix-core model
 

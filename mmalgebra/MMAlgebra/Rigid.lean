@@ -686,12 +686,13 @@ theorem rigid_term_complete (A : RigidAlg m K) (ins2 ins3 : List (ℕ → α))
     (t₁ t₂ : Term) (hw₁ : TermWF K t₁) (hw₂ : TermWF K t₂) (n₁ : t₁.leaves.Nodup)
     (n₂ : t₂.leaves.Nodup) (hl : ∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves) (hne : nfR t₁ ≠ nfR t₂) :
     ∃ (s : List ℕ) (q : ℕ → α), s.length ≤ 3 ∧ (∀ i, i ∉ s → q i = A.z) ∧
-      eval m q m.zero m.zero t₁ ≠ eval m q m.zero m.zero t₂ :=
-  term_complete (labelsNF rigidLabels) A.slot (fun _ => True) (evRO m K)
+      eval m q m.zero m.zero t₁ ≠ eval m q m.zero m.zero t₂ := by
+  obtain ⟨s, q, hs, hz, _, hq⟩ := term_complete (labelsNF rigidLabels) A.slot (fun _ => True) (evRO m K)
     (fun t hw hn p _ => rigid_sound A p t hw hn)
     (rigid_base ins2 ins3
       (sep_of_table codes2All mem_codes2All _ ins2 (fun κ q => evR m K q (realize2 κ 0 1)) hnd2)
       (sep_of_table codes3All mem_codes3All _ ins3 (fun κ q => evR m K q (κ.realize 0 1 2)) hnd3))
     t₁ t₂ hw₁ hw₂ n₁ n₂ hl hne
+  exact ⟨s, q, hs, hz, hq⟩
 
 end MMAlgebra
