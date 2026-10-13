@@ -17,6 +17,8 @@ Terms for one output entry, their evaluation on any `Machine` (a block function 
 addition), a structural error bound from per-block and per-addition error contracts, the
 divergence of two schedules on one machine or two, the sharper bound when they share work, and
 schedules for every length (any order and grouping of the products), as used by the bridge to the
-Ozaki schemes.
+Ozaki schemes, and completeness from laws and base witnesses: chains on any rigid multiplier, and
+terms with additions through the rigid, correctly rounded and pairwise normal forms, which are
+labeled trees determined by their restrictions to triples of leaves.
 Imports only Lean's standard library and `Ozaki.Basic`, so it can be used beside either hardware
 model. -/
