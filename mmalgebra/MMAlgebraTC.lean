@@ -4,6 +4,7 @@ import MMAlgebraTC.Completeness
 import MMAlgebraTC.NegZero
 import MMAlgebraTC.ChainComplete
 import MMAlgebraTC.TermComplete
+import MMAlgebraTC.ChainVariants
 import MMAlgebraTC.OneRounding
 import MMAlgebraTC.Exact
 import MMAlgebraTC.ScheduleFreeExact

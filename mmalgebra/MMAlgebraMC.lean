@@ -11,6 +11,7 @@ import MMAlgebraMC.Blocks
 import MMAlgebraMC.RigidMC
 import MMAlgebraMC.RoundedMC
 import MMAlgebraMC.PairwiseMC
+import MMAlgebraMC.ChainBF16
 
 /-! # The reduction algebra on the AMD matrix-core model
 
