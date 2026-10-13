@@ -70,7 +70,6 @@ export default defineConfig({
             { label: 'Error bounds', slug: 'properties/error-bounds' },
             { label: 'Non-monotonicity', slug: 'properties/non-monotonicity' },
             { label: 'TC-EFT correction', slug: 'properties/eft' },
-            { label: 'MMAlgebra: schedule equivalence', slug: 'mmalgebra' },
           ],
         },
         {
@@ -85,6 +84,7 @@ export default defineConfig({
             { label: 'Related work and novelty', slug: 'ozaki/literature' },
           ],
         },
+        { label: 'Schedules: the reduction algebra', slug: 'schedules' },
         {
           label: 'Proofs & trust',
           items: [

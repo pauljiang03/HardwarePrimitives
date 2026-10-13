@@ -6,7 +6,7 @@ It has three parts, each building on the one before:
 
 1. **Hardware semantics.** Executable models of the block FMAs of NVIDIA Tensor Cores (Volta, Ampere and Hopper) and of AMD matrix cores (CDNA 1, 2 and 3), following Khattak and Mikaitis, *Accurate Models of NVIDIA Tensor Cores* ([paper](https://arxiv.org/html/2512.07004v4)) and *Accurate Models of AMD Matrix Cores* ([paper](https://arxiv.org/abs/2609.14845)). On top of the Tensor Core model: error bounds, a characterization of non-monotonicity, and TC-EFT, an error-free transformation that recovers the correctly rounded sum of a block FMA. The non-monotonicity results and the TC-EFT algorithm come from the TC-EFT paper (*TC-EFT: Characterizing and Correcting Tensor Core Arithmetic*). The root library `TensorCore` holds the Tensor Core model; [`amd/`](amd/README.md) holds the matrix core model.
 2. **Emulation.** [`ozaki/`](ozaki/README.md) proves the Ozaki schemes and NVIDIA's automatic dynamic precision on both models, with correctly rounded variants and integer pipelines of bounded width.
-3. **Schedules.** An algebra of reduction schedules that decides which ways of computing a matrix product give identical bits on each architecture (in progress).
+3. **Schedules.** [`mmalgebra/`](mmalgebra/README.md) is an algebra of reduction schedules that decides which ways of computing a matrix product give identical bits on each architecture, and bounds how far apart they can be when they do not.
 
 Lean names describe what each result states; docstrings cite the paper and number where one applies.
 
@@ -60,7 +60,7 @@ The calculation succeeds with the FP32 value `4.0`. It prints the encoded result
 | [`examples/`](examples/README.md) | Checked worked examples and Lean batch adapters |
 | [`amd/`](amd/README.md) | Matrix-Core: the AMD matrix-core (CDNA 1–3) formalization of *Accurate Models of AMD Matrix Cores*, a standalone Lake project with its own FloatLib implementation |
 | [`ozaki/`](ozaki/README.md) | The Ozaki schemes (Ozaki-I, Ozaki-II, and ADP/ESC) on the Tensor Core and Matrix-Core models, with correctly rounded versions of all three; a standalone Lake project that requires both |
-| [`mmalgebra/`](mmalgebra/README.md) | MMAlgebra: the algebra of matrix multiply-accumulate reductions, which decides when two GEMM schedules give bitwise identical results on the Tensor Core and Matrix-Core models, with a Python prototype; a standalone Lake project that requires both |
+| [`mmalgebra/`](mmalgebra/README.md) | The reduction algebra of schedules: when two GEMM schedules give bitwise identical results on the Tensor Core and Matrix-Core models, and how far apart they can be, with a Python prototype; a standalone Lake project that requires both models and `ozaki/` |
 | [`floatlib-port/`](floatlib-port/README.md) | Independent FloatLib implementation and equivalence proofs, with its own Lake project |
 | [`docs/`](docs/README.md) | Numbered guide, command reference, and trust boundaries |
 | [`scripts/`](scripts/) | Validation runners, exact-arithmetic oracles, and proof audits |

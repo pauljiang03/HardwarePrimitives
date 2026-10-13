@@ -1,15 +1,15 @@
 ---
-title: 'MMAlgebra: when two GEMM schedules give the same bits'
-description: The algebra of matrix multiply-accumulate reductions. For each modeled matrix multiplier, the exact laws under which two GEMM schedules give bitwise identical results, with proofs, completeness, concrete witnesses, a decision procedure, and a plan for Triton.
+title: 'Schedules: the reduction algebra'
+description: The third part of MMAlgebra, the algebra of reduction schedules. For each modeled matrix multiplier, the exact laws under which two GEMM schedules give bitwise identical results, with proofs, completeness, concrete witnesses, a decision procedure, and a plan for Triton.
 ---
 
-**MMAlgebra** (the algebra of matrix multiply-accumulate reductions) answers one question for
-every matrix multiplier modeled on this site: when do two ways of computing the same matrix product
+The third part of MMAlgebra, the **reduction algebra**, answers one question for every matrix
+multiplier modeled on this site: when do two ways of computing the same matrix product
 give the same result, bit for bit? For one entry of `D = C + AB`, every GEMM schedule (split-K,
 stream-K, the k-tile depth, the instruction shape, and whether `C` is added in the first block FMA
 or in the epilogue) is a small term built from block FMAs and binary32 additions. The block
-semantics of [the Tensor Core model](/TC-EFT/model/) and [the AMD matrix-core
-model](/TC-EFT/amd/) determine which rewrites of these terms preserve the output word for every
+semantics of [the Tensor Core model](/MMAlgebra/model/) and [the AMD matrix-core
+model](/MMAlgebra/amd/) determine which rewrites of these terms preserve the output word for every
 input. The answer is an algebra per architecture: a short list of laws, a completeness result
 saying that no other laws hold (proved in Lean for two products, checked exhaustively on small
 terms), and, for any two schedules that are not equivalent, a concrete input on which they
@@ -34,9 +34,9 @@ FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a blo
 | Inside the exact region (small integer operands) every schedule agrees | Proved in Lean on every Tensor Core model and on CDNA 1, 2 and 3 |
 | Decision procedure with separating inputs; Triton front end | Python prototype; Triton front end planned |
 
-The Lean development is the [`mmalgebra/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra)
+The Lean development is the [`mmalgebra/`](https://github.com/pauljiang03/MMAlgebra/tree/main/mmalgebra)
 project of this repository, which requires the two models, and the Python prototype is in
-[`mmalgebra/prototype/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra/prototype).
+[`mmalgebra/prototype/`](https://github.com/pauljiang03/MMAlgebra/tree/main/mmalgebra/prototype).
 
 ## The problem: bitwise reproducibility of matrix products
 
@@ -72,7 +72,7 @@ This matters in practice:
 - **Across GPUs.** The same schedule gives different bits on different matrix multipliers, since
   their block FMAs align, truncate and round differently.
 
-Practitioners' working rule is that only an identical schedule reproduces. MMAlgebra makes that
+Practitioners' working rule is that only an identical schedule reproduces. The algebra makes that
 rule exact: it says which schedule changes are harmless on which hardware, proves it, and shows
 with a concrete input that every other change is harmful. It also finds the exceptions, where
 two schedules that look different always agree.
@@ -85,19 +85,19 @@ A matrix multiplier does not add one product at a time. Following Khattak and Mi
 for an FMA size `K` (`N_FMA`) of 1 to 16, with a binary32 accumulator `c` and output `d`, and an
 MMA or MFMA instruction whose inner dimension `k` exceeds `K` is a chain of `k / K` block FMAs, in
 increasing `k`, each block's output being the next block's `c` (see [instructions and
-chaining](/TC-EFT/model/instructions/)). How a block forms its sum is what differs:
+chaining](/MMAlgebra/model/instructions/)). How a block forms its sum is what differs:
 
 | Variant | `K` (fp16) | How one block FMA adds |
 | --- | ---: | --- |
-| V100, A100, H100 Tensor Cores | 4, 8, 16 | Exact products in denormalized form; every term, `c` included, aligned to the largest exponent with `23 + n_eab` fractional bits (0, 1, 2 extra alignment bits) and truncated; one exact multi-term addition; truncation to binary32 ([the model](/TC-EFT/model/), [variants](/TC-EFT/model/variants/)) |
-| CDNA 1 (MI100) | 4 | Exact sum of `c` and the products, rounded once to nearest ([correct rounding](/TC-EFT/amd/architectures/#cdna-1-mi100-correct_rounding)) |
-| CDNA 2 (MI210, MI250) | 4 | Each product rounded to binary32, pairwise sums `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added last; subnormals flushed ([pairwise sums](/TC-EFT/amd/architectures/#cdna-2-mi210-mi250-pair_wise_sum)) |
-| CDNA 3 (MI300) | 8 | Products aligned to their largest exponent with 24 fractional bits; `c` added late, with rounding down; final rounding to nearest ([global alignment](/TC-EFT/amd/architectures/#cdna-3-mi300a-mi300x-algorithms-1-and-2)) |
+| V100, A100, H100 Tensor Cores | 4, 8, 16 | Exact products in denormalized form; every term, `c` included, aligned to the largest exponent with `23 + n_eab` fractional bits (0, 1, 2 extra alignment bits) and truncated; one exact multi-term addition; truncation to binary32 ([the model](/MMAlgebra/model/), [variants](/MMAlgebra/model/variants/)) |
+| CDNA 1 (MI100) | 4 | Exact sum of `c` and the products, rounded once to nearest ([correct rounding](/MMAlgebra/amd/architectures/#cdna-1-mi100-correct_rounding)) |
+| CDNA 2 (MI210, MI250) | 4 | Each product rounded to binary32, pairwise sums `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added last; subnormals flushed ([pairwise sums](/MMAlgebra/amd/architectures/#cdna-2-mi210-mi250-pair_wise_sum)) |
+| CDNA 3 (MI300) | 8 | Products aligned to their largest exponent with 24 fractional bits; `c` added late, with rounding down; final rounding to nearest ([global alignment](/MMAlgebra/amd/architectures/#cdna-3-mi300a-mi300x-algorithms-1-and-2)) |
 | SFMA (fp32 inputs, all CDNA) | 1 | A sequential FMA, each step rounded to nearest |
 
 Every variant above has a bit-level Lean model on this site, validated against recorded or
-published hardware outputs ([NVIDIA](/TC-EFT/model/validation/), [AMD](/TC-EFT/amd/validation/)).
-MMAlgebra uses the models as its semantics, through a Python port that agrees with them bit for
+published hardware outputs ([NVIDIA](/MMAlgebra/model/validation/), [AMD](/MMAlgebra/amd/validation/)).
+The algebra uses the models as its semantics, through a Python port that agrees with them bit for
 bit on 1,800 random blocks.
 
 ## The algebra
@@ -155,8 +155,8 @@ is a tie that rounds to even, `2.25`, twice; the chain adds `y + z = 2^-22` firs
 
 The same products show early and late accumulation of `C` on V100. With `c = 2.25`,
 `blk(c, {y, z})` returns `2.25`, while `c ⊕ [y z]` returns `2.25 + 2^-22`. In Lean:
-[`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29) and
-[`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13).
+[`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29) and
+[`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13).
 
 ## Laws by architecture
 
@@ -193,21 +193,21 @@ symmetries of the tree (25 violations); the 101 inside them gave none.
 
 **Products act as a multiset** wherever a block adds its terms in one step after aligning them to
 a common exponent: the largest exponent and the exact sum of truncated terms do not depend on the
-order. In Lean this is [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) for every Tensor Core model, and
-[`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L37) for the sum that CDNA 1 and CDNA 3 round at the end of a block. CDNA 2's block is a fixed tree
+order. In Lean this is [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) for every Tensor Core model, and
+[`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L37) for the sum that CDNA 1 and CDNA 3 round at the end of a block. CDNA 2's block is a fixed tree
 `((p₁ + p₂) + (p₃ + p₄))` with a rounding at every node, so only the tree's own symmetries (swap
-within a pair, swap the pairs) preserve it ([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L53)).
+within a pair, swap the pairs) preserve it ([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L53)).
 
 **Zero products are invisible**: a product with a zero factor adds nothing to the exact sum and
 is ignored when the alignment exponent is chosen, so it can replace an empty slot and the reverse
-([`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230)). A block with no products returns its accumulator input
-when that input is finite and not `−0` ([`zero_products_passthrough`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Instruction.lean#L147)). The exception is real: in
+([`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230)). A block with no products returns its accumulator input
+when that input is finite and not `−0` ([`zero_products_passthrough`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Instruction.lean#L147)). The exception is real: in
 the random tests, one SFMA block returned `−0` (a tiny negative product rounded to zero), and an
 empty block after it returned `+0`. On CDNA 2 a zero product prunes
 its leaf of the tree, but moving it to another slot reshapes the tree.
 
 **The merge law of CDNA 1** follows from correct rounding: a block returns the binary32 value
-nearest to the exact sum of `c` and its products ([`MatrixCore.correctRounding_nearestEven`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L30)),
+nearest to the exact sum of `c` and its products ([`MatrixCore.correctRounding_nearestEven`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L30)),
 and an fp16 product (at most 22 significant bits, magnitude between `2^-48` and `2^32`) is exactly
 representable in binary32. So a block from `0` holding one product returns that product exactly,
 and `[x] [J]` rounds the same exact sum as `[x J]`; likewise `[x] ⊕ [y]` and `[x y]` both round
@@ -216,7 +216,7 @@ differently: inside a block, `x` takes part with its exponent sum, while as an a
 been normalized, as in the hand-sized example.
 
 **The `c`-split law of CDNA 2** follows from the block formula
-`d = fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` ([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L24)): `c` is added last,
+`d = fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` ([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L24)): `c` is added last,
 in one binary32 addition. The equation holds with an addition that, like CDNA 2's own, flushes
 subnormal inputs and results to zero. One consequence: a split-K whose last part is a single
 block gives the unsplit chain's bits on CDNA 2. On every other variant, `c` takes part in the
@@ -224,7 +224,7 @@ block's alignment or rounding (early accumulation), and moving it changes the re
 
 **Negation** is a symmetry of truncation toward zero and of rounding to nearest. CDNA 3 rounds
 down in two of its steps, so negating every input can change the magnitude of the output
-([`MatrixCore.globalAlignment_sign_asymmetric`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L71)). This is not a schedule law, but where it holds, a
+([`MatrixCore.globalAlignment_sign_asymmetric`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L71)). This is not a schedule law, but where it holds, a
 separating input still separates after negation.
 
 ### Normal forms: three algebras
@@ -251,7 +251,7 @@ CDNA 1 bf16 is a boundary case. Its blocks are correctly rounded too, but a bf16
 below binary32's range, and then a one-product block rounds it: with `p₀ = 2^-149` and
 `p₁ = 2^-150`, `[p₀] [p₁]` returns `2^-148` (the tie `1.5 · 2^-149` rounds to even) while
 `[p₁] [p₀]` returns `2^-149`, because `[p₁]` alone rounds `2^-150` to `+0`
-([`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23)). Over all inputs its chains are rigid: the twelve
+([`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23)). Over all inputs its chains are rigid: the twelve
 chain patterns of three products are pairwise separated.
 
 ## Completeness
@@ -266,7 +266,7 @@ The argument has three steps.
 1. **Restriction.** Set `aᵢ = 0` for every product outside a support `S`. Every block then behaves
    as the block with those slots emptied (zero products are invisible), so the term evaluates as
    its restriction to `S`, with empty blocks and additions of an all-zero part dropped. In Lean,
-   [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) proves this for chains on every Tensor Core model. Dropping an
+   [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) proves this for chains on every Tensor Core model. Dropping an
    empty block or an addition of `+0` needs the value passing through to be other than `−0`.
 2. **Small supports.** Two different normal forms already differ after restriction to some
    support of at most three products. For rigid chains, two products suffice: an ordered partition
@@ -297,18 +297,18 @@ The product `y` has a subnormal factor, so the exponent the hardware sees for it
 enters the next block as a binary32 accumulator with exponent `−2`; the grid is `2^-25`, and 1,058
 units of `2^-25` of `x` survive, two units of the last place more. The pair `[x] [y]` against `[x y]`
 is separated by exchanging the roles of the two products. Lean turns this into a theorem about
-all chains: [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377) shows that two chains holding `x` and `y` in different
+all chains: [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377) shows that two chains holding `x` and `y` in different
 patterns differ on an input supported on `{x, y}`, given five concrete block evaluations, which
-[`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485) and
-[`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) discharge by kernel evaluation (H100 needs different words:
+[`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485) and
+[`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) discharge by kernel evaluation (H100 needs different words:
 `x = 0x0052 × 0x6587`, `y = 0x0ba7 × 0x3ff9`, where `[x] [y]` is three units in the last place
 above `[x y] = [y] [x]`).
 
 On the AMD models the witnesses are kernel-checked: products `p₀ ≈ 0.002458`, `p₁ ≈ 12.41` and
 `p₂ ≈ 0.000948` give `((p₀ + p₁) + p₂) = 12.4131507…` but `((p₀ + p₂) + p₁) = 12.4131498…` on
 both CDNA 1 and CDNA 2, and on CDNA 1 the chains `[p₀] [p₁ p₂]` and `[p₀ p₁ p₂]` agree with the
-second, as the merge law says ([`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35)). On
-CDNA 3, two products separate the three chain patterns ([`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47)).
+second, as the merge law says ([`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35)). On
+CDNA 3, two products separate the three chain patterns ([`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47)).
 
 **Status.** Every enumeration agrees with the statement: chains and terms over 2 and 3 products
 on all variants, and terms over 4 products on V100, H100, CDNA 1, CDNA 3 and SFMA, gave no unsound
@@ -336,12 +336,12 @@ blocks can, because the two products move to different blocks.
 
 | Variant | Blocks per `k = 16` instruction | In order | `k = 0` and `k = 15` exchanged | Lean |
 | --- | --- | --- | --- | --- |
-| V100 (`HMMA.844`) | 4 × 4 | `−14.43653488…` | `−14.43653583…` | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17) |
-| A100 (`HMMA.1688`) | 2 × 8 | `4.57211368…·10⁻⁴` | `4.57211397…·10⁻⁴` | [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27) |
-| CDNA 1 | 4 × 4 | `487.12280…` | `487.12277…` | [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16) |
-| CDNA 2 | 4 × 4 | `239.79177…` | `239.79176…` | [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26) |
-| CDNA 3 | 2 × 8 | `−0.0011084491…` | `−0.0011084490…` | [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
-| H100 (`HMMA.16816`) | 1 × 16 | never changes | | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
+| V100 (`HMMA.844`) | 4 × 4 | `−14.43653488…` | `−14.43653583…` | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17) |
+| A100 (`HMMA.1688`) | 2 × 8 | `4.57211368…·10⁻⁴` | `4.57211397…·10⁻⁴` | [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27) |
+| CDNA 1 | 4 × 4 | `487.12280…` | `487.12277…` | [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16) |
+| CDNA 2 | 4 × 4 | `239.79177…` | `239.79176…` | [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26) |
+| CDNA 3 | 2 × 8 | `−0.0011084491…` | `−0.0011084490…` | [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
+| H100 (`HMMA.16816`) | 1 × 16 | never changes | | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
 
 Each witness has two or three nonzero products and zeros elsewhere; the outputs differ in the last
 place.
@@ -391,11 +391,11 @@ addition rounds once:
 
 | Operation | Error of one operation | Per unit of input magnitude, normal operands | Lean |
 | --- | --- | --- | --- |
-| V100, A100, H100 block FMA | `< (K + 1)·2^(η − F) + ulp(D)` | `12u`, `11u`, `10.5u` | [`evalBlock_error_bound`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/ErrorBounds.lean#L81) |
-| CDNA 1 block, SFMA step | `≤ 2^-24 A + 2^-150` | `u` | [`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L76) |
-| CDNA 2 block | `≤ (flushed inputs) + 2^-21 A + 2^-120` | `8u` | [`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L473) |
-| CDNA 3 block | `≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149` | `14u` | [`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L238) |
-| binary32 addition | `≤ 2^-24 \|x + y\| + 2^-150` | `u` | [`MMAlgebra.MC.add_le`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L122) |
+| V100, A100, H100 block FMA | `< (K + 1)·2^(η − F) + ulp(D)` | `12u`, `11u`, `10.5u` | [`evalBlock_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/ErrorBounds.lean#L81) |
+| CDNA 1 block, SFMA step | `≤ 2^-24 A + 2^-150` | `u` | [`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L76) |
+| CDNA 2 block | `≤ (flushed inputs) + 2^-21 A + 2^-120` | `8u` | [`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L473) |
+| CDNA 3 block | `≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149` | `14u` | [`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L238) |
+| binary32 addition | `≤ 2^-24 \|x + y\| + 2^-150` | `u` | [`MMAlgebra.MC.add_le`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L122) |
 
 Here `A = |c| + Σ|p|` for the block. For the Tensor Cores the per-unit constant follows from the
 model bound because, with normal operands, every term's magnitude is at least 2 to the power of
@@ -440,11 +440,11 @@ For example, products `2047·2047`, `2047·1000`, `−1000·3` and `3·3` with `
 reversed chain with `c` in the epilogue alike.
 
 In Lean, the composition is proved once for any matrix multiplier with a binary32 addition
-([`MMAlgebra.eval_error`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160)), and
-instantiated for the correctly rounded models, SFMA and CDNA 1 ([`MMAlgebra.MC.block_le_cr`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L67),
-[`MMAlgebra.MC.cdna1_divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L153)). The exact region is proved on every Tensor Core model and on
-the exact configurations of CDNA 1, 2 and 3 ([`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172),
-[`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), with the example [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44)). The block
+([`MMAlgebra.eval_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160)), and
+instantiated for the correctly rounded models, SFMA and CDNA 1 ([`MMAlgebra.MC.block_le_cr`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L67),
+[`MMAlgebra.MC.cdna1_divergence`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L153)). The exact region is proved on every Tensor Core model and on
+the exact configurations of CDNA 1, 2 and 3 ([`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172),
+[`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), with the example [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44)). The block
 constants for the Tensor Cores, CDNA 2 and CDNA 3 are derived from the per-block theorems by the
 argument above, which is not yet in Lean; the prototype checks the composed bound on 1,800 random
 evaluations, subnormal operands included, with no violation.
@@ -575,7 +575,7 @@ buffer, the arrival order changes the result on some input.
 ### Batch invariance
 
 A serving system is batch-invariant when the term for each output entry does not depend on the
-batch size `M`. With MMAlgebra this becomes checkable: enumerate the configurations a launch
+batch size `M`. With the algebra this becomes checkable: enumerate the configurations a launch
 heuristic picks for each `M`, compute the term for one entry under each, and decide whether they
 are equivalent. If not, the separating input, embedded as one row of `A` in batches of the two
 sizes, is a test case that shows the difference. Today's batch-invariant modes fix one
@@ -600,7 +600,7 @@ different variants, since their block FMAs differ, and the algebra says which re
 each target. Because the models are executable, a term can also be evaluated on a CPU to obtain
 the exact bits a modeled GPU would return, which makes a reference result for one GPU checkable
 on another machine. Identical bits across vendors need a common semantics instead, such as the
-[correctly rounded Ozaki schemes](/TC-EFT/ozaki/correct-rounding/).
+[correctly rounded Ozaki schemes](/MMAlgebra/ozaki/correct-rounding/).
 
 ### Who benefits, and how this compares
 
@@ -609,7 +609,7 @@ independent of the batch or the rollout and the trainer to agree; kernel and com
 who want to know whether a transformation or a tuning choice can change results; and numerical
 analysts, who get exact statements in place of rules of thumb.
 
-| Approach | What it gives | What MMAlgebra adds |
+| Approach | What it gives | What the algebra adds |
 | --- | --- | --- |
 | Fixing one kernel configuration (Thinking Machines, SGLang, vLLM) | Batch invariance by construction, at a cost in throughput | Which other configurations are provably safe, and a witness for each unsafe one |
 | Library guarantees (cuBLAS, PyTorch) | Run-to-run reproducibility under fixed versions and hardware | Reasons tied to the schedule, valid across configurations |
@@ -619,7 +619,7 @@ analysts, who get exact statements in place of rules of thumb.
 
 The closest work is Yang et al.'s checker, which already works on real compiled kernels, covers
 reductions beyond GEMM and attention, and was measured on Hopper and Blackwell GPUs, none of which
-MMAlgebra does yet. The two are complementary: the algebra could serve as the arithmetic core of
+the algebra does yet. The two are complementary: the algebra could serve as the arithmetic core of
 such a checker on the architectures it models.
 
 What is not new should be said plainly. That only identical schedules reproduce on rigid
@@ -681,28 +681,28 @@ for any two that do not, an input that shows it.
 
 | Claim | Evidence | Where |
 | --- | --- | --- |
-| Products in a block act as a multiset (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
-| Zero products are invisible (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230) |
-| A chain on an input supported on `S` equals the chain restricted to `S` | Proved | [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) |
-| Chains with different patterns of two products differ (V100, A100, H100 fp16) | Proved, with kernel-checked base witnesses | [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377), [`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485), [`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) |
-| Multiset law on CDNA 1 and CDNA 3 (for the sum before the final rounding); order dependence on CDNA 2 | Proved in the AMD library | [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L37), [`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Order.lean#L53) |
-| Base witnesses on CDNA 1, 2 and 3 | Kernel-checked | [`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35), [`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47) |
-| One instruction is not one rounding | Kernel-checked | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17), [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27), [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16), [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26), [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
-| The worked examples on this page | Kernel-checked | [`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29), [`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13), [`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23) |
-| The laws on every modeled variant | Random testing, 300 trials per law and variant | [`laws.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/laws.py) |
-| Normal forms sound and complete over 2 and 3 products on every variant, and over 4 on five variants | Exhaustive enumeration, separating inputs found by search | [`classes.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/classes.py), [`terms.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms.py), [`terms4.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms4.py), [`bf16_extremes.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/bf16_extremes.py) |
-| Completeness reduces to supports of at most 3 products | Exhaustive: chains over up to 6 products, terms over 4 | [`restriction_lemma.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/restriction_lemma.py), [`terms4.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/terms4.py) |
-| The decision procedure, the configuration study, the one-rounding comparison | 210 random pairs; 10 configurations on 6 variants | [`decide_equiv.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/decide_equiv.py), [`config_study.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/config_study.py), [`oneround.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/oneround.py) |
-| The structural bound, divergence of two schedules, and shared work, for any matrix multiplier | Proved | [`MMAlgebra.eval_error`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160) |
-| The divergence bound on SFMA and CDNA 1 | Proved | [`MMAlgebra.MC.crContract`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L141), [`MMAlgebra.MC.cdna1_divergence`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L153) |
-| Inside the exact region every schedule agrees | Proved; kernel-checked example | [`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172), [`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44) |
-| The composed bound on the Tensor Cores, CDNA 2 and CDNA 3; worst cases and tightness | 1,800 random evaluations with no violation; adversarial search, witnesses checked on the model | [`divergence.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/divergence.py) |
-| How different BLAS programs are | Modeled programs, `k = 1024`, 200 entries on each of four kinds of data | [`blas_programs.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/blas_programs.py) |
-| The Python port computes the Lean models' output words | 1,800 random blocks on 12 variants, bit for bit | [`validate_port.py`](https://github.com/pauljiang03/TC-EFT/blob/main/mmalgebra/prototype/validate_port.py) |
-| The models match the hardware | Replayed measurements and published vectors; assumed beyond them | [NVIDIA validation](/TC-EFT/model/validation/), [AMD validation](/TC-EFT/amd/validation/) |
+| Products in a block act as a multiset (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
+| Zero products are invisible (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230) |
+| A chain on an input supported on `S` equals the chain restricted to `S` | Proved | [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) |
+| Chains with different patterns of two products differ (V100, A100, H100 fp16) | Proved, with kernel-checked base witnesses | [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377), [`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485), [`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) |
+| Multiset law on CDNA 1 and CDNA 3 (for the sum before the final rounding); order dependence on CDNA 2 | Proved in the AMD library | [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L37), [`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L53) |
+| Base witnesses on CDNA 1, 2 and 3 | Kernel-checked | [`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35), [`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47) |
+| One instruction is not one rounding | Kernel-checked | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17), [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27), [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16), [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26), [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
+| The worked examples on this page | Kernel-checked | [`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29), [`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13), [`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23) |
+| The laws on every modeled variant | Random testing, 300 trials per law and variant | [`laws.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/laws.py) |
+| Normal forms sound and complete over 2 and 3 products on every variant, and over 4 on five variants | Exhaustive enumeration, separating inputs found by search | [`classes.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/classes.py), [`terms.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/terms.py), [`terms4.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/terms4.py), [`bf16_extremes.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/bf16_extremes.py) |
+| Completeness reduces to supports of at most 3 products | Exhaustive: chains over up to 6 products, terms over 4 | [`restriction_lemma.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/restriction_lemma.py), [`terms4.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/terms4.py) |
+| The decision procedure, the configuration study, the one-rounding comparison | 210 random pairs; 10 configurations on 6 variants | [`decide_equiv.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/decide_equiv.py), [`config_study.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/config_study.py), [`oneround.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/oneround.py) |
+| The structural bound, divergence of two schedules, and shared work, for any matrix multiplier | Proved | [`MMAlgebra.eval_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L51), [`MMAlgebra.divergence`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L138), [`MMAlgebra.divergence_shared`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Divergence.lean#L160) |
+| The divergence bound on SFMA and CDNA 1 | Proved | [`MMAlgebra.MC.crContract`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L141), [`MMAlgebra.MC.cdna1_divergence`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Bound.lean#L153) |
+| Inside the exact region every schedule agrees | Proved; kernel-checked example | [`MMAlgebra.TC.eval_agree`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Exact.lean#L172), [`MMAlgebra.MC.eval_agree`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Exact.lean#L261), [`MMAlgebraTCTests.v100_exact_region`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L44) |
+| The composed bound on the Tensor Cores, CDNA 2 and CDNA 3; worst cases and tightness | 1,800 random evaluations with no violation; adversarial search, witnesses checked on the model | [`divergence.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/divergence.py) |
+| How different BLAS programs are | Modeled programs, `k = 1024`, 200 entries on each of four kinds of data | [`blas_programs.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/blas_programs.py) |
+| The Python port computes the Lean models' output words | 1,800 random blocks on 12 variants, bit for bit | [`validate_port.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/validate_port.py) |
+| The models match the hardware | Replayed measurements and published vectors; assumed beyond them | [NVIDIA validation](/MMAlgebra/model/validation/), [AMD validation](/MMAlgebra/amd/validation/) |
 
 Every theorem uses only Lean's standard axioms (`propext`, `Classical.choice`, `Quot.sound`),
 which the project's audit checks. The prototype's recorded outputs are in
-[`mmalgebra/prototype/results/`](https://github.com/pauljiang03/TC-EFT/tree/main/mmalgebra/prototype/results),
+[`mmalgebra/prototype/results/`](https://github.com/pauljiang03/MMAlgebra/tree/main/mmalgebra/prototype/results),
 and `python3 scripts/check.py --prototype` in `mmalgebra/` reproduces them. The theorems are about
 the models; that GPUs behave like them rests on the models' validation.

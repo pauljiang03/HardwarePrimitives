@@ -1,4 +1,4 @@
-# MMAlgebra prototype
+# Reduction-algebra prototype
 
 Plain Python 3 (3.9 or later, standard library only) with exact rational arithmetic. Every script
 runs from this directory and needs no GPU. The scripts rely on `assert` and refuse to run under
