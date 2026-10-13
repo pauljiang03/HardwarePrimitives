@@ -1,10 +1,10 @@
 ---
 title: ADP and ESC
-description: NVIDIA's Automatic Dynamic Precision for FP64 emulation on INT8 engines, formalized in Lean - its slice encoding, the exponent span capacity, the Grade-A guarantee for the whole routine, a subnormal counterexample and a guardrail that fixes it, and a correctly rounded variant.
+description: NVIDIA's Automatic Dynamic Precision for FP64 emulation on INT8 matrix multipliers, formalized in Lean - its slice encoding, the exponent span capacity, the Grade-A guarantee for the whole routine, a subnormal counterexample and a guardrail that fixes it, and a correctly rounded version.
 ---
 
 ADP (Schwarz et al., NVIDIA, arXiv:2511.13778) is the scheme behind FP64
-emulation in cuBLAS. It runs Ozaki-I on INT8 engines and adds guardrails: it
+emulation in cuBLAS. It runs Ozaki-I on INT8 matrix multipliers and adds guardrails: it
 estimates from the inputs' exponents how many slices full FP64 accuracy needs
 (the exponent span capacity, ESC), and falls back to native FP64 when the
 inputs contain Inf or NaN or emulation would not pay off. The Lean development
@@ -24,19 +24,19 @@ Lean's standard axioms.
    FP64, use native FP64.
 5. **Emulate.** Convert each row and column to `W`-bit fixed point, cut the
    integers into signed bytes, multiply all `s²` slice pairs on the INT8
-   engine, recombine exactly, and round once to binary64.
+   matrix multiplier, recombine exactly, and round once to binary64.
 
-## The encoding and the engine
+## The encoding and the matrix multiplier
 
 | Fact | Lean |
 | --- | --- |
 | Fixed point: `0 ≤ a 2^s − N < 1` and `N ∈ [−2^W, 2^W)`. | [`fixed_floor`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADPError.lean#L103), [`fixed_range`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADPError.lean#L110) |
 | The unsigned-slice remap reconstructs every integer, and its slices are signed bytes exactly on its range; a remapped digit keeps the unsigned digit's bit pattern. | [`remap_value`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L109), [`remap_s8`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L156), [`remap_bit_pattern`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L167) |
 | `53`-bit integers need `8` naive signed slices but `7` remapped ones; the remap range is slightly smaller than the prototype's. | [`slices_53`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L190), [`remap_range_smaller`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L171) |
-| INT8 × INT8 → INT32 is exact on byte operands; a 16-bit register wraps. | [`int8Dot_bytes`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8.lean#L47), [`int8Dot_16_wraps`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8.lean#L52) |
-| The `s²` slice products, weighted by `256^(t+u)`, add up to the fixed-point product, so the emulated result is one binary64 rounding of it. | [`slice_recombination`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L490), [`int8Ozaki_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8.lean#L101) |
+| INT8 × INT8 → INT32 is exact on byte operands; a 16-bit register wraps. | [`int8Dot_bytes`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8.lean#L48), [`int8Dot_16_wraps`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8.lean#L53) |
+| The `s²` slice products, weighted by `256^(t+u)`, add up to the fixed-point product, so the emulated result is one binary64 rounding of it. | [`slice_recombination`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADP.lean#L490), [`int8Ozaki_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8.lean#L103) |
 
-The INT8 engine here is a 32-bit wrapping register (TC-EFT's fixed-width
+The INT8 matrix multiplier here is a 32-bit wrapping register (TC-EFT's fixed-width
 accumulator) over exact integer products, not a model of an INT8 Tensor Core
 instruction.
 
@@ -86,18 +86,18 @@ emulated path and the classical `γₖ` bound on the native path
   final-rounding check on the same input, and no guardrail catches it. This
   concerns the routine as the paper describes it, which the paper and the
   cuBLAS documentation say is accurate for subnormal values too. Shipping
-  cuBLAS is not modelled: it passes Demmel et al.'s underflow test (2026),
+  cuBLAS is not modeled: it passes Demmel et al.'s underflow test (2026),
   detecting the wide range and using its FP64 path, much as the guardrail
   below does.
 - **One more guardrail fixes it.** `adpSafe` sends inputs with a nonzero
   entry below `2^-1022` to native FP64. With it, Grade A holds with no
-  normality hypothesis ([`adpSafe_accuracy`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L94)); on the counterexample it returns
+  normality hypothesis ([`adpSafe_accuracy`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L95)); on the counterexample it returns
   the correctly rounded `2^-1074`, and on the five recorded Z3 cases it returns
   what `adp` returns.
 - **The routine returns values.** For finite inputs of matching shapes whose
   products are within range, `adp` (on normal or zero entries) and `adpSafe`
-  (on any) return values, never Inf or NaN ([`adp_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L371),
-  [`adpSafe_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L405)).
+  (on any) return values, never Inf or NaN ([`adp_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L374),
+  [`adpSafe_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L408)).
 - **The zero policy matters for the whole routine, not only the estimate.**
   The Z3 model stops its unsafe zero policies with an assertion. Without it,
   "skip zeros" fails for every block size of at least `2` and every length
@@ -122,30 +122,31 @@ emulated path and the classical `γₖ` bound on the native path
 ## Correctly rounded
 
 ADP rounds once, but it rounds the fixed-point product, which differs from
-`x · y` where the conversion drops bits. The check of the other schemes
-applies: `H` is the exactly recombined fixed-point product, `B` the
+`x · y` where the conversion drops bits. The rounding test of the other
+schemes applies: `H` is the exactly recombined fixed-point product, `B` the
 fixed-point bound, and if `H ± B` round to the same value, so does `x · y`;
-otherwise a wider configuration, then the exact product ([`adpCR_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Correct.lean#L252)). On two
-random binary64 test cases the check settles every entry at the slice count
+otherwise a wider configuration, then the exact product ([`adpCR_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Correct.lean#L255)). On two
+random binary64 test cases the rounding test succeeds on every entry at the
+slice count
 ADP's own ESC rule picks (`8` and `11` slices), so correct rounding costs no
-extra INT8 products there. This variant takes the `(s, W)` configurations as
+extra INT8 products there. This version takes the `(s, W)` configurations as
 given; it is not the ESC-driven routine with its guardrails, and its last
-resort is exact rational arithmetic, not the engine.
+resort is exact rational arithmetic, not the matrix multiplier.
 
-`adpCRE` runs every product on the INT8 engine. The engine is split into
-chunks so that INT32 never wraps, which makes it exact on `6`-bit slices for
-every length ([`int8SplitK_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L139)). The fixed-point enclosures run on it,
-and so does the exact path: Ozaki-I with all slice products of `6`-bit
+`adpCRE` runs every product on the INT8 matrix multiplier. The matrix
+multiplier is split into chunks so that INT32 never wraps, which makes it exact on `6`-bit slices for
+every length ([`int8SplitK_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L141)). The fixed-point enclosures run on it,
+and so does the exact fallback: Ozaki-I with all slice products of `6`-bit
 slices, which leaves nothing over after `300` slices for binary64 inputs. The
 result is the IEEE binary64 round to nearest of `x · y` for binary64 inputs
-of any length ([`adpCRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L223)). On the subnormal counterexample the enclosure
-of `8` slices does not settle it, and the exact path returns `2^-1074`.
+of any length ([`adpCRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L226)). On the subnormal counterexample the enclosure
+of `8` slices does not decide it, and the exact fallback returns `2^-1074`.
 
-The whole variant also runs as one integer function from
+The whole correctly rounded version also runs as one integer function from
 `(significand, exponent)` inputs: integer fixed-point conversion, byte slices
-on the INT8 engine, an integer check and the fallback in fixed-width
-registers, with one theorem bounding every register ([`adpCRJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L33),
-[`adpCRJS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L59) with signed zeros, [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434); see
+on the INT8 matrix multiplier, an integer rounding test and the exact
+fallback in fixed-width registers, with one theorem bounding every register ([`adpCRJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L34),
+[`adpCRJS_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPIntJ.lean#L60) with signed zeros, [`adpCRJC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPChecked.lean#L434); see
 [correct rounding](/TC-EFT/ozaki/correct-rounding/)).
 
 ## What is checked
@@ -159,10 +160,10 @@ Every test-level check of the Z3 model that concerns ADP itself is a theorem
 or a kernel-checked test on the model's own inputs:
 - decoding, including both zeros;
 - the paper's remap example ([`Ozaki.ADP.paper_remap_example`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADPEncodings.lean#L312));
-- the three slice encodings agreeing ([`encodings_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPLabels.lean#L125));
+- the three slice encodings agreeing ([`encodings_agree`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPLabels.lean#L126));
 - ESC with block size `1` ([`escCoarse_one`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADPEncodings.lean#L353));
-- the valid paths ([`adp_finite_path`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPLabels.lean#L282));
-- emergent overflow ([`emulEntry_none_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPLabels.lean#L297));
+- the valid paths ([`adp_finite_path`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPLabels.lean#L283));
+- emergent overflow ([`emulEntry_none_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPLabels.lean#L298));
 - subnormal inputs;
 - the zero policies ([`zeros_case_caught`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/ADPEncodings.lean#L383)).
 
@@ -182,7 +183,7 @@ returns the Z3 model's words.
 
 - **INT8 hardware semantics are out of scope for now**, on both vendors
   ([issue #2](https://github.com/pauljiang03/TC-EFT/issues/2)). The INT8
-  engine is the arithmetic of a wrapping INT32 register over exact integer
+  matrix multiplier is the arithmetic of a wrapping INT32 register over exact integer
   products. Its result is the exact sum modulo `2^32` in every accumulation
   order, and a saturating register agrees with it on ADP's operands
   ([`int8Dot_any_order`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8Semantics.lean#L76), [`int8_wrap_sat_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8Semantics.lean#L135)). Neither hardware model
@@ -190,4 +191,4 @@ returns the Z3 model's words.
 - The routine follows the Z3 model of the paper, not cuBLAS's implementation.
 - Grade A is proved for `adp` on normal or zero entries and for `adpSafe` on
   all entries, with an underflow term; cuBLAS's own handling of subnormal
-  inputs is not modelled.
+  inputs is not modeled.

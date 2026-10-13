@@ -80,22 +80,22 @@ Points to note:
 
 ## Preparing a block
 
-`prepare` decodes `C` as FP32 and every operand in the profile's format. If
+`prepare` decodes `C` as FP32 and every operand in the model's input format. If
 any of them is nonfinite, it returns `none`:
 
 ```lean
-def prepareProducts (p : Profile) (ps : List (p.Word × p.Word)) :
+def prepareProducts (p : Model) (ps : List (p.Word × p.Word)) :
     Option (List (Decoded × Decoded)) :=
   ps.mapM fun (a, b) => do
     return (← p.decode a, ← p.decode b)
 
-def prepare {p : Profile} (x : BlockInput p) : Option PreparedBlock :=
+def prepare {p : Model} (x : BlockInput p) : Option PreparedBlock :=
   match decode32 x.c, prepareProducts p x.products with
   | some c, some ps => some ⟨p, ps, c⟩
   | _, _ => none
 ```
 
-The result, a `PreparedBlock`, records the profile, the decoded pairs, and the
+The result, a `PreparedBlock`, records the model, the decoded pairs, and the
 decoded `C`. Every later stage is a function of a `PreparedBlock`.
 
 ## TF32: register words and packed values
@@ -111,7 +111,7 @@ ignored. The model separates the two concerns:
 
 The theorem
 [`tf32_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Specification/Supported.lean#L47)
-proves that, on correctly padded register words, the register-level
+proves that, on register words whose low 13 bits are zero, the register-level
 invocation gives the same bits as the *Accurate Models* specification (`IndependentSpec`). Words whose low
 bits are not zero are rejected rather than silently masked.
 

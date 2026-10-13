@@ -9,7 +9,7 @@ the hardware comes from three checks.
 ## The paper's test vectors
 
 Every test vector of the paper's Section 4, for CDNA 1, 2 and 3 and the fp32,
-fp16, bf16, bf16 `_1k`, XF32 and fp8 paths, is a regression proved by kernel
+fp16, bf16, bf16 `_1k`, XF32 and fp8 variants, is a regression proved by kernel
 evaluation that reproduces the output the paper reports for the hardware
 ([`tests/MatrixCoreTests/Paper/`](https://github.com/pauljiang03/TC-EFT/tree/main/amd/tests/MatrixCoreTests/Paper)).
 Parameterized families, such as `j = 24 … 32`, are checked for every listed
@@ -36,13 +36,13 @@ subnormal and uniform random bits) and on the paper's targeted vectors.
 The Lean side is `mc_eval`, which prints the observed result of an inner
 product for given words.
 
-On 600,000 random inner products across all ten profiles, the two agree once
+On 600,000 random inner products across all ten models, the two agree once
 two special-value lines and one unread flag in the MATLAB code are corrected.
 The two remaining differences are two of the paper's bf16 vectors that test
 the subnormal-aware normalization, where the Lean model returns the outputs
 the paper reports for the hardware. The MATLAB models have no fp32 SFMA and
-no mixed fp8 formats, so those paths are compared through the paper's vectors
-only. The method and the per-profile counts are in
+no mixed fp8 formats, so those variants are compared through the paper's
+vectors only. The method and the per-model counts are in
 [`amd/docs/differential.md`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/docs/differential.md).
 
 ## A second implementation on FloatLib
@@ -50,10 +50,10 @@ only. The method and the per-profile counts are in
 [`amd/floatlib-port/`](https://github.com/pauljiang03/TC-EFT/tree/main/amd/floatlib-port)
 reimplements the model on [FloatLib](https://github.com/lean-dojo/FloatLib)
 instead of Matrix-Core's own numerics, as a separate Lake project with
-mathlib. Lean proves that, for every profile and any input words, a block of
+mathlib. Lean proves that, for every model and any input words, a block of
 the FloatLib implementation gives the same observation as the model (finite
 word, infinity or NaN), and an inner product of any length the same as
-`dotOutcome`. Every profile's contract and the chaining theorems hold for the
+`dotOutcome`. Every model's contract and the chaining theorems hold for the
 FloatLib implementation too. It follows the layout of the
 [Tensor Core FloatLib cross-check](/TC-EFT/proofs/floatlib/).
 

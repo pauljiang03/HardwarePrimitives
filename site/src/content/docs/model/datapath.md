@@ -6,28 +6,28 @@ description: A second implementation of the model in fixed-width bitvector regis
 `evalBlock` works on exact integers and rationals. That makes it a clear
 definition to prove things about, but it does not say how wide the hardware's
 registers need to be. The bitvector datapath, `Datapath.evalBlock`,
-computes the same group with **bitvector operations only**, in registers
-whose widths come from the profile. Lean proves it returns the same FP32
+computes the same block FMA with **bitvector operations only**, in registers
+whose widths come from the model. Lean proves it returns the same FP32
 word as `evalBlock`, or the same error, for **every** input on all eight
-supported GPU paths.
+supported GPU variants.
 
 The integer model is still the definition that all other theorems are about.
 The datapath is a second implementation next to it.
 
 ## Register widths
 
-The widths follow from the profile: the 23 FP32 mantissa bits, the `p` extra
-alignment bits, and the number of products `K`.
+The widths follow from the model: the 23 FP32 fractional bits, the `p` extra
+alignment bits, and the FMA size `K`.
 
 | Register | Width | Why |
 | --- | --- | --- |
 | Product significand | 24 bits | an 11-bit × 11-bit product is below `2^22` |
 | Exponents | 9 bits | see [exponents](#exponents) below |
 | Output exponent field | 8 bits | the FP32 exponent field |
-| Aligned term | `F + 2 = 25 + p` bits | the implicit bit, one implicit padding bit, and `F = 23 + p` bits after the binary point |
-| Accumulator | `F + 2 + c` magnitude bits and a sign bit, two's complement | `c = ⌊log₂ K⌋ + 1` carry bits, so the `K + 1` terms cannot overflow |
+| Aligned term | `F + 2 = 25 + p` bits | two integer bits (the implicit bit and a second bit for a product in denormalized form) and `F = 23 + p` fractional bits |
+| Accumulator | `F + 2 + c` magnitude bits and a sign bit, two's complement | `c = ⌊log₂ K⌋ + 1` extra carry bits, so the `K + 1` terms cannot overflow |
 
-| Path | `F` | `K` | Accumulator |
+| Variant | `F` | `K` | Accumulator |
 | --- | --- | --- | --- |
 | V100 FP16 | 23 | 4 | 28 bits + sign |
 | A100 FP16, BF16 | 24 | 8 | 30 bits + sign |
@@ -37,10 +37,11 @@ alignment bits, and the number of products `K`.
 | H100 TF32 (mma) | 25 | 8 | 31 bits + sign |
 
 The **implicit bit** is the leading 1 of a significand `1.xxx`; multiplying
-two implicit bits puts a 1 in the same place. The **implicit padding** bit
+two implicit bits puts a 1 in the same place. The **second integer bit**
 sits above it: a product of two significands below 2 can reach `11.xxx`, just
-under 4, and the hardware does not renormalize it, so the carry stays in the
-register. `C` and subnormal products never use the padding bit.
+under 4, and the hardware keeps the product in denormalized form, so the carry
+stays in the register. `C` and subnormal products never use the second integer
+bit.
 
 The magnitude widths for A100 and H100 FP16 are the adder widths *Accurate
 Models* gives (§4.1.2 and §4.1.6): `26 + ⌈log₂ 9⌉ = 30` and `27 + 5 = 32`.
@@ -51,7 +52,8 @@ The paper keeps the sign separately; here it is the two's complement sign bit.
 FP32 has an 8-bit exponent field, and the output word uses exactly that. The
 exponents before the output need 9 bits:
 
-- The alignment exponent can be as low as the floor, −133 on H100, and as high
+- The alignment exponent can be as low as the minimum alignment exponent,
+  −133 on H100, and as high
   as 127 from `C` alone. That is 261 values, more than 8 bits can hold.
 - Product exponents span more: two BF16 inputs near the maximum give 254.
 
@@ -79,7 +81,7 @@ follows the same five steps as the model:
 2. **Multiply.** The significands are multiplied in a 24-bit register and the
    biased exponents are added. Nothing is normalized.
 3. **Align.** A fold keeps the largest exponent of a nonzero term, starting
-   from the profile floor. Each significand is shifted left to put `F` bits
+   from the model's minimum alignment exponent. Each significand is shifted left to put `F` bits
    after the binary point, then right by the gap to the largest exponent. The
    right shift drops the bits below the grid, which is the truncation.
 4. **Accumulate.** The aligned terms are negated where needed and added in the
@@ -94,21 +96,21 @@ follows the same five steps as the model:
    mantissa are packed into the output word.
 
 ```lean
-def evalBlock (path : Path) (x : BlockInput path.profile) : Except ModelError F32 := do
-  if x.products.length != path.profile.products then throw .wrongProductCount
+def evalBlock (variant : Variant) (x : BlockInput variant.model) : Except ModelError F32 := do
+  if x.products.length != variant.model.nfma then throw .wrongProductCount
   let some c := decodeC x.c | throw .nonfiniteInput
-  let some ps := x.products.mapM (decodeTerm path) | throw .nonfiniteInput
+  let some ps := x.products.mapM (decodeTerm variant) | throw .nonfiniteInput
   let ts := c :: ps
-  let e := alignExp path ts
-  let some bits := normalize (accumulate path e ts) e (alignBits path) | throw .accumulatorOutOfRange
+  let e := alignExp variant ts
+  let some bits := normalize (accumulate variant e ts) e (alignBits variant) | throw .accumulatorOutOfRange
   return bits
 ```
 
 ## The equality theorem
 
 ```lean
-theorem evalBlock_eq (path : Path) (x : BlockInput path.profile) :
-    Datapath.evalBlock path x = (TensorCore.evalBlock x).map (·.output.bits)
+theorem evalBlock_eq (variant : Variant) (x : BlockInput variant.model) :
+    Datapath.evalBlock variant x = (TensorCore.evalBlock x).map (·.output.bits)
 ```
 
 This holds for every input, including every rejection. The proof follows
@@ -118,14 +120,14 @@ the stages:
 | --- | --- | --- |
 | Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L48), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L97) | each decoder gives the model's decoded value |
 | Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's unnormalized product |
-| Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the floor-raised maximum over nonzero terms |
+| Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
 | Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
 | Accumulate | [`Datapath.accumulate_toInt`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Align.lean#L126), [`Datapath.accumulator_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L121) | the accumulator's signed value is the model's exact sum; it never overflows |
 | Normalize and truncate | [`Datapath.normalize_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Normalize.lean#L182) | the bitvector normalizer is `round32 .truncate`, bit for bit |
 
 [`Normalize.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Normalize.lean)
 proves `normalize_eq` for any accumulator width from 24 to 64 bits, so it
-does not depend on the profile.
+does not depend on the model.
 
 ## What the equality covers
 
@@ -134,9 +136,9 @@ does not depend on the profile.
 - **The output word, not the trace.** `evalBlock` also returns intermediate
   values such as the aligned bits and residuals; the datapath returns only
   the word. Each stage is still proved to match internally.
-- **The eight supported paths.** `evalBlock` is defined for any profile; the
+- **The eight supported variants.** `evalBlock` is defined for any model; the
   datapath covers V100 FP16, A100 FP16/BF16/TF32 and H100 FP16/BF16/TF32
-  (both TF32 modes). The FP64 DMMA path has no datapath.
+  (both TF32 modes). The FP64 DMMA variant has no datapath.
 - **The definitions are bitvectors; the proof is not.** The equivalence is
   proved by reading registers as integers (`toNat`, `toInt`), so one proof
   covers every input and every register width.
@@ -158,14 +160,14 @@ normalization, and a final truncation.
 | --- | --- | --- |
 | Products | exact, in the SMT floating-point theory | exact, bitvector multiplication |
 | Extra alignment bits | none on Volta/Turing, one on Ampere | `p` = 0, 1, 2 on V100, A100, H100 |
-| Carry bits | ⌈log₂ N⌉ for N terms | ⌊log₂ K⌋ + 1 for K products and C: 3, 4, 5 |
+| Extra carry bits | ⌈log₂ N⌉ for N terms | ⌊log₂ K⌋ + 1 for K products and C: 3, 4, 5 |
 | Use | solver queries for discriminating inputs, then GPU runs | executable definition with proofs over every input |
-| Coverage | FP16 inputs on Volta, Turing, Ampere, including FP16 output | FP16, BF16, TF32 inputs with FP32 output on V100, A100, H100, including floors and subnormals |
+| Coverage | FP16 inputs on Volta, Turing, Ampere, including FP16 output | FP16, BF16, TF32 inputs with FP32 output on V100, A100, H100, including minimum alignment exponents and subnormals |
 
 The SMT model answers one query at a time and some queries time out (the
 Ampere carry-bit query ran for 6 hours). Here the carry-bit width is proved
 sufficient for every input. The datapath could also be used for solver
-queries on one fixed profile, through Lean's `bv_decide`.
+queries on one fixed model, through Lean's `bv_decide`.
 
 ## Tests
 

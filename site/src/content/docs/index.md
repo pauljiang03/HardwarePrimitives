@@ -4,10 +4,11 @@ description: What TC-EFT models, what it proves, and how the parts fit together.
 ---
 
 TC-EFT is a Lean 4 library about the arithmetic of NVIDIA Tensor Cores (TCs).
-A Tensor Core instruction computes `D = C + Σ aᵢ·bᵢ` over a small group of
-low-precision products. It is **not** an IEEE fused dot product. The products
-are exact, but before the hardware adds them it aligns them to a common grid
-fixed by the largest exponent in the group, and it discards bits below that
+A Tensor Core instruction computes `D = C + Σ aᵢ·bᵢ` with block FMAs, each of
+which adds a small number of low-precision products in a single multi-term
+addition. It is **not** an IEEE fused dot product. The products are exact,
+but before the hardware adds them it aligns their significands relative to
+the largest exponent in the block, and it truncates the bits below that
 grid. The sum is then truncated to FP32. Because of this, the output
 can be less accurate than the input precision suggests, and it can be
 **non-monotone**: making `C` smaller can make `D` larger.
@@ -15,8 +16,8 @@ can be less accurate than the input precision suggests, and it can be
 The library has three layers:
 
 1. **[A model of the Tensor Core](/TC-EFT/model/).** An executable function,
-   `evalBlock`, maps encoded input words to an FP32 output word for one group
-   of products. It follows the hardware model of Khattak and Mikaitis,
+   `evalBlock`, maps encoded input words to an FP32 output word for one block
+   FMA. It follows the hardware model of Khattak and Mikaitis,
    *[Accurate Models of NVIDIA Tensor Cores](https://arxiv.org/html/2512.07004v4)*,
    and uses exact integers and rationals throughout. It does not rely on
    floating-point hardware or rounding libraries.
@@ -84,7 +85,7 @@ import TensorCore.TC
 
 open TensorCore
 
--- Four FP16 products 1.0 × 1.0 with C = +0 on the V100 profile.
+-- Four FP16 products 1.0 × 1.0 with C = +0 on the V100 model.
 def ones : BlockInput v100F16F32 :=
   ⟨List.replicate 4 (0x3c00, 0x3c00), 0⟩
 
@@ -100,8 +101,8 @@ example : ((evalBlock ones).toOption.map fun t => t.output.bits) =
 The proofs are about the **formal model**, under each theorem's stated
 hypotheses. The link from the model to real GPUs comes from replaying
 recorded measurements and from *Accurate Models*, which the definitions follow.
-It is evidence, not a proof. The supported paths have FP16, BF16, or TF32
-operands and FP32 `C` and output. See [Modeling scope and
+It is evidence, not a proof. The supported variants have FP16, BF16, or TF32
+input formats and FP32 `C` and output. See [Modeling scope and
 limits](/TC-EFT/model/scope/) and [What is tested](/TC-EFT/proofs/tested/).
 
 ## Start exploring

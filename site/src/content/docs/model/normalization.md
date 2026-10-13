@@ -84,9 +84,9 @@ model and the validation data cover finite outputs. The accepted domain is
 stated exactly:
 
 ```lean
-theorem evalBlock_success_iff (p : Profile) (x : BlockInput p) :
+theorem evalBlock_success_iff (p : Model) (x : BlockInput p) :
     (∃ t, evalBlock x = .ok t) ↔
-      x.products.length = p.products ∧
+      x.products.length = p.nfma ∧
         ∃ b, prepare x = some b ∧ absQ b.accumulator ≤ maxFinite32
 ```
 

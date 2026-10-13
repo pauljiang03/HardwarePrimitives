@@ -6,7 +6,7 @@ description: What the Lean model of AMD matrix cores covers, the modeling choice
 ## Covered
 
 - One MFMA block, and inner products and `D = AB + C` built from chained
-  blocks, on every path of *Accurate Models of AMD Matrix Cores*: the fp32
+  blocks, on every variant of *Accurate Models of AMD Matrix Cores*: the fp32
   SFMA on CDNA 1, 2 and 3; CDNA 1 fp16 and bf16; CDNA 2 fp16, bf16 and bf16
   `_1k`; CDNA 3 fp16, bf16, XF32 and fp8 E4M3/E5M2 FNUZ in any mix.
 - Every input word, including subnormals, infinities and NaN, through the
@@ -47,7 +47,7 @@ record why:
   the paper's description, checked against its vectors and the MATLAB models,
   not derived.
 - **INT8 MFMA instructions** are not modeled. The ADP scheme of the
-  [Ozaki section](/TC-EFT/ozaki/adp/) runs on an idealized INT8 engine.
+  [Ozaki section](/TC-EFT/ozaki/adp/) runs on an idealized INT8 matrix multiplier.
 - **Tiles, GEMMs and scheduling.** The model covers blocks and explicitly
   chained blocks; how a full GEMM is split across wavefronts and instructions
   is outside it.

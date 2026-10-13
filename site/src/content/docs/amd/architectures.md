@@ -76,7 +76,7 @@ Products are kept denormalized (`s_p ∈ [0, 4)`), and a product with
 `|p_ℓ| ≥ 2^128` is an infinity before accumulation. XF32 truncates each
 binary32 input to ten fraction bits and uses `N_FMA = 4`. In Lean:
 `productSum` (with `alignedSum`), `cExp`, `shiftedC`, `shiftedSum`,
-`normaliseRD` and `lateSum`; `alignedAccumulation` composes them.
+`normalizeRD` and `lateSum`; `alignedAccumulation` composes them.
 
 ### binary8: Algorithm 2 (`odd_even_grouping`)
 

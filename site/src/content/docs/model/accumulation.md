@@ -4,7 +4,8 @@ description: The aligned terms are added exactly, and a fixed-width register mod
 ---
 
 After alignment every term is a run of bits whose lowest bit is at `2^(η−F)`.
-The hardware adds these bit strings in a fixed-point adder. The model adds them exactly:
+The hardware adds these bit strings in a single multi-term addition, in a
+fixed-point adder. The model adds them exactly:
 
 ```lean
 def PreparedBlock.accumulator (b : PreparedBlock) : ℚ :=
@@ -29,28 +30,28 @@ def machineAccumulate (w : ℕ) (acc : BitVec w) : List ℤ → BitVec w
   | [] => acc
   | z :: zs => machineAccumulate w (acc + BitVec.ofInt w z) zs
 
-def evalBlockMachine (w : ℕ) {p : Profile} (x : BlockInput p) : Except ModelError BlockTrace
+def evalBlockMachine (w : ℕ) {p : Model} (x : BlockInput p) : Except ModelError BlockTrace
   -- identical to evalBlock, but accumulates with machineAccumulate w
 ```
 
 ## The width theorem
 
-Each aligned term has at most `F + 2` magnitude bits (unnormalized products are less
-than 4 in significand). There are `K + 1` terms, counting `C`. So `F + 2`
-magnitude bits, plus `⌈log₂(K+1)⌉` carry bits, plus one sign bit, are always
+Each aligned term has at most `F + 2` magnitude bits (products in denormalized
+form have a significand below 4, hence two integer bits). There are `K + 1` terms, counting `C`. So `F + 2`
+magnitude bits, plus `⌈log₂(K+1)⌉` extra carry bits, plus one sign bit, are always
 enough:
 
 ```lean
 /-- All encoded inputs have identical reference and machine results at any adequate width. -/
-theorem evalBlockMachine_eq {p : Profile} (x : BlockInput p) (w F carryBits : ℕ)
-    (hF : p.alignFracBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits)
+theorem evalBlockMachine_eq {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
+    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits)
     (hw : F + 2 + carryBits + 1 ≤ w) : evalBlockMachine w x = evalBlock x
 ```
 
-For the FP16 profiles this gives concrete widths, which hold for **every**
+For the FP16 models this gives concrete widths, which hold for **every**
 encoded input:
 
-| Theorem | Profile | Register width |
+| Theorem | Model | Register width |
 | --- | --- | --- |
 | `v100_machine_eq` | V100 FP16, K = 4, F = 23 | 29 bits |
 | `ampere_machine_eq` | A100 FP16, K = 8, F = 24 | 31 bits |

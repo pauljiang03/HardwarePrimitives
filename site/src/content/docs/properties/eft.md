@@ -1,6 +1,6 @@
 ---
 title: TC-EFT correction
-description: Does TC-EFT work? What it recovers, its fast and exact paths, and what its guarantees do and do not say.
+description: Does TC-EFT work? What it recovers, its fast path and exact fallback, and what its guarantees do and do not say.
 ---
 
 TC-EFT is the algorithm of the **TC-EFT paper** (*TC-EFT: Characterizing and
@@ -17,7 +17,7 @@ rounded sum is a finite FP32 number. The fixed-size 576-bit implementation is
 proved to return the same bits.
 
 The caveats below never involve a wrong answer. They concern **which of two
-paths** produces the answer (a fast FP32 path or a slower exact path), and
+routes** produces the answer (a fast FP32 path or a slower exact fallback), and
 **what the proofs do and do not cover**.
 
 ## What it recovers, in bits
@@ -32,8 +32,8 @@ significant bits. TC-EFT puts those dropped bits back.
 2. **Split every term at the cut-off** into its *high bits* (at or above it)
    and its *low bits* (below it). The low bits of each term are exactly what
    was lost or is not visible in `D`.
-3. **Sum the high bits** to get `H`. `H` and `D` agree except in a small
-   window of bits. Their difference is the *overlap* `εₒ = D − H`.
+3. **Sum the high bits** to get `H`. `H` and `D` agree except in a few
+   overlapping bits. Their difference is the *overlap* `εₒ = D − H`.
 4. **Add the low bits back:** `S = D − εₒ + (sum of all low bits)`, which is
    just `H + (sum of all low bits)`. Then round once to FP32.
 
@@ -57,8 +57,8 @@ TC-EFT runs a check first. The fast path is used only if all of these hold:
   the lowest low bit present, the low parts need fewer than 24 bits in total,
   so adding them in FP32 never drops a bit.
 - **Those bits sit inside FP32's exponent range:** the lowest one is no lower
-  than `2^-149` (FP32's smallest subnormal bit), and the window does not
-  reach past `2^128`.
+  than `2^-149` (FP32's smallest subnormal bit), and the span of these bits
+  does not reach past `2^128`.
 - **`D`, the overlap `εₒ`, and `H` each fit in FP32's 24 significant bits.**
 - **The final result is within FP32's range.**
 
@@ -67,14 +67,14 @@ theorem scalarCorrected_correct ...   -- check passes ⇒ fast path returns RNE(
 ```
 
 The key lemma is that adding numbers in FP32 is exact when all their bits fit
-within one 24-bit window (`naiveSumBinary_exact_of_bitSpan`).
+within one span of 24 bits (`naiveSumBinary_exact_of_bitSpan`).
 
-### The exact path: a wide fixed-point register
+### The exact fallback: a wide fixed-point register
 
 If the check fails, TC-EFT adds all the bits in a register wide enough to hold
 every bit of every term. The reference version uses exact rationals; the
 implementation uses a **576-bit** fixed-point word whose lowest bit is
-`2^-272`. It then rounds once to FP32. This path always gives the right
+`2^-272`. It then rounds once to FP32. This fallback always gives the right
 answer, but it is slower.
 
 ```lean
@@ -105,13 +105,13 @@ out the inputs' exponents are:
 | Uniformly random bit patterns (exponents spread over the whole range) | 86 (V100), 24 (A100), 1 (H100) out of 1,000 |
 | The TC-EFT paper's validation suites | 290 of 2,459 finite cases |
 
-When the fast path is not taken, the exact path gives the answer.
+When the fast path is not taken, the exact fallback gives the answer.
 
 **3. The fast-path check uses the tightest grid.** To judge whether the low
 bits fit in 24 bits, the check measures from the *lowest bit actually set*
 in the low parts and ignores zero terms. This is the tightest choice for this
 kind of check: any valid grid must lie at or below that bit, and choosing that
-bit gives the smallest 24-bit budget. The reference version, the 576-bit
+bit leaves the most room within the 24 bits. The reference version, the 576-bit
 version, and the TC-EFT paper's own test generator (`grid_predicate`) all use
 this rule. On the paper's validation suites the reference version now takes
 the fast path in exactly the cases the paper's generator does, and the test
@@ -128,7 +128,7 @@ comparisons against exact values. Lean proves that whenever the check passes,
 every FP32 step is exact, so the fast path is taken and returns the correctly
 rounded sum (`EFMachine.Components.scalar_of_guard`).
 
-**5. The paper's input-budget condition covers part of the check.** The
+**5. The paper's input-based precondition covers part of the check.** The
 TC-EFT paper's inequality (17) bounds the bit span from the inputs alone. For
 FP32 correction, `ExtractionGrid.inputGrid_scalarPredicate_fp32` derives five
 of the check's nine conditions from it and assumes the other four: a grid no

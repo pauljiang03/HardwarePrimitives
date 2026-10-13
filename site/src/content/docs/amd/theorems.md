@@ -13,9 +13,9 @@ The full list, with every Lean name and file, is in
 
 | What it says | Lean |
 | --- | --- |
-| On every path and for every input, the model returns a word exactly when an independently written transcription of the paper's algorithms specifies it. | [`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L129), [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161) |
+| On every variant and for every input, the model returns a word exactly when an independently written transcription of the paper's algorithms specifies it. | [`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L129), [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161) |
 | A block is accepted exactly when `a` and `b` have `N_FMA` entries, every operand is finite, accumulation succeeds, and `S_acc` is below the overflow threshold. | [`MatrixCore.evalBlock_success_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L41) |
-| On every profile with subnormals, the output is `fl{S_acc}`: the nearest binary32 value, ties to even. | [`MatrixCore.evalBlock_nearestEven`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L60) |
+| On every model with subnormals, the output is `fl{S_acc}`: the nearest binary32 value, ties to even. | [`MatrixCore.evalBlock_nearestEven`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L60) |
 | The observation for any input words reports a finite word exactly when the model accepts, with the same word; otherwise an infinity or NaN. | [`MatrixCore.blockOutcome_finite_iff`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/SpecialAgreement.lean#L169) |
 
 ## Output error
@@ -24,9 +24,9 @@ The bounds compare `d` with the exact `Σ a_ℓ b_ℓ + c` of the decoded inputs
 
 | What it says | Lean |
 | --- | --- |
-| SFMA and CDNA 1: `\|exact − d\|` is at most half a binary32 ulp of the exact sum. | [`MatrixCore.correctRounding_error`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L84) |
-| CDNA 2: at most the effect of flushing subnormal inputs plus one rounding bound for each product conversion, each node of the pairwise tree and the final `fl{·}`. | [`MatrixCore.pairwise_error`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L227) |
-| CDNA 3: at most the error of `S_acc` in its branch of Algorithm 1 or 2 plus half an ulp of `S_acc`. | [`MatrixCore.aligned_error`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L300) |
+| SFMA and CDNA 1: `\|exact − d\|` is at most half a binary32 ulp of the exact sum. | [`MatrixCore.correctRounding_error`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L85) |
+| CDNA 2: at most the effect of flushing subnormal inputs plus one rounding bound for each product conversion, each pairwise sum and the final `fl{·}`. | [`MatrixCore.pairwise_error`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L229) |
+| CDNA 3: at most the error of `S_acc` in its branch of Algorithm 1 or 2 plus half an ulp of `S_acc`. | [`MatrixCore.aligned_error`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L302) |
 | From the inputs alone, with `A = Σ\|p_ℓ\| + \|c\|`: `2^-24 A + 2^-150` on SFMA and CDNA 1; `2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149` on CDNA 3, where denormalized products make `2^(e_max)` exceed every `\|p_ℓ\|`. | [`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L76), [`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L238), [`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L473) |
 | An inner product is within the sum of its blocks' bounds of `c` plus all products. | [`MatrixCore.dotBits_error_bound`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Contract.lean#L225) |
 

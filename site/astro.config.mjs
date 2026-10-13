@@ -12,6 +12,7 @@ export default defineConfig({
     '/overview': '/TC-EFT/',
     '/model/conversion': '/TC-EFT/model/normalization/',
     '/proofs/trust': '/TC-EFT/proofs/tested/',
+    '/model/profiles': '/TC-EFT/model/variants/',
   },
   integrations: [
     starlight({
@@ -42,7 +43,7 @@ export default defineConfig({
             { label: '3. Alignment', slug: 'model/alignment' },
             { label: '4. Accumulation', slug: 'model/accumulation' },
             { label: '5. Normalization and final rounding', slug: 'model/normalization' },
-            { label: '6. Architecture profiles', slug: 'model/profiles' },
+            { label: '6. Variants and their numerical features', slug: 'model/variants' },
             { label: '7. Instructions and chaining', slug: 'model/instructions' },
             { label: '8. Independent specification', slug: 'model/specification' },
             { label: '9. Bitvector datapath', slug: 'model/datapath' },

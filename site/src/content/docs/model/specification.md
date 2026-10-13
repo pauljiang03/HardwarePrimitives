@@ -39,10 +39,10 @@ def Rounds (x : ℚ) (bits : BitVec 32) : Prop :=
 ## The equality theorem
 
 ```lean
-/-- Every supported GPU path and every input, with failures observed as none. -/
-theorem supported_eq_spec (path : Path) (x : BlockInput (implementationModel path)) :
+/-- Every supported GPU variant and every input, with failures observed as none. -/
+theorem supported_eq_spec (variant : Variant) (x : BlockInput (implementationModel variant)) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
-      bits (parameters path) (supportedInput path x)
+      bits (parameters variant) (supportedInput variant x)
 ```
 
 - This holds **for all inputs**. It is a universal theorem, not a test over
@@ -54,7 +54,8 @@ theorem supported_eq_spec (path : Path) (x : BlockInput (implementationModel pat
   succeed with the specified bits.
 - **Signed zero is covered.** The result is unique at the bit level,
   including the sign of zero.
-- `tf32_eq_spec` extends the result to padded TF32 register words, and
+- `tf32_eq_spec` extends the result to TF32 register words (32-bit words
+  whose low 13 bits are zero), and
   `machine_eq_spec` extends it to fixed-width accumulators of adequate
   width.
 

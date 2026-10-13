@@ -1,25 +1,25 @@
 ---
-title: 6. Architecture profiles
-description: How V100, A100, and H100 Tensor Core paths are parameterized, and the general InvocationSpec interface.
+title: 6. Variants and their numerical features
+description: How the V100, A100, and H100 Tensor Core variants are parameterized, and the general InvocationSpec interface.
 ---
 
 The pipeline is the same on every GPU. Architectures differ only in a few
-parameters, and a `Model` collects them:
+numerical features, and a `Model` collects them:
 
 ```lean
-structure Profile where
-  input : Format          -- fp16, bf16, or tf19
-  products : ℕ            -- K
+structure Model where
+  input : Format          -- input format: fp16, bf16, or tf19
+  nfma : ℕ                -- K, the FMA size N_FMA
   alignFracBits : ℤ       -- F = 23 + p
-  eAlignMin : Option ℤ   -- minimum alignment exponent
+  eAlignMin : Option ℤ    -- the minimum alignment exponent e_align^min
 ```
 
-## The supported paths
+## The supported variants
 
 All of them have FP32 `C` and FP32 output. The parameters follow Table 3 of
 *Accurate Models* (Khattak and Mikaitis).
 
-| Path | Lean profile | Input | K | p (F = 23 + p) | Floor |
+| Variant | Lean model | Input | K (N_FMA) | p = n_eab (F = 23 + p) | e_align^min |
 | --- | --- | --- | ---: | ---: | ---: |
 | V100 FP16 | `v100F16F32` | FP16 | 4 | 0 | none |
 | A100 FP16 | `ampereF16F32` | FP16 | 8 | 1 | −132 |
@@ -33,15 +33,15 @@ All of them have FP32 `C` and FP32 output. The parameters follow Table 3 of
 They are built from generic constructors, for example:
 
 ```lean
-def fp16Fp32Model (K extraBits : ℕ) (floor : Option ℤ := none) : Profile :=
-  ⟨fp16, K, (23 + extraBits : ℕ), floor⟩
+def fp16Fp32Model (K neab : ℕ) (eAlignMin : Option ℤ := none) : Model :=
+  ⟨fp16, K, (23 + neab : ℕ), eAlignMin⟩
 
-def ampereF16F32 : Profile := fp16Fp32Model 8 1 (some (-132))
-def hopperF16F32 : Profile := fp16Fp32Model 16 2 (some (-133))
+def ampereF16F32 : Model := fp16Fp32Model 8 1 (some (-132))
+def hopperF16F32 : Model := fp16Fp32Model 16 2 (some (-133))
 ```
 
-Most theorems are stated for **arbitrary** `K`, `p`, and floor, and the named
-profiles are instances. Choosing parameters does not by itself establish that
+Most theorems are stated for **arbitrary** `K`, `p`, and minimum alignment
+exponent, and the named models are instances. Choosing parameters does not by itself establish that
 a GPU behaves that way. That link comes from the
 [hardware replay](/TC-EFT/model/validation/).
 
@@ -51,30 +51,30 @@ that the two transcriptions match.
 
 ## Beyond one block: `InvocationSpec`
 
-[`InvocationSpec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Invocation.lean#L20)
-is a more general description of a Tensor Core invocation. Profiles embed
-into it, and it can express variations the basic profile cannot:
+[`InvocationSpec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Invocation.lean#L21)
+is a more general description of a Tensor Core invocation. Models embed
+into it, and it can express variations the basic model cannot:
 
 ```lean
 inductive CPlacement where
-  | inGroup                                        -- C is aligned with the products
-  | afterProducts (stages : List RoundingStage)  -- products rounded first, then C added exactly
+  | early                                   -- early accumulation: C is aligned with the products
+  | late (stages : List RoundingStage)     -- late accumulation: products rounded first, then C added exactly
 
 inductive AccumulationKind where
-  | aligned (alignFracBits : ℕ) (floor : Option ℤ) (cPlacement : CPlacement)
+  | aligned (alignFracBits : ℕ) (eAlignMin : Option ℤ) (cPlacement : CPlacement)
   | fused                                          -- exact single-product FMA (e.g. FP64 DMMA)
 
 structure InvocationSpec where
-  input : OperandEncoding        -- includes TF32's padded register words
+  input : OperandEncoding        -- includes TF32's 32-bit register words
   cFormat : Format
-  products : ℕ
+  nfma : ℕ
   accumulation : AccumulationKind
   intermediate : List RoundingStage := []
   output : RoundingStage       -- output format and rounding direction
 ```
 
-- `Profile.toInvocation` embeds a profile as an aligned, in-group,
-  FP32-truncation invocation, and the compatibility theorems show the
+- `Model.toInvocation` embeds a model as an aligned invocation with early
+  accumulation of `C` and FP32 truncation, and the compatibility theorems show the
   results are equal.
 - `binary64Fma mode` models an FP64 DMMA as a **fused** operation: one
   correctly rounded result in any of four directions (`binary64Fma_correct`).
@@ -85,5 +85,5 @@ structure InvocationSpec where
   `..._truncate`, `..._towardNegative`, `..._towardPositive`).
 
 The headline theorems and the hardware validation concern the eight aligned
-FP32-output paths in the table. The general interface is there for
+FP32-output variants in the table. The general interface is there for
 experimenting with other configurations.

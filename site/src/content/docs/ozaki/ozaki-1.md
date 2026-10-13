@@ -4,9 +4,9 @@ description: The complete Lean proof of Ozaki-I on the Tensor Core and AMD matri
 ---
 
 Ozaki-I (Ozaki, Ogita, Oishi and Rump, 2012) computes a high-precision matrix
-product on a low-precision matrix engine. It cuts every input into a few
-slices of small integers, multiplies slices on the engine, where products of
-small integers are exact, and adds the scaled products. This page follows the
+product on a low-precision matrix multiplier. It cuts every input into a few
+slices of small integers, multiplies slices on the matrix multiplier, where
+products of small integers are exact, and adds the scaled products. This page follows the
 whole proof, from the slicing of the inputs to the value the hardware returns.
 Every step is a Lean theorem in the [`ozaki/`](https://github.com/pauljiang03/TC-EFT/tree/main/ozaki)
 project, which depends on the Tensor Core model of this repository and on the
@@ -29,12 +29,13 @@ parameters: `b`, the bits per slice, and `s`, the number of slices.
 1. **Split** `x` into `s` slices on decreasing power-of-two grids,
    `x = Σₜ 2^gₜ qₜ + r`, where every `qₜ` is a vector of integers of magnitude
    at most `2^b` and `r` is what is left. Split `y` the same way into `2^hᵤ pᵤ`.
-2. **Multiply** the `s (s + 1) / 2` slice pairs with `t + u < s` on the engine:
+2. **Multiply** the `s (s + 1) / 2` slice pairs with `t + u < s` on the matrix multiplier:
    the integer dot products `qₜ · pᵤ`.
 3. **Add** the products, each scaled by `2^(gₜ + hᵤ)`, in binary32 (or binary64
    for FP64 emulation), smallest first.
 
-The Z3 models use `k = 4`, `b = 11` and `s = 4`: ten engine products per entry.
+The Z3 models use `k = 4`, `b = 11` and `s = 4`: ten products on the matrix
+multiplier per entry.
 
 ## Step 1: the slicing is exact
 
@@ -64,7 +65,7 @@ binary32 operations is the split of the proof when every grid is in that range
 ([`splitFrom32_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Split32.lean#L268)). The Z3 lemma covers `|a| ≤ 1`.
 
 Outside that range σ overflows (above about `2^115`) or the grid falls below
-binary32's, as on the long exact paths. Slicing with integer operations covers
+binary32's, as in the long exact fallbacks. Slicing with integer operations covers
 every grid: on significands and exponents it shifts, divides with
 round-half-even and compares, and it equals the split of the proof for every
 vector and grid ([`splitInt_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceInt.lean#L582)). Its coefficients have at most `b + 1` bits,
@@ -74,36 +75,37 @@ whatever the exponents ([`splitInt_width`](https://github.com/pauljiang03/TC-EFT
 
 ## Step 2: every slice product is exact on the hardware
 
-An `MatrixMultiplier` is a function from two integer vectors to the value the hardware
-returns. `Engine.ExactOn b budget` says it returns `Σ xᵢyᵢ` exactly when every
-entry has magnitude at most `2^b` and the products total at most `bound`.
+A `MatrixMultiplier` is a function from two integer vectors to the value the
+hardware returns. `MatrixMultiplier.ExactOn b bound` says that it returns
+`Σ xᵢyᵢ` exactly when every entry has magnitude at most `2^b` and the
+products total at most `bound`, the exactness bound.
 
-On the Tensor Core model, the engine encodes the integers as fp16, bf16 or
-tf32 words, pads them to groups, and chains the groups through `C`, starting
-from zero. Integer operands lose nothing in alignment when `2b ≤ F` (`F = 23`
+On the Tensor Core model, the matrix multiplier encodes the integers as fp16,
+bf16 or tf32 words, pads them with zeros to whole block FMAs, and chains the
+block FMAs through `C`, starting from zero. Integer operands lose nothing in alignment when `2b ≤ F` (`F = 23`
 on V100, `24` on A100, `25` on H100), and the binary32 output holds every
 integer up to `2^24`:
 
 | Fact | Lean |
 | --- | --- |
-| A block of integer operands with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L184) |
-| So does a chain of blocks. | [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L335) |
-| The engine is exact on `b`-bit vectors whose products total at most `2^24`, on any path with `2b ≤ F` whose input format holds `b`-bit integers. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L193) |
-| This holds on all eight GPU paths, with `b = 11` for fp16 and tf32 and `b = 8` for bf16. | [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
+| A block of integer operands with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L185) |
+| So does a chain of blocks. | [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L336) |
+| The matrix multiplier is exact on `b`-bit vectors whose products total at most `2^24`, on any variant with `2b ≤ F` whose input format holds `b`-bit integers. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L195) |
+| This holds on all eight GPU variants, with `b = 11` for fp16 and tf32 and `b = 8` for bf16. | [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
 
 ```lean
-theorem tcMultiplier_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) : (tcMultiplier p).ExactOn b (2 ^ 24)
+theorem tcMultiplier_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) : (tcMultiplier p).ExactOn b (2 ^ 24)
 ```
 
 The same holds on the AMD model for the binary32 SFMA, CDNA 1, 2 and 3 fp16,
-CDNA 3 XF32 and the bf16 paths ([`mcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326)).
+CDNA 3 XF32 and the bf16 variants ([`mcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326)).
 
 **What the hardware models add.** That a slice product must fit the binary32
 output is the familiar slice-width rule of the Ozaki literature. The models
-prove it on each path, show that the output rather than the accumulator sets
-it, and show where it breaks: a full A100 or H100 group of `11`-bit products
-already loses a bit ([`a100_full_group`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Limits.lean#L51)). The
+prove it on each variant, show that the output rather than the accumulator
+sets it, and show where it breaks: a full block FMA of `11`-bit products on
+A100 or H100 already loses a bit ([`a100_full_blockFMA`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Limits.lean#L51)). The
 [hardware semantics](/TC-EFT/ozaki/hardware/) page has the exact condition,
 the two-pass recovery and the choice of slices per GPU.
 
@@ -112,14 +114,14 @@ the two-pass recovery and the choice of slices per GPU.
 With exact slice products, the only error before the additions is the slice
 pairs Ozaki-I skips and the residuals. Lean proves an exact identity for it:
 pairing slice `t` of `x` with the residual of `y` after `s − t` slices accounts
-for every skipped pair at once ([`dot_eq_exactTerms_add`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L194)):
+for all the skipped pairs together ([`dot_eq_exactTerms_add`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L199)):
 
 ```text
 x · y − Σ_{t+u<s} 2^(gₜ+hᵤ) (qₜ · pᵤ) = r · y + Σₜ 2^gₜ (qₜ · r'ₛ₋ₜ)
 ```
 
 Bounding each piece with Step 1 gives the slicing error
-([`exactTerms_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L230), [`exactTerms_error_normwise`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L297)):
+([`exactTerms_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L235), [`exactTerms_error_normwise`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L302)):
 
 ```text
 |x · y − Σ terms| ≤ (s + 1) k 2^(E + F − s(b+1)) ≤ 4 (s + 1) k max|x| max|y| 2^(−s(b+1))
@@ -151,14 +153,14 @@ its exponent is in range, so the scaling is exact
 
 | Fact | Lean |
 | --- | --- |
-| Ozaki-I adds exactly the scaled exact slice products. | [`ozaki1_eq_sumWith`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L168), [`tcOzaki1_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Schemes.lean#L49) |
-| The result is within the addition bound plus the slicing bound of `x · y`. | [`ozaki1_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L367), [`tcOzaki1_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Schemes.lean#L56), [`mcOzaki1_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Schemes.lean#L56) |
-| The result is never Inf or NaN when the inputs are within a stated range. | [`ozaki1_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Success.lean#L112), [`tcOzaki1_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Success.lean#L35) |
+| Ozaki-I adds exactly the scaled exact slice products. | [`ozaki1_eq_sumWith`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L173), [`tcOzaki1_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Schemes.lean#L49) |
+| The result is within the addition bound plus the slicing bound of `x · y`. | [`ozaki1_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki1.lean#L372), [`tcOzaki1_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Schemes.lean#L56), [`mcOzaki1_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Schemes.lean#L56) |
+| The result is never Inf or NaN when the inputs are within a stated range. | [`ozaki1_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Success.lean#L113), [`tcOzaki1_isSome`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Success.lean#L35) |
 | The Z3 configuration runs exactly on V100. | [`v100_ozaki1_z3`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Schemes.lean#L105) |
 
 ```lean
-theorem tcOzaki1_error {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
+theorem tcOzaki1_error {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) {v : ℚ} (hv : tcOzaki1 p b s x y = some v) :
     Rat.abs (v - dot x y) ≤
       ((1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length - 1) *
@@ -172,18 +174,18 @@ theorem tcOzaki1_error {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsIn
 
 The condition `k · 2^(2b) ≤ 2^24` above allows only four terms of `11`-bit
 slices. Split-K removes it: cut the inner dimension into chunks of
-`2^(24 − 2b)` terms, run each chunk on the engine, and add the integer chunk
-results exactly. This is exact for every length ([`chunked_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SplitK.lean#L130),
+`2^(24 − 2b)` terms, run each chunk on the matrix multiplier, and add the integer chunk
+results exactly. This is exact for every length ([`chunked_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SplitK.lean#L131),
 [`tcSplitK_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/LongDot.lean#L42)), and on the Tensor Core model the chunk results can be
 added in TC-EFT's fixed-width register, exact while the products total less
 than `2^63` in a 64-bit register ([`tcSplitKReg_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/LongDot.lean#L74)). On A100 and H100 a
-second TC-EFT technique recovers a full group of `11`-bit products exactly: run
+second TC-EFT technique recovers a full block FMA of `11`-bit products exactly: run
 it once from `c = 0`, then again from `c = −D1`; because `c` takes part in
 alignment, the second pass returns exactly what the first truncated
-([`twoPass_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L254)). The two-pass engine is exact for every length on all
-eight paths, with full groups of `11`-bit slices on fp16 and tf32 and `8`-bit
-slices on bf16 ([`h100F16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L471), [`h100TF32Mma_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L507),
-[`h100BF16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L489) and five more). With split-K:
+([`twoPass_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L256)). The two-pass matrix multiplier is exact for every length on
+all eight variants, with full block FMAs of `11`-bit slices on fp16 and tf32
+and `8`-bit slices on bf16 ([`h100F16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L474), [`h100TF32Mma_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L510),
+[`h100BF16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L492) and five more). With split-K:
 
 - Ozaki-I's error bound holds for every `k` ([`tcOzaki1L_error`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/LongDot.lean#L114)).
 - **FP64 emulation.** With binary64 recombination the same bound holds with
@@ -193,13 +195,14 @@ slices on bf16 ([`h100F16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/
 ## Correctly rounded Ozaki-I
 
 Ozaki-I as above guarantees an error bound, not correct rounding. Its
-correctly rounded variant keeps the slice products exact, checks whether both
-ends of `H ± B` round to the same float, tries more slices if not, and
-otherwise takes an exact path that also runs on the engine: Ozaki-I with all
-`s²` slice products once nothing is left over ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L472)).
+correctly rounded version keeps the slice products exact and applies Ziv's
+rounding test: it checks whether both ends of `H ± B` round to the same float,
+tries more slices if not, and otherwise takes an exact fallback that also runs
+on the matrix multiplier: Ozaki-I with all `s²` slice products once nothing is
+left over ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L473)).
 
 ```lean
-theorem tcOzaki1CRD_eq {p : Profile} {b : ℕ} (heng : (tcMultiplier p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRD_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
@@ -217,8 +220,8 @@ bounding every register, and with IEEE special values. All of it is on the
 
 - **Against the Z3 models.** On their two test cases the Lean pipelines return
   the same binary32 words as the unmodified Z3 models on the V100, A100 and
-  H100 fp16 and all tf32 paths, and on the AMD SFMA, CDNA 1, 2 and 3 fp16 and
-  CDNA 3 XF32 paths, by kernel evaluation.
+  H100 fp16 and all tf32 variants, and on the AMD SFMA, CDNA 1, 2 and 3 fp16
+  and CDNA 3 XF32 variants, by kernel evaluation.
 - **Against exact arithmetic.** The correctly rounded variants return the words
   an independent Python script computes with exact fractions: on the Z3
   matrices, a product with heavy cancellation, a product exactly halfway
@@ -234,11 +237,11 @@ bounding every register, and with IEEE special values. All of it is on the
 - **The hardware models.** The theorems are about the Tensor Core and
   matrix-core models; that GPUs behave like them rests on the models'
   [validation](/TC-EFT/model/validation/).
-- **The engine's conditions.** Slices fit the input format (`b ≤ 11` for fp16
+- **The matrix multiplier's conditions.** Slices fit the input format (`b ≤ 11` for fp16
   and tf32, `b ≤ 8` for bf16) and `2b ≤ F`; with split-K, chunks of
   `2^(24 − 2b)` terms.
-- **Off the engine.** The slicing, the check, the exact path and the final
-  rounding are one integer function, with one theorem bounding every
+- **Off the matrix multiplier.** The slicing, the rounding test, the exact
+  fallback and the final rounding are one integer function, with one theorem bounding every
   register ([correct rounding](/TC-EFT/ozaki/correct-rounding/)). The binary32
   σ-trick is proved only for grids in `[2^-149, 2^104]`; the integer slicing
   covers every grid.
@@ -246,5 +249,5 @@ bounding every register, and with IEEE special values. All of it is on the
   round to nearest even. TensorCore's own rounding agrees with it up to the
   largest finite value and returns nothing above it; no result depends on
   that.
-- **Not covered.** FP8 paths, NaN payloads, and the dispatch heuristics of
+- **Not covered.** FP8 variants, NaN payloads, and the dispatch heuristics of
   production libraries.

@@ -57,7 +57,7 @@ python3 scripts/check_equivalence.py
 | Import | Contents |
 | --- | --- |
 | `TensorCore.Numerics` | Formats, encodings, exact arithmetic, rounding |
-| `TensorCore.TC` | Tensor Core profiles, block model, specification, error and non-monotonicity theory |
+| `TensorCore.TC` | Tensor Core models, block model, specification, error and non-monotonicity theory |
 | `TensorCore.EFT` | Reference EFT, scalar preconditions, Algorithm 1 of the TC-EFT paper |
 | `TensorCore.Kernels.EFT` | Bounded 576-bit EFT and its refinement proofs |
 | `TensorCore` | All of the above |

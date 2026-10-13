@@ -10,7 +10,7 @@ truncated away start to count.
 
 ## The mechanism, concretely
 
-On the V100 profile, take four products `2^-12 × 2^-12 = 2^-24`:
+On the V100 model, take four products `2^-12 × 2^-12 = 2^-24`:
 
 | `C` | η | Grid | Products kept | Output |
 | --- | ---: | --- | --- | --- |
@@ -26,10 +26,10 @@ This formalizes Theorem III.4 of the TC-EFT paper (`nonmonotone_perturbation`),
 stated here on encoded inputs.
 
 ```lean
-theorem nonmonotone_encoded (K p : ℕ) (floor : Option ℤ) (hfl : ∀ f ∈ floor, f ≤ -1)
-    (a b : (fp16Fp32Model K p floor).Word) (da db : Decoded)
-    (ha : (fp16Fp32Model K p floor).decode a = some da)
-    (hb : (fp16Fp32Model K p floor).decode b = some db)
+theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -1)
+    (a b : (fp16Fp32Model K p eAlignMin).Word) (da db : Decoded)
+    (ha : (fp16Fp32Model K p eAlignMin).decode a = some da)
+    (hb : (fp16Fp32Model K p eAlignMin).decode b = some db)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
@@ -38,8 +38,8 @@ theorem nonmonotone_encoded (K p : ℕ) (floor : Option ℤ) (hfl : ∀ f ∈ fl
       t.output.value = 1 ∧ (1 < t'.output.value ↔ 3 * 2 ^ p ≤ K)
 ```
 
-In words: take any FP16 profile with `K` products and `p` extra bits, and any
-floor at most −1. Use `K` copies of a product whose exact value is
+In words: take any FP16 model with FMA size `K`, `p` extra alignment bits,
+and a minimum alignment exponent, if any, of at most −1. Use `K` copies of a product whose exact value is
 `2^-(24+p)` and whose unnormalized exponent is at most −1. With `C = 1` the output is
 exactly 1. Lowering `C` to its FP32 predecessor `1 − 2^-24` makes the output
 **exceed 1 exactly when `K ≥ 3 · 2^p`**.

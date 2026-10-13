@@ -1,6 +1,6 @@
 ---
 title: 4. Independent specification
-description: A second transcription of Accurate Models of AMD Matrix Cores, written in the paper's fixed-point language without the model's definitions, and proved equal to the model on every path.
+description: A second transcription of Accurate Models of AMD Matrix Cores, written in the paper's fixed-point language without the model's definitions, and proved equal to the model on every variant.
 ---
 
 [`Specification/Defs.lean`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Defs.lean)
@@ -27,8 +27,8 @@ rather than the model's grid operations:
   finite binary32 words, with the overflow threshold stated separately.
 
 `Spec.Result S a b c w` (and `Spec.PairwiseResult` for CDNA 2) says that `w`
-is the block output for the words `a`, `b`, `c`. The parameters of each path
-are transcribed from the paper.
+is the block output for the words `a`, `b`, `c`. The numerical features of
+each variant are transcribed from the paper.
 
 ## Equivalence
 
@@ -50,7 +50,7 @@ proves that the specification's Algorithms 1 and 2 compute the model's
 
 For CDNA 2, [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161) states the same for
 `Spec.PairwiseResult`; its proof identifies the specification's `fl{·}` with
-the model's and unfolds the model's pairwise tree.
+the model's and unfolds the model's pairwise sum.
 
 ```lean
 import MatrixCore
@@ -73,6 +73,6 @@ deliberately planted implementation dependency.
 
 ## Scope
 
-The specification covers every path of the paper: the SFMA, CDNA 1
+The specification covers every variant of the paper: the SFMA, CDNA 1
 fp16/bf16, CDNA 2 fp16/bf16/bf16 `_1k`, and CDNA 3 fp16/bf16/XF32/fp8 (any
 mix of E4M3 and E5M2).

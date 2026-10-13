@@ -1,6 +1,6 @@
 ---
 title: 3. Alignment
-description: The alignment exponent η, the profile floor, the grid 2^(η−F), and truncation.
+description: The alignment exponent η, the minimum alignment exponent, the grid 2^(η−F), and truncation.
 ---
 
 Alignment is where a Tensor Core loses information, and it is the core of the
@@ -15,34 +15,34 @@ def maxTermExp (ts : List UnnormalizedProduct) : Option ℤ :=
   (ts.filterMap fun t => if t.significand = 0 then none else some t.unnormalizedExp).foldl
     (fun acc e => some (match acc with | none => e | some v => max v e)) none
 
-/-- The floor only raises a nonempty maximum; an all-zero block stays `none`. -/
-def Profile.applyEAlignMin (p : Profile) : Option ℤ → Option ℤ
+/-- The minimum alignment exponent only raises a nonempty maximum; an all-zero block stays `none`. -/
+def Model.applyEAlignMin (p : Model) : Option ℤ → Option ℤ
   | none => none
   | some e => some (match p.eAlignMin with | none => e | some f => max e f)
 
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
-  b.profile.applyEAlignMin (maxTermExp b.terms)
+  b.model.applyEAlignMin (maxTermExp b.terms)
 ```
 
 - η is the **largest unnormalized exponent among the nonzero terms**. Zero terms are
   skipped, so a zero product never coarsens the grid.
 - If every term is zero, η is `none`. The accumulator is then exactly zero
   and the output is `+0`.
-- Ampere and Hopper have an **alignment floor** (`−132` and `−133`): η is
-  never below it. The floor only matters when every term is tiny, for example
-  products of subnormals. It then coarsens the grid and flushes those terms
-  to zero. V100 has no floor.
+- Ampere and Hopper have a **minimum alignment exponent** `e_align^min`
+  (`−132` and `−133`): η is capped from below by it. It only matters when every
+  term is tiny, for example products of subnormals. It then coarsens the grid
+  and flushes those terms to zero. V100 has no minimum alignment exponent.
 
 ## Step 2: the grid
 
 ```lean
 def PreparedBlock.alignGridExponent (b : PreparedBlock) : ℤ :=
-  b.alignExp.getD 0 - b.profile.alignFracBits
+  b.alignExp.getD 0 - b.model.alignFracBits
 ```
 
 The grid spacing is `2^(η − F)`, where `F = alignFracBits = 23 + p`. Here `p`
-is the number of **extra alignment bits** the architecture keeps beyond
-FP32's 23 mantissa bits: 0 on V100, 1 on A100, 2 on H100. A larger `p` gives
+is the number of **extra alignment bits** (`n_eab`) the architecture keeps
+beyond FP32's 23 fractional bits: 0 on V100, 1 on A100, 2 on H100. A larger `p` gives
 a finer grid, so less is lost.
 
 ## Step 3: truncation

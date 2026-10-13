@@ -49,6 +49,6 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
 ## Assumed
 
 That the *Accurate Models* model, and therefore this one, matches hardware in the
-regions the recorded data does not exercise: active alignment floors,
+regions the recorded data does not exercise: active minimum alignment exponents,
 subnormal and zero operands, wide-exponent BF16/TF32 inputs, and the H100 TF32
-K = 8 MMA path.
+K = 8 MMA variant.

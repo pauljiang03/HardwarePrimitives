@@ -36,7 +36,7 @@ for how a block accumulates, the constructors of [`MatrixCore.Accumulation`](htt
 | CDNA 3 (MI300A, MI300X) | fp16 / bf16 / XF32 | `global_alignment` with late `c` (Algorithm 1) | 8 / 8 / 4 |
 | CDNA 3 | fp8 E4M3 / E5M2 FNUZ, any mix | `odd_even_grouping` (Algorithm 2) | 16 |
 
-Every path ends with `d = fl{S_acc}`: the accumulated value `S_acc`,
+Every variant ends with `d = fl{S_acc}`: the accumulated value `S_acc`,
 normalized and rounded to nearest even in binary32. What differs is how
 `S_acc` is formed.
 

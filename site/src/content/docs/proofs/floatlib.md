@@ -12,8 +12,8 @@ runtime.
 ## The equivalence theorem
 
 [`floatlib_eq_reference`](https://github.com/pauljiang03/TC-EFT/blob/main/floatlib-port/TCFloat/Equivalence/Representations.lean#L149)
-and its inverse cover every profile with FP16, BF16, or TF32 input (any `K`,
-extra bits, and floor), every encoded input, and every `D`. They prove that
+and its inverse cover every model with FP16, BF16, or TF32 input (any FMA
+size `K`, extra alignment bits, and minimum alignment exponent), every encoded input, and every `D`. They prove that
 the two implementations produce corresponding **complete observations**:
 TC results, EFT results, error kinds, and branch tags. The correspondence is
 stated through explicit `Equiv`s.

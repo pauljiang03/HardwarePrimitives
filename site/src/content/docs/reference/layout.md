@@ -6,7 +6,7 @@ description: Where each part of the development lives.
 | Path | Contents |
 | --- | --- |
 | [`TensorCore/Numerics/`](https://github.com/pauljiang03/TC-EFT/tree/main/TensorCore/Numerics) | Formats, encodings, exact arithmetic, truncation, rounding and its correctness |
-| [`TensorCore/TC/`](https://github.com/pauljiang03/TC-EFT/tree/main/TensorCore/TC) | Profiles, `evalBlock`, invocations, accumulator width, error bounds, non-monotonicity, chaining |
+| [`TensorCore/TC/`](https://github.com/pauljiang03/TC-EFT/tree/main/TensorCore/TC) | Models, `evalBlock`, invocations, accumulator width, error bounds, non-monotonicity, chaining |
 | [`TensorCore/TC/Specification/`](https://github.com/pauljiang03/TC-EFT/tree/main/TensorCore/TC/Specification) | Independent *Accurate Models* specification (`IndependentSpec`) and the equality proof |
 | [`TensorCore/EFT/`](https://github.com/pauljiang03/TC-EFT/tree/main/TensorCore/EFT) | Extraction, scalar predicate, reference Algorithm 1 (TC-EFT paper) |
 | [`TensorCore/Kernels/Datapath/`](https://github.com/pauljiang03/TC-EFT/tree/main/TensorCore/Kernels/Datapath) | Bitvector Tensor Core datapath and its equality with `evalBlock` |

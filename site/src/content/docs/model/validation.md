@@ -27,7 +27,7 @@ measured on the GPU.
 | **Total** | | **35,000** | **0** | **0** |
 
 The BF16 and TF32 rows are run through **both** the general `InvocationSpec`
-descriptor and the proved profile. Both agree with the device and with each
+descriptor and the proved model. Both agree with the device and with each
 other. The results are recorded in
 [`data/regressions/device-report.json`](https://github.com/pauljiang03/TC-EFT/blob/main/data/regressions/device-report.json)
 and
@@ -44,7 +44,7 @@ The recorded rows are random normal inputs. They exercise alignment
 truncation and truncation heavily, but some features are **not covered by
 hardware data**:
 
-- **Alignment floors** (−132 and −133) are never active in these rows.
+- **Minimum alignment exponents** (−132 and −133) are never active in these rows.
 - **Zero operands** do not occur, and **subnormal** operands are rare (0, 1,
   and 5 on V100, A100, and H100 FP16). BF16 and TF32 rows have none.
 - **H100 TF32 MMA (K = 8)** has no recorded rows. Its parameters come from
@@ -68,7 +68,8 @@ rational arithmetic generate and check further cases:
   independent IEEE decoder, bit-level alignment, and binary search over
   encodings for the output. 0 mismatches.
 - `scripts/check_features.py`: 132 configurations of `K` and `p`, 2,033
-  cases, including padding and subnormal edge cases. 0 mismatches.
+  cases, including edge cases of the extra alignment bits and of subnormals.
+  0 mismatches.
 
 The oracles share no code with the Lean model. They agree with it by
 implementing the same *Accurate Models* semantics separately.

@@ -1,18 +1,18 @@
 ---
 title: 7. Instructions and chaining
-description: Multi-group instructions are modeled as an ordered sequence of blocks, each feeding its FP32 output to the next as C.
+description: Instructions made of several block FMAs are modeled as an ordered sequence of blocks, each feeding its FP32 output to the next as C.
 ---
 
-A single MMA instruction often covers more products than one normalization
-group. A WMMA `m16n16k16` FP16 tile, for example, has inner dimension
-`k = 16`. On V100 (`K = 4`) that is four groups. The model treats such an
-instruction as a **left-to-right chain of blocks**: each group's FP32 output
-becomes the next group's `C`.
+A single MMA instruction often covers more products than one block FMA. A
+WMMA `m16n16k16` FP16 tile, for example, has inner dimension `k = 16`. On
+V100 (FMA size `K = 4`) that is four block FMAs. The model treats such an
+instruction as a **left-to-right chain of blocks**: each block's FP32 output
+becomes the next block's `C`.
 
 ## Running a chain
 
 ```lean
-def runBlocks (p : Profile) :
+def runBlocks (p : Model) :
     F32 → List (List (p.Word × p.Word)) → Except ModelError (List BlockTrace)
   | _, [] => .ok []
   | c, ps :: rest =>
@@ -24,27 +24,27 @@ def runBlocks (p : Profile) :
 ```
 
 The value passed along the chain is the encoded **output word**, not an
-exact rational. Rounding between groups is therefore part of the model, as
-it is on hardware.
+exact rational. Rounding between block FMAs is therefore part of the model,
+as it is on hardware.
 
-## Instruction paths
+## Instruction variants
 
 ```lean
 structure InstructionVariant where
   name : String
   k : ℕ                 -- inner dimension of the instruction
-  products : ℕ          -- K, products per group
-  extraBits : ℕ
-  floor : Option ℤ
+  nfma : ℕ              -- K, the FMA size N_FMA
+  neab : ℕ              -- n_eab, the extra alignment bits
+  eAlignMin : Option ℤ  -- the minimum alignment exponent
   evidence : String     -- where the parameters come from
-  nfmaPos : 0 < products
-  kDiv : products ∣ k
+  nfmaPos : 0 < nfma
+  kDiv : nfma ∣ k
 
 def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F16)) :=
-  chunks p.products p.groups pairs          -- k / K contiguous groups, increasing k
+  chunks p.nfma p.blocks pairs              -- k / K contiguous block FMAs, increasing k
 ```
 
-| Path | Lowering | Groups × K |
+| Variant | Lowering | Block FMAs × K |
 | --- | --- | --- |
 | `v100Wmma16` | `HMMA.844` | 4 × 4 |
 | `ampereWmma16` | `HMMA.1688` | 2 × 8 |
@@ -54,11 +54,11 @@ def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F
 
 - [`runBlocks_residual_ledger`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Composition.lean#L95):
   the exact sum of all inputs equals the final output plus the sum of the
-  losses recorded by every group, alignment and final rounding included.
-- `zero_products_passthrough`: a group whose products are all zero returns its
+  losses recorded by every block FMA, alignment and final rounding included.
+- `zero_products_passthrough`: a block FMA whose products are all zero returns its
   finite `C` unchanged. The theorem excludes `C = −0`.
-- `single_group_output`: if only the first group has nonzero products, the
-  instruction returns that group's output.
+- `single_block_output`: if only the first block FMA has nonzero products, the
+  instruction returns that block's output.
 - `InstructionVariant.schedule_flatten`: the schedule is a partition of the
   inputs in order.
 

@@ -4,30 +4,30 @@ description: How TC-EFT turns encoded Tensor Core inputs into an FP32 output wor
 ---
 
 This section explains how Tensor Core arithmetic is represented in Lean. It
-covers the data types, every stage of `evalBlock`, the architecture
-parameters, and how the model is tied to an independent specification and to
+covers the data types, every stage of `evalBlock`, the numerical features of
+each GPU variant, and how the model is tied to an independent specification and to
 GPU measurements.
 
 ## The hardware behavior being modeled
 
-One Tensor Core *normalization group* computes
+One Tensor Core *block FMA* computes
 
 ```text
 D = C + a₁·b₁ + a₂·b₂ + … + a_K·b_K
 ```
 
 where `aᵢ, bᵢ` are FP16, BF16, or TF32 words, `C` is an FP32 word, `D` is an
-FP32 word, and `K` (4, 8, or 16) depends on the GPU and the input format.
+FP32 word, and the FMA size `K` (4, 8, or 16) depends on the GPU and the input format.
 Khattak and Mikaitis (*[Accurate Models of NVIDIA Tensor
 Cores](https://arxiv.org/html/2512.07004v4)*) found that NVIDIA hardware does **not** round this sum
 once, the way a fused dot product would. It does the following:
 
 1. Forms each product **exactly**, without normalizing the significand.
 2. Finds the **largest exponent** among the nonzero terms (including `C`),
-   optionally raised to a hardware **floor**.
+   raised to the **minimum alignment exponent** where the architecture has one.
 3. **Aligns** every term to a fixed-point grid `F` bits below that exponent,
    and **truncates** any bits below the grid.
-4. **Adds** the aligned bits exactly, in a fixed-point adder.
+4. **Adds** the aligned bits exactly, in a single multi-term addition.
 5. **Normalizes** the sum to FP32 and **truncates** it: bits beyond FP32's 24
    significant bits are dropped.
 
@@ -48,13 +48,13 @@ The whole model is about 120 lines, in
 These are its definitions, unchanged apart from omitted comments:
 
 ```lean
-structure Profile where
-  input : Format          -- operand format: fp16, bf16, or tf19 (packed TF32)
-  products : ℕ            -- K, the number of products per group
-  alignFracBits : ℤ       -- F = 23 + p, mantissa bits kept after alignment
-  eAlignMin : Option ℤ   -- lower bound on the alignment exponent, if any
+structure Model where
+  input : Format          -- input format: fp16, bf16, or tf19 (packed TF32)
+  nfma : ℕ                -- K, the FMA size N_FMA
+  alignFracBits : ℤ       -- F = 23 + p, fractional bits kept after alignment
+  eAlignMin : Option ℤ    -- the minimum alignment exponent, if any
 
-structure BlockInput (p : Profile) where
+structure BlockInput (p : Model) where
   products : List (p.Word × p.Word)   -- encoded (aᵢ, bᵢ) pairs
   c : F32                             -- encoded FP32 accumulator input
 
@@ -63,10 +63,10 @@ def PreparedBlock.terms (b : PreparedBlock) : List UnnormalizedProduct :=
     b.products.map fun (a, b) => unnormalizedMul a b
 
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
-  b.profile.applyEAlignMin (maxTermExp b.terms)
+  b.model.applyEAlignMin (maxTermExp b.terms)
 
 def PreparedBlock.alignGridExponent (b : PreparedBlock) : ℤ :=
-  b.alignExp.getD 0 - b.profile.alignFracBits
+  b.alignExp.getD 0 - b.model.alignFracBits
 
 def PreparedBlock.alignedBits (b : PreparedBlock) : List ℤ :=
   b.terms.map fun t => truncBits t.value b.alignGridExponent
@@ -81,8 +81,8 @@ def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 
-def evalBlock {p : Profile} (x : BlockInput p) : Except ModelError BlockTrace :=
-  if x.products.length != p.products then .error .wrongProductCount
+def evalBlock {p : Model} (x : BlockInput p) : Except ModelError BlockTrace :=
+  if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare x with
     | none => .error .nonfiniteInput
     | some b => evalPrepared b
@@ -93,11 +93,11 @@ def evalBlock {p : Profile} (x : BlockInput p) : Except ModelError BlockTrace :=
 | Lean name | Meaning | In *Accurate Models* / its MATLAB code |
 | --- | --- | --- |
 | `significand` | The significand bits, hidden bit included, with the sign | significand (`a_sig`, `prod_sig`) |
-| `unnormalizedExp` | Exponent as the hardware sees it. For an input, its unbiased exponent (minimum normal exponent for subnormals). For a product, the sum of the input exponents, with no renormalization. | "sum of exponents"; products "remain denormalised" (`prod_exp`) |
+| `unnormalizedExp` | Exponent as the hardware sees it. For an input, its unbiased exponent (minimum normal exponent for subnormals). For a product, the sum of the input exponents: the product stays in denormalized form. | "sum of exponents"; products "remain denormalised" (`prod_exp`) |
 | `mantissaBits` | Mantissa width: how many low bits of the significand lie after the binary point. For a format or an input value, the stored mantissa width (10 for FP16). For a product, the sum of both inputs' widths (20 for FP16 × FP16). value = `significand · 2^(unnormalizedExp − mantissaBits)` | mantissa bits (`manBits`) |
-| `UnnormalizedProduct`, `unnormalizedMul` | An exact product kept in that unnormalized form | `prod_sig`, `prod_exp` with `denorm_prd` |
-| `alignExp` (η) | Alignment exponent: largest `unnormalizedExp` of a nonzero term, raised to the floor | maximum exponent, "capped from below" |
-| `alignFracBits` (F) | Mantissa bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `neab` |
+| `UnnormalizedProduct`, `unnormalizedMul` | An exact product kept in that denormalized form | `prod_sig`, `prod_exp` with `denorm_prd` |
+| `alignExp` (η) | Alignment exponent: largest `unnormalizedExp` of a nonzero term, raised to the minimum alignment exponent | maximum exponent, "capped from below" by `e_align^min` |
+| `alignFracBits` (F) | Fractional bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `n_eab` |
 | `alignGridExponent` | Exponent of the alignment grid step, `η − F` | |
 | `outputUlpExponent` | Exponent of one unit in the last place of the FP32 output | |
 
@@ -118,7 +118,7 @@ Three design choices run through the model:
 
 ## A worked trace
 
-Here is the V100 profile (`K = 4`, `F = 23`, no floor) with four FP16 products
+Here is the V100 model (`K = 4`, `F = 23`, no minimum alignment exponent) with four FP16 products
 `2^-12 × 2^-12`, run for two values of `C`:
 
 | Stage | `C = 1.0` (`0x3f800000`) | `C = 1 − 2^-24` (`0x3f7fffff`) |
@@ -156,11 +156,11 @@ Each stage has its own page:
 
 1. [Formats and decoding](/TC-EFT/model/formats/): IEEE classification, unnormalized exponents, subnormals, TF32 packing.
 2. [Exact unnormalized products](/TC-EFT/model/products/): why products are not normalized.
-3. [Alignment](/TC-EFT/model/alignment/): `η`, the floor, the grid, and truncation.
+3. [Alignment](/TC-EFT/model/alignment/): `η`, the minimum alignment exponent, the grid, and truncation.
 4. [Accumulation](/TC-EFT/model/accumulation/): the exact sum and fixed-width registers.
 5. [Normalization and final rounding](/TC-EFT/model/normalization/): `round32`, range, signed zero.
-6. [Architecture profiles](/TC-EFT/model/profiles/): V100/A100/H100 parameters and the general `InvocationSpec`.
-7. [Instructions and chaining](/TC-EFT/model/instructions/): multi-group instructions and passing `C` between groups.
+6. [Variants and their numerical features](/TC-EFT/model/variants/): V100/A100/H100 models and the general `InvocationSpec`.
+7. [Instructions and chaining](/TC-EFT/model/instructions/): instructions made of several block FMAs, and passing `C` between them.
 8. [Independent specification](/TC-EFT/model/specification/): `IndependentSpec` (a transcription of *Accurate Models*) and the equality proof.
 9. [Bitvector datapath](/TC-EFT/model/datapath/): the model in fixed-width registers, proved to give the same output word.
 10. [Hardware validation](/TC-EFT/model/validation/): replay of GPU measurements.

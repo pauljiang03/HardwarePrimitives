@@ -29,9 +29,9 @@ for what is tested rather than proved.
 
 **Yes, for every possible input.** The executable model and an independently
 written transcription of *Accurate Models* produce the same output bits, or
-both reject the input. This holds on all eight supported GPU paths.
+both reject the input. This holds on all eight supported GPU variants.
 
-- **Assumes:** nothing beyond the input being one of the eight supported paths.
+- **Assumes:** nothing beyond the input being one of the eight supported variants.
 - **Classification:** Core theorem. The transcription is mechanically checked not to reuse
   any model code, and a companion result shows it isn't vacuous.
 - **Lean:** [`IndependentSpec.supported_eq_spec`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Specification/Supported.lean#L27)
@@ -69,7 +69,7 @@ is the rounding loss.
 
 **No.** A model with a fixed-width, wrapping two's-complement register gives
 the same output for every input, as long as the register is wide enough:
-29, 31 and 33 bits for the V100, A100 and H100 FP16 profiles, a sign bit
+29, 31 and 33 bits for the V100, A100 and H100 FP16 models, a sign bit
 included. Every partial
 sum is exact too, whatever the order of additions.
 
@@ -81,23 +81,23 @@ sum is exact too, whatever the order of additions.
 
 **Yes.** A [bitvector datapath](/TC-EFT/model/datapath/) decodes, multiplies,
 aligns, sums and normalizes using bitvector operations only. Its registers
-are sized from the profile: `F + 2` bits per aligned term, an accumulator of
+are sized from the model: `F + 2` bits per aligned term, an accumulator of
 28 to 32 magnitude bits plus a sign bit (30 and 32 on A100 and H100 FP16, the
 widths in *Accurate Models*), and 9-bit exponents. It returns the same output word as the model, or the same
-error, for every input on all eight supported GPU paths.
+error, for every input on all eight supported GPU variants.
 
-- **Assumes:** nothing beyond the input being one of the eight supported paths.
+- **Assumes:** nothing beyond the input being one of the eight supported variants.
 - **Classification:** Core theorem. The datapath shares no arithmetic with the
   model: it uses shifts, a leading-zero count and wrapping additions where the
   model uses rationals and floors.
 - **Lean:** [`Datapath.evalBlock_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L208)
 
-### Chained groups
+### Chained block FMAs
 
-**For instructions made of several groups, the same loss accounting holds
+**For instructions made of several block FMAs, the same loss accounting holds
 across the whole chain.**
 
-- **Assumes:** each group's output is passed on as the next group's `C`.
+- **Assumes:** each block's output is passed on as the next block's `C`.
 - **Classification:** Core theorem.
 - **Lean:** [`runBlocks_residual_ledger`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Composition.lean#L95)
 
@@ -105,13 +105,13 @@ across the whole chain.**
 
 ### Can a smaller C give a larger result?
 
-**Yes, and exactly when the group has at least 3·2^p products.** Here p is
+**Yes, and exactly when the FMA size is at least 3·2^p.** Here p is
 the GPU's number of extra alignment bits. The proof uses a specific family:
 K equal tiny products, with `C` lowered from 1 to the next FP32 value below 1.
 
 - **Assumes:** that construction (products of exactly `2^-(24+p)`) and a
-  floor at most −1.
-- **Classification:** Core theorem. It is an exact threshold, and every GPU profile has
+  minimum alignment exponent, if any, of at most −1.
+- **Classification:** Core theorem. It is an exact threshold, and every GPU model has
   a checked concrete example.
 - **Lean:** [`nonmonotone_encoded`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/TC/Monotonicity.lean#L273)
 
@@ -155,7 +155,7 @@ intermediate FP32 operation is exact, so only the final rounding remains.
 
 - **Assumes:** the scalar safety check holds.
 - **Classification:** Core theorem. The core is a proof that naive FP32 summation is
-  exact within a 24-bit budget.
+  exact when all the bits fit within a span of 24 bits.
 - **Lean:** [`scalarCorrected_correct`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/EFT/Extraction.lean#L160), [`naiveSumBinary_exact_of_bitSpan`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/Numerics/Binary/ScalarSum.lean#L166)
 
 ### Recovering the exact sum from D
@@ -166,10 +166,10 @@ intermediate FP32 operation is exact, so only the final rounding remains.
   retained part, so the identity is a rearrangement.
 - **Lean:** [`overlap_recovery`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/EFT/Extraction.lean#L20)
 
-### Does the paper's input-budget condition imply the safety check?
+### Does the paper's input-based precondition imply the safety check?
 
 **Partly.** For FP32 correction it derives five of the check's nine
-conditions: format, grid, 24-bit budget, magnitude range, and `D` fitting in
+conditions: format, grid, a span of at most 24 bits, magnitude range, and `D` fitting in
 FP32. It assumes the other four: a grid no lower than `2^-149`, the overlap
 and `H` fitting in FP32, and the sum in range. A concrete block satisfies all
 of them.
