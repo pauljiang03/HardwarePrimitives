@@ -2,14 +2,14 @@ import MCFloat.Model
 
 /-! # `mc_floatlib`: evaluate inner products with the FloatLib implementation
 
-Same protocol as Matrix-Core's `mc_eval`: lines `<profile> <a> <b> <c>` with comma-separated
+Same protocol as Matrix-Core's `mc_eval`: lines `<model> <a> <b> <c>` with comma-separated
 hexadecimal words; prints `F <hex>` for a finite result, `I+`/`I-` for an infinity, `N` for
 NaN, and `X` for a malformed line. -/
 
 open MCFloat
 open FloatLib.Floats.Formats.BinaryInterchange
 
-def profileOf : String → Option Profile
+def modelOf : String → Option MCModel
   | "cdna1F16" => some cdna1F16
   | "cdna1BF16" => some cdna1BF16
   | "cdna2F16" => some cdna2F16
@@ -44,7 +44,7 @@ def evalLine (line : String) : String :=
   let clean := String.ofList (line.toList.filter fun c => c ≠ '\n' ∧ c ≠ '\r')
   match clean.splitOn " " with
   | [p, a, b, c] =>
-    match profileOf p, (a.splitOn ",").mapM parseHex, (b.splitOn ",").mapM parseHex, parseHex c with
+    match modelOf p, (a.splitOn ",").mapM parseHex, (b.splitOn ",").mapM parseHex, parseHex c with
     | some P, some as, some bs, some cw =>
       match dot P as bs cw with
       | some w => show32 w

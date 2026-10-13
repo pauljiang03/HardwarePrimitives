@@ -32,15 +32,15 @@ private theorem alignment_replicate (t : Term) (k : Nat) :
     · by_cases hk : k = 0 <;> simp [hz,hk]
 
 /-- A leading nonzero C selects eta if each repeated product's unnormalized exponent is no larger. -/
-theorem construction_alignExp (prof : Profile) (K : Nat) (a b c : Term)
+theorem construction_alignExp (M : TCModel) (K : Nat) (a b c : Term)
     (hc : c.dyadic.significand ≠ 0) (hs : (a.mul b).unnormalizedExp ≤ c.unnormalizedExp)
-    (hf : ∀ f ∈ prof.floor, f ≤ c.unnormalizedExp) :
-    Block.alignExp ⟨prof,c,List.replicate K (a,b)⟩ = some c.unnormalizedExp := by
+    (hf : ∀ f ∈ M.eAlignMin, f ≤ c.unnormalizedExp) :
+    Block.alignExp ⟨M,c,List.replicate K (a,b)⟩ = some c.unnormalizedExp := by
   have ha : maxTermExp (c :: List.replicate K (a.mul b)) = some c.unnormalizedExp := by
     simp only [maxTermExp, alignment_replicate, ite_eq_right hc]
     split_ifs <;> simp [max_eq_left hs]
   simp only [Block.alignExp, Block.terms, List.map_replicate, ha, Option.map_some]
-  cases hp : prof.floor with
+  cases hp : M.eAlignMin with
   | none => simp
   | some f =>
     have h := hf f (by simp [hp])
@@ -53,16 +53,16 @@ theorem oneTerm_value : oneTerm.value = 1 := by decide +kernel
 theorem belowOneTerm_value : belowOneTerm.value = 1-pow2 (-24) := by decide +kernel
 
 /-- With C=1 all products of the family fall below the alignment quantum. -/
-theorem construction_accumulator_one (prof : Profile) (p K : Nat) (a b : Term)
-    (hp : prof.extra = p) (hf : ∀ f ∈ prof.floor, f ≤ -1)
+theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
+    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).unnormalizedExp ≤ -1) :
-    Block.accumulator ⟨prof,oneTerm,List.replicate K (a,b)⟩ = 1 := by
-  have he := construction_alignExp prof K a b oneTerm (by decide) (by exact le_trans hs (by decide))
+    Block.accumulator ⟨M,oneTerm,List.replicate K (a,b)⟩ = 1 := by
+  have he := construction_alignExp M K a b oneTerm (by decide) (by exact le_trans hs (by decide))
     (by intro f h; exact le_trans (hf f h) (by decide))
-  have hq : Block.q ⟨prof,oneTerm,List.replicate K (a,b)⟩ = -(23+(p:Int)) := by
+  have hq : Block.q ⟨M,oneTerm,List.replicate K (a,b)⟩ = -(23+(p:Int)) := by
     unfold Block.q
     rw [he]
-    change 0 - ((23+prof.extra:Nat):Int) = _
+    change 0 - ((23+M.neab:Nat):Int) = _
     rw [hp]
     omega
   have hone : truncGrid 1 (-(23+(p:Int))) = 1 := by
@@ -80,16 +80,16 @@ theorem construction_accumulator_one (prof : Profile) (p K : Nat) (a b : Term)
     List.sum_cons, List.sum_replicate, hq, oneTerm_value, hone, hterm, nsmul_zero, add_zero]
 
 /-- Lowering C by one FP32 step exposes all K product contributions. -/
-theorem construction_accumulator_below (prof : Profile) (p K : Nat) (a b : Term)
-    (hp : prof.extra = p) (hf : ∀ f ∈ prof.floor, f ≤ -1)
+theorem construction_accumulator_below (M : TCModel) (p K : Nat) (a b : Term)
+    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).unnormalizedExp ≤ -1) :
-    Block.accumulator ⟨prof,belowOneTerm,List.replicate K (a,b)⟩ =
+    Block.accumulator ⟨M,belowOneTerm,List.replicate K (a,b)⟩ =
       1-pow2 (-24)+(K:ℚ)*pow2 (-(24+(p:Int))) := by
-  have he := construction_alignExp prof K a b belowOneTerm (by decide) hs hf
-  have hq : Block.q ⟨prof,belowOneTerm,List.replicate K (a,b)⟩ = -(24+(p:Int)) := by
+  have he := construction_alignExp M K a b belowOneTerm (by decide) hs hf
+  have hq : Block.q ⟨M,belowOneTerm,List.replicate K (a,b)⟩ = -(24+(p:Int)) := by
     unfold Block.q
     rw [he]
-    change -1 - ((23+prof.extra:Nat):Int) = _
+    change -1 - ((23+M.neab:Nat):Int) = _
     rw [hp]
     omega
   have hcval : belowOneTerm.value = ((16777215*2^p:Nat):ℚ)*pow2 (-(24+(p:Int))) := by
@@ -152,16 +152,16 @@ theorem round32_rtz_above_one (x : ℚ) (hx : (1:ℚ)/2 ≤ x) (hx2 : x < 2) :
     constructor <;> intro h <;> linarith
 
 /-- General TC-EFT nonmonotonicity threshold (Theorem III.4), for all natural p and K. -/
-theorem nonmonotone_perturbation (prof : Profile) (p K : Nat) (a b : Term)
-    (hp : prof.extra = p) (hf : ∀ f ∈ prof.floor, f ≤ -1)
+theorem nonmonotone_perturbation (M : TCModel) (p K : Nat) (a b : Term)
+    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).unnormalizedExp ≤ -1)
     (hK : K < 2^(24+p)) :
     ∃ bits y,
-      Block.evaluate ⟨prof,oneTerm,List.replicate K (a,b)⟩ = some 0x3f800000 ∧
-      Block.evaluate ⟨prof,belowOneTerm,List.replicate K (a,b)⟩ = some bits ∧
+      Block.evaluate ⟨M,oneTerm,List.replicate K (a,b)⟩ = some 0x3f800000 ∧
+      Block.evaluate ⟨M,belowOneTerm,List.replicate K (a,b)⟩ = some bits ∧
       value32 bits = some y ∧ (1 < y ↔ 3*2^p ≤ K) := by
-  have ha := construction_accumulator_one prof p K a b hp hf hv hs
-  have hb := construction_accumulator_below prof p K a b hp hf hv hs
+  have ha := construction_accumulator_one M p K a b hp hf hv hs
+  have hb := construction_accumulator_below M p K a b hp hf hv hs
   let q := pow2 (-(24+(p:Int)))
   let A : ℚ := 1-pow2 (-24)+(K:ℚ)*q
   have hq : 0 < q := pow2_pos' _
@@ -205,32 +205,32 @@ theorem nonmonotone_perturbation (prof : Profile) (p K : Nat) (a b : Term)
     exact_mod_cast (Iff.rfl : 3*2^p ≤ K ↔ 3*2^p ≤ K)
 
 /-- The same monotonicity property as the source: fix products and decrease C. -/
-def MonotoneInAccumulator (prof : Profile) (products : List (Term × Term)) : Prop :=
+def MonotoneInAccumulator (M : TCModel) (products : List (Term × Term)) : Prop :=
   ∀ (c c' : Term) (bits bits' : Nat) (y y' : ℚ),
-    Block.evaluate ⟨prof,c,products⟩ = some bits →
-    Block.evaluate ⟨prof,c',products⟩ = some bits' →
+    Block.evaluate ⟨M,c,products⟩ = some bits →
+    Block.evaluate ⟨M,c',products⟩ = some bits' →
     value32 bits = some y → value32 bits' = some y' →
     c'.value < c.value → y' ≤ y
 
 /-- An explicit failure of monotonicity whenever the general family's threshold is met. -/
-theorem construction_not_monotone (prof : Profile) (p K : Nat) (a b : Term)
-    (hp : prof.extra = p) (hf : ∀ f ∈ prof.floor, f ≤ -1)
+theorem construction_not_monotone (M : TCModel) (p K : Nat) (a b : Term)
+    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).unnormalizedExp ≤ -1)
     (hK : K < 2^(24+p)) (hthreshold : 3*2^p ≤ K) :
-    ¬ MonotoneInAccumulator prof (List.replicate K (a,b)) := by
-  obtain ⟨bits,y,h1,h2,hy,hiff⟩ := nonmonotone_perturbation prof p K a b hp hf hv hs hK
+    ¬ MonotoneInAccumulator M (List.replicate K (a,b)) := by
+  obtain ⟨bits,y,h1,h2,hy,hiff⟩ := nonmonotone_perturbation M p K a b hp hf hv hs hK
   intro hm
   have hle := hm oneTerm belowOneTerm 0x3f800000 bits 1 y h1 h2 (by decide +kernel) hy
     (by rw [oneTerm_value, belowOneTerm_value]; exact sub_lt_self 1 (pow2_pos' _))
   exact (not_le_of_gt (hiff.mpr hthreshold)) hle
 
-private theorem prepare_replicate (prof : Profile) (K aw bw c : Nat) (a b d : Term)
-    (hk : prof.products = K)
-    (ha : decode prof.format aw = some a) (hb : decode prof.format bw = some b)
+private theorem prepare_replicate (M : TCModel) (K aw bw c : Nat) (a b d : Term)
+    (hk : M.nfma = K)
+    (ha : decode M.format aw = some a) (hb : decode M.format bw = some b)
     (hc : decode .binary32 c = some d) :
-    prepare prof (List.replicate K (aw,bw)) c = some ⟨prof,d,List.replicate K (a,b)⟩ := by
+    prepare M (List.replicate K (aw,bw)) c = some ⟨M,d,List.replicate K (a,b)⟩ := by
   have hm : (List.replicate K (aw,bw)).mapM (fun (u,v) => do
-      return (← decode prof.format u, ← decode prof.format v)) = some (List.replicate K (a,b)) := by
+      return (← decode M.format u, ← decode M.format v)) = some (List.replicate K (a,b)) := by
     clear hk
     induction K with
     | zero => rfl
@@ -241,20 +241,20 @@ private theorem prepare_replicate (prof : Profile) (K aw bw c : Nat) (a b d : Te
   simp [prepare, hk, hc, hm]
 
 /-- The parameterized theorem at the actual encoded FP16 entry point, with arbitrary K/p. -/
-theorem nonmonotone_encoded (K p : Nat) (floor : Option Int)
-    (hf : ∀ f ∈ floor, f ≤ -1) (aw bw : Nat) (a b : Term)
+theorem nonmonotone_encoded (K p : Nat) (eAlignMin : Option Int)
+    (hf : ∀ f ∈ eAlignMin, f ≤ -1) (aw bw : Nat) (a b : Term)
     (ha : decode .binary16 aw = some a) (hb : decode .binary16 bw = some b)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).unnormalizedExp ≤ -1)
     (hK : K < 2^(24+p)) :
     ∃ bits y,
-      evalWords (fp16 K p floor) (List.replicate K (aw,bw)) 0x3f800000 = some 0x3f800000 ∧
-      evalWords (fp16 K p floor) (List.replicate K (aw,bw)) 0x3f7fffff = some bits ∧
+      evalWords (fp16 K p eAlignMin) (List.replicate K (aw,bw)) 0x3f800000 = some 0x3f800000 ∧
+      evalWords (fp16 K p eAlignMin) (List.replicate K (aw,bw)) 0x3f7fffff = some bits ∧
       value32 bits = some y ∧ (1 < y ↔ 3*2^p ≤ K) := by
   have h1 : decode .binary32 0x3f800000 = some oneTerm := by rfl
   have h2 : decode .binary32 0x3f7fffff = some belowOneTerm := by rfl
-  have hp1 := prepare_replicate (fp16 K p floor) K aw bw 0x3f800000 a b oneTerm rfl ha hb h1
-  have hp2 := prepare_replicate (fp16 K p floor) K aw bw 0x3f7fffff a b belowOneTerm rfl ha hb h2
-  obtain ⟨bits,y,he1,he2,hy,hi⟩ := nonmonotone_perturbation (fp16 K p floor) p K a b rfl hf hv hs hK
+  have hp1 := prepare_replicate (fp16 K p eAlignMin) K aw bw 0x3f800000 a b oneTerm rfl ha hb h1
+  have hp2 := prepare_replicate (fp16 K p eAlignMin) K aw bw 0x3f7fffff a b belowOneTerm rfl ha hb h2
+  obtain ⟨bits,y,he1,he2,hy,hi⟩ := nonmonotone_perturbation (fp16 K p eAlignMin) p K a b rfl hf hv hs hK
   exact ⟨bits,y,by simpa [evalWords, hp1] using he1,
     by simpa [evalWords, hp2] using he2,hy,hi⟩
 

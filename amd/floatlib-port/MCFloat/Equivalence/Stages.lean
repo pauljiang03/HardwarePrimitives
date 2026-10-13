@@ -119,7 +119,7 @@ theorem odds_agree {R : α → β → Prop} :
     simp only [MCFloat.odds, MCFloat.evens, MatrixCore.oddIndexed, MatrixCore.evenIndexed]
     exact ⟨.cons h1 ih.1, .cons h2 ih.2⟩
 
-theorem productSum_agree (Q : MatrixCore.Profile) (hneab : Q.neab = 1) (i : Bool)
+theorem productSum_agree (Q : MatrixCore.Model) (hneab : Q.neab = 1) (i : Bool)
     (hacc : Q.accumulation = if i then .oddEvenGrouping else .globalAlignment)
     {ps : List MCFloat.Term} {us : List MatrixCore.Unpacked} (h : List.Forall₂ ProdAgree ps us) :
     (if i then MCFloat.groupedSum ps else MCFloat.alignedSum ps) = MatrixCore.productSum Q us := by
@@ -138,7 +138,7 @@ theorem productSum_agree (Q : MatrixCore.Profile) (hneab : Q.neab = 1) (i : Bool
 
 /-! ## Late `c` -/
 
-theorem lateC_agree (Q : MatrixCore.Profile) (cut : Option ℕ)
+theorem lateC_agree (Q : MatrixCore.Model) (cut : Option ℕ)
     (hz : Q.cZeroExp = some (-126)) (hl : Q.late = { cCutoff := cut })
     {c : MCFloat.Term} {u : MatrixCore.Unpacked} (hc : TermAgree c u) (eMax : Option ℤ) (s : ℚ) :
     MCFloat.lateC cut eMax s c = MatrixCore.lateSum Q eMax s u := by
@@ -147,7 +147,7 @@ theorem lateC_agree (Q : MatrixCore.Profile) (cut : Option ℕ)
     have he := hc.exponent
     by_cases hm : u.m = 0 <;> simp_all
   unfold MCFloat.lateC MatrixCore.lateSum MatrixCore.cExp MatrixCore.shiftedC MatrixCore.shiftedSum
-    MatrixCore.normaliseRD
+    MatrixCore.normalizeRD
   rw [hz, hl, heC, hc.value]
   have hcexp : (if u.m = 0 then some (-126 : ℤ) else some u.e) =
       some (if u.m = 0 then -126 else u.e) := by split <;> rfl

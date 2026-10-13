@@ -1,6 +1,6 @@
 import TCFloat
 
-/-! Representation checks for zero signs, metadata consistency, trace invariants, and profile scope. -/
+/-! Representation checks for zero signs, metadata consistency, trace invariants, and model scope. -/
 namespace TCFloat.Comparison
 open FloatLib.Floats.Formats.BinaryInterchange
 
@@ -45,7 +45,7 @@ theorem checked_trace_consistent :
     (trace inconsistentTrace.block 0).map Trace.output = some 0 := by
   decide +kernel
 
-/-- The `23 + extra` profile family cannot represent alignment precision F=22. -/
-theorem profile_subset (extra : Nat) : (23 + extra : Int) ≠ 22 := by omega
+/-- The `23 + neab` family of models cannot keep F = 22 fractional bits after alignment. -/
+theorem model_subset (neab : Nat) : (23 + neab : Int) ≠ 22 := by omega
 
 end TCFloat.Comparison

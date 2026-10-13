@@ -17,7 +17,7 @@ lake build                      # the implementation, the proofs, the audit and 
 echo "cdna1F16 3c00,3c00,3c00,3c00 3c00,3c00,3c00,3c00 0" | .lake/build/bin/mc_floatlib
 ```
 
-`mc_floatlib` reads the same lines as Matrix-Core's `mc_eval` (`<profile> <a> <b> <c>`, words in
+`mc_floatlib` reads the same lines as Matrix-Core's `mc_eval` (`<model> <a> <b> <c>`, words in
 hexadecimal) and prints `F <word>`, `I+`, `I-` or `N`. The example prints `F 40800000`, the
 binary32 word of `4`.
 
@@ -30,12 +30,12 @@ binary32 word of `4`.
 | --- | --- | --- |
 | Decoding `a_ℓ`, `b_ℓ`, `c` (fp32, fp16, bf16, fp8 E4M3/E5M2 FNUZ) | `classify` | `Model.ofBits`, `Model.isNaN`, `Model.isInf`, `Model.signBit`, `Model.toDyadic?` with the catalog formats `binary32`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz` |
 | XF32: binary32 truncated to tf19 | `Operand.read .xf32` | the `tf32` format applied to the upper 19 bits of the word |
-| `p_ℓ = a_ℓ b_ℓ`, exact and denormalised | `Term.mul` | `Dyadic.mul` |
+| `p_ℓ = a_ℓ b_ℓ`, exact, in denormalized form | `Term.mul` | `Dyadic.mul` |
 | `fl{·}`, RNE to binary32, `±∞` on overflow | `round32`, `fl` | `Model.roundRatWithRounding .binary32 .nearestEven` |
 | Flush to zero (CDNA 2) | `flush` | `Model.isSubnormal`, `Model.zero` |
 | Results with special values | `special`, `add32` | `Model.posInf`, `Model.negInf`, `Model.canonicalNaN` |
 | Alignment, truncation, RD | `truncGrid`, `rdGrid` | mathlib's `⌊·⌋` on `ℚ` |
-| Subnormal-aware normalisation | `normExp` | `RationalBinary.floorLog2` |
+| Subnormal-aware normalization | `normExp` | `RationalBinary.floorLog2` |
 
 Every block returns a FloatLib binary32 word, including infinities and NaN, so an inner product
 passes FloatLib words from block to block.
@@ -47,7 +47,7 @@ classification as Matrix-Core's `Outcome` (finite word, `±∞`, NaN).
 
 | What it says | Lean name | File |
 | --- | --- | --- |
-| For each of the 12 profiles (SFMA; CDNA 1 fp16, bf16; CDNA 2 fp16, bf16, bf16 `_1k`; CDNA 3 fp16, bf16, XF32, fp8 in all four format combinations), the FloatLib profile corresponds to Matrix-Core's. | `sfma`, `cdna1F16`, …, `cdna3E5M2E4M3` | [Equivalence.lean](MCFloat/Equivalence.lean) |
+| For each of the 12 models (SFMA; CDNA 1 fp16, bf16; CDNA 2 fp16, bf16, bf16 `_1k`; CDNA 3 fp16, bf16, XF32, fp8 in all four format combinations), the FloatLib parameter record (`MCFloat.MCModel`) corresponds to Matrix-Core's `Model`. | `sfma`, `cdna1F16`, …, `cdna3E5M2E4M3` | [Equivalence.lean](MCFloat/Equivalence.lean) |
 | One block gives the same observation as `blockOutcome`. | `block_agree` | [Equivalence/Block.lean](MCFloat/Equivalence/Block.lean) |
 | An inner product of any length gives the same observation as `dotOutcome`. | `dot_agree` | [Equivalence/Dot.lean](MCFloat/Equivalence/Dot.lean) |
 | Where Matrix-Core's `blockBits` returns a word, the FloatLib block returns the same word. | `blockBits_agree` | [Equivalence.lean](MCFloat/Equivalence.lean) |
@@ -56,7 +56,7 @@ classification as Matrix-Core's `Outcome` (finite word, `±∞`, NaN).
 
 ### Contracts and chaining
 
-[MCFloat/Contracts.lean](MCFloat/Contracts.lean) states Matrix-Core's per-profile contracts and
+[MCFloat/Contracts.lean](MCFloat/Contracts.lean) states Matrix-Core's per-model contracts and
 chaining theorems for the FloatLib implementation. Whenever a FloatLib block returns a finite word
 (`Finite w`):
 
@@ -73,7 +73,7 @@ chaining theorems for the FloatLib implementation. Whenever a FloatLib block ret
 The intermediate stages are proved separately: products, `e_max`, aligned and odd/even sums, and
 late `c` in [Stages.lean](MCFloat/Equivalence/Stages.lean); products with special values and
 FloatLib's special results in [Special.lean](MCFloat/Equivalence/Special.lean); the CDNA 2
-pairwise tree in [Block.lean](MCFloat/Equivalence/Block.lean).
+pairwise sums in [Block.lean](MCFloat/Equivalence/Block.lean).
 
 The rounding proof uses FloatLib's closed form of its rational rounder
 (`roundRatScaled_false_eq_of_isIEEE`) and matches each branch (overflow, underflow, subnormal,
@@ -100,9 +100,9 @@ code fails the check until it is pinned again with `--pin`.
 ## Differential check
 
 `scripts/compare.py` runs `mc_floatlib` and Matrix-Core's `mc_eval` on random inner products
-for all 12 profiles. It uses five input schemes: uniform bits, normal values across the range,
+for all 12 models. It uses five input schemes: uniform bits, normal values across the range,
 values within a few binades of each other, subnormals, and inputs with infinities, NaN and
-extreme values. With 20,000 cases per profile and scheme (seed 7, 1,200,000 inner products),
+extreme values. With 20,000 cases per model and scheme (seed 7, 1,200,000 inner products),
 all outputs agree bit for bit. The proofs already cover every input; this run tests the compiled
 executables and the scripts.
 
@@ -124,12 +124,12 @@ returned `c` as a finite word even when `c` was an infinity or NaN. `dotOutcome`
 
 ## Folder map
 
-| Path | Purpose |
+| File | Purpose |
 | --- | --- |
 | [MCFloat/Model.lean](MCFloat/Model.lean) | The FloatLib implementation: decoding, products, `fl{·}`, the four accumulation configurations, special values, blocks and inner products. |
 | [MCFloat/Equivalence/](MCFloat/Equivalence/) | Arithmetic, rounding, decoding, stage, block and inner-product proofs. |
-| [MCFloat/Equivalence.lean](MCFloat/Equivalence.lean) | Profile correspondences and the main theorems. |
-| [MCFloat/Contracts.lean](MCFloat/Contracts.lean) | Per-profile contracts and chaining, transported to the FloatLib implementation. |
+| [MCFloat/Equivalence.lean](MCFloat/Equivalence.lean) | Correspondences between the FloatLib parameter records and Matrix-Core's models, and the main theorems. |
+| [MCFloat/Contracts.lean](MCFloat/Contracts.lean) | Per-model contracts and chaining, transported to the FloatLib implementation. |
 | [Main.lean](Main.lean) | `mc_floatlib`, the executable. |
 | [tests/](tests/) | Audit and checked examples. |
 | [scripts/](scripts/) | Reference preparation, comparison with `mc_eval`, and `check.py`. |

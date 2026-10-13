@@ -9,16 +9,16 @@ private theorem sum_sub (ts : List Term) (f g : Term → ℚ) :
   | cons t ts ih => simp only [List.map_cons, List.sum_cons, ih]; ring
 
 /-- Flowback of fixed products when C selects a different alignment grid. -/
-def flowback (p : Profile) (ps : List (Term × Term)) (c c' : Term) : ℚ :=
+def flowback (p : TCModel) (ps : List (Term × Term)) (c c' : Term) : ℚ :=
   let before : Block := ⟨p,c,ps⟩
   let after : Block := ⟨p,c',ps⟩
   (ps.map fun (a,b) => truncGrid (a.mul b).value after.q - truncGrid (a.mul b).value before.q).sum
 
-def accumulatorShift (p : Profile) (ps : List (Term × Term)) (c c' : Term) : ℚ :=
+def accumulatorShift (p : TCModel) (ps : List (Term × Term)) (c c' : Term) : ℚ :=
   truncGrid c.value (Block.q ⟨p,c,ps⟩) - truncGrid c'.value (Block.q ⟨p,c',ps⟩)
 
-/-- Actual profile-selected grids, not an assumption that the grids stay fixed. -/
-theorem perturbed_accumulator (p : Profile) (ps : List (Term × Term)) (c c' : Term) :
+/-- The grids the model selects, not an assumption that the grids stay fixed. -/
+theorem perturbed_accumulator (p : TCModel) (ps : List (Term × Term)) (c c' : Term) :
     (Block.accumulator ⟨p,c',ps⟩) = (Block.accumulator ⟨p,c,ps⟩) +
       flowback p ps c c' - accumulatorShift p ps c c' := by
   have hs := sum_sub (ps.map fun (a,b) => a.mul b)
@@ -31,14 +31,14 @@ theorem perturbed_accumulator (p : Profile) (ps : List (Term × Term)) (c c' : T
   ring
 
 /-- Flowback exceeds the lost retained C exactly when the internal accumulator rises. -/
-theorem accumulator_increase_iff (p : Profile) (ps : List (Term × Term)) (c c' : Term) :
+theorem accumulator_increase_iff (p : TCModel) (ps : List (Term × Term)) (c c' : Term) :
     (Block.accumulator ⟨p,c,ps⟩) < (Block.accumulator ⟨p,c',ps⟩) ↔
       accumulatorShift p ps c c' < flowback p ps c c' := by
   rw [perturbed_accumulator p ps c c']
   constructor <;> intro h <;> linarith
 
 /-- Without an alignment-grid change, changing C monotonically changes the accumulator. -/
-theorem accumulator_monotone_same_grid (p : Profile) (ps : List (Term × Term)) (c c' : Term)
+theorem accumulator_monotone_same_grid (p : TCModel) (ps : List (Term × Term)) (c c' : Term)
     (hc : c.value ≤ c'.value) (hq : Block.q ⟨p,c,ps⟩ = Block.q ⟨p,c',ps⟩) :
     Block.accumulator ⟨p,c,ps⟩ ≤ Block.accumulator ⟨p,c',ps⟩ := by
   simp only [Block.accumulator, Block.aligned, Block.terms, List.map_cons, List.sum_cons,
@@ -81,22 +81,22 @@ theorem total_error_bound (t : Trace) :
   linarith
 
 /-- Full encoded FloatLib computation, suitable for closed kernel-checked examples. -/
-def evalWords (p : Profile) (ps : List (Nat × Nat)) (c : Nat) : Option Nat :=
+def evalWords (p : TCModel) (ps : List (Nat × Nat)) (c : Nat) : Option Nat :=
   (prepare p ps c).bind Block.evaluate
 
-/-- Decreasing C by one FP32 step increases the TC output: actual V100 profile. -/
+/-- Decreasing C by one FP32 step increases the TC output: the actual V100 model. -/
 theorem v100_nonmonotonic :
     evalWords v100 (List.replicate 4 (0x0c00,0x0c00)) 0x3f800000 = some 0x3f800000 ∧
     evalWords v100 (List.replicate 4 (0x0c00,0x0c00)) 0x3f7fffff = some 0x3f800001 := by
   decide +kernel
 
-/-- Same phenomenon for the extra alignment bit in the A100 profile. -/
+/-- The same phenomenon with the extra alignment bit of the A100 model. -/
 theorem a100_nonmonotonic :
     evalWords a100 (List.replicate 8 (0x0c00,0x0800)) 0x3f800000 = some 0x3f800000 ∧
     evalWords a100 (List.replicate 8 (0x0c00,0x0800)) 0x3f7fffff = some 0x3f800001 := by
   decide +kernel
 
-/-- Same phenomenon for two extra alignment bits in the H100 profile. -/
+/-- The same phenomenon with the two extra alignment bits of the H100 model. -/
 theorem h100_nonmonotonic :
     evalWords h100 (List.replicate 16 (0x0c00,0x0400)) 0x3f800000 = some 0x3f800000 ∧
     evalWords h100 (List.replicate 16 (0x0c00,0x0400)) 0x3f7fffff = some 0x3f800001 := by

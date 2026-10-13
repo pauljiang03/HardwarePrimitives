@@ -60,7 +60,7 @@ theorem observe_word (w : MatrixCore.F32) :
     cases hd : MatrixCore.binary32.decode w <;> rw [hm, hd] at hc <;> simp only [Agree] at hc <;>
     simp [hc]
 
-theorem fold_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (h : Corresponds P Q)
+theorem fold_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (L : List (List Q.a.Word × List Q.b.Word)) (w : MCFloat.F32) (o : MatrixCore.Outcome)
     (hwo : observe w = o) :
     ((L.map fun (ab : List Q.a.Word × List Q.b.Word) =>
@@ -110,9 +110,9 @@ theorem fold_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (h : Correspon
         simp only [Option.bind_eq_bind, Option.bind_some, ← hb]
         exact ih w' _ rfl
 
-/-- **Inner products.** For corresponding profiles, any inner dimension and any input words, the
+/-- **Inner products.** For corresponding models, any inner dimension and any input words, the
 FloatLib inner product observes as Matrix-Core's `dotOutcome`. -/
-theorem dot_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (h : Corresponds P Q)
+theorem dot_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (a : List Q.a.Word) (b : List Q.b.Word) (c : MatrixCore.F32) :
     (MCFloat.dot P (a.map BitVec.toNat) (b.map BitVec.toNat) c.toNat).map observe =
       MatrixCore.dotOutcome Q a b c := by

@@ -77,9 +77,19 @@ def pinned_spelling(tokens, name):
     return tokens
 
 
+# Parent modules renamed after the pinned revision: current name -> pinned name.
+RENAMED_MODULES = {
+    'TensorCore.Numerics.Binary.ResidualBound': 'TensorCore.Numerics.Binary.ResidualBudget',
+    'TensorCore.TC.CanonicalEAlignMin': 'TensorCore.TC.CanonicalFloor',
+    'TensorCore.TC.ExtraAlignmentBits': 'TensorCore.TC.Padding',
+    'TensorCore.TC.Models': 'TensorCore.TC.Profiles',
+    'TensorCore.TC.Specification.Variants': 'TensorCore.TC.Specification.Profiles',
+}
+
+
 def legacy_module(module):
-    """Resolve a parent module to its pinned reference-manifest key (the pin uses current names)."""
-    return module
+    """Resolve a parent module to its pinned reference-manifest key."""
+    return RENAMED_MODULES.get(module, module)
 
 
 def legacy_import(line):

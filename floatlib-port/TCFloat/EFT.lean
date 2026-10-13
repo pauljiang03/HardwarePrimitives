@@ -8,9 +8,9 @@ private theorem sum_coefficients (zs : List Int) (q : ℚ) :
   | nil => simp
   | cons z zs ih => simp only [List.map_cons, List.sum_cons, Int.cast_add, ih, add_mul]
 
-/-- Every prefix fits the source coefficient budget, so sequential FP32 addition is exact. -/
+/-- Every prefix fits the source coefficient bound, so sequential FP32 addition is exact. -/
 theorem naiveSumFrom_exact (zs : List Int) (a e : Int) (hmin : -149 ≤ e) (hmax : e ≤ 104)
-    (hbudget : a.natAbs + (zs.map Int.natAbs).sum < 2^24) :
+    (hbound : a.natAbs + (zs.map Int.natAbs).sum < 2^24) :
     naiveSumFrom ((a : ℚ)*pow2 e) (zs.map fun (z : Int) => (z : ℚ)*pow2 e) =
       some (((a + zs.sum : Int) : ℚ)*pow2 e) := by
   induction zs generalizing a with
@@ -18,7 +18,7 @@ theorem naiveSumFrom_exact (zs : List Int) (a e : Int) (hmin : -149 ≤ e) (hmax
   | cons z zs ih =>
     have htri := Int.natAbs_add_le a z
     have hb : (a+z).natAbs + (zs.map Int.natAbs).sum < 2^24 := by
-      simp only [List.map_cons, List.sum_cons] at hbudget
+      simp only [List.map_cons, List.sum_cons] at hbound
       omega
     have hz : (a+z).natAbs < 2^24 := by omega
     have hr := grid_representable (a+z) e hmin hmax hz
@@ -35,10 +35,10 @@ theorem scalarUnchecked_correct (t : Trace) (h : t.scalarPredicate = true) :
     t.scalarUnchecked = round32 .nearestEven t.block.ideal := by
   unfold Trace.scalarPredicate at h
   simp only [Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨hmin,hmax⟩,hgrid⟩,hbudget⟩,_⟩,_⟩,hH⟩,_⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨hmin,hmax⟩,hgrid⟩,hbound⟩,_⟩,_⟩,hH⟩,_⟩ := h
   have hs : naiveSumFrom 0 t.lowParts = some t.lowParts.sum := by
     rw [hgrid, sum_coefficients]
-    simpa using naiveSumFrom_exact t.lowCoefficients 0 t.supportExponent hmin hmax (by simpa using hbudget)
+    simpa using naiveSumFrom_exact t.lowCoefficients 0 t.supportExponent hmin hmax (by simpa using hbound)
   have hh : t.output + -t.overlap = t.retained := by unfold Trace.overlap; ring
   have ha : add32 t.output (-t.overlap) = some t.retained := by
     simpa [hh] using representable_add_exact t.output (-t.overlap) (by simpa [hh] using hH)

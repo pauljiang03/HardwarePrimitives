@@ -22,11 +22,11 @@ private def pairs : List Nat → Option (List (Nat × Nat))
   | _ => none
 private def format (s : String) : Option FloatFormat := match s with
   | "fp16" => some .binary16 | "bf16" => some .bfloat16 | "tf32" => some .tf32 | _ => none
-private def blockJson (p : Profile) (ns : List Nat) : Option Json := do
-  if ns.length != 2*p.products+2 then none else do
-    let c := ns[2*p.products]!
-    let d := ns[2*p.products+1]!
-    let ps ← pairs (ns.take (2*p.products))
+private def blockJson (p : TCModel) (ns : List Nat) : Option Json := do
+  if ns.length != 2*p.nfma+2 then none else do
+    let c := ns[2*p.nfma]!
+    let d := ns[2*p.nfma+1]!
+    let ps ← pairs (ns.take (2*p.nfma))
     if c ≥ 2^32 || d ≥ 2^32 || ps.any (fun (a,b) => a ≥ 2^p.format.bitWidth || b ≥ 2^p.format.bitWidth)
       then none else do
     match prepare p ps c with
@@ -43,10 +43,10 @@ private def blockJson (p : Profile) (ns : List Nat) : Option Json := do
         | some t => Json.mkObj [("bits", toJson t.encodedAlgorithm.1), ("branch", toJson t.encodedAlgorithm.2)]
       return Json.mkObj [("ideal", toJson (qText b.ideal)), ("model", model), ("correction", correction)]
 
-private def featureJson (p : Profile) (words : List Nat) (registerTF32 : Bool) : Json := Id.run do
-  if words.length != 2*p.products+1 then return failure "wrongProductCount"
-  let c := words[2*p.products]!
-  let mut ws := words.take (2*p.products)
+private def featureJson (p : TCModel) (words : List Nat) (registerTF32 : Bool) : Json := Id.run do
+  if words.length != 2*p.nfma+1 then return failure "wrongProductCount"
+  let c := words[2*p.nfma]!
+  let mut ws := words.take (2*p.nfma)
   if registerTF32 then
     if ws.any (fun x => x ≥ 2^32 || x % 2^13 != 0) then return failure "nonfiniteInput"
     ws := ws.map (· / 2^13)
@@ -60,12 +60,12 @@ private def featureJson (p : Profile) (words : List Nat) (registerTF32 : Bool) :
 
 private def command (args : List String) : Option Json := do
   match args with
-  | "block" :: fmt :: k :: extra :: fl :: words =>
+  | "block" :: fmt :: k :: neab :: fl :: words =>
     let f ← format fmt
     let k ← k.toNat?
-    let extra ← extra.toNat?
-    let floor ← if fl = "none" then some none else fl.toInt? |>.map some
-    blockJson ⟨f,k,extra,floor⟩ (← words.mapM String.toNat?)
+    let neab ← neab.toNat?
+    let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
+    blockJson ⟨f,k,neab,eAlignMin⟩ (← words.mapM String.toNat?)
   | ["family", p, k, j] =>
     let p ← p.toNat?
     let k ← k.toNat?
@@ -82,12 +82,12 @@ private def command (args : List String) : Option Json := do
     if d = 0 then none else do
       let x : ℚ := n / (d : ℚ)
       return Json.mkObj [("rne", toJson (round32 .nearestEven x)), ("trunc", toJson (round32 .towardZero x))]
-  | fmt :: k :: extra :: fl :: words =>
+  | fmt :: k :: neab :: fl :: words =>
     let f ← format (if fmt = "canonical" then "fp16" else fmt)
     let k ← k.toNat?
-    let extra ← extra.toNat?
-    let floor ← if fl = "none" then some none else fl.toInt? |>.map some
-    return featureJson ⟨f,k,extra,floor⟩ (← words.mapM String.toNat?) (fmt == "tf32")
+    let neab ← neab.toNat?
+    let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
+    return featureJson ⟨f,k,neab,eAlignMin⟩ (← words.mapM String.toNat?) (fmt == "tf32")
   | _ => none
 
 def main (args : List String) : IO Unit := do

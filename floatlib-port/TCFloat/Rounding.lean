@@ -69,7 +69,7 @@ theorem representable_of_grid (x : ℚ) (hg : Grid32 x) (hx : |x| ≤ maxFinite3
   subst y
   simp [representable, hr, hv]
 
-/-- Common-grid coefficient budget used by the source scalar EFT predicate. -/
+/-- Common-grid coefficient bound used by the source scalar EFT predicate. -/
 theorem grid_representable (z : Int) (e : Int) (hmin : -149 ≤ e) (hmax : e ≤ 104)
     (hz : z.natAbs < 2^24) : representable ((z : ℚ)*pow2 e) = true := by
   apply representable_of_grid

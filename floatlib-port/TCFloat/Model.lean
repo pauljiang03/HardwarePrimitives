@@ -28,15 +28,15 @@ def truncCoeff (x : ℚ) (e : Int) : Int :=
   if x < 0 then -⌊-x / pow2 e⌋ else ⌊x / pow2 e⌋
 def truncGrid (x : ℚ) (e : Int) : ℚ := truncCoeff x e * pow2 e
 
-structure Profile where
+structure TCModel where
   format : FloatFormat
-  products : Nat
-  extra : Nat
-  floor : Option Int
+  nfma : Nat
+  neab : Nat
+  eAlignMin : Option Int
 
-def fp16 (k extra : Nat) (floor : Option Int := none) : Profile := ⟨.binary16, k, extra, floor⟩
-def bf16 (k extra : Nat) (floor : Option Int := none) : Profile := ⟨.bfloat16, k, extra, floor⟩
-def tf32 (k extra : Nat) (floor : Option Int := none) : Profile := ⟨.tf32, k, extra, floor⟩
+def fp16 (k neab : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.binary16, k, neab, eAlignMin⟩
+def bf16 (k neab : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.bfloat16, k, neab, eAlignMin⟩
+def tf32 (k neab : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.tf32, k, neab, eAlignMin⟩
 def v100 := fp16 4 0
 def a100 := fp16 8 1 (some (-132))
 def h100 := fp16 16 2 (some (-133))
@@ -60,12 +60,12 @@ def Term.mul (a b : Term) : Term :=
   ⟨a.dyadic.mul b.dyadic, a.unnormalizedExp + b.unnormalizedExp, a.mantissaBits + b.mantissaBits⟩
 
 structure Block where
-  profile : Profile
+  model : TCModel
   c : Term
   products : List (Term × Term)
 
-def prepare (p : Profile) (pairs : List (Nat × Nat)) (c : Nat) : Option Block := do
-  if pairs.length != p.products then none else do
+def prepare (p : TCModel) (pairs : List (Nat × Nat)) (c : Nat) : Option Block := do
+  if pairs.length != p.nfma then none else do
     let c ← decode .binary32 c
     let ps ← pairs.mapM fun (a,b) => do return (← decode p.format a, ← decode p.format b)
     return ⟨p,c,ps⟩
@@ -81,8 +81,8 @@ def maxTermExp : List Term → Option Int
     if t.dyadic.significand = 0 then rest
     else some (rest.map (max t.unnormalizedExp) |>.getD t.unnormalizedExp)
 def Block.alignExp (b : Block) : Option Int :=
-  (maxTermExp b.terms).map fun e => b.profile.floor.map (max e) |>.getD e
-def Block.q (b : Block) : Int := b.alignExp.getD 0 - (23 + b.profile.extra : Nat)
+  (maxTermExp b.terms).map fun e => b.model.eAlignMin.map (max e) |>.getD e
+def Block.q (b : Block) : Int := b.alignExp.getD 0 - (23 + b.model.neab : Nat)
 def Block.aligned (b : Block) : List ℚ := b.terms.map fun t => truncGrid t.value b.q
 def Block.accumulator (b : Block) : ℚ := b.aligned.sum
 def Block.residuals (b : Block) : List ℚ := b.terms.map fun t => t.value - truncGrid t.value b.q

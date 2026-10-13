@@ -14,7 +14,7 @@ numerics:
 * products are exact FloatLib dyadics;
 * every `fl{·}` is FloatLib's binary32 round-to-nearest-even of an exact rational, which yields
   `±∞` on overflow; subnormal results are flushed with FloatLib's field accessors;
-* alignment, truncation and RD use mathlib's floor, and normalisation FloatLib's `floorLog2`.
+* alignment, truncation and RD use mathlib's floor, and normalization FloatLib's `floorLog2`.
 
 A block maps input words to a FloatLib binary32 word. `MCFloat.Equivalence` proves that the
 observed result (finite word, infinity, NaN) is Matrix-Core's `blockOutcome` for every input. -/
@@ -112,7 +112,7 @@ def rdGrid (x : ℚ) (g : ℤ) : ℚ := ⌊x / pow2 g⌋ * pow2 g
 def normExp (x : ℚ) : ℤ :=
   max (FloatLib.Numerics.RationalBinary.floorLog2 x.num.natAbs x.den) (-126)
 
-/-! ## Profiles -/
+/-! ## Models -/
 
 inductive Kind where
   /-- `correct_rounding`: the exact sum, one final RNE. -/
@@ -123,7 +123,7 @@ inductive Kind where
   `c` and an optional cutoff on the shift of `c`. -/
   | late (interleaved : Bool) (cutoff : Option ℕ)
 
-structure Profile where
+structure MCModel where
   a : Operand
   b : Operand
   nfma : ℕ
@@ -131,16 +131,16 @@ structure Profile where
   /-- Products with `|p_ℓ| ≥ 2^128` overflow (CDNA 3). -/
   productLimit : Bool
 
-def sfma : Profile := ⟨.fmt .binary32, .fmt .binary32, 1, .exact, false⟩
-def cdna1F16 : Profile := ⟨.fmt .binary16, .fmt .binary16, 4, .exact, false⟩
-def cdna1BF16 : Profile := ⟨.fmt .bfloat16, .fmt .bfloat16, 2, .exact, false⟩
-def cdna2F16 : Profile := ⟨.fmt .binary16, .fmt .binary16, 4, .pairwise, false⟩
-def cdna2BF16 : Profile := ⟨.fmt .bfloat16, .fmt .bfloat16, 2, .pairwise, false⟩
-def cdna2BF16_1k : Profile := ⟨.fmt .bfloat16, .fmt .bfloat16, 4, .pairwise, false⟩
-def cdna3F16 : Profile := ⟨.fmt .binary16, .fmt .binary16, 8, .late false none, true⟩
-def cdna3BF16 : Profile := ⟨.fmt .bfloat16, .fmt .bfloat16, 8, .late false none, true⟩
-def cdna3XF32 : Profile := ⟨.xf32, .xf32, 4, .late false none, true⟩
-def cdna3FP8 (a b : FloatFormat) : Profile := ⟨.fmt a, .fmt b, 16, .late true (some 25), true⟩
+def sfma : MCModel := ⟨.fmt .binary32, .fmt .binary32, 1, .exact, false⟩
+def cdna1F16 : MCModel := ⟨.fmt .binary16, .fmt .binary16, 4, .exact, false⟩
+def cdna1BF16 : MCModel := ⟨.fmt .bfloat16, .fmt .bfloat16, 2, .exact, false⟩
+def cdna2F16 : MCModel := ⟨.fmt .binary16, .fmt .binary16, 4, .pairwise, false⟩
+def cdna2BF16 : MCModel := ⟨.fmt .bfloat16, .fmt .bfloat16, 2, .pairwise, false⟩
+def cdna2BF16_1k : MCModel := ⟨.fmt .bfloat16, .fmt .bfloat16, 4, .pairwise, false⟩
+def cdna3F16 : MCModel := ⟨.fmt .binary16, .fmt .binary16, 8, .late false none, true⟩
+def cdna3BF16 : MCModel := ⟨.fmt .bfloat16, .fmt .bfloat16, 8, .late false none, true⟩
+def cdna3XF32 : MCModel := ⟨.xf32, .xf32, 4, .late false none, true⟩
+def cdna3FP8 (a b : FloatFormat) : MCModel := ⟨.fmt a, .fmt b, 16, .late true (some 25), true⟩
 
 /-! ## CDNA 3 alignment -/
 
@@ -221,7 +221,7 @@ def special (xs : List Ext) : F32 :=
 
 /-- `a_ℓ · b_ℓ` with special values: IEEE rules for infinities and NaN; for finite operands an
 infinity when CDNA 3 sees `|p_ℓ| ≥ 2^128` or CDNA 2's conversion to binary32 overflows. -/
-def product (P : Profile) : Value → Value → Ext
+def product (P : MCModel) : Value → Value → Ext
   | .finite a, .finite b =>
     let q := (a.mul b).value
     if P.productLimit && decide (pow2 128 ≤ |q|) then .inf (decide (q < 0))
@@ -243,20 +243,20 @@ def add32 (u v : F32) : F32 :=
   | .inf _, .finite _ => u
   | .finite _, .inf _ => v
 
-/-- Balanced pairwise tree of `add32`. -/
-def tree : ℕ → List F32 → F32
+/-- The balanced pairwise sum of a group with `add32`. -/
+def pairwiseGroupSum : ℕ → List F32 → F32
   | _, [] => Model.posZero .binary32
   | _, [x] => x
   | 0, _ => nan32
   | depth + 1, xs =>
     let h := xs.length / 2
-    add32 (tree depth (xs.take h)) (tree depth (xs.drop h))
+    add32 (pairwiseGroupSum depth (xs.take h)) (pairwiseGroupSum depth (xs.drop h))
 
-/-- CDNA 2: inputs flushed, every product converted to binary32, the pairwise tree, then `c`
+/-- CDNA 2: inputs flushed, every product converted to binary32, the pairwise sum, then `c`
 added with a final `fl{·}`. -/
 def pairwiseBlock (as bs : List Term) (c : Term) : F32 :=
   let leaves := List.zipWith (fun a b => fl true (a.flushed * b.flushed)) as bs
-  let t := tree leaves.length leaves
+  let t := pairwiseGroupSum leaves.length leaves
   match classifyModel t with
   | .finite q => fl true (c.flushed + q.value)
   | _ => t
@@ -264,7 +264,7 @@ def pairwiseBlock (as bs : List Term) (c : Term) : F32 :=
 /-! ## Blocks -/
 
 /-- The result word for finite inputs. -/
-def finiteBlock (P : Profile) (as bs : List Term) (c : Term) : F32 :=
+def finiteBlock (P : MCModel) (as bs : List Term) (c : Term) : F32 :=
   let ps := List.zipWith Term.mul as bs
   if P.productLimit && ps.any (fun p => decide (pow2 128 ≤ |p.value|)) then
     special (ps.map fun p =>
@@ -279,7 +279,7 @@ def finiteBlock (P : Profile) (as bs : List Term) (c : Term) : F32 :=
 
 /-- One block `d = Σ a_ℓ b_ℓ + c` on words; `none` when `a` or `b` does not have `N_FMA`
 entries. -/
-def block (P : Profile) (a b : List ℕ) (c : ℕ) : Option F32 :=
+def block (P : MCModel) (a b : List ℕ) (c : ℕ) : Option F32 :=
   if a.length ≠ P.nfma ∨ b.length ≠ P.nfma then none
   else
     let A := a.map P.a.read
@@ -300,7 +300,7 @@ def pad (n : ℕ) (xs : List ℕ) : List ℕ := xs ++ List.replicate ((n - xs.le
 
 /-- `d = Σ a_ℓ b_ℓ + c` in blocks of `N_FMA` (zero padded), each block's result word the next
 block's `c`; a NaN result is final. -/
-def dot (P : Profile) (a b : List ℕ) (c : ℕ) : Option F32 :=
+def dot (P : MCModel) (a b : List ℕ) (c : ℕ) : Option F32 :=
   if a.length ≠ b.length then none
   else
     let a' := pad P.nfma a

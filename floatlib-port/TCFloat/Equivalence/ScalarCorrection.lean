@@ -1,5 +1,5 @@
 import TCFloat.Equivalence.Representations
-import TensorCore.Numerics.Binary.ResidualBudget
+import TensorCore.Numerics.Binary.ResidualBound
 
 set_option backward.isDefEq.respectTransparency false
 set_option maxRecDepth 4096
@@ -7,20 +7,20 @@ namespace TCFloat.Equivalence
 
 private theorem fp32_max : TensorCore.fp32.maxFinite=maxFinite32 := by decide +kernel
 
-/-- Naive FP32 summation of integer multiples of one grid is exact when the coefficient budget and absolute range hold (TC-EFT paper, Theorems IV.8–IV.9). -/
+/-- Naive FP32 summation of integer multiples of one grid is exact when the coefficient bound and absolute range hold (TC-EFT paper, Theorems IV.8–IV.9). -/
 theorem floatlib_naiveSum_exact (zs : List Int) (e : Int) (hmin : -149 ≤ e)
-    (hbudget : (zs.map Int.natAbs).sum < 2^24)
+    (hbound : (zs.map Int.natAbs).sum < 2^24)
     (hrange : ((zs.map Int.natAbs).sum:Rat)*pow2 e ≤ maxFinite32) :
     naiveSumFrom 0 (zs.map fun (z : Int) => (z:Rat)*pow2 e)=some ((zs.sum:Rat)*pow2 e) := by
   rw [naiveSum_eq]
   have h := TensorCore.naiveSumBinary_exact TensorCore.fp32 (by decide) e hmin zs
-    (by simpa only [magnitudeSum_eq,show TensorCore.fp32.mantissaBits=23 from rfl] using hbudget)
+    (by simpa only [magnitudeSum_eq,show TensorCore.fp32.mantissaBits=23 from rfl] using hbound)
     (by simpa only [magnitudeSum_eq,pow2_eq,fp32_max] using hrange)
   simpa only [TensorCore.naiveSumBinary_fp32,TensorCore.naiveSum32,pow2_eq,sumZ_eq] using h
 
 /-- The exact naive summation holds for every ordering of the summands. -/
 theorem floatlib_naiveSum_any_order (xs ys : List Int) (hp : xs.Perm ys) (e : Int)
-    (hmin : -149 ≤ e) (hbudget : (xs.map Int.natAbs).sum < 2^24)
+    (hmin : -149 ≤ e) (hbound : (xs.map Int.natAbs).sum < 2^24)
     (hrange : ((xs.map Int.natAbs).sum:Rat)*pow2 e ≤ maxFinite32) :
     naiveSumFrom 0 (ys.map fun (z : Int) => (z:Rat)*pow2 e)=some ((xs.sum:Rat)*pow2 e) := by
   have hm : (xs.map Int.natAbs).sum=(ys.map Int.natAbs).sum := (hp.map _).sum_eq
@@ -66,10 +66,10 @@ theorem floatlib_lowParts_on_grid (t : Trace) (e : Int) (he : e ≤ t.extraction
     (((x.value-truncGrid x.value t.extractionExponent)/pow2 e).floor:Rat)*pow2 e
   rw [hr,mul_div_cancel_right₀ _ (show pow2 e ≠ 0 by unfold pow2; positivity),Rat.floor_intCast]
 
-/-- The input-budget inequality (TC-EFT paper, (17)) bounds the actual low-part coefficient sum, including all-zero inputs. -/
-theorem floatlib_inputBudget_coefficient_bound (t : Trace) (e : Int) (he : e ≤ t.extractionExponent)
+/-- The input-based precondition (TC-EFT paper, (17)) bounds the actual low-part coefficient sum, including all-zero inputs. -/
+theorem floatlib_inputGrid_coefficient_bound (t : Trace) (e : Int) (he : e ≤ t.extractionExponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : Int, x.value=(z:Rat)*pow2 e)
-    (hbudget : t.block.terms.length*(2^(t.extractionExponent-e).toNat-1)<2^24) :
+    (hbound : t.block.terms.length*(2^(t.extractionExponent-e).toNat-1)<2^24) :
     ((t.coefficientsAt e).map Int.natAbs).sum<2^24 := by
   have hg := floatlib_lowParts_on_grid t e he hinput
   have hb := TensorCore.extraction_coefficient_bound (t.coefficientsAt e) t.extractionExponent e 24 he
@@ -79,7 +79,7 @@ theorem floatlib_inputBudget_coefficient_bound (t : Trace) (e : Int) (he : e ≤
       apply floatlib_lowPart_bound t
       rw [hg]
       exact List.mem_map.mpr ⟨z,hz,rfl⟩)
-    (by simpa [Trace.coefficientsAt,Trace.lowParts] using hbudget)
+    (by simpa [Trace.coefficientsAt,Trace.lowParts] using hbound)
   simpa only [magnitudeSum_eq] using hb
 
 /-- FloatLib's FP32 subtraction `D − overlap` recovers the retained sum exactly when it is representable (TC-EFT paper, Lemma IV.10). -/
@@ -91,24 +91,24 @@ theorem floatlib_overlap_subtraction_exact (t : Trace) (hH : representable t.ret
 /-- The scalar correction returns RNE of the exact sum on any common grid meeting the coefficient and range conditions (TC-EFT paper, Corollary IV.11). -/
 theorem floatlib_scalar_correct_on_grid (t : Trace) (e : Int) (hmin : -149 ≤ e)
     (hgrid : t.lowParts=(t.coefficientsAt e).map fun (z : Int) => (z:Rat)*pow2 e)
-    (hbudget : ((t.coefficientsAt e).map Int.natAbs).sum<2^24)
+    (hbound : ((t.coefficientsAt e).map Int.natAbs).sum<2^24)
     (hrange : (((t.coefficientsAt e).map Int.natAbs).sum:Rat)*pow2 e ≤ maxFinite32)
     (hH : representable t.retained=true) :
     t.scalarUnchecked=round32 .nearestEven t.block.ideal := by
   have hs : naiveSumFrom 0 t.lowParts=some t.lowParts.sum := by
-    rw [hgrid,floatlib_naiveSum_exact _ e hmin hbudget hrange,sum_coefficients_at]
+    rw [hgrid,floatlib_naiveSum_exact _ e hmin hbound hrange,sum_coefficients_at]
   simp only [Trace.scalarUnchecked,hs,floatlib_overlap_subtraction_exact t hH,Option.bind_some]
   rw [retained_add_low]
 
-/-- The input-budget sufficient condition yields correct FP32 scalar correction. -/
-theorem floatlib_scalar_correct_of_inputBudget (t : Trace) (e : Int) (hmin : -149 ≤ e)
+/-- The input-based precondition yields correct FP32 scalar correction. -/
+theorem floatlib_scalar_correct_of_inputGrid (t : Trace) (e : Int) (hmin : -149 ≤ e)
     (he : e ≤ t.extractionExponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : Int, x.value=(z:Rat)*pow2 e)
-    (hbudget : t.block.terms.length*(2^(t.extractionExponent-e).toNat-1)<2^24)
+    (hbound : t.block.terms.length*(2^(t.extractionExponent-e).toNat-1)<2^24)
     (hrange : (((t.coefficientsAt e).map Int.natAbs).sum:Rat)*pow2 e ≤ maxFinite32)
     (hH : representable t.retained=true) :
     t.scalarUnchecked=round32 .nearestEven t.block.ideal :=
   floatlib_scalar_correct_on_grid t e hmin (floatlib_lowParts_on_grid t e he hinput)
-    (floatlib_inputBudget_coefficient_bound t e he hinput hbudget) hrange hH
+    (floatlib_inputGrid_coefficient_bound t e he hinput hbound) hrange hH
 
 end TCFloat.Equivalence

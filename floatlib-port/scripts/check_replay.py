@@ -55,7 +55,7 @@ def coverage():
     rows=[]
     for c in cases:
         ws=[int(w,16) for w in c['words']]
-        floor='none'  # source check_eft_coverage.py deliberately uses no alignment floor
+        floor='none'  # source check_eft_coverage.py deliberately uses no minimum alignment exponent
         rows.append(' '.join(map(str,['block','fp16',c['k'],c['extra'],floor,*ws,c.get('bits',0)])))
     outputs=run(rows,'scalar-coverage')
     counts={True:0,False:0}

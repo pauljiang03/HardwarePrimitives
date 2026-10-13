@@ -2,8 +2,8 @@ import MCFloat.Equivalence.Stages
 
 /-! # Special values and CDNA 2 binary32 arithmetic
 
-FloatLib's special-value results, products with special values, and the pairwise tree of
-binary32 additions observe as Matrix-Core's `combineSpecial`, `productX` and `pairTreeX`. -/
+FloatLib's special-value results, products with special values, and the pairwise sums of
+binary32 additions observe as Matrix-Core's `combineSpecial`, `productX` and `pairwiseGroupSumX`. -/
 
 set_option linter.unusedSimpArgs false
 set_option linter.unreachableTactic false
@@ -79,13 +79,13 @@ theorem zero_agree {t : MCFloat.Term} {u : MatrixCore.Unpacked} (h : TermAgree t
     (u.value = 0) ↔ t.isZero = true := by
   rw [MatrixCore.Unpacked.value_eq_zero_iff, h.zero]; simp
 
-/-- The profiles' product rules correspond. -/
-structure ProductRules (P : MCFloat.Profile) (Q : MatrixCore.Profile) : Prop where
+/-- The models' product rules correspond. -/
+structure ProductRules (P : MCFloat.MCModel) (Q : MatrixCore.Model) : Prop where
   limit : P.productLimit = Q.productOverflow
   pairwise : P.kind = .pairwise ↔ Q.accumulation = .pairWiseSum
   subnormals : Q.accumulation = .pairWiseSum → Q.subnormals = false
 
-theorem product_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (hP : ProductRules P Q)
+theorem product_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (hP : ProductRules P Q)
     {va vb : MCFloat.Value} {da db : MatrixCore.Datum} (ha : Agree va da) (hb : Agree vb db) :
     extX (MCFloat.product P va vb) = MatrixCore.productX Q da db := by
   cases va <;> cases da <;> simp [Agree] at ha <;> cases vb <;> cases db <;> simp [Agree] at hb <;>

@@ -3,10 +3,10 @@ import TCFloat.Model
 /-! The two encoded interfaces: the TC model and the TC-EFT correction. -/
 namespace TCFloat.Interface
 
-def tc (p : Profile) (pairs : List (Nat × Nat)) (c : Nat) : Option Nat :=
+def tc (p : TCModel) (pairs : List (Nat × Nat)) (c : Nat) : Option Nat :=
   (prepare p pairs c).bind Block.evaluate
 
-def eft (p : Profile) (pairs : List (Nat × Nat)) (c d : Nat) : Option (Option Nat × String) :=
+def eft (p : TCModel) (pairs : List (Nat × Nat)) (c d : Nat) : Option (Option Nat × String) :=
   (prepare p pairs c).bind fun b =>
     (trace b d).map Trace.encodedAlgorithm
 
@@ -20,11 +20,11 @@ end TCFloat.Trace
 
 namespace TCFloat.Interface
 /-- Bounded encodings for one block. -/
-structure Input (p : Profile) where
+structure Input (p : TCModel) where
   products : List (Fin (2^p.format.bitWidth) × Fin (2^p.format.bitWidth))
   c : Fin (2^32)
 
-def Input.pairs {p : Profile} (x : Input p) : List (Nat × Nat) :=
+def Input.pairs {p : TCModel} (x : Input p) : List (Nat × Nat) :=
   x.products.map fun (a,b) => (a.val,b.val)
 
 inductive Error where
@@ -35,17 +35,17 @@ inductive Error where
   deriving Repr, DecidableEq
 
 /-- Typed validation outcomes preserve the reference interface's error distinctions. -/
-def tcChecked (p : Profile) (x : Input p) : Except Error Nat :=
-  if x.products.length != p.products then .error .wrongProductCount
+def tcChecked (p : TCModel) (x : Input p) : Except Error Nat :=
+  if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare p x.pairs x.c.val with
     | none => .error .nonfiniteInput
     | some b => match b.evaluate with
       | none => .error .accumulatorOutOfRange
       | some bits => .ok bits
 
-def eftChecked (p : Profile) (x : Input p) (d : Fin (2^32)) :
+def eftChecked (p : TCModel) (x : Input p) (d : Fin (2^32)) :
     Except Error (Option Nat × String) :=
-  if x.products.length != p.products then .error .wrongProductCount
+  if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare p x.pairs x.c.val with
     | none => .error .nonfiniteInput
     | some b => match trace b d.val with

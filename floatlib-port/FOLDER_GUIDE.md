@@ -13,14 +13,14 @@ Three different claims should be kept separate:
 | Claim | Evidence |
 |---|---|
 | The FloatLib and first-principles implementations compute the same modeled behavior. | A universal equivalence theorem, including output bits, EFT branches and validation errors. |
-| The formal EFT recovers the exact sum and produces correctly rounded FP32 results under its conditions. | Exact-recovery and rounding proofs; the scalar path retains its grid, coefficient and representability conditions. |
+| The formal EFT recovers the exact sum and produces correctly rounded FP32 results under its conditions. | Exact-recovery and rounding proofs; the scalar branch retains its grid, coefficient and representability conditions. |
 | The behavior model describes physical Tensor Cores. | Agreement with recorded hardware measurements on the tested cases. This is not a proof covering every hardware execution. |
 
 Equivalence cannot rule out an assumption shared by both models being wrong about hardware. Likewise, Lean checks the written theorem and its hypotheses; relating those definitions to the manuscript and hardware remains part of the specification review.
 
 ## Scope of interface equivalence
 
-The main theorem is [`TCFloat.Equivalence.floatlib_eq_reference`](TCFloat/Equivalence/Representations.lean). It covers FP16, BF16 and packed TF32 operands with FP32 output, using alignment precision `F = 23 + extra`. Product count, the natural number of extra bits and the optional alignment floor are parameters.
+The main theorem is [`TCFloat.Equivalence.floatlib_eq_reference`](TCFloat/Equivalence/Representations.lean). It covers FP16, BF16 and packed TF32 operands with FP32 output, keeping `F = 23 + neab` fractional bits after alignment. The FMA size, the number `neab` of extra alignment bits and the optional minimum alignment exponent are parameters.
 
 For every encoded block and every supplied FP32 word D, the two checked interfaces return the same TC bits and the same EFT branch/bits, or corresponding validation errors. D does not have to be the TC model's output. Nonfinite encodings and wrong product counts are included as rejected cases.
 
@@ -44,7 +44,7 @@ The executable uses FloatLib decoding, exact dyadic multiplication and rounding 
 
 ## Folder map
 
-| Path | Purpose |
+| File | Purpose |
 |---|---|
 | [TCFloat/Model.lean](TCFloat/Model.lean) | Executable TC stages, extraction, scalar guard and reference EFT branches. |
 | [TCFloat/Interface.lean](TCFloat/Interface.lean) | Encoded paper interfaces, bounded inputs and typed validation errors. |
@@ -152,7 +152,7 @@ EOF
 cat test-results/example-outputs.jsonl
 ```
 
-There is one JSON output record per input line. The `block` command runs the TC model and EFT with an explicit supplied D. Its arguments are `FORMAT K EXTRA FLOOR a0 b0 ... c D`, with interleaved operand pairs and decimal encoded words. `none` means no alignment floor. Decoded, the first example uses FP16 operands `0.000244140625 = 2^-12`, C = `1.0` and D = `1.0`; its exact ideal is `1 + 2^-24`, and the correctly rounded FP32 answer is `1.0`. `round` tests the exact rational numerator/denominator in RTZ and RNE. `family` executes a member of the encoded non-monotonicity family.
+There is one JSON output record per input line. The `block` command runs the TC model and EFT with an explicit supplied D. Its arguments are `FORMAT K NEAB EALIGNMIN a0 b0 ... c D`: the FMA size, the number of extra alignment bits, and the minimum alignment exponent, then interleaved operand pairs and decimal encoded words. `none` means no minimum alignment exponent. Decoded, the first example uses FP16 operands `0.000244140625 = 2^-12`, C = `1.0` and D = `1.0`; its exact ideal is `1 + 2^-24`, and the correctly rounded FP32 answer is `1.0`. `round` tests the exact rational numerator/denominator in RTZ and RNE. `family` executes a member of the encoded non-monotonicity family.
 
 The `block` command expects packed 19-bit TF32 words when FORMAT is `tf32`. The separate feature command named `tf32` expects 32-bit register words with their low 13 bits zero. See the [README's executable interface](README.md#executable-interface) for the command forms.
 
@@ -168,7 +168,7 @@ This last command executes the model and writes observations. Use `check_tc_eft_
 
 ### Execution and data flow
 
-For the model/EFT suites, the execution path is:
+For the model/EFT suites, the data flow is:
 
 ```text
 saved vectors or deterministic case generator
@@ -188,15 +188,15 @@ For a `block` command, [Main.lean](Main.lean) prepares the operands once, then p
 
 ### Exactly what each comparison checks
 
-**Synthetic FP16 feature cases — [check_features.py](scripts/check_features.py).** The Python reference decodes operands using integer fields and exact rationals, preserves unnormalized input exponents, forms exact products, selects the alignment grid, truncates signed terms and adds them. It finds the toward-zero FP32 result by binary search over nonnegative finite FP32 encodings, then applies the sign. For accepted cases, the harness checks `bits`, `ideal`, `accumulated`, `value` and `residual`. For rejected synthetic cases, it checks that an `error` field exists; this particular check does not require the exact error constructor. Selected large-padding configurations also assert that alignment loss vanishes. Inputs include fixed boundaries and pseudorandom cases from seed `20260905`.
+**Synthetic FP16 feature cases — [check_features.py](scripts/check_features.py).** The Python reference decodes operands using integer fields and exact rationals, preserves the input exponents, forms exact products in denormalized form, selects the alignment grid, truncates signed terms and adds them. It finds the toward-zero FP32 result by binary search over nonnegative finite FP32 encodings, then applies the sign. For accepted cases, the harness checks `bits`, `ideal`, `accumulated`, `value` and `residual`. For rejected synthetic cases, it checks that an `error` field exists; this particular check does not require the exact error constructor. Selected configurations with many extra alignment bits also assert that alignment loss vanishes. Inputs include fixed boundaries and pseudorandom cases from seed `20260905`.
 
-**Recorded hardware rows — [check_features.py](scripts/check_features.py) and [check_replay.py](scripts/check_replay.py).** Before replay, the scripts verify the vendor file hashes. Each row supplies encoded A/B operands, FP32 C and a recorded FP32 output D. FP16 operands stored in FP32 form are converted exactly to FP16 words. BF16 operands must have 16 zero low bits and are shifted into BF16 words. TF32 register operands must have 13 zero low bits; the feature adapter converts them to packed TF32. For each architecture/format profile, the harness executes the model and compares its `bits` directly with recorded D. The hardware replay checks output bits; it does not claim that the intermediate diagnostics were measured on hardware. There are 5,000 rows in each of seven groups: V100/A100/H100 FP16 and A100/H100 BF16/TF32.
+**Recorded hardware rows — [check_features.py](scripts/check_features.py) and [check_replay.py](scripts/check_replay.py).** Before replay, the scripts verify the vendor file hashes. Each row supplies encoded A/B operands, FP32 C and a recorded FP32 output D. FP16 operands stored in FP32 form are converted exactly to FP16 words. BF16 operands must have 16 zero low bits and are shifted into BF16 words. TF32 register operands must have 13 zero low bits; the feature adapter converts them to packed TF32. For each architecture and input format, the harness executes the model and compares its `bits` directly with recorded D. The hardware replay checks output bits; it does not claim that the intermediate diagnostics were measured on hardware. There are 5,000 rows for each of seven variants: V100/A100/H100 FP16 and A100/H100 BF16/TF32.
 
-**Saved scalar/EFT corpus — [check_replay.py](scripts/check_replay.py).** The script reads `../data/regressions/eft-coverage-cases.json` and sends `block` commands to Lean. Its cases use no alignment floor. For ordinary records it checks TC bits, the exact scalar-guard Boolean, scalar result bits or rejection, each low component, full reference-EFT bits and the correction using supplied D. For records marked as errors it compares the model error string exactly and skips the ordinary-field checks. These records contain saved regression expectations.
+**Saved scalar/EFT corpus — [check_replay.py](scripts/check_replay.py).** The script reads `../data/regressions/eft-coverage-cases.json` and sends `block` commands to Lean. Its cases use no minimum alignment exponent. For ordinary records it checks TC bits, the exact scalar-guard Boolean, scalar result bits or rejection, each low component, full reference-EFT bits and the correction using supplied D. For records marked as errors it compares the model error string exactly and skips the ordinary-field checks. These records contain saved regression expectations.
 
 **Paper oracle suite — [check_tc_eft_paper.py](scripts/check_tc_eft_paper.py).** Hash-checked generator files from `../vendor/tc-eft-validation/` are copied into an isolated scratch directory and run. The harness captures their inputs and stage values, including draws excluded from the generator's finite accepted set. It computes the expected ideal independently from the encoded inputs, obtains model expectations from the integer block oracle, and obtains FP32 rounding expectations from the oracle's neighboring-value procedure. It supplies the expected TC word as D when available, otherwise zero.
 
-For ordinary block cases, the comparison checks the exact ideal, TC bits or the exact accumulator-out-of-range error, accumulator value, selected unnormalized-exponent maximum and corrected bits. Where the generator supplies intermediate stages, it also checks the quantum, original terms, aligned terms, alignment residuals, low parts, output residual and overlap. The generator stores C last; the harness rotates those lists to the port's C-first order before comparing. It verifies that the scalar guard agrees with whether a scalar result exists, and that any accepted scalar result equals the expected correctly rounded answer.
+For ordinary block cases, the comparison checks the exact ideal, TC bits or the exact accumulator-out-of-range error, accumulator value, the selected largest exponent of a nonzero term and corrected bits. Where the generator supplies intermediate stages, it also checks the quantum, original terms, aligned terms, alignment residuals, low parts, output residual and overlap. The generator stores C last; the harness rotates those lists to the port's C-first order before comparing. It verifies that the scalar guard agrees with whether a scalar result exists, and that any accepted scalar result equals the expected correctly rounded answer.
 
 The paper suite requires the `allZero` branch for all-zero terms and `outOfRange` when the exact sum lies outside the finite output domain. Otherwise it accepts either `scalar` or `exactReference`, provided the bits are correct. The pinned Python generator's scalar test can use a different grid from the Lean implementation, so `scalar_predicate_differences` records guard disagreements without treating them as incorrect numerical results. This suite checks numerical agreement with the Python oracle. The direct comparison below checks exact branch agreement with the first-principles Lean implementation.
 
@@ -204,7 +204,7 @@ The same script executes 49,005 encoded `family p K j` commands for `p=0..4`, `K
 
 **Targeted edges — [check_edges.py](scripts/check_edges.py).** Nine deliberately varied finite D words are supplied for a block whose ideal is the FP32 midpoint `1 + 2^-24`; the correction must return the even endpoint, 1, for every D. Eight exact rational inputs check signed zero, tiny values, underflow ties, finite extremes and values just outside the finite range in both rounding modes. Three domain cases check nonfinite D, a nonfinite operand and invalid TF32 register padding. The script also runs the dependency negative controls described below.
 
-**Monotonicity boundaries — [check_monotonicity.py](scripts/check_monotonicity.py).** The script constructs encoded FP16 products with values `2^-12` and `2^(-12-p)`, varies `p=0..8`, and chooses K below, at and above `3*2^p`, plus zero/small cases. For three floor settings and C equal to either 1 or `1-2^-24`, it checks the exact accumulator formula, selected exponent and output comparison with 1. For the lowered-C case, an output greater than 1 must occur exactly when `K >= 3*2^p`. This is a 360-case regression of the theorem's boundary behavior.
+**Monotonicity boundaries — [check_monotonicity.py](scripts/check_monotonicity.py).** The script constructs encoded FP16 products with values `2^-12` and `2^(-12-p)`, varies `p=0..8`, and chooses K below, at and above `3*2^p`, plus zero/small cases. For three settings of the minimum alignment exponent and C equal to either 1 or `1-2^-24`, it checks the exact accumulator formula, selected exponent and output comparison with 1. For the lowered-C case, an output greater than 1 must occur exactly when `K >= 3*2^p`. This is a 360-case regression of the theorem's boundary behavior.
 
 ### Direct comparison of the two implementations
 

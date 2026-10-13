@@ -5,7 +5,7 @@ set_option backward.isDefEq.respectTransparency false
 namespace TCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-def inputPairs {p : Profile} (x : TensorCore.BlockInput (profile p)) : List (Nat × Nat) :=
+def inputPairs {p : TCModel} (x : TensorCore.BlockInput (model p)) : List (Nat × Nat) :=
   x.products.map fun (a,b) => (a.toNat,b.toNat)
 
 theorem option_mapM {α β γ : Type} (xs : List α) (f : α → Option β) (g : α → Option γ)
@@ -40,23 +40,23 @@ theorem option_mapM_valid {α β : Type} (xs : List α) (f : α → Option β) (
           exact h a b hf
         · exact ih bs hs c hc
 
-def pairDecode (p : Profile) (ab : (profile p).Word × (profile p).Word) : Option (Term × Term) := do
+def pairDecode (p : TCModel) (ab : (model p).Word × (model p).Word) : Option (Term × Term) := do
   return (← decode p.format ab.1.toNat, ← decode p.format ab.2.toNat)
 
-theorem pair_decode_eq (p : Profile) (hf : p.format.isIEEE=true)
-    (ab : (profile p).Word × (profile p).Word) :
+theorem pair_decode_eq (p : TCModel) (hf : p.format.isIEEE=true)
+    (ab : (model p).Word × (model p).Word) :
     (pairDecode p ab).map (fun (a,b) => (project a,project b)) =
-      (do return (← (profile p).decode ab.1, ← (profile p).decode ab.2)) := by
+      (do return (← (model p).decode ab.1, ← (model p).decode ab.2)) := by
   have ha := decode_project p.format hf ab.1.toNat ab.1.isLt
   have hb := decode_project p.format hf ab.2.toNat ab.2.isLt
-  change _ = (profile p).decode ab.1 at ha
-  change _ = (profile p).decode ab.2 at hb
+  change _ = (model p).decode ab.1 at ha
+  change _ = (model p).decode ab.2 at hb
   rw [← ha,← hb]
   cases hda : decode p.format ab.1.toNat <;> cases hdb : decode p.format ab.2.toNat <;>
     simp [pairDecode,hda,hdb]
 
-theorem pair_decode_valid (p : Profile) (hf : p.format.isIEEE=true)
-    (ab : (profile p).Word × (profile p).Word) (v : Term × Term)
+theorem pair_decode_valid (p : TCModel) (hf : p.format.isIEEE=true)
+    (ab : (model p).Word × (model p).Word) (v : Term × Term)
     (hv : pairDecode p ab=some v) : ValidTerm v.1 ∧ ValidTerm v.2 := by
   unfold pairDecode at hv
   cases ha : decode p.format ab.1.toNat <;> cases hb : decode p.format ab.2.toNat <;>
@@ -65,15 +65,15 @@ theorem pair_decode_valid (p : Profile) (hf : p.format.isIEEE=true)
   exact ⟨decode_value p.format hf _ _ ha,decode_value p.format hf _ _ hb⟩
 
 /-- Actual preparation commutes with projection; the port checks shape at this boundary. -/
-theorem prepare_eq (p : Profile) (hf : p.format.isIEEE=true)
-    (x : TensorCore.BlockInput (profile p)) (hshape : x.products.length=p.products) :
+theorem prepare_eq (p : TCModel) (hf : p.format.isIEEE=true)
+    (x : TensorCore.BlockInput (model p)) (hshape : x.products.length=p.nfma) :
     (TCFloat.prepare p (inputPairs x) x.c.toNat).map block = TensorCore.prepare x := by
   have hc := decode_project .binary32 (by decide) x.c.toNat x.c.isLt
   change _ = TensorCore.decode32 x.c at hc
   have hp := option_mapM x.products (pairDecode p)
-    (fun (a,b) => do return (← (profile p).decode a,← (profile p).decode b))
+    (fun (a,b) => do return (← (model p).decode a,← (model p).decode b))
     (fun (a,b) => (project a,project b)) (pair_decode_eq p hf)
-  change _ = TensorCore.prepareProducts (profile p) x.products at hp
+  change _ = TensorCore.prepareProducts (model p) x.products at hp
   unfold TCFloat.prepare inputPairs
   simp only [List.length_map,hshape,bne_self_eq_false,List.mapM_map]
   change (do
@@ -84,8 +84,8 @@ theorem prepare_eq (p : Profile) (hf : p.format.isIEEE=true)
   rw [← hc,← hp]
   cases decode .binary32 x.c.toNat <;> cases x.products.mapM (pairDecode p) <;> rfl
 
-theorem prepare_valid (p : Profile) (hf : p.format.isIEEE=true)
-    (x : TensorCore.BlockInput (profile p)) (b : Block)
+theorem prepare_valid (p : TCModel) (hf : p.format.isIEEE=true)
+    (x : TensorCore.BlockInput (model p)) (b : Block)
     (hb : TCFloat.prepare p (inputPairs x) x.c.toNat=some b) : ValidBlock b := by
   unfold TCFloat.prepare inputPairs at hb
   simp only [List.length_map,List.mapM_map] at hb
@@ -172,14 +172,14 @@ theorem trace_algorithm_eq (b : Block) (hb : ValidBlock b) (D : TensorCore.F32) 
     exact congrArg some (encoded_trace_eq hrel)
 
 /-- Universal encoded TC equality, including malformed product counts, nonfinite inputs, subnormals, signed zero and out-of-range accumulator rejection. -/
-theorem tc_encoded_eq (p : Profile) (hf : p.format.isIEEE=true)
-    (x : TensorCore.BlockInput (profile p)) :
+theorem tc_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
+    (x : TensorCore.BlockInput (model p)) :
     Interface.tc p (inputPairs x) x.c.toNat =
       (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) := by
-  by_cases hs : x.products.length=p.products
+  by_cases hs : x.products.length=p.nfma
   · have hp := prepare_eq p hf x hs
     unfold Interface.tc TensorCore.evalBlock
-    simp only [profile,hs,bne_self_eq_false,Bool.false_eq_true,ite_false]
+    simp only [model,hs,bne_self_eq_false,Bool.false_eq_true,ite_false]
     rw [← hp]
     cases hb : TCFloat.prepare p (inputPairs x) x.c.toNat with
     | none => rfl
@@ -187,18 +187,18 @@ theorem tc_encoded_eq (p : Profile) (hf : p.format.isIEEE=true)
       simp only [Option.map_some,Option.bind_some]
       rw [evalPrepared_bits]
       exact evaluate_eq b (prepare_valid p hf x b hb)
-  · have hs' : (x.products.length != p.products)=true := bne_iff_ne.mpr hs
-    simp [Interface.tc,TCFloat.prepare,inputPairs,TensorCore.evalBlock,profile,hs',Except.toOption]
+  · have hs' : (x.products.length != p.nfma)=true := bne_iff_ne.mpr hs
+    simp [Interface.tc,TCFloat.prepare,inputPairs,TensorCore.evalBlock,model,hs',Except.toOption]
 
 /-- Universal encoded EFT equality: identical validation success, branch and bits, for every supplied FP32 D. -/
-theorem eft_encoded_eq (p : Profile) (hf : p.format.isIEEE=true)
-    (x : TensorCore.BlockInput (profile p)) (D : TensorCore.F32) :
+theorem eft_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
+    (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.eft p (inputPairs x) x.c.toNat D.toNat =
       (TensorCore.tcEftEncoded x D).toOption.map encodedResult := by
-  by_cases hs : x.products.length=p.products
+  by_cases hs : x.products.length=p.nfma
   · have hp := prepare_eq p hf x hs
     unfold Interface.eft TensorCore.tcEftEncoded TensorCore.prepareEncodedEFT
-    simp only [profile,hs,bne_self_eq_false,Bool.false_eq_true,ite_false]
+    simp only [model,hs,bne_self_eq_false,Bool.false_eq_true,ite_false]
     rw [← hp]
     cases hb : TCFloat.prepare p (inputPairs x) x.c.toNat with
     | none => rfl
@@ -206,13 +206,13 @@ theorem eft_encoded_eq (p : Profile) (hf : p.format.isIEEE=true)
       simp only [Option.map_some,Option.bind_some]
       rw [trace_algorithm_eq b (prepare_valid p hf x b hb) D]
       cases TensorCore.finite32 D <;> rfl
-  · have hs' : (x.products.length != p.products)=true := bne_iff_ne.mpr hs
+  · have hs' : (x.products.length != p.nfma)=true := bne_iff_ne.mpr hs
     simp [Interface.eft,TCFloat.prepare,inputPairs,TensorCore.tcEftEncoded,
-      TensorCore.prepareEncodedEFT,profile,hs',Except.toOption]
+      TensorCore.prepareEncodedEFT,model,hs',Except.toOption]
 
 /-- The encoded TC and EFT interfaces commute with the same input translation. -/
-theorem universal_equivalence (p : Profile) (hf : p.format.isIEEE=true)
-    (x : TensorCore.BlockInput (profile p)) (D : TensorCore.F32) :
+theorem universal_equivalence (p : TCModel) (hf : p.format.isIEEE=true)
+    (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tc p (inputPairs x) x.c.toNat =
         (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) ∧
     Interface.eft p (inputPairs x) x.c.toNat D.toNat =

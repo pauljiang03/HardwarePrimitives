@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supplied-D independence, signed underflow, padding validation and negative controls."""
+"""Supplied-D independence, signed underflow, TF32 register-padding validation and negative controls."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 import json, os, shutil, sys, subprocess, tempfile
@@ -45,7 +45,7 @@ def check_reference_preparation():
             assert (port/'reference-compat'/name).read_bytes()==(PORT/'reference-compat'/name).read_bytes(),name
         block=root/'TensorCore/TC/Block.lean'
         original=block.read_text()
-        expression='b.alignExp.getD 0 - b.profile.alignMantissaBits'
+        expression='b.alignExp.getD 0 - b.model.alignFracBits'
         assert original.count(expression)==1
         block.write_text('-- Archive regression\n'+original.replace(expression,expression.replace(' - ','   -   ')))
         prepare('comments_and_whitespace')

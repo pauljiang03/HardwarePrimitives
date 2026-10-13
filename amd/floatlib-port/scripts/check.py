@@ -28,7 +28,7 @@ def step(name, cmd):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", type=int, default=2000, help="comparison cases per profile and regime")
+    ap.add_argument("--cases", type=int, default=2000, help="comparison cases per model and regime")
     ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
     print(step("reference sources", ["python3", "scripts/prepare_reference.py"]).strip())

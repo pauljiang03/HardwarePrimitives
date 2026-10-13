@@ -2,7 +2,7 @@ import MCFloat.Equivalence.Dot
 
 /-! # FloatLib implementation ≡ Matrix-Core
 
-Every MCFloat profile corresponds to the Matrix-Core profile of the same name, so for every
+Every MCFloat model corresponds to the Matrix-Core model of the same name, so for every
 architecture and input format of the paper:
 
 * `block_agree`: one block observes as `blockOutcome` for any input words;
@@ -14,7 +14,7 @@ The proofs use only Lean's standard axioms (`tests/Audit.lean`). -/
 
 namespace MCFloat.Equivalence
 
-theorem rules_of {P : MCFloat.Profile} {Q : MatrixCore.Profile}
+theorem rules_of {P : MCFloat.MCModel} {Q : MatrixCore.Model}
     (hl : P.productLimit = Q.productOverflow)
     (hp : P.kind = .pairwise ↔ Q.accumulation = .pairWiseSum)
     (hs : Q.accumulation = .pairWiseSum → Q.subnormals = false) : ProductRules P Q :=
@@ -88,7 +88,7 @@ theorem cdna3E5M2E4M3 : Corresponds (MCFloat.cdna3FP8 .e5m2fnuz .e4m3fnuz)
   cdna3FP8 operand_e5m2fnuz operand_e4m3fnuz
 
 /-- On Matrix-Core's finite domain the FloatLib block returns the same binary32 word. -/
-theorem blockBits_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (h : Corresponds P Q)
+theorem blockBits_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (x : MatrixCore.BlockInput Q) (d : MatrixCore.F32) (hd : MatrixCore.blockBits x = .ok d) :
     ∃ w, MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat = some w ∧
       MCFloat.bits w = d.toNat := by

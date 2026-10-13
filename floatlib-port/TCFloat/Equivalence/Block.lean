@@ -4,10 +4,10 @@ set_option backward.isDefEq.respectTransparency false
 namespace TCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-def profile (p : Profile) : TensorCore.Profile :=
-  ⟨format p.format,p.products,23+p.extra,p.floor⟩
+def model (p : TCModel) : TensorCore.Model :=
+  ⟨format p.format,p.nfma,23+p.neab,p.eAlignMin⟩
 def block (b : Block) : TensorCore.PreparedBlock :=
-  ⟨profile b.profile,b.products.map (fun (a,b) => (project a,project b)),project b.c⟩
+  ⟨model b.model,b.products.map (fun (a,b) => (project a,project b)),project b.c⟩
 def unnormalizedTerm (t : Term) : TensorCore.UnnormalizedProduct :=
   ⟨t.dyadic.signedSignificand,t.unnormalizedExp,t.mantissaBits⟩
 
@@ -98,13 +98,13 @@ theorem alignExp_eq (b : Block) : (block b).alignExp = b.alignExp := by
   unfold TensorCore.PreparedBlock.alignExp
   rw [terms_eq,alignment_eq]
   simp only [Block.alignExp,
-    TensorCore.Profile.applyFloor,block,profile]
-  cases maxTermExp b.terms <;> cases b.profile.floor <;> rfl
+    TensorCore.Model.applyEAlignMin,block,model]
+  cases maxTermExp b.terms <;> cases b.model.eAlignMin <;> rfl
 
 theorem q_eq (b : Block) : (block b).alignGridExponent = b.q := by
   unfold TensorCore.PreparedBlock.alignGridExponent
   rw [alignExp_eq]
-  simp [Block.q,block,profile]
+  simp [Block.q,block,model]
 
 theorem accumulator_eq (b : Block) (hb : ValidBlock b) : (block b).accumulator = b.accumulator := by
   rw [TensorCore.PreparedBlock.accumulator,← TensorCore.sum_coefficients]

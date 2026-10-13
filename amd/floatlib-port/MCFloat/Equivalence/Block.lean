@@ -2,7 +2,7 @@ import MCFloat.Equivalence.Special
 
 /-! # One block
 
-For every profile pair that corresponds (`Corresponds`), and for every input words, the FloatLib
+For every pair of models that correspond (`Corresponds`), and for all input words, the FloatLib
 block observes as Matrix-Core's `blockOutcome`: the same finite word, the same infinity, or
 NaN. -/
 
@@ -44,20 +44,20 @@ theorem wordX_add32 {u v : MCFloat.F32} {X Y : MatrixCore.XVal} (hu : WordX u X)
            classify_nan32])
     | simp [MCFloat.add32, hu, hv, MatrixCore.XVal.add, MatrixCore.XVal.fl, WordX, classify_nan32]
 
-theorem wordX_tree : ∀ (d : ℕ) {ws : List MCFloat.F32} {xs : List MatrixCore.XVal},
-    List.Forall₂ WordX ws xs → WordX (MCFloat.tree d ws) (MatrixCore.pairTreeX true d xs)
+theorem wordX_pairwiseGroupSum : ∀ (d : ℕ) {ws : List MCFloat.F32} {xs : List MatrixCore.XVal},
+    List.Forall₂ WordX ws xs → WordX (MCFloat.pairwiseGroupSum d ws) (MatrixCore.pairwiseGroupSumX true d xs)
   | _, [], [], .nil => by
-    simp only [MCFloat.tree, MatrixCore.pairTreeX, WordX, classify_posZero]
+    simp only [MCFloat.pairwiseGroupSum, MatrixCore.pairwiseGroupSumX, WordX, classify_posZero]
     exact ⟨_, rfl, by simp [MCFloat.Term.value, FloatLib.Numerics.Dyadic.toRat,
       FloatLib.Numerics.Dyadic.signedSignificand]⟩
-  | _, [_], [_], .cons h .nil => by simpa [MCFloat.tree, MatrixCore.pairTreeX] using h
+  | _, [_], [_], .cons h .nil => by simpa [MCFloat.pairwiseGroupSum, MatrixCore.pairwiseGroupSumX] using h
   | 0, _ :: _ :: _, _ :: _ :: _, _ => by
-    simp [MCFloat.tree, MatrixCore.pairTreeX, WordX, classify_nan32]
+    simp [MCFloat.pairwiseGroupSum, MatrixCore.pairwiseGroupSumX, WordX, classify_nan32]
   | d + 1, w1 :: w2 :: ws, x1 :: x2 :: xs, h => by
     have hl := h.length_eq
-    simp only [MCFloat.tree, MatrixCore.pairTreeX]
+    simp only [MCFloat.pairwiseGroupSum, MatrixCore.pairwiseGroupSumX]
     rw [hl]
-    exact wordX_add32 (wordX_tree d (List.forall₂_take _ h)) (wordX_tree d (List.forall₂_drop _ h))
+    exact wordX_add32 (wordX_pairwiseGroupSum d (List.forall₂_take _ h)) (wordX_pairwiseGroupSum d (List.forall₂_drop _ h))
 
 theorem flushed_agree {t : MCFloat.Term} {u : MatrixCore.Unpacked} (h : TermAgree t u) :
     t.flushed = (MatrixCore.Unpacked.flush u).value := by
@@ -95,7 +95,7 @@ theorem observe_finish (c : ℚ) {t : MCFloat.F32} {T : MatrixCore.XVal} (h : Wo
   · simp [h, observe, MatrixCore.XVal.add, MatrixCore.finishOutcome]
   · simp [h, observe, MatrixCore.XVal.add, MatrixCore.finishOutcome]
 
-theorem pairwise_agree (Q : MatrixCore.Profile) (hs : Q.subnormals = false)
+theorem pairwise_agree (Q : MatrixCore.Model) (hs : Q.subnormals = false)
     {as bs : List MCFloat.Term} {us vs : List MatrixCore.Unpacked} {c : MCFloat.Term}
     {uc : MatrixCore.Unpacked} (ha : List.Forall₂ TermAgree as us)
     (hb : List.Forall₂ TermAgree bs vs) (hc : TermAgree c uc) :
@@ -105,12 +105,12 @@ theorem pairwise_agree (Q : MatrixCore.Profile) (hs : Q.subnormals = false)
   simp only [hs, Bool.not_false, Bool.false_eq_true, ite_false, MatrixCore.Prepared.flushed,
     MatrixCore.Prepared.p]
   rw [hl.length_eq, flushed_agree hc]
-  exact observe_finish _ (wordX_tree _ hl)
+  exact observe_finish _ (wordX_pairwiseGroupSum _ hl)
 
 /-! ## Finite inputs -/
 
-/-- An MCFloat profile and a Matrix-Core profile describe the same block. -/
-structure Corresponds (P : MCFloat.Profile) (Q : MatrixCore.Profile) : Prop where
+/-- An MCFloat model and a Matrix-Core model describe the same block. -/
+structure Corresponds (P : MCFloat.MCModel) (Q : MatrixCore.Model) : Prop where
   a : OperandAgree P.a Q.a
   b : OperandAgree P.b Q.b
   nfma : P.nfma = Q.nfma
@@ -123,7 +123,7 @@ structure Corresponds (P : MCFloat.Profile) (Q : MatrixCore.Profile) : Prop wher
     | .late i cut => Q.accumulation = (if i then .oddEvenGrouping else .globalAlignment) ∧
         Q.subnormals = true ∧ Q.late = { cCutoff := cut }
 
-theorem finiteBlock_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (h : Corresponds P Q)
+theorem finiteBlock_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {as bs : List MCFloat.Term} {us vs : List MatrixCore.Unpacked} {c : MCFloat.Term}
     {uc : MatrixCore.Unpacked} (ha : List.Forall₂ TermAgree as us)
     (hb : List.Forall₂ TermAgree bs vs) (hc : TermAgree c uc) :
@@ -228,7 +228,7 @@ theorem read_agree {o : MCFloat.Operand} {i : MatrixCore.InputFormat} (h : Opera
   | nil => exact .nil
   | cons w ws ih => exact .cons (h w) ih
 
-theorem products_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (hP : ProductRules P Q)
+theorem products_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (hP : ProductRules P Q)
     {A B : List MCFloat.Value} {DA DB : List MatrixCore.Datum}
     (ha : List.Forall₂ Agree A DA) (hb : List.Forall₂ Agree B DB) :
     (List.zipWith (MCFloat.product P) A B).map extX = List.zipWith (MatrixCore.productX Q) DA DB := by
@@ -247,9 +247,9 @@ theorem mapM_map {f : β → Option γ} {g : α → β} (l : List α) :
   | nil => rfl
   | cons x l ih => simp [List.mapM_cons, ih]
 
-/-- **One block.** For corresponding profiles and any input words, the FloatLib block's result
+/-- **One block.** For corresponding models and any input words, the FloatLib block's result
 word observes as Matrix-Core's `blockOutcome`. -/
-theorem block_agree {P : MCFloat.Profile} {Q : MatrixCore.Profile} (h : Corresponds P Q)
+theorem block_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (x : MatrixCore.BlockInput Q) :
     (MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat).map observe =
       MatrixCore.blockOutcome x := by

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Run the FloatLib implementation and Matrix-Core's model on the same random inner products.
 
-Both executables read `<profile> <a> <b> <c>` lines (hexadecimal words) and print the observed
+Both executables read `<model> <a> <b> <c>` lines (hexadecimal words) and print the observed
 result: `F <word>`, `I+`, `I-` or `N`. Outputs are compared exactly, words bit for bit.
 
-Inputs for every profile:
+Inputs for every model:
   bits     independent uniform words (infinities and NaN included);
   normal   finite words with exponents drawn over the whole normal range;
   narrow   finite words with exponents within a few binades of each other, so that alignment,
@@ -122,7 +122,7 @@ def run(exe, lines):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cases", type=int, default=5000, help="cases per profile and regime")
+    ap.add_argument("--cases", type=int, default=5000, help="cases per model and regime")
     ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
     for d in (REPO, PORT):
