@@ -6,6 +6,9 @@ import MMAlgebraMC.Bound
 import MMAlgebraMC.Pinned
 import MMAlgebraMC.Counterexamples
 import MMAlgebraMC.Bridge
+import MMAlgebraMC.Words
+import MMAlgebraMC.Blocks
+import MMAlgebraMC.RigidMC
 
 /-! # The reduction algebra on the AMD matrix-core model
 
