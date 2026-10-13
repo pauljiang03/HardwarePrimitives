@@ -4,6 +4,9 @@ import MMAlgebra.Schedule
 import MMAlgebra.Partition
 import MMAlgebra.ChainComplete
 import MMAlgebra.LTree
+import MMAlgebra.TermComplete
+import MMAlgebra.Shapes
+import MMAlgebra.Rigid
 
 /-! # Reduction terms and their divergence, on any matrix multiplier
 
