@@ -134,6 +134,49 @@ and columns.
 ([`data/fallback-sim-rules.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/fallback-sim-rules.json)
 has the rerun.)
 
+### Per tile
+
+A GEMM computes each slice product for a whole tile at once, so what the early
+exit saves also depends on scheduling. A second simulation
+([`scripts/tile_sim.py`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/tile_sim.py),
+[`data/tile-sim.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/tile-sim.json)) runs full `256 × 256` GEMMs with
+binary64 output at `k` = 256, 1024 and 4096, about two million entries, under
+three schedules:
+
+- **Per entry**, the lower bound.
+- **Uniform per tile**: a whole `16 × 8` tile takes the next refinement if the
+  test fails for any of its entries.
+- **Compaction**: the entries whose test failed are packed into new tiles,
+  either ideally or by gathering rows and columns, which accounts for the lost
+  reuse of data.
+
+| Schedule | Ozaki-I, slices `5` then `6` | Ozaki-I, `k`-dependent slices | Ozaki-II |
+| --- | --- | --- | --- |
+| Uniform per tile: share of the per-entry saving kept | 0–43 % | 48–95 % (median 60 %) | 48–100 % (median 86 %) |
+| Gathering: share kept | median 44 % | 39–99 % (median 93 %) | 59–100 % (median 94 %) |
+
+Ideal compaction stays within 4.4 % of the per-entry cost, so the real loss is
+the reuse of data. Under heavy cancellation (condition number `10^6`), uniform
+per-tile Ozaki-I costs 8 % more than always taking the exact fallback. The work
+off the matrix multiplier is 0.24–2.5 % of its multiply-adds for Ozaki-I and
+3.5–9.6 % for Ozaki-II, under assumed weights per operation. Every interval and
+every result of a successful test was checked against the exact product. These
+are instruction counts, not GPU time.
+
+### A test suite for real hardware
+
+[`scripts/targeted_validation.py`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/targeted_validation.py) and the
+Lean files in [`scripts/targeted/`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/scripts/targeted) produce
+[`data/targeted-validation.json`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/targeted-validation.json), summarized
+in [`data/targeted-validation.md`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/data/targeted-validation.md). It holds 140
+cases, 85 for NVIDIA and 55 for AMD, whose predicted outputs distinguish the
+models' numerical features: full block FMAs, cancellation, two passes,
+non-monotonicity, minimum alignment exponents, signed zeros, subnormals, TF32
+and extra alignment bits. Each case gives the input words, a suggested
+instruction, the predicted output word and what a mismatch would mean. Of the
+cases, 56 come from theorems, whose values the script re-checks. The suite has
+not yet been run on hardware.
+
 ## Fixed-width integer arithmetic
 
 Everything after the matrix multiplier can run in integer registers whose

@@ -84,7 +84,7 @@ modules evaluate large terms in the kernel, the largest for about two minutes ea
 | [`tests/`](tests/README.md) | Regression tests against the Z3 models' outputs and an exact-fraction oracle, and the axiom audits. |
 | [`examples/`](examples/README.md) | Worked examples. |
 | [`data/`](data/) | The Z3 models' inputs and outputs, and correctly rounded reference products, as binary32 and binary64 words. |
-| [`scripts/`](scripts/) | `check.py` (validation); `z3_reference.py`, `z3_adp_reference.py`, `z3_adp_labels.py`, `z3_adp_zero_policies.py`, `z3_specials_reference.py` and `correct_reference.py` (record `data/`). |
+| [`scripts/`](scripts/) | `check.py` (validation); `z3_reference.py`, `z3_adp_reference.py`, `z3_adp_labels.py`, `z3_adp_zero_policies.py`, `z3_specials_reference.py` and `correct_reference.py` (record `data/`); `fallback_sim.py` and `tile_sim.py` (simulated costs of correct rounding, per entry and per tile); `targeted_validation.py` with `targeted/` (the test suite for real hardware). |
 
 `TensorCore` and `MatrixCore` cannot be imported into the same file: both declare the `ℕ ℤ ℚ`
 notation and their own arithmetic. `Ozaki` therefore uses Lean's types directly, so it can be
@@ -229,6 +229,32 @@ are proved: slice counts chosen for precision `t + ⌈log₂ k⌉` remove the fa
 the first test (`Ozaki.ozaki1Bound_le_cr`), which brings binary64 fallbacks to about `0 %` on
 well-conditioned data in the rerun; and taking the exact fallback first when it is cheaper
 never costs more (`Ozaki.ozaki1CRA_cost_le`).
+
+**Per tile, measured.** A GEMM computes each slice product for a whole tile at once, so what the
+early exit saves also depends on scheduling. A second simulation
+([`scripts/tile_sim.py`](scripts/tile_sim.py), [`data/tile-sim.json`](data/tile-sim.json)) runs full
+`256 × 256` GEMMs with binary64 output at `k = 256, 1024, 4096`, about two million entries, under
+three schedules. Scheduling per entry gives the lower bound. Uniform scheduling per tile gives a
+whole `16 × 8` tile the next refinement if the test fails for any of its entries. Compaction packs
+the entries whose test failed into new tiles, either ideally or by gathering rows and columns, which
+accounts for the lost reuse of data. Uniform per-tile scheduling keeps 0–43 % of the per-entry
+saving with the plain list of slice counts, 48–95 % (median 60 %) with the `k`-dependent rule and
+48–100 % (median 86 %) for Ozaki-II. Gathering keeps a median of 93 % with the `k`-dependent rule
+and 94 % for Ozaki-II. Under heavy cancellation (condition number `10^6`), uniform per-tile Ozaki-I
+costs 8 % more than always taking the exact fallback. The work off the matrix multiplier is
+0.24–2.5 % of its multiply-adds for Ozaki-I and 3.5–9.6 % for Ozaki-II, under assumed weights per
+operation. Every interval and every result of a successful test was checked against the exact
+product. These are instruction counts, not GPU time.
+
+**A test suite for real hardware.** [`scripts/targeted_validation.py`](scripts/targeted_validation.py)
+and the Lean files in [`scripts/targeted/`](scripts/targeted/) produce
+[`data/targeted-validation.json`](data/targeted-validation.json) (summarized in
+[`data/targeted-validation.md`](data/targeted-validation.md)). It holds 140 cases, 85 for NVIDIA and
+55 for AMD, whose predicted outputs distinguish the models' numerical features: full block FMAs,
+cancellation, two passes, non-monotonicity, minimum alignment exponents, signed zeros, subnormals,
+TF32 and extra alignment bits. Each case gives the input words, a suggested instruction, the
+predicted output word and what a mismatch would mean. Of the cases, 56 come from theorems, whose
+values the script re-checks. The suite has not yet been run on hardware.
 
 **The rounding test succeeds at once on exact zeros.** The slicing bound counts only the positions
 where both entries are nonzero, so on an entry whose products are all zero, such as sparse rows and

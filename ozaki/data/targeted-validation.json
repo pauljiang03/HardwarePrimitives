@@ -1,0 +1,3797 @@
+{
+ "description": "Targeted hardware-validation suite: inputs that exercise the models' distinguishing cases and the boundaries the earlier NVIDIA measurements did not cover (minimum alignment exponents, signed zeros, subnormals, TF32's exponent range, H100 TF32 MMA), with the outputs the Lean models predict. See targeted-validation.md.",
+ "generated_by": "ozaki/scripts/targeted_validation.py",
+ "conventions": {
+  "block": "d = c + sum_i a_i * b_i for one output element; a_i, b_i are input words in k order, c and d binary32 words.",
+  "words": "hex; fp16/bf16 16-bit, tf32 the 19-bit tf19 word (a_fp32_register / b_fp32_register give the 32-bit register words, low 13 bits zero), binary32 and xf32 32-bit, fp8 8-bit FNUZ.",
+  "blocks": "NVIDIA: k is split into contiguous block FMAs of size fma_size_K, the FP32 output of each block FMA the c of the next. AMD: blocks of N_FMA, chained the same way.",
+  "zero_fill": "On an instruction with a larger k, place the vector in k = 0..len-1 and zeros elsewhere (a block FMA whose products are all zero returns c unchanged when c is finite and not -0); signed-zero cases need k equal to the vector length.",
+  "alternatives": "the same input evaluated by the model under a nearby hypothesis (another minimum alignment exponent, number of extra alignment bits or FMA size): which one the hardware matches localises a mismatch."
+ },
+ "predictions": {
+  "NVIDIA": "computed by #eval of TensorCore.runBlocks in ozaki/scripts/targeted/TensorCoreCases.lean; models in TensorCore/TC/CanonicalDefs.lean, TensorCore/TC/CanonicalFormatDefs.lean",
+  "AMD": "computed by #eval of MatrixCore.dotBits in ozaki/scripts/targeted/MatrixCoreCases.lean; models in amd/MatrixCore/MC/Models.lean"
+ },
+ "counts": {
+  "full-block-exactness": 8,
+  "cancellation": 6,
+  "two-pass": 12,
+  "non-monotonicity": 30,
+  "min-alignment-exponent": 8,
+  "signed-zero": 18,
+  "subnormal": 34,
+  "tf32-exponent-range": 12,
+  "h100-tf32-mma": 8,
+  "extra-alignment-bits": 4
+ },
+ "cases": [
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-full-block",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "Seven products 2047^2 (11-bit integers) in one A100 block FMA: the exact sum 29331463 needs 25 bits, so the FP32 output truncates it to 29331462.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4BDFC803",
+    "value": "29331462"
+   },
+   "exact_sum": "29331463",
+   "lean_source": "Ozaki.TC.a100_full_blockFMA (ozaki/OzakiTC/Limits.lean:51)",
+   "mismatch_means": "0x4BDFC804 (29331464) means the final conversion rounds to nearest rather than truncating; any other value means that the FMA size, the alignment to F = 24 fraction bits or the exact sum inside the block FMA is wrong. This is the case that limits Ozaki slices to fewer bits on A100.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-full-block",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FE"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "Fifteen products 2047^2 and one 2047*2046 in one H100 block FMA of size 16: exact sum 67041297, truncated to 67041296.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4C7FBE04",
+    "value": "67041296"
+   },
+   "exact_sum": "67041297",
+   "lean_source": "example at ozaki/OzakiTC/TwoPass.lean:565",
+   "mismatch_means": "Truncation and round-to-nearest agree here (the binary32 neighbours are 67041296 and 67041300), so the case tests the FMA size 16 and the exact sum: 0x4C7FBE05 (67041300) would mean rounding up, other values a different K or F = 25. Pass 2 of nv-h100-f16-two-pass tests the residual.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-exact-not-binary32",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0xE7FF", "0xE7FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0x67FF", "0x67FF"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "5 x 2047^2 + 1 - 2 x 2047^2 = 12570628: exact in one A100 block FMA, while left-to-right binary32 additions give 12570626.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B3FD004",
+    "value": "12570628"
+   },
+   "exact_sum": "12570628",
+   "lean_source": "Ozaki.TC.a100_exact_where_binary32_is_not (ozaki/OzakiTC/Limits.lean:62)",
+   "mismatch_means": "12570626 means the hardware accumulates in binary32 steps rather than with one wide alignment; the model's exact sum inside the block FMA would be wrong.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-full-block",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "CDNA 3 version of the full block: 7 x 2047^2 = 29331463 is rounded to nearest (even) as 29331464, where the A100 truncates to 29331462 (cross-vendor difference on identical inputs).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4BDFC804",
+    "value": "29331464"
+   },
+   "exact_sum": "29331463",
+   "lean_source": "Ozaki.MC.cdna3F16_full_blockFMA (ozaki/OzakiMC/Limits.lean:34)",
+   "mismatch_means": "29331462 would mean truncation (as on NVIDIA); 29331463 is not representable in binary32.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1-f16-exact-not-sfma",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0xE7FF", "0xE7FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0x67FF", "0x67FF"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "The 8-term vector 5 x 2047^2 + 1 - 2 x 2047^2 on the fp16 variant is exact (12570628).",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B3FD004",
+    "value": "12570628"
+   },
+   "exact_sum": "12570628",
+   "lean_source": "Ozaki.MC.fp16_exact_where_sfma_is_not (ozaki/OzakiMC/Limits.lean:51)",
+   "mismatch_means": "Another value means the fp16 block (exact sum / pairwise sums in binary32 / global alignment) differs from the model.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-f16-exact-not-sfma",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0xE7FF", "0xE7FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0x67FF", "0x67FF"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "The 8-term vector 5 x 2047^2 + 1 - 2 x 2047^2 on the fp16 variant is exact (12570628).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B3FD004",
+    "value": "12570628"
+   },
+   "exact_sum": "12570628",
+   "lean_source": "Ozaki.MC.fp16_exact_where_sfma_is_not (ozaki/OzakiMC/Limits.lean:51)",
+   "mismatch_means": "Another value means the fp16 block (exact sum / pairwise sums in binary32 / global alignment) differs from the model.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-exact-not-sfma",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0xE7FF", "0xE7FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x3C00", "0x67FF", "0x67FF"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "The 8-term vector 5 x 2047^2 + 1 - 2 x 2047^2 on the fp16 variant is exact (12570628).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B3FD004",
+    "value": "12570628"
+   },
+   "exact_sum": "12570628",
+   "lean_source": "Ozaki.MC.fp16_exact_where_sfma_is_not (ozaki/OzakiMC/Limits.lean:51)",
+   "mismatch_means": "Another value means the fp16 block (exact sum / pairwise sums in binary32 / global alignment) differs from the model.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-sfma-f32-not-exact",
+   "model": "sfmaF32",
+   "input_format": "binary32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x3F800000", "0xC4FFE000", "0xC4FFE000"],
+    "b": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x3F800000", "0x44FFE000", "0x44FFE000"]
+   },
+   "category": "full-block-exactness",
+   "purpose": "The same vector as binary32 words on the f32 MFMA (sequential FMA): rounds to 12570626.",
+   "architecture": "CDNA 1/2/3",
+   "instruction": "CDNA 1/2/3: v_mfma_f32_16x16x4f32 (k = 4; an SFMA chain, so longer vectors chain D -> C over several instructions, k in increasing order); 1-term: v_mfma_f32_32x32x1f32",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B3FD002",
+    "value": "12570626"
+   },
+   "exact_sum": "12570628",
+   "lean_source": "Ozaki.MC.fp16_exact_where_sfma_is_not (ozaki/OzakiMC/Limits.lean:51)",
+   "mismatch_means": "12570628 would mean the f32 MFMA does not round after each step (not an SFMA chain), or uses another order.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-cancel-zero",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x6800", "0x6800", "0x6800", "0x6800", "0xE800", "0xE800", "0xE800", "0xE800"],
+    "b": ["0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800"]
+   },
+   "category": "cancellation",
+   "purpose": "Four 2^22 and four -2^22 in one A100 block FMA (total magnitude 2^25, twice the 2^24 exactness bound): exact 0.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "Ozaki.TC.a100_cancel_zero (ozaki/OzakiTC/Cancellation.lean:349)",
+   "mismatch_means": "A nonzero output means the sum inside the block FMA is not exact for large cancelling terms, which would invalidate the cancellation-exactness theorems.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-cancel-2047",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0xE7FF", "0xE7FF", "0xE7FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"]
+   },
+   "category": "cancellation",
+   "purpose": "Four 2047^2 and three -2047^2: magnitude 7 x 2047^2 > 2^24, result exactly 2047^2 = 4190209.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4A7FC004",
+    "value": "4190209"
+   },
+   "exact_sum": "4190209",
+   "lean_source": "Ozaki.TC.a100_cancel_2047 (ozaki/OzakiTC/Cancellation.lean:359)",
+   "mismatch_means": "Another output means the aligned sum inside the block FMA loses bits when only the result fits in 24 bits.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-cancel-zero",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0xE800", "0xE800", "0xE800", "0xE800", "0xE800", "0xE800", "0xE800", "0xE800"],
+    "b": ["0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800"]
+   },
+   "category": "cancellation",
+   "purpose": "Eight 2^22 and eight -2^22, a full H100 block FMA of size 16: exact 0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "Ozaki.TC.h100_cancel_zero (ozaki/OzakiTC/Cancellation.lean:368)",
+   "mismatch_means": "A nonzero output means the H100 sum inside the block FMA is not exact.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-cancel-zero",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x6800", "0x6800", "0x6800", "0x6800", "0xE800", "0xE800", "0xE800", "0xE800"],
+    "b": ["0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800", "0x6800"]
+   },
+   "category": "cancellation",
+   "purpose": "Four 2^22 and four -2^22 in one CDNA 3 block of 8: +0.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "Ozaki.MC.cdna3_cancel_zero (ozaki/OzakiMC/Cancellation.lean:327)",
+   "mismatch_means": "A nonzero output means CDNA 3's global alignment loses the cancelling terms.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1-f16-cancel-c",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x4B000000",
+    "a": ["0x6800", "0xE800", "0x6800", "0xE800"],
+    "b": ["0x6800", "0x6800", "0x6800", "0x6800"]
+   },
+   "category": "cancellation",
+   "purpose": "c = 2^23 and products 2^22, -2^22, 2^22, -2^22: exactly 2^23 (on CDNA 2 every one of the pairwise sums cancels).",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B000000",
+    "value": "8388608"
+   },
+   "exact_sum": "8388608",
+   "lean_source": "Ozaki.MC.cdna12_cancel_c (ozaki/OzakiMC/Cancellation.lean:338)",
+   "mismatch_means": "Another output means c is not combined exactly with cancelling products.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-f16-cancel-c",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x4B000000",
+    "a": ["0x6800", "0xE800", "0x6800", "0xE800"],
+    "b": ["0x6800", "0x6800", "0x6800", "0x6800"]
+   },
+   "category": "cancellation",
+   "purpose": "c = 2^23 and products 2^22, -2^22, 2^22, -2^22: exactly 2^23 (on CDNA 2 every one of the pairwise sums cancels).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4B000000",
+    "value": "8388608"
+   },
+   "exact_sum": "8388608",
+   "lean_source": "Ozaki.MC.cdna12_cancel_c (ozaki/OzakiMC/Cancellation.lean:338)",
+   "mismatch_means": "Another output means c is not combined exactly with cancelling products.",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-two-pass/pass1",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"]
+   },
+   "category": "two-pass",
+   "purpose": "Two passes of the A100 full block: pass 1 (c = +0) gives D1 = 29331462; pass 2 from c = -D1 gives D2 = 1; D1 + D2 = 29331463 exactly.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4BDFC803",
+    "value": "29331462"
+   },
+   "exact_sum": "29331463",
+   "lean_source": "examples at ozaki/OzakiTC/TwoPass.lean:557 and :560 (Ozaki.TC.twoPass)",
+   "mismatch_means": "Pass 2 != 1.0 means the accumulator does not hold S - D1 exactly when c = -D1 (Ozaki.TC.twoPass_exact's hardware premise fails). Pass 2's c is the model's -D1; if pass 1 matches it is the device's own -D1.",
+   "family": "nv-a100-f16-two-pass",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-two-pass/pass2",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0xCBDFC803",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"]
+   },
+   "category": "two-pass",
+   "purpose": "Two passes of the A100 full block: pass 1 (c = +0) gives D1 = 29331462; pass 2 from c = -D1 gives D2 = 1; D1 + D2 = 29331463 exactly.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "1",
+   "lean_source": "examples at ozaki/OzakiTC/TwoPass.lean:557 and :560 (Ozaki.TC.twoPass)",
+   "mismatch_means": "Pass 2 != 1.0 means the accumulator does not hold S - D1 exactly when c = -D1 (Ozaki.TC.twoPass_exact's hardware premise fails). Pass 2's c is the model's -D1; if pass 1 matches it is the device's own -D1.",
+   "family": "nv-a100-f16-two-pass",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-two-pass/pass1",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FE"]
+   },
+   "category": "two-pass",
+   "purpose": "Two passes of the H100 block FMA: D1 = 67041296, D2 = 1, sum 67041297.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4C7FBE04",
+    "value": "67041296"
+   },
+   "exact_sum": "67041297",
+   "lean_source": "examples at ozaki/OzakiTC/TwoPass.lean:565 and :569",
+   "mismatch_means": "Pass 2 != 1.0 means two-pass recovery fails on H100.",
+   "family": "nv-h100-f16-two-pass",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-two-pass/pass2",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0xCC7FBE04",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FE"]
+   },
+   "category": "two-pass",
+   "purpose": "Two passes of the H100 block FMA: D1 = 67041296, D2 = 1, sum 67041297.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "1",
+   "lean_source": "examples at ozaki/OzakiTC/TwoPass.lean:565 and :569",
+   "mismatch_means": "Pass 2 != 1.0 means two-pass recovery fails on H100.",
+   "family": "nv-h100-f16-two-pass",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-two-pass/pass1",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF"]
+   },
+   "category": "two-pass",
+   "purpose": "Two passes of the CDNA 3 full block: D1 = 29331464, D2 = -1, sum 29331463.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4BDFC804",
+    "value": "29331464"
+   },
+   "exact_sum": "29331463",
+   "lean_source": "Ozaki.MC.cdna3F16_twoPass_full_blockFMA (ozaki/OzakiMC/TwoPass.lean:635)",
+   "mismatch_means": "Pass 2 != -1.0 means CDNA 3's late-c alignment loses S - D1.",
+   "family": "amd-cdna3-f16-two-pass",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-two-pass/pass2",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0xCBDFC804",
+    "a": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x0000"],
+    "b": ["0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF", "0x67FF"]
+   },
+   "category": "two-pass",
+   "purpose": "Two passes of the CDNA 3 full block: D1 = 29331464, D2 = -1, sum 29331463.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0xBF800000",
+    "value": "-1"
+   },
+   "exact_sum": "-1",
+   "lean_source": "Ozaki.MC.cdna3F16_twoPass_full_blockFMA (ozaki/OzakiMC/TwoPass.lean:635)",
+   "mismatch_means": "Pass 2 != -1.0 means CDNA 3's late-c alignment loses S - D1.",
+   "family": "amd-cdna3-f16-two-pass",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-sfma-f32-two-prod/pass1",
+   "model": "sfmaF32",
+   "input_format": "binary32",
+   "k": 1,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x4B7FFFFF"],
+    "b": ["0x4B7FFFFF"]
+   },
+   "category": "two-pass",
+   "purpose": "SFMA two passes are TwoProdFMA: (2^24 - 1)^2 rounds to 2^48 - 2^25; pass 2 returns 1.",
+   "architecture": "CDNA 1/2/3",
+   "instruction": "CDNA 1/2/3: v_mfma_f32_16x16x4f32 (k = 4; an SFMA chain, so longer vectors chain D -> C over several instructions, k in increasing order); 1-term: v_mfma_f32_32x32x1f32",
+   "predicted": {
+    "status": "ok",
+    "d": "0x577FFFFE",
+    "value": "281474943156224"
+   },
+   "exact_sum": "281474943156225",
+   "lean_source": "Ozaki.MC.sfma_twoProd (ozaki/OzakiMC/TwoPass.lean:642)",
+   "mismatch_means": "Pass 2 != 1.0 means the f32 MFMA does not compute c + a*b with one rounding (no fused product).",
+   "family": "amd-sfma-f32-two-prod",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-sfma-f32-two-prod/pass2",
+   "model": "sfmaF32",
+   "input_format": "binary32",
+   "k": 1,
+   "inputs": {
+    "c": "0xD77FFFFE",
+    "a": ["0x4B7FFFFF"],
+    "b": ["0x4B7FFFFF"]
+   },
+   "category": "two-pass",
+   "purpose": "SFMA two passes are TwoProdFMA: (2^24 - 1)^2 rounds to 2^48 - 2^25; pass 2 returns 1.",
+   "architecture": "CDNA 1/2/3",
+   "instruction": "CDNA 1/2/3: v_mfma_f32_16x16x4f32 (k = 4; an SFMA chain, so longer vectors chain D -> C over several instructions, k in increasing order); 1-term: v_mfma_f32_32x32x1f32",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "1",
+   "lean_source": "Ozaki.MC.sfma_twoProd (ozaki/OzakiMC/TwoPass.lean:642)",
+   "mismatch_means": "Pass 2 != 1.0 means the f32 MFMA does not compute c + a*b with one rounding (no fused product).",
+   "family": "amd-sfma-f32-two-prod",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-f16-two-pass-fails/pass1",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x6800", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x6800", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "two-pass",
+   "purpose": "CDNA 2: products 2^22 and 2^-14; the pairwise sums round 2^22 + 2^-14 to 2^22 before c is added, so pass 2 from c = -2^22 returns 0 and two passes miss 2^-14.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4A800000",
+    "value": "4194304"
+   },
+   "exact_sum": "68719476737 * 2^-14",
+   "lean_source": "Ozaki.MC.cdna2_twoPass_fails (ozaki/OzakiMC/TwoPass.lean:653)",
+   "mismatch_means": "Pass 2 = 2^-14 (0x38800000) would mean CDNA 2 adds c before rounding the product pair (no rounded pairwise sums), and two-pass recovery would hold on CDNA 2 after all.",
+   "family": "amd-cdna2-f16-two-pass-fails",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-f16-two-pass-fails/pass2",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0xCA800000",
+    "a": ["0x6800", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x6800", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "two-pass",
+   "purpose": "CDNA 2: products 2^22 and 2^-14; the pairwise sums round 2^22 + 2^-14 to 2^22 before c is added, so pass 2 from c = -2^22 returns 0 and two passes miss 2^-14.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-14",
+   "lean_source": "Ozaki.MC.cdna2_twoPass_fails (ozaki/OzakiMC/TwoPass.lean:653)",
+   "mismatch_means": "Pass 2 = 2^-14 (0x38800000) would mean CDNA 2 adds c before rounding the product pair (no rounded pairwise sums), and two-pass recovery would hold on CDNA 2 after all.",
+   "family": "amd-cdna2-f16-two-pass-fails",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1-f16-two-pass-recovers/pass1",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x6800", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x6800", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "two-pass",
+   "purpose": "The same block on CDNA 1, which sums exactly: pass 2 returns 2^-14 and two passes recover 2^22 + 2^-14.",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4A800000",
+    "value": "4194304"
+   },
+   "exact_sum": "68719476737 * 2^-14",
+   "lean_source": "Ozaki.MC.cdna2_twoPass_fails (ozaki/OzakiMC/TwoPass.lean:653)",
+   "mismatch_means": "Pass 2 = 0 would mean CDNA 1 rounds inside the block.",
+   "family": "amd-cdna1-f16-two-pass-recovers",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1-f16-two-pass-recovers/pass2",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0xCA800000",
+    "a": ["0x6800", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x6800", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "two-pass",
+   "purpose": "The same block on CDNA 1, which sums exactly: pass 2 returns 2^-14 and two passes recover 2^22 + 2^-14.",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x38800000",
+    "value": "1 * 2^-14"
+   },
+   "exact_sum": "1 * 2^-14",
+   "lean_source": "Ozaki.MC.cdna2_twoPass_fails (ozaki/OzakiMC/TwoPass.lean:653)",
+   "mismatch_means": "Pass 2 = 0 would mean CDNA 1 rounds inside the block.",
+   "family": "amd-cdna1-f16-two-pass-recovers",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100-f16-nonmonotone/c=1",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "Lowering c from 1 to 1 - 1ulp or 1 - 2ulp raises the V100 output from 0x3F800000 to 0x3F800001 (TC-EFT Theorem III.4/III.5 at K = 4, p = 0); at 1 - 3ulp it is 1 again.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "4194305 * 2^-22",
+   "lean_source": "TensorCore.nonmonotone_v100_family, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:11, :120)",
+   "mismatch_means": "Monotone outputs mean the alignment exponent does not follow c's exponent as modeled.",
+   "family": "nv-v100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-nonmonotone/c=1",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The A100 c-family (K = 8, p = 1, products 2^-25): c = 1 gives 1, c = 1 - 1ulp gives 1 + 1ulp.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "4194305 * 2^-22",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean A100's alignment differs from the model (K, F = 24 or truncation).",
+   "family": "nv-a100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-nonmonotone/c=1",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The H100 c-family (K = 16, p = 2, products 2^-26).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "4194305 * 2^-22",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean H100's alignment differs from the model.",
+   "family": "nv-h100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100-f16-nonmonotone/c=1-1ulp",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x3F7FFFFF",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "Lowering c from 1 to 1 - 1ulp or 1 - 2ulp raises the V100 output from 0x3F800000 to 0x3F800001 (TC-EFT Theorem III.4/III.5 at K = 4, p = 0); at 1 - 3ulp it is 1 again.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800001",
+    "value": "8388609 * 2^-23"
+   },
+   "exact_sum": "16777219 * 2^-24",
+   "lean_source": "TensorCore.nonmonotone_v100_family, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:11, :120)",
+   "mismatch_means": "Monotone outputs mean the alignment exponent does not follow c's exponent as modeled.",
+   "family": "nv-v100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-nonmonotone/c=1-1ulp",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F7FFFFF",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The A100 c-family (K = 8, p = 1, products 2^-25): c = 1 gives 1, c = 1 - 1ulp gives 1 + 1ulp.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800001",
+    "value": "8388609 * 2^-23"
+   },
+   "exact_sum": "16777219 * 2^-24",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean A100's alignment differs from the model (K, F = 24 or truncation).",
+   "family": "nv-a100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-nonmonotone/c=1-1ulp",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x3F7FFFFF",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The H100 c-family (K = 16, p = 2, products 2^-26).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800001",
+    "value": "8388609 * 2^-23"
+   },
+   "exact_sum": "16777219 * 2^-24",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean H100's alignment differs from the model.",
+   "family": "nv-h100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100-f16-nonmonotone/c=1-2ulp",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x3F7FFFFE",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "Lowering c from 1 to 1 - 1ulp or 1 - 2ulp raises the V100 output from 0x3F800000 to 0x3F800001 (TC-EFT Theorem III.4/III.5 at K = 4, p = 0); at 1 - 3ulp it is 1 again.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800001",
+    "value": "8388609 * 2^-23"
+   },
+   "exact_sum": "8388609 * 2^-23",
+   "lean_source": "TensorCore.nonmonotone_v100_family, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:11, :120)",
+   "mismatch_means": "Monotone outputs mean the alignment exponent does not follow c's exponent as modeled.",
+   "family": "nv-v100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-nonmonotone/c=1-2ulp",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F7FFFFE",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The A100 c-family (K = 8, p = 1, products 2^-25): c = 1 gives 1, c = 1 - 1ulp gives 1 + 1ulp.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800001",
+    "value": "8388609 * 2^-23"
+   },
+   "exact_sum": "8388609 * 2^-23",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean A100's alignment differs from the model (K, F = 24 or truncation).",
+   "family": "nv-a100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-nonmonotone/c=1-2ulp",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x3F7FFFFE",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The H100 c-family (K = 16, p = 2, products 2^-26).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800001",
+    "value": "8388609 * 2^-23"
+   },
+   "exact_sum": "8388609 * 2^-23",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean H100's alignment differs from the model.",
+   "family": "nv-h100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100-f16-nonmonotone/c=1-3ulp",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x3F7FFFFD",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "Lowering c from 1 to 1 - 1ulp or 1 - 2ulp raises the V100 output from 0x3F800000 to 0x3F800001 (TC-EFT Theorem III.4/III.5 at K = 4, p = 0); at 1 - 3ulp it is 1 again.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "16777217 * 2^-24",
+   "lean_source": "TensorCore.nonmonotone_v100_family, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:11, :120)",
+   "mismatch_means": "Monotone outputs mean the alignment exponent does not follow c's exponent as modeled.",
+   "family": "nv-v100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-f16-nonmonotone/c=1-3ulp",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F7FFFFD",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800", "0x0800"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The A100 c-family (K = 8, p = 1, products 2^-25): c = 1 gives 1, c = 1 - 1ulp gives 1 + 1ulp.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "16777217 * 2^-24",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean A100's alignment differs from the model (K, F = 24 or truncation).",
+   "family": "nv-a100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-f16-nonmonotone/c=1-3ulp",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x3F7FFFFD",
+    "a": ["0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400", "0x0400"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The H100 c-family (K = 16, p = 2, products 2^-26).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "16777217 * 2^-24",
+   "lean_source": "TensorCore.nonmonotone_ampere_hopper_witnesses, range_witnesses (tests/TensorCoreTests/TC/Monotonicity.lean:102, :120)",
+   "mismatch_means": "Monotone outputs mean H100's alignment differs from the model.",
+   "family": "nv-h100-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-f16-nonmonotone/x",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0200", "0x0000", "0x0000", "0x0000"],
+    "b": ["0xD200", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 2 fp16: raising p1 from -2^-10 (subnormal operand, flushed) to -2^-11 (normal) lowers the output from 0 to -2^-11.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "-3 * 2^-11",
+   "lean_source": "MatrixCore.cdna2F16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:146)",
+   "mismatch_means": "x giving -2^-10 means subnormal fp16 inputs are not flushed on CDNA 2.",
+   "family": "amd-cdna2-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-f16-nonmonotone/x'",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0400", "0x0000", "0x0000", "0x0000"],
+    "b": ["0xC800", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 2 fp16: raising p1 from -2^-10 (subnormal operand, flushed) to -2^-11 (normal) lowers the output from 0 to -2^-11.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0xBA000000",
+    "value": "-1 * 2^-11"
+   },
+   "exact_sum": "-1 * 2^-11",
+   "lean_source": "MatrixCore.cdna2F16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:146)",
+   "mismatch_means": "x giving -2^-10 means subnormal fp16 inputs are not flushed on CDNA 2.",
+   "family": "amd-cdna2-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-bf16-nonmonotone/x",
+   "model": "cdna2BF16",
+   "input_format": "bf16",
+   "k": 2,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0040", "0x0000"],
+    "b": ["0xF180", "0x0000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 2 bf16: -2^-27 (subnormal operand, flushed) rises to -2^-28; output falls 0 -> -2^-28.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x2bf16 (k = 2, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "-1 * 2^-27",
+   "lean_source": "MatrixCore.cdna2BF16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:152)",
+   "mismatch_means": "x giving -2^-27 means subnormal bf16 inputs are not flushed on CDNA 2.",
+   "family": "amd-cdna2-bf16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-bf16-nonmonotone/x'",
+   "model": "cdna2BF16",
+   "input_format": "bf16",
+   "k": 2,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000"],
+    "b": ["0xF080", "0x0000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 2 bf16: -2^-27 (subnormal operand, flushed) rises to -2^-28; output falls 0 -> -2^-28.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x2bf16 (k = 2, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0xB1800000",
+    "value": "-1 * 2^-28"
+   },
+   "exact_sum": "-1 * 2^-28",
+   "lean_source": "MatrixCore.cdna2BF16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:152)",
+   "mismatch_means": "x giving -2^-27 means subnormal bf16 inputs are not flushed on CDNA 2.",
+   "family": "amd-cdna2-bf16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-bf16_1k-nonmonotone/x",
+   "model": "cdna2BF16_1k",
+   "input_format": "bf16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0040", "0x0000", "0x0000", "0x0000"],
+    "b": ["0xF180", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The same on the CDNA 2 bf16 _1k variant (block of 4).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4bf16_1k (k = 4, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "-1 * 2^-27",
+   "lean_source": "MatrixCore.cdna2BF16_1k_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:156)",
+   "mismatch_means": "x giving -2^-27 means subnormal bf16 inputs are not flushed on _1k.",
+   "family": "amd-cdna2-bf16_1k-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2-bf16_1k-nonmonotone/x'",
+   "model": "cdna2BF16_1k",
+   "input_format": "bf16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000", "0x0000", "0x0000"],
+    "b": ["0xF080", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "The same on the CDNA 2 bf16 _1k variant (block of 4).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4bf16_1k (k = 4, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0xB1800000",
+    "value": "-1 * 2^-28"
+   },
+   "exact_sum": "-1 * 2^-28",
+   "lean_source": "MatrixCore.cdna2BF16_1k_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:156)",
+   "mismatch_means": "x giving -2^-27 means subnormal bf16 inputs are not flushed on _1k.",
+   "family": "amd-cdna2-bf16_1k-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-nonmonotone/x",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3C01", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x17FE", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 fp16: p1 rises from 2^-9 - 2^-29 (e_p = -10) to 2^-9 (e_p = 1, subnormal times 2^15); e_max rises and seven products 2^-24 are truncated away, so the output falls.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B0006F8",
+    "value": "1048799 * 2^-29"
+   },
+   "exact_sum": "1048799 * 2^-29",
+   "lean_source": "MatrixCore.cdna3F16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:164)",
+   "mismatch_means": "Equal or rising outputs mean CDNA 3 aligns by the products' values, not by the exponents of the denormalized products.",
+   "family": "amd-cdna3-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-nonmonotone/x'",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x7800", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 fp16: p1 rises from 2^-9 - 2^-29 (e_p = -10) to 2^-9 (e_p = 1, subnormal times 2^15); e_max rises and seven products 2^-24 are truncated away, so the output falls.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B000000",
+    "value": "1 * 2^-9"
+   },
+   "exact_sum": "32775 * 2^-24",
+   "lean_source": "MatrixCore.cdna3F16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:164)",
+   "mismatch_means": "Equal or rising outputs mean CDNA 3 aligns by the products' values, not by the exponents of the denormalized products.",
+   "family": "amd-cdna3-f16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-bf16-nonmonotone/x",
+   "model": "cdna3BF16",
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3FD9", "0x3980", "0x3980", "0x3980", "0x3980", "0x3980", "0x3980", "0x3980"],
+    "b": ["0x3C17", "0x39FE", "0x39FE", "0x39FE", "0x39FE", "0x39FE", "0x39FE", "0x39FE"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 bf16 analogue (2^-6 - 2^-21 rises to 2^-6 = 2^-133 * 2^127).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_bf16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3C8000BC",
+    "value": "2097199 * 2^-27"
+   },
+   "exact_sum": "16777593 * 2^-30",
+   "lean_source": "MatrixCore.cdna3BF16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:172)",
+   "mismatch_means": "As for fp16.",
+   "family": "amd-cdna3-bf16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-bf16-nonmonotone/x'",
+   "model": "cdna3BF16",
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x3980", "0x3980", "0x3980", "0x3980", "0x3980", "0x3980", "0x3980"],
+    "b": ["0x7F00", "0x39FE", "0x39FE", "0x39FE", "0x39FE", "0x39FE", "0x39FE", "0x39FE"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 bf16 analogue (2^-6 - 2^-21 rises to 2^-6 = 2^-133 * 2^127).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_bf16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3C800000",
+    "value": "1 * 2^-6"
+   },
+   "exact_sum": "16778105 * 2^-30",
+   "lean_source": "MatrixCore.cdna3BF16_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:172)",
+   "mismatch_means": "As for fp16.",
+   "family": "amd-cdna3-bf16-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-xf32-nonmonotone/x",
+   "model": "cdna3XF32",
+   "input_format": "xf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F802000", "0x39800000", "0x39800000", "0x39800000"],
+    "b": ["0x3AFFC000", "0x39800000", "0x39800000", "0x39800000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 XF32 analogue (2^-136 * 2^127).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x4_xf32 (k = 4, one block); or 16x16x8_xf32 with zeros in k = 4..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B0002F8",
+    "value": "1048671 * 2^-29"
+   },
+   "exact_sum": "1048671 * 2^-29",
+   "lean_source": "MatrixCore.cdna3XF32_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:179)",
+   "mismatch_means": "As for fp16; also tests XF32 subnormal tf19 operands.",
+   "family": "amd-cdna3-xf32-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-xf32-nonmonotone/x'",
+   "model": "cdna3XF32",
+   "input_format": "xf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00002000", "0x39800000", "0x39800000", "0x39800000"],
+    "b": ["0x7F000000", "0x39800000", "0x39800000", "0x39800000"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 XF32 analogue (2^-136 * 2^127).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x4_xf32 (k = 4, one block); or 16x16x8_xf32 with zeros in k = 4..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B000000",
+    "value": "1 * 2^-9"
+   },
+   "exact_sum": "32771 * 2^-24",
+   "lean_source": "MatrixCore.cdna3XF32_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:179)",
+   "mismatch_means": "As for fp16; also tests XF32 subnormal tf19 operands.",
+   "family": "amd-cdna3-xf32-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-fp8-e4m3-nonmonotone/x",
+   "model": "cdna3FP8 e4m3fnuz e4m3fnuz",
+   "input_format": "fp8 e4m3fnuz/e4m3fnuz",
+   "k": 16,
+   "inputs": {
+    "c": "0x33000000",
+    "a": ["0x2F", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
+    "b": ["0x40", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 fp8 E4M3: equal products, the larger e_max rounds c = 2^-25 down to zero.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x16_fp8_fp8 (k = 16, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3E700002",
+    "value": "7864321 * 2^-25"
+   },
+   "exact_sum": "7864321 * 2^-25",
+   "lean_source": "MatrixCore.cdna3E4M3_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:187)",
+   "mismatch_means": "Equal outputs mean c's late alignment (24, 32, RD) differs.",
+   "family": "amd-cdna3-fp8-e4m3-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-fp8-e4m3-nonmonotone/x'",
+   "model": "cdna3FP8 e4m3fnuz e4m3fnuz",
+   "input_format": "fp8 e4m3fnuz/e4m3fnuz",
+   "k": 16,
+   "inputs": {
+    "c": "0x33000000",
+    "a": ["0x01", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
+    "b": ["0x7F", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 fp8 E4M3: equal products, the larger e_max rounds c = 2^-25 down to zero.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x16_fp8_fp8 (k = 16, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3E700000",
+    "value": "15 * 2^-6"
+   },
+   "exact_sum": "7864321 * 2^-25",
+   "lean_source": "MatrixCore.cdna3E4M3_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:187)",
+   "mismatch_means": "Equal outputs mean c's late alignment (24, 32, RD) differs.",
+   "family": "amd-cdna3-fp8-e4m3-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-fp8-e5m2-nonmonotone/x",
+   "model": "cdna3FP8 e5m2fnuz e5m2fnuz",
+   "input_format": "fp8 e5m2fnuz/e5m2fnuz",
+   "k": 16,
+   "inputs": {
+    "c": "0x33000000",
+    "a": ["0x3B", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
+    "b": ["0x40", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 fp8 E5M2 analogue.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x16_bf8_bf8 (k = 16, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3EE00001",
+    "value": "14680065 * 2^-25"
+   },
+   "exact_sum": "14680065 * 2^-25",
+   "lean_source": "MatrixCore.cdna3E5M2_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:194)",
+   "mismatch_means": "As for E4M3.",
+   "family": "amd-cdna3-fp8-e5m2-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-fp8-e5m2-nonmonotone/x'",
+   "model": "cdna3FP8 e5m2fnuz e5m2fnuz",
+   "input_format": "fp8 e5m2fnuz/e5m2fnuz",
+   "k": 16,
+   "inputs": {
+    "c": "0x33000000",
+    "a": ["0x01", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"],
+    "b": ["0x7F", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00", "0x00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 fp8 E5M2 analogue.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x16_bf8_bf8 (k = 16, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3EE00000",
+    "value": "7 * 2^-4"
+   },
+   "exact_sum": "14680065 * 2^-25",
+   "lean_source": "MatrixCore.cdna3E5M2_nonmonotonic (amd/MatrixCore/MC/ProductMonotonicity.lean:194)",
+   "mismatch_means": "As for E4M3.",
+   "family": "amd-cdna3-fp8-e5m2-nonmonotone",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-products-not-determined/1.5x1.5",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3E00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x3E00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 with normal operands only: equal products 1.5 * 1.5 and 2.25 * 1 give different outputs (0x40100002 vs 0x40100000).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x40100002",
+    "value": "4718593 * 2^-21"
+   },
+   "exact_sum": "37748743 * 2^-24",
+   "lean_source": "MatrixCore.cdna3F16_products_not_determined (amd/MatrixCore/MC/ProductMonotonicity.lean:202)",
+   "mismatch_means": "Equal outputs mean CDNA 3 aligns on product values, not on the exponent e_a + e_b of the denormalized product.",
+   "family": "amd-cdna3-f16-products-not-determined",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3-f16-products-not-determined/2.25x1",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x4080", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"],
+    "b": ["0x3C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00", "0x0C00"]
+   },
+   "category": "non-monotonicity",
+   "purpose": "CDNA 3 with normal operands only: equal products 1.5 * 1.5 and 2.25 * 1 give different outputs (0x40100002 vs 0x40100000).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x40100000",
+    "value": "9 * 2^-2"
+   },
+   "exact_sum": "37748743 * 2^-24",
+   "lean_source": "MatrixCore.cdna3F16_products_not_determined (amd/MatrixCore/MC/ProductMonotonicity.lean:202)",
+   "mismatch_means": "Equal outputs mean CDNA 3 aligns on product values, not on the exponent e_a + e_b of the denormalized product.",
+   "family": "amd-cdna3-f16-products-not-determined",
+   "agrees_with_theorem": true
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-bf16-min-align-exp-kept",
+   "model": "a100BF16F32",
+   "fma_size_K": 8,
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x1C80", "0x9880", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x1C80", "0x1880", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Control half of the minimum-alignment-exponent probe: products 2^-140 and -2^-j with -2^-j exactly on the predicted grid 2^(eAlignMin - F) (A100: 2^-156; H100: 2^-158), so it is kept and the output is 2^-140 - 2^-149 (0x000001FF).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32 (k = 8, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x000001FF",
+    "value": "511 * 2^-149"
+   },
+   "exact_sum": "65535 * 2^-156",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x00000200 means the grid is coarser: a minimum alignment exponent at least one above the model's (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (bf16 K=8 F=24 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-131 (bf16 K=8 F=24 eAlignMin -131)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-133 (bf16 K=8 F=24 eAlignMin -133)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-tf32-min-align-exp-kept",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0E400", "0x4C400", "0x00000", "0x00000"],
+    "b": ["0x0E400", "0x0C400", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x1C800000", "0x98800000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x1C800000", "0x18800000", "0x00000000", "0x00000000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Control half of the minimum-alignment-exponent probe: products 2^-140 and -2^-j with -2^-j exactly on the predicted grid 2^(eAlignMin - F) (A100: 2^-156; H100: 2^-158), so it is kept and the output is 2^-140 - 2^-149 (0x000001FF).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x000001FF",
+    "value": "511 * 2^-149"
+   },
+   "exact_sum": "65535 * 2^-156",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x00000200 means the grid is coarser: a minimum alignment exponent at least one above the model's (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (tf32 K=4 F=24 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-131 (tf32 K=4 F=24 eAlignMin -131)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-133 (tf32 K=4 F=24 eAlignMin -133)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-bf16-min-align-exp-dropped",
+   "model": "a100BF16F32",
+   "fma_size_K": 8,
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x1C80", "0x9880", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x1C80", "0x1800", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Minimum-alignment-exponent probe: the maximum exponent (-140) is below the minimum alignment exponent, so the model aligns to it (A100 -132, H100 -133) and -2^-j, one step below the grid, is truncated away: output 2^-140 (0x00000200). Without a minimum alignment exponent (or with a lower one) it is kept: 0x000001FF.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32 (k = 8, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000200",
+    "value": "1 * 2^-140"
+   },
+   "exact_sum": "131071 * 2^-157",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x000001FF means no minimum alignment exponent, or one below the model's. Together with the -kept case the pair pins the minimum alignment exponent exactly.",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (bf16 K=8 F=24 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-131 (bf16 K=8 F=24 eAlignMin -131)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-133 (bf16 K=8 F=24 eAlignMin -133)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-tf32-min-align-exp-dropped",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0E400", "0x4C400", "0x00000", "0x00000"],
+    "b": ["0x0E400", "0x0C000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x1C800000", "0x98800000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x1C800000", "0x18000000", "0x00000000", "0x00000000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Minimum-alignment-exponent probe: the maximum exponent (-140) is below the minimum alignment exponent, so the model aligns to it (A100 -132, H100 -133) and -2^-j, one step below the grid, is truncated away: output 2^-140 (0x00000200). Without a minimum alignment exponent (or with a lower one) it is kept: 0x000001FF.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000200",
+    "value": "1 * 2^-140"
+   },
+   "exact_sum": "131071 * 2^-157",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x000001FF means no minimum alignment exponent, or one below the model's. Together with the -kept case the pair pins the minimum alignment exponent exactly.",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (tf32 K=4 F=24 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-131 (tf32 K=4 F=24 eAlignMin -131)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-133 (tf32 K=4 F=24 eAlignMin -133)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-bf16-min-align-exp-kept",
+   "model": "hopperBF16F32",
+   "fma_size_K": 16,
+   "input_format": "bf16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x1C80", "0x9880", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x1C80", "0x1780", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Control half of the minimum-alignment-exponent probe: products 2^-140 and -2^-j with -2^-j exactly on the predicted grid 2^(eAlignMin - F) (A100: 2^-156; H100: 2^-158), so it is kept and the output is 2^-140 - 2^-149 (0x000001FF).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 (k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x000001FF",
+    "value": "511 * 2^-149"
+   },
+   "exact_sum": "262143 * 2^-158",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x00000200 means the grid is coarser: a minimum alignment exponent at least one above the model's (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (bf16 K=16 F=25 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-132 (bf16 K=16 F=25 eAlignMin -132)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-134 (bf16 K=16 F=25 eAlignMin -134)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-min-align-exp-kept",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0E400", "0x4C400", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x0E400", "0x0BC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x1C800000", "0x98800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x1C800000", "0x17800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Control half of the minimum-alignment-exponent probe: products 2^-140 and -2^-j with -2^-j exactly on the predicted grid 2^(eAlignMin - F) (A100: 2^-156; H100: 2^-158), so it is kept and the output is 2^-140 - 2^-149 (0x000001FF).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x000001FF",
+    "value": "511 * 2^-149"
+   },
+   "exact_sum": "262143 * 2^-158",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x00000200 means the grid is coarser: a minimum alignment exponent at least one above the model's (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (tf32 K=8 F=25 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-132 (tf32 K=8 F=25 eAlignMin -132)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-134 (tf32 K=8 F=25 eAlignMin -134)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-bf16-min-align-exp-dropped",
+   "model": "hopperBF16F32",
+   "fma_size_K": 16,
+   "input_format": "bf16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x1C80", "0x9880", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x1C80", "0x1700", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Minimum-alignment-exponent probe: the maximum exponent (-140) is below the minimum alignment exponent, so the model aligns to it (A100 -132, H100 -133) and -2^-j, one step below the grid, is truncated away: output 2^-140 (0x00000200). Without a minimum alignment exponent (or with a lower one) it is kept: 0x000001FF.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 (k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000200",
+    "value": "1 * 2^-140"
+   },
+   "exact_sum": "524287 * 2^-159",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x000001FF means no minimum alignment exponent, or one below the model's. Together with the -kept case the pair pins the minimum alignment exponent exactly.",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (bf16 K=16 F=25 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-132 (bf16 K=16 F=25 eAlignMin -132)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-134 (bf16 K=16 F=25 eAlignMin -134)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-min-align-exp-dropped",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0E400", "0x4C400", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x0E400", "0x0B800", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x1C800000", "0x98800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x1C800000", "0x17000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "min-alignment-exponent",
+   "purpose": "Minimum-alignment-exponent probe: the maximum exponent (-140) is below the minimum alignment exponent, so the model aligns to it (A100 -132, H100 -133) and -2^-j, one step below the grid, is truncated away: output 2^-140 (0x00000200). Without a minimum alignment exponent (or with a lower one) it is kept: 0x000001FF.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000200",
+    "value": "1 * 2^-140"
+   },
+   "exact_sum": "524287 * 2^-159",
+   "lean_source": "constructed; Model.applyEAlignMin (TensorCore/TC/Defs.lean), PreparedBlock.alignExp (TensorCore/TC/Block.lean)",
+   "mismatch_means": "0x000001FF means no minimum alignment exponent, or one below the model's. Together with the -kept case the pair pins the minimum alignment exponent exactly.",
+   "alternatives": [
+    {
+     "hypothesis": "no-min-align-exp (tf32 K=8 F=25 no eAlignMin)",
+     "d": "0x000001FF"
+    },
+    {
+     "hypothesis": "min-align-exp-132 (tf32 K=8 F=25 eAlignMin -132)",
+     "d": "0x00000200"
+    },
+    {
+     "hypothesis": "min-align-exp-134 (tf32 K=8 F=25 eAlignMin -134)",
+     "d": "0x000001FF"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-negzero-products-negzero-c",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-negzero-products-poszero-c",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-zero-products-negzero-c",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-cancel-to-zero-negzero-c",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x3C00", "0xBC00", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-negzero-products-negzero-c",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-negzero-products-poszero-c",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-zero-products-negzero-c",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-cancel-to-zero-negzero-c",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x3C00", "0xBC00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-negzero-products-negzero-c",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-negzero-products-poszero-c",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-zero-products-negzero-c",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-cancel-to-zero-negzero-c",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x3C00", "0xBC00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1F16-negzero-products-negzero-c",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1F16-cancel-to-zero-negzero-c",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x3C00", "0xBC00", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2F16-negzero-products-negzero-c",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2F16-cancel-to-zero-negzero-c",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x3C00", "0xBC00", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3F16-negzero-products-negzero-c",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000", "0x8000"],
+    "b": ["0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00", "0x3C00"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3F16-cancel-to-zero-negzero-c",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x80000000",
+    "a": ["0x3C00", "0xBC00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "signed-zero",
+   "purpose": "Zero sums with -0 inputs. The model returns +0 for every zero sum, including c = -0 with -0 products, where IEEE addition gives -0.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; TensorCore.evalPrepared (round32 .truncate of the exact accumulator, TensorCore/TC/Block.lean) / MatrixCore fl32 (amd/MatrixCore/MC/Eval.lean)",
+   "mismatch_means": "0x80000000 means the hardware keeps the IEEE sign of zero; the model (and the theorems that exclude c = -0, e.g. zero_products_passthrough) would need a sign rule. The Ozaki layer takes zero signs from the inputs, not from the outputs of the matrix multiplier (Ozaki/SignedZero.lean), so its results are unaffected."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-subnormal-products",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0001", "0x0001", "0x0001"],
+    "b": ["0x0001", "0x0001", "0x0001", "0x0001"]
+   },
+   "category": "subnormal",
+   "purpose": "K products of the smallest fp16 subnormal (2^-24 * 2^-24 = 2^-48): exact.",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x28800000",
+    "value": "1 * 2^-46"
+   },
+   "exact_sum": "1 * 2^-46",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal fp16 operands are flushed."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-subnormal-operand-beside-normal",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x7BFF", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A subnormal fp16 operand (2^-24) times 65504 beside 2^-14 * 1: exact 2079 * 2^-19 if the subnormal is kept, 2^-14 if flushed (the model flushes only on CDNA 2).",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B81F000",
+    "value": "2079 * 2^-19"
+   },
+   "exact_sum": "2079 * 2^-19",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-14 (0x38800000) where the model keeps subnormals means inputs are flushed; the reverse on CDNA 2 means they are not."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-v100F16F32-subnormal-c-passthrough",
+   "model": "v100F16F32",
+   "fma_size_K": 4,
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000003",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "All-zero products with a subnormal c (3 * 2^-149): the model returns c unchanged (CDNA 2 flushes it to +0).",
+   "architecture": "V100",
+   "instruction": "V100: mma.sync.aligned.m8n8k4.row.col.f32.f16.f16.f32 (HMMA.884, k = 4, one block FMA); or WMMA m16n16k16 (HMMA.844, four block FMAs of size 4) with the vector in k = 0..3 and zeros elsewhere",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000003",
+    "value": "3 * 2^-149"
+   },
+   "exact_sum": "3 * 2^-149",
+   "lean_source": "TensorCore.zero_products_passthrough (TensorCore/TC/Instruction.lean:147); MatrixCore subnormals := false on CDNA 2",
+   "mismatch_means": "+0 on NVIDIA / CDNA 1 / CDNA 3 means subnormal c is flushed; 3 on CDNA 2 means it is not."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-subnormal-products",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001"],
+    "b": ["0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001"]
+   },
+   "category": "subnormal",
+   "purpose": "K products of the smallest fp16 subnormal (2^-24 * 2^-24 = 2^-48): exact.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x29000000",
+    "value": "1 * 2^-45"
+   },
+   "exact_sum": "1 * 2^-45",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal fp16 operands are flushed."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-subnormal-operand-beside-normal",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0400", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x7BFF", "0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A subnormal fp16 operand (2^-24) times 65504 beside 2^-14 * 1: exact 2079 * 2^-19 if the subnormal is kept, 2^-14 if flushed (the model flushes only on CDNA 2).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B81F000",
+    "value": "2079 * 2^-19"
+   },
+   "exact_sum": "2079 * 2^-19",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-14 (0x38800000) where the model keeps subnormals means inputs are flushed; the reverse on CDNA 2 means they are not."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-ampereF16F32-subnormal-c-passthrough",
+   "model": "ampereF16F32",
+   "fma_size_K": 8,
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000003",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "All-zero products with a subnormal c (3 * 2^-149): the model returns c unchanged (CDNA 2 flushes it to +0).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.f16.f16.f32 (HMMA.1688, k = 8, one block FMA); or m16n8k16 / WMMA m16n16k16 (two block FMAs of size 8) with the vector in k = 0..7",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000003",
+    "value": "3 * 2^-149"
+   },
+   "exact_sum": "3 * 2^-149",
+   "lean_source": "TensorCore.zero_products_passthrough (TensorCore/TC/Instruction.lean:147); MatrixCore subnormals := false on CDNA 2",
+   "mismatch_means": "+0 on NVIDIA / CDNA 1 / CDNA 3 means subnormal c is flushed; 3 on CDNA 2 means it is not."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-subnormal-products",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001"],
+    "b": ["0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001", "0x0001"]
+   },
+   "category": "subnormal",
+   "purpose": "K products of the smallest fp16 subnormal (2^-24 * 2^-24 = 2^-48): exact.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x29800000",
+    "value": "1 * 2^-44"
+   },
+   "exact_sum": "1 * 2^-44",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal fp16 operands are flushed."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-subnormal-operand-beside-normal",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0400", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x7BFF", "0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A subnormal fp16 operand (2^-24) times 65504 beside 2^-14 * 1: exact 2079 * 2^-19 if the subnormal is kept, 2^-14 if flushed (the model flushes only on CDNA 2).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B81F000",
+    "value": "2079 * 2^-19"
+   },
+   "exact_sum": "2079 * 2^-19",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-14 (0x38800000) where the model keeps subnormals means inputs are flushed; the reverse on CDNA 2 means they are not."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperF16F32-subnormal-c-passthrough",
+   "model": "hopperF16F32",
+   "fma_size_K": 16,
+   "input_format": "fp16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000003",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "All-zero products with a subnormal c (3 * 2^-149): the model returns c unchanged (CDNA 2 flushes it to +0).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32 or WMMA m16n16k16 (HMMA.16816, k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000003",
+    "value": "3 * 2^-149"
+   },
+   "exact_sum": "3 * 2^-149",
+   "lean_source": "TensorCore.zero_products_passthrough (TensorCore/TC/Instruction.lean:147); MatrixCore subnormals := false on CDNA 2",
+   "mismatch_means": "+0 on NVIDIA / CDNA 1 / CDNA 3 means subnormal c is flushed; 3 on CDNA 2 means it is not."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100BF16F32-subnormal-operand",
+   "model": "a100BF16F32",
+   "fma_size_K": 8,
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x4A80", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32 (k = 8, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x08000000",
+    "value": "1 * 2^-111"
+   },
+   "exact_sum": "1 * 2^-111",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100BF16F32-subnormal-output",
+   "model": "a100BF16F32",
+   "fma_size_K": 8,
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3D80", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32 (k = 8, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00080000",
+    "value": "1 * 2^-130"
+   },
+   "exact_sum": "1 * 2^-130",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperBF16F32-subnormal-operand",
+   "model": "hopperBF16F32",
+   "fma_size_K": 16,
+   "input_format": "bf16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x4A80", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 (k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x08000000",
+    "value": "1 * 2^-111"
+   },
+   "exact_sum": "1 * 2^-111",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperBF16F32-subnormal-output",
+   "model": "hopperBF16F32",
+   "fma_size_K": 16,
+   "input_format": "bf16",
+   "k": 16,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3D80", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 (k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00080000",
+    "value": "1 * 2^-130"
+   },
+   "exact_sum": "1 * 2^-130",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100TF32F32-subnormal-operand",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00001", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x3DC00", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x00002000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x7B800000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x37800000",
+    "value": "1 * 2^-16"
+   },
+   "exact_sum": "1 * 2^-16",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100TF32F32-subnormal-output",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00400", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x1EC00", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x00800000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3D800000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00080000",
+    "value": "1 * 2^-130"
+   },
+   "exact_sum": "1 * 2^-130",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32MmaF32-subnormal-operand",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00001", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x3DC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x00002000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x7B800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x37800000",
+    "value": "1 * 2^-16"
+   },
+   "exact_sum": "1 * 2^-16",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32MmaF32-subnormal-output",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00400", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x1EC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x00800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3D800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00080000",
+    "value": "1 * 2^-130"
+   },
+   "exact_sum": "1 * 2^-130",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32WmmaF32-subnormal-operand",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00001", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x3DC00", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x00002000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x7B800000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "ok",
+    "d": "0x37800000",
+    "value": "1 * 2^-16"
+   },
+   "exact_sum": "1 * 2^-16",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32WmmaF32-subnormal-output",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x00400", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x1EC00", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x00800000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3D800000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00080000",
+    "value": "1 * 2^-130"
+   },
+   "exact_sum": "1 * 2^-130",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1F16-subnormal-operand",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x33800000",
+    "value": "1 * 2^-24"
+   },
+   "exact_sum": "1 * 2^-24",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1F16-subnormal-operand-beside-normal",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x7BFF", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A subnormal fp16 operand (2^-24) times 65504 beside 2^-14 * 1: exact 2079 * 2^-19 if the subnormal is kept, 2^-14 if flushed (the model flushes only on CDNA 2).",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B81F000",
+    "value": "2079 * 2^-19"
+   },
+   "exact_sum": "2079 * 2^-19",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-14 (0x38800000) where the model keeps subnormals means inputs are flushed; the reverse on CDNA 2 means they are not."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1F16-subnormal-c-passthrough",
+   "model": "cdna1F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000003",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "All-zero products with a subnormal c (3 * 2^-149): the model returns c unchanged (CDNA 2 flushes it to +0).",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x4f16 (k = 4, one block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000003",
+    "value": "3 * 2^-149"
+   },
+   "exact_sum": "3 * 2^-149",
+   "lean_source": "TensorCore.zero_products_passthrough (TensorCore/TC/Instruction.lean:147); MatrixCore subnormals := false on CDNA 2",
+   "mismatch_means": "+0 on NVIDIA / CDNA 1 / CDNA 3 means subnormal c is flushed; 3 on CDNA 2 means it is not."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2F16-subnormal-operand",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-24",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2F16-subnormal-operand-beside-normal",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0400", "0x0000", "0x0000"],
+    "b": ["0x7BFF", "0x3C00", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A subnormal fp16 operand (2^-24) times 65504 beside 2^-14 * 1: exact 2079 * 2^-19 if the subnormal is kept, 2^-14 if flushed (the model flushes only on CDNA 2).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x38800000",
+    "value": "1 * 2^-14"
+   },
+   "exact_sum": "2079 * 2^-19",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-14 (0x38800000) where the model keeps subnormals means inputs are flushed; the reverse on CDNA 2 means they are not."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2F16-subnormal-c-passthrough",
+   "model": "cdna2F16",
+   "input_format": "fp16",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000003",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "All-zero products with a subnormal c (3 * 2^-149): the model returns c unchanged (CDNA 2 flushes it to +0).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x4f16 (k = 4, one pairwise block) for 4-term vectors; v_mfma_f32_32x32x8f16 (k = 8, two blocks of 4) for 8-term vectors",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "3 * 2^-149",
+   "lean_source": "TensorCore.zero_products_passthrough (TensorCore/TC/Instruction.lean:147); MatrixCore subnormals := false on CDNA 2",
+   "mismatch_means": "+0 on NVIDIA / CDNA 1 / CDNA 3 means subnormal c is flushed; 3 on CDNA 2 means it is not."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3F16-subnormal-operand",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x33800000",
+    "value": "1 * 2^-24"
+   },
+   "exact_sum": "1 * 2^-24",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3F16-subnormal-operand-beside-normal",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0400", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x7BFF", "0x3C00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A subnormal fp16 operand (2^-24) times 65504 beside 2^-14 * 1: exact 2079 * 2^-19 if the subnormal is kept, 2^-14 if flushed (the model flushes only on CDNA 2).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3B81F000",
+    "value": "2079 * 2^-19"
+   },
+   "exact_sum": "2079 * 2^-19",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-14 (0x38800000) where the model keeps subnormals means inputs are flushed; the reverse on CDNA 2 means they are not."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3F16-subnormal-c-passthrough",
+   "model": "cdna3F16",
+   "input_format": "fp16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000003",
+    "a": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "All-zero products with a subnormal c (3 * 2^-149): the model returns c unchanged (CDNA 2 flushes it to +0).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_f16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000003",
+    "value": "3 * 2^-149"
+   },
+   "exact_sum": "3 * 2^-149",
+   "lean_source": "TensorCore.zero_products_passthrough (TensorCore/TC/Instruction.lean:147); MatrixCore subnormals := false on CDNA 2",
+   "mismatch_means": "+0 on NVIDIA / CDNA 1 / CDNA 3 means subnormal c is flushed; 3 on CDNA 2 means it is not."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1BF16-subnormal-output",
+   "model": "cdna1BF16",
+   "input_format": "bf16",
+   "k": 2,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000"],
+    "b": ["0x3E80", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x2bf16 (k = 2, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00200000",
+    "value": "1 * 2^-128"
+   },
+   "exact_sum": "1 * 2^-128",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna1BF16-subnormal-operand",
+   "model": "cdna1BF16",
+   "input_format": "bf16",
+   "k": 2,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000"],
+    "b": ["0x4B00", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "CDNA 1 (MI100)",
+   "instruction": "MI100: v_mfma_f32_32x32x2bf16 (k = 2, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x08800000",
+    "value": "1 * 2^-110"
+   },
+   "exact_sum": "1 * 2^-110",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2BF16-subnormal-output",
+   "model": "cdna2BF16",
+   "input_format": "bf16",
+   "k": 2,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000"],
+    "b": ["0x3E80", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x2bf16 (k = 2, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-128",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna2BF16-subnormal-operand",
+   "model": "cdna2BF16",
+   "input_format": "bf16",
+   "k": 2,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000"],
+    "b": ["0x4B00", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "CDNA 2 (MI210/MI250)",
+   "instruction": "MI210/MI250: v_mfma_f32_32x32x2bf16 (k = 2, one block)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-110",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3BF16-subnormal-output",
+   "model": "cdna3BF16",
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0080", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x3E80", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "A product 2^-126 * 2^-4 = 2^-130 whose output is an FP32 subnormal (0x00080000).",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_bf16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00200000",
+    "value": "1 * 2^-128"
+   },
+   "exact_sum": "1 * 2^-128",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal outputs are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "AMD",
+   "id": "amd-cdna3BF16-subnormal-operand",
+   "model": "cdna3BF16",
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x0001", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"],
+    "b": ["0x4B00", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000", "0x0000"]
+   },
+   "category": "subnormal",
+   "purpose": "One subnormal operand (bf16 2^-133, TF32 2^-136, fp16 2^-24) times a normal one: exact.",
+   "architecture": "CDNA 3 (MI300)",
+   "instruction": "MI300: v_mfma_f32_32x32x8_bf16 (k = 8, one block of 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x08800000",
+    "value": "1 * 2^-110"
+   },
+   "exact_sum": "1 * 2^-110",
+   "lean_source": "constructed",
+   "mismatch_means": "0 means subnormal operands of this format are flushed (expected on CDNA 2 only)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100TF32F32-wide-spread",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x2EC00", "0x10C00", "0x6EC00", "0x00000"],
+    "b": ["0x2EC00", "0x10C00", "0x2EC00", "0x00000"],
+    "a_fp32_register": ["0x5D800000", "0x21800000", "0xDD800000", "0x00000000"],
+    "b_fp32_register": ["0x5D800000", "0x21800000", "0x5D800000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "Products 2^120, 2^-120, -2^120 (exponents far outside FP16's range): aligned to 2^120 the middle product is truncated away, so the output is 0 where the exact sum is 2^-120.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-120",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-120 means the TF32 variant keeps more than F bits below the maximum exponent (exact or order-dependent accumulation)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100TF32F32-small-range",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x10C00", "0x10800", "0x10000", "0x00000"],
+    "b": ["0x10C00", "0x10400", "0x10000", "0x00000"],
+    "a_fp32_register": ["0x21800000", "0x21000000", "0x20000000", "0x00000000"],
+    "b_fp32_register": ["0x21800000", "0x20800000", "0x20000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "Products 2^-120, 2^-123, 2^-126 (below FP16's range, normal in FP32): exact 73 * 2^-126.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x03920000",
+    "value": "73 * 2^-126"
+   },
+   "exact_sum": "73 * 2^-126",
+   "lean_source": "constructed",
+   "mismatch_means": "Another value means TF32 exponents are narrowed or the minimum alignment exponent acts differently."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100TF32F32-above-fp32-max-in-block",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F800", "0x3F800", "0x7F800", "0x00000"],
+    "b": ["0x1FC00", "0x1FC00", "0x1FC00", "0x00000"],
+    "a_fp32_register": ["0x7F000000", "0x7F000000", "0xFF000000", "0x00000000"],
+    "b_fp32_register": ["0x3F800000", "0x3F800000", "0x3F800000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "2^127 + 2^127 - 2^127: the partial sum 2^128 exceeds FP32's range but the aligned sum of the block FMA does not overflow, so the output is 2^127 (0x7F000000).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x7F000000",
+    "value": "170141183460469231731687303715884105728"
+   },
+   "exact_sum": "170141183460469231731687303715884105728",
+   "lean_source": "constructed",
+   "mismatch_means": "+Inf means the sum of the block FMA overflows at FP32 range (sequential binary32 additions, or a narrow accumulator exponent)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100TF32F32-overflow",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F800", "0x3F800", "0x00000", "0x00000"],
+    "b": ["0x1FC00", "0x1FC00", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x7F000000", "0x7F000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3F800000", "0x3F800000", "0x00000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "2^127 + 2^127 = 2^128: outside the model's domain (accumulatorOutOfRange, no output). Recorded to see what the hardware returns (presumably +Inf), not as a model prediction.",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "outside model domain",
+    "model_error": "accumulatorOutOfRange",
+    "d": null,
+    "value": null
+   },
+   "exact_sum": "340282366920938463463374607431768211456",
+   "lean_source": "TensorCore.ModelError.accumulatorOutOfRange (TensorCore/TC/Block.lean)",
+   "mismatch_means": "No model prediction; any finite output would be notable."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32MmaF32-wide-spread",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x2EC00", "0x10C00", "0x6EC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x2EC00", "0x10C00", "0x2EC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x5D800000", "0x21800000", "0xDD800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x5D800000", "0x21800000", "0x5D800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "Products 2^120, 2^-120, -2^120 (exponents far outside FP16's range): aligned to 2^120 the middle product is truncated away, so the output is 0 where the exact sum is 2^-120.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-120",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-120 means the TF32 variant keeps more than F bits below the maximum exponent (exact or order-dependent accumulation)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32MmaF32-small-range",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x10C00", "0x10800", "0x10000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x10C00", "0x10400", "0x10000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x21800000", "0x21000000", "0x20000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x21800000", "0x20800000", "0x20000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "Products 2^-120, 2^-123, 2^-126 (below FP16's range, normal in FP32): exact 73 * 2^-126.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x03920000",
+    "value": "73 * 2^-126"
+   },
+   "exact_sum": "73 * 2^-126",
+   "lean_source": "constructed",
+   "mismatch_means": "Another value means TF32 exponents are narrowed or the minimum alignment exponent acts differently."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32MmaF32-above-fp32-max-in-block",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F800", "0x3F800", "0x7F800", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x1FC00", "0x1FC00", "0x1FC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x7F000000", "0x7F000000", "0xFF000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3F800000", "0x3F800000", "0x3F800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "2^127 + 2^127 - 2^127: the partial sum 2^128 exceeds FP32's range but the aligned sum of the block FMA does not overflow, so the output is 2^127 (0x7F000000).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x7F000000",
+    "value": "170141183460469231731687303715884105728"
+   },
+   "exact_sum": "170141183460469231731687303715884105728",
+   "lean_source": "constructed",
+   "mismatch_means": "+Inf means the sum of the block FMA overflows at FP32 range (sequential binary32 additions, or a narrow accumulator exponent)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32MmaF32-overflow",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F800", "0x3F800", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "b": ["0x1FC00", "0x1FC00", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x7F000000", "0x7F000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3F800000", "0x3F800000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "2^127 + 2^127 = 2^128: outside the model's domain (accumulatorOutOfRange, no output). Recorded to see what the hardware returns (presumably +Inf), not as a model prediction.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "outside model domain",
+    "model_error": "accumulatorOutOfRange",
+    "d": null,
+    "value": null
+   },
+   "exact_sum": "340282366920938463463374607431768211456",
+   "lean_source": "TensorCore.ModelError.accumulatorOutOfRange (TensorCore/TC/Block.lean)",
+   "mismatch_means": "No model prediction; any finite output would be notable."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32WmmaF32-wide-spread",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x2EC00", "0x10C00", "0x6EC00", "0x00000"],
+    "b": ["0x2EC00", "0x10C00", "0x2EC00", "0x00000"],
+    "a_fp32_register": ["0x5D800000", "0x21800000", "0xDD800000", "0x00000000"],
+    "b_fp32_register": ["0x5D800000", "0x21800000", "0x5D800000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "Products 2^120, 2^-120, -2^120 (exponents far outside FP16's range): aligned to 2^120 the middle product is truncated away, so the output is 0 where the exact sum is 2^-120.",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "1 * 2^-120",
+   "lean_source": "constructed",
+   "mismatch_means": "2^-120 means the TF32 variant keeps more than F bits below the maximum exponent (exact or order-dependent accumulation)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32WmmaF32-small-range",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x10C00", "0x10800", "0x10000", "0x00000"],
+    "b": ["0x10C00", "0x10400", "0x10000", "0x00000"],
+    "a_fp32_register": ["0x21800000", "0x21000000", "0x20000000", "0x00000000"],
+    "b_fp32_register": ["0x21800000", "0x20800000", "0x20000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "Products 2^-120, 2^-123, 2^-126 (below FP16's range, normal in FP32): exact 73 * 2^-126.",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "ok",
+    "d": "0x03920000",
+    "value": "73 * 2^-126"
+   },
+   "exact_sum": "73 * 2^-126",
+   "lean_source": "constructed",
+   "mismatch_means": "Another value means TF32 exponents are narrowed or the minimum alignment exponent acts differently."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32WmmaF32-above-fp32-max-in-block",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F800", "0x3F800", "0x7F800", "0x00000"],
+    "b": ["0x1FC00", "0x1FC00", "0x1FC00", "0x00000"],
+    "a_fp32_register": ["0x7F000000", "0x7F000000", "0xFF000000", "0x00000000"],
+    "b_fp32_register": ["0x3F800000", "0x3F800000", "0x3F800000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "2^127 + 2^127 - 2^127: the partial sum 2^128 exceeds FP32's range but the aligned sum of the block FMA does not overflow, so the output is 2^127 (0x7F000000).",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "ok",
+    "d": "0x7F000000",
+    "value": "170141183460469231731687303715884105728"
+   },
+   "exact_sum": "170141183460469231731687303715884105728",
+   "lean_source": "constructed",
+   "mismatch_means": "+Inf means the sum of the block FMA overflows at FP32 range (sequential binary32 additions, or a narrow accumulator exponent)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-hopperTF32WmmaF32-overflow",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 4,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x3F800", "0x3F800", "0x00000", "0x00000"],
+    "b": ["0x1FC00", "0x1FC00", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x7F000000", "0x7F000000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x3F800000", "0x3F800000", "0x00000000", "0x00000000"]
+   },
+   "category": "tf32-exponent-range",
+   "purpose": "2^127 + 2^127 = 2^128: outside the model's domain (accumulatorOutOfRange, no output). Recorded to see what the hardware returns (presumably +Inf), not as a model prediction.",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "outside model domain",
+    "model_error": "accumulatorOutOfRange",
+    "d": null,
+    "value": null
+   },
+   "exact_sum": "340282366920938463463374607431768211456",
+   "lean_source": "TensorCore.ModelError.accumulatorOutOfRange (TensorCore/TC/Block.lean)",
+   "mismatch_means": "No model prediction; any finite output would be notable."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-full-block",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x00000"],
+    "b": ["0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x00000"],
+    "a_fp32_register": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x00000000"],
+    "b_fp32_register": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x00000000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "The A100 full-block witness in TF32 on H100 MMA (K = 8, F = 25): 7 x 2047^2 = 29331463 truncated to 29331462.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4BDFC803",
+    "value": "29331462"
+   },
+   "exact_sum": "29331463",
+   "lean_source": "constructed; analogue of Ozaki.TC.a100_full_blockFMA",
+   "mismatch_means": "Any other output means the H100 TF32 MMA model (K = 8, F = 25, truncation) is wrong."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-two-pass/pass1",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x00000"],
+    "b": ["0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x00000"],
+    "a_fp32_register": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x00000000"],
+    "b_fp32_register": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x00000000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "Two passes of the TF32 full block on H100 MMA: D1 = 29331462, D2 = 1.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x4BDFC803",
+    "value": "29331462"
+   },
+   "exact_sum": "29331463",
+   "lean_source": "constructed; Ozaki.TC.twoPass on hopperTF32MmaF32",
+   "mismatch_means": "Pass 2 != 1.0 means two-pass recovery fails on the H100 TF32 MMA variant.",
+   "family": "nv-h100-tf32mma-two-pass"
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-two-pass/pass2",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0xCBDFC803",
+    "a": ["0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x00000"],
+    "b": ["0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x227FF", "0x00000"],
+    "a_fp32_register": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x00000000"],
+    "b_fp32_register": ["0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x44FFE000", "0x00000000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "Two passes of the TF32 full block on H100 MMA: D1 = 29331462, D2 = 1.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "1",
+   "lean_source": "constructed; Ozaki.TC.twoPass on hopperTF32MmaF32",
+   "mismatch_means": "Pass 2 != 1.0 means two-pass recovery fails on the H100 TF32 MMA variant.",
+   "family": "nv-h100-tf32mma-two-pass"
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-cancel-zero",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x22800", "0x22800", "0x22800", "0x22800", "0x62800", "0x62800", "0x62800", "0x62800"],
+    "b": ["0x22800", "0x22800", "0x22800", "0x22800", "0x22800", "0x22800", "0x22800", "0x22800"],
+    "a_fp32_register": ["0x45000000", "0x45000000", "0x45000000", "0x45000000", "0xC5000000", "0xC5000000", "0xC5000000", "0xC5000000"],
+    "b_fp32_register": ["0x45000000", "0x45000000", "0x45000000", "0x45000000", "0x45000000", "0x45000000", "0x45000000", "0x45000000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "The cancellation witness in TF32 on H100 MMA: four 2^22, four -2^22, exact 0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x00000000",
+    "value": "0"
+   },
+   "exact_sum": "0",
+   "lean_source": "constructed; analogue of Ozaki.TC.h100_cancel_zero",
+   "mismatch_means": "A nonzero output means the H100 TF32 MMA sum inside the block FMA is not exact."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-tf32-k8-fma-size-probe",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x00000000",
+    "a": ["0x22C00", "0x22C00", "0x1FC00", "0x00000", "0x62C00", "0x62C00", "0x00000", "0x00000"],
+    "b": ["0x22800", "0x22800", "0x1FC00", "0x00000", "0x22800", "0x22800", "0x00000", "0x00000"],
+    "a_fp32_register": ["0x45800000", "0x45800000", "0x3F800000", "0x00000000", "0xC5800000", "0xC5800000", "0x00000000", "0x00000000"],
+    "b_fp32_register": ["0x45000000", "0x45000000", "0x3F800000", "0x00000000", "0x45000000", "0x45000000", "0x00000000", "0x00000000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "FMA-size probe, k = 8: 2^23 + 2^23 + 1 + 0 | -2^23 - 2^23 + 0 + 0. One block FMA of size 8 (H100 TF32 MMA) returns the exact 1; two chained block FMAs of size 4 (H100 TF32 WMMA, A100 TF32) round the first one's 2^24 + 1 to 2^24 and return 0.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "1",
+   "lean_source": "constructed; TensorCore.runBlocks (TensorCore/TC/Composition.lean)",
+   "mismatch_means": "0 on mma.sync.m16n8k8.tf32 means the FMA size of H100's TF32 MMA is 4, not 8.",
+   "alternatives": [
+    {
+     "hypothesis": "K4-chained (H100 WMMA) (hopperTF32WmmaF32)",
+     "d": "0x00000000"
+    },
+    {
+     "hypothesis": "K4-chained (A100) (a100TF32F32)",
+     "d": "0x00000000"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-align-bits-probe",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00"],
+    "b": ["0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800"],
+    "a_fp32_register": ["0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000"],
+    "b_fp32_register": ["0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "Extra-alignment-bits probe: c = 1 and eight products 1.5 * 2^-25. With F = 23 + p each product keeps floor(1.5 * 2^(p - 2)) grid units: p = 1 gives 1.0, p = 2 (model) 0x3F800002, p = 3 0x3F800003.",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800002",
+    "value": "4194305 * 2^-22"
+   },
+   "exact_sum": "8388611 * 2^-23",
+   "lean_source": "constructed",
+   "mismatch_means": "The output identifies p: see alternatives.",
+   "alternatives": [
+    {
+     "hypothesis": "p1 (tf32 K=8 F=24 eAlignMin -133)",
+     "d": "0x3F800000"
+    },
+    {
+     "hypothesis": "p3 (tf32 K=8 F=26 eAlignMin -133)",
+     "d": "0x3F800003"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-c-family/c=1",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00"],
+    "b": ["0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400"],
+    "a_fp32_register": ["0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000"],
+    "b_fp32_register": ["0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "The H100 FP16 c-family inputs in TF32 at the MMA FMA size 8 < 3 * 2^2: below the threshold of TC-EFT Theorem III.4, so the model predicts no inversion (both outputs 1.0).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "8388609 * 2^-23",
+   "lean_source": "constructed; TensorCore.nonmonotone_encoded (TensorCore/TC/Monotonicity.lean:273), below_threshold_monotone (tests/TensorCoreTests/TC/Monotonicity.lean:113)",
+   "mismatch_means": "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer extra alignment bits on the TF32 MMA variant.",
+   "family": "nv-h100-tf32mma-c-family"
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32mma-c-family/c=1-1ulp",
+   "model": "hopperTF32MmaF32",
+   "fma_size_K": 8,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F7FFFFF",
+    "a": ["0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00", "0x1CC00"],
+    "b": ["0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400", "0x1C400"],
+    "a_fp32_register": ["0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000", "0x39800000"],
+    "b_fp32_register": ["0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000", "0x38800000"]
+   },
+   "category": "h100-tf32-mma",
+   "purpose": "The H100 FP16 c-family inputs in TF32 at the MMA FMA size 8 < 3 * 2^2: below the threshold of TC-EFT Theorem III.4, so the model predicts no inversion (both outputs 1.0).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "16777217 * 2^-24",
+   "lean_source": "constructed; TensorCore.nonmonotone_encoded (TensorCore/TC/Monotonicity.lean:273), below_threshold_monotone (tests/TensorCoreTests/TC/Monotonicity.lean:113)",
+   "mismatch_means": "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer extra alignment bits on the TF32 MMA variant.",
+   "family": "nv-h100-tf32mma-c-family"
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-tf32wmma-align-bits-probe",
+   "model": "hopperTF32WmmaF32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00"],
+    "b": ["0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800"],
+    "a_fp32_register": ["0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000"],
+    "b_fp32_register": ["0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000"]
+   },
+   "category": "extra-alignment-bits",
+   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "architecture": "H100",
+   "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800002",
+    "value": "4194305 * 2^-22"
+   },
+   "exact_sum": "8388611 * 2^-23",
+   "lean_source": "constructed",
+   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives)."
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-tf32-align-bits-probe",
+   "model": "a100TF32F32",
+   "fma_size_K": 4,
+   "input_format": "tf32",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00", "0x1CE00"],
+    "b": ["0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800", "0x1C800"],
+    "a_fp32_register": ["0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000"],
+    "b_fp32_register": ["0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000"]
+   },
+   "category": "extra-alignment-bits",
+   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "8388611 * 2^-23",
+   "lean_source": "constructed",
+   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "p2 (tf32 K=4 F=25 eAlignMin -132)",
+     "d": "0x3F800002"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-a100-bf16-align-bits-probe",
+   "model": "a100BF16F32",
+   "fma_size_K": 8,
+   "input_format": "bf16",
+   "k": 8,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0"],
+    "b": ["0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900"]
+   },
+   "category": "extra-alignment-bits",
+   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "architecture": "A100",
+   "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32 (k = 8, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800000",
+    "value": "1"
+   },
+   "exact_sum": "8388611 * 2^-23",
+   "lean_source": "constructed",
+   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "p2 (bf16 K=8 F=25 eAlignMin -132)",
+     "d": "0x3F800002"
+    }
+   ]
+  },
+  {
+   "vendor": "NVIDIA",
+   "id": "nv-h100-bf16-align-bits-probe",
+   "model": "hopperBF16F32",
+   "fma_size_K": 16,
+   "input_format": "bf16",
+   "k": 16,
+   "inputs": {
+    "c": "0x3F800000",
+    "a": ["0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0"],
+    "b": ["0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900"]
+   },
+   "category": "extra-alignment-bits",
+   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "architecture": "H100",
+   "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 (k = 16, one block FMA)",
+   "predicted": {
+    "status": "ok",
+    "d": "0x3F800004",
+    "value": "2097153 * 2^-21"
+   },
+   "exact_sum": "4194307 * 2^-22",
+   "lean_source": "constructed",
+   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives).",
+   "alternatives": [
+    {
+     "hypothesis": "p1 (bf16 K=16 F=24 eAlignMin -133)",
+     "d": "0x3F800000"
+    },
+    {
+     "hypothesis": "p3 (bf16 K=16 F=26 eAlignMin -133)",
+     "d": "0x3F800006"
+    }
+   ]
+  }
+ ]
+}
