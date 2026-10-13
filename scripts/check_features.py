@@ -130,8 +130,8 @@ def main():
     got = run_rows(rows, 'canonical-features.txt')
     losses = dict(alignment=0, output=0, both=0)
     rejected = 0
-    exact_padding_checked = 0
-    source_padding_checked = 0
+    exact_neab_checked = 0
+    source_neab_checked = 0
     for args, result in zip(cases, got):
         expected = reference(args[3], *args[:3])
         if expected is None:
@@ -145,10 +145,10 @@ def main():
         alignment = expected['ideal'] != expected['accumulated']
         if args[1] >= 253 and (args[2] is None or args[2] <= 127):
             assert not alignment, (args, result)
-            exact_padding_checked += 1
+            exact_neab_checked += 1
         if args[1] >= 156 and (args[2] is None or args[2] <= 30):
             assert not alignment, (args, result)
-            source_padding_checked += 1
+            source_neab_checked += 1
         output = expected['accumulated'] != expected['value']
         losses['alignment'] += alignment
         losses['output'] += output
@@ -184,8 +184,8 @@ def main():
                   configurations=len({c[:3] for c in cases}), cases=len(cases), rejected=rejected, mismatches=0,
                   K=sorted({c[0] for c in cases}), extra_bits=sorted({c[1] for c in cases}),
                   exercised_losses=losses, published_device_comparisons=device_reports,
-                  exact_padding_accepted_cases=exact_padding_checked,
-                  source_padding_accepted_cases=source_padding_checked,
+                  exact_neab_accepted_cases=exact_neab_checked,
+                  source_neab_accepted_cases=source_neab_checked,
                   published_device_vectors=sum(r['vectors'] for r in device_reports),
                   new_gpu_measurements=False,
                   source_files_hash_checked=len(pins['sha256']),

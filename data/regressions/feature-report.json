@@ -76,8 +76,8 @@
       }
     }
   ],
-  "exact_padding_accepted_cases": 95,
-  "source_padding_accepted_cases": 142,
+  "exact_neab_accepted_cases": 95,
+  "source_neab_accepted_cases": 142,
   "published_device_vectors": 15000,
   "new_gpu_measurements": false,
   "source_files_hash_checked": 38,
