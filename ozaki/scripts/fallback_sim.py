@@ -54,7 +54,12 @@ Usage (numpy from the local uv cache, no network):
     uv run --offline --no-project --python 3.12 --with numpy \
         python scripts/fallback_sim.py --out data/fallback-sim.json
     uv run --offline --no-project --python 3.12 --with numpy \
+        python scripts/fallback_sim.py --rules --datasets \
+        uniform,spread8,spread40,cancel1e2,cancel1e6,cancel1e10,sparse90,block4,fp16,int27,int12
+    uv run --offline --no-project --python 3.12 --with numpy \
         python scripts/fallback_sim.py --summary data/fallback-sim.json   # markdown tables
+
+The second command reproduces data/fallback-sim-rules.json (54 configurations).
 """
 import argparse
 import json
@@ -68,7 +73,7 @@ from itertools import accumulate
 import numpy as np
 
 SLICE_BITS = 11          # b: slices are b-bit integers, |q| <= 2^b (Split.lean)
-WINDOW_BITS = 96         # W of TruncatedSum.lean
+TRUNCATED_SUM_BITS = 96  # W of TruncatedSum.lean
 MODULUS_CAP = 4096       # moduli <= 2^(b+1)
 FORMATS = {'binary64': (53, -1022, 1023), 'binary32': (24, -126, 127)}
 LIMB = 20                # limb width for the exact Ozaki-II integer products
@@ -590,7 +595,7 @@ def process_block(mode, Xv, Yv, fmt_name, cfg, rec, stats, nvalidate):
     else:
         for (t, u) in pairs:
             T[(t, u)] = np.einsum('ij,ij->i', X.Q[t], Y.Q[u], dtype=np.int64).tolist()
-    stats['engine_products_simulated'] += len(pairs)
+    stats['mm_products_simulated'] += len(pairs)
     stats['time_products'] += time.time() - t0
 
     # The entrywise bound: sum min(|x_i y_i|, 2^(E+F-s(b+1)-1)) for every s; overlap counts.
@@ -719,7 +724,7 @@ def process_block(mode, Xv, Yv, fmt_name, cfg, rec, stats, nvalidate):
         rec['kappa'].append(math.inf if zero else sabs[e] / abs(float(dy_frac(v))))
 
         # Triangle sums, exact (H) and truncated (TruncatedSum.lean), by anti-diagonals.
-        q = E + F - WINDOW_BITS
+        q = E + F - TRUNCATED_SUM_BITS
         Hs, Ws, Ns = [0], [0], [0]
         H = WS = nzt = 0
         for d in range(smax):
@@ -814,8 +819,8 @@ def summarize(rec, cfg):
     base = se ** 2
     smax_e = int(se.max())
     out = {'entries': n,
-           'exact_path_slices_hist': hist(se),
-           'exact_path_cost_mean': round(float(base.mean()), 3),
+           'exact_fallback_slices_hist': hist(se),
+           'exact_fallback_cost_mean': round(float(base.mean()), 3),
            'full_split_sxsy_cost_mean': round(float(sxsy.mean()), 3),
            'frac_exact_zero': frac(zero, n), 'frac_tie': frac(tie, n),
            'frac_representable': frac(rep & ~zero, n)}
@@ -834,17 +839,17 @@ def summarize(rec, cfg):
                               if t < s and u < s) for s in range(smax_e + 1)])
         o1[key] = {}
         for bound in BOUNDS1:
-            settle = np.full(n, -1)
+            succeeded_at = np.full(n, -1)
             for idx, s in enumerate(ss):
-                m = (settle < 0) & np.array(rec['ok1'][bound][s])
-                settle[m] = idx
-            fb = settle < 0
+                m = (succeeded_at < 0) & np.array(rec['ok1'][bound][s])
+                succeeded_at[m] = idx
+            fb = succeeded_at < 0
             extra = 1 if bound.startswith('overlap') else 0
             tris = np.array([tri(s) for s in ss])
             cum_noreuse = np.cumsum(tris)
-            cost = np.where(fb, tri(sl) + base - reuse[se], tris[np.maximum(settle, 0)]) + extra
+            cost = np.where(fb, tri(sl) + base - reuse[se], tris[np.maximum(succeeded_at, 0)]) + extra
             cost_noreuse = np.where(fb, cum_noreuse[-1] + base,
-                                    cum_noreuse[np.maximum(settle, 0)]) + extra
+                                    cum_noreuse[np.maximum(succeeded_at, 0)]) + extra
             # Adaptive: s_e is known after splitting; go straight to the exact fallback when it is
             # no dearer than the first test.
             direct = base <= tri(ss[0]) + extra
@@ -852,35 +857,35 @@ def summarize(rec, cfg):
             wl = np.array(rec['wide1'][bound][sl])
             hx = np.array(rec['hex1'][sl])
             o1[key][bound] = {
-                'settled_frac': {str(s): frac(settle == idx, n) for idx, s in enumerate(ss)},
+                'test_succeeded_frac': {str(s): frac(succeeded_at == idx, n) for idx, s in enumerate(ss)},
                 'exact_frac': frac(fb, n),
-                'exact_path_slices_mean': round(float(se[fb].mean()), 3) if fb.any() else None,
-                'exact_path_slices_hist': hist(se[fb]) if fb.any() else {},
+                'exact_fallback_slices_mean': round(float(se[fb].mean()), 3) if fb.any() else None,
+                'exact_fallback_slices_hist': hist(se[fb]) if fb.any() else {},
                 'cost_mean': round(float(cost.mean()), 3),
                 'cost_mean_no_reuse': round(float(cost_noreuse.mean()), 3),
                 'cost_mean_adaptive': round(float(cost_adapt.mean()), 3),
-                'cost_ratio_vs_exact_path': round(float(cost.mean() / base.mean()), 4),
+                'cost_ratio_vs_exact_fallback': round(float(cost.mean() / base.mean()), 4),
                 'fallbacks': fallback_mix(fb, zero, tie, rep, wl, hx),
             }
     o2 = {}
     counts = [len(ms) for ms, _ in cfg['oz2_cfgs']]
     cum = np.cumsum(counts)
     for bound in BOUNDS2:
-        settle = np.full(n, -1)
+        succeeded_at = np.full(n, -1)
         for c in range(len(counts)):
-            m = (settle < 0) & np.array(rec['ok2'][bound][c])
-            settle[m] = c
-        fb = settle < 0
-        cost = np.where(fb, cum[-1] + base, cum[np.maximum(settle, 0)])
+            m = (succeeded_at < 0) & np.array(rec['ok2'][bound][c])
+            succeeded_at[m] = c
+        fb = succeeded_at < 0
+        cost = np.where(fb, cum[-1] + base, cum[np.maximum(succeeded_at, 0)])
         wl = np.array(rec['wide2'][bound][len(counts) - 1])
         hx = np.array(rec['hex2'][len(counts) - 1])
         o2[bound] = {
-            'settled_frac': {str(cnt): frac(settle == c, n) for c, cnt in enumerate(counts)},
+            'test_succeeded_frac': {str(cnt): frac(succeeded_at == c, n) for c, cnt in enumerate(counts)},
             'exact_frac': frac(fb, n),
-            'exact_path_slices_mean': round(float(se[fb].mean()), 3) if fb.any() else None,
-            'exact_path_slices_hist': hist(se[fb]) if fb.any() else {},
+            'exact_fallback_slices_mean': round(float(se[fb].mean()), 3) if fb.any() else None,
+            'exact_fallback_slices_hist': hist(se[fb]) if fb.any() else {},
             'cost_mean': round(float(cost.mean()), 3),
-            'cost_ratio_vs_exact_path': round(float(cost.mean() / base.mean()), 4),
+            'cost_ratio_vs_exact_fallback': round(float(cost.mean() / base.mean()), 4),
             'fallbacks': fallback_mix(fb, zero, tie, rep, wl, hx),
         }
     out['ozaki1'] = o1
@@ -929,7 +934,7 @@ def run_dataset(name, k, fmt_name, args):
                                 'validate_exact', 'validate_exact_fail', 'validate_capsum',
                                 'validate_capsum_fail', 'validate_oz2', 'validate_oz2_fail',
                                 'validate_oz2_bounds', 'validate_oz2_bounds_fail',
-                                'engine_products_simulated')}
+                                'mm_products_simulated')}
     for key in ('time_slice', 'time_products', 'time_capsum', 'time_oz2', 'time_entries'):
         stats[key] = 0.0
     t0 = time.time()
@@ -991,22 +996,23 @@ def main():
     results = []
     meta = {
         'script': 'scripts/fallback_sim.py',
-        'slice_bits_b': SLICE_BITS, 'window_bits_W': WINDOW_BITS,
+        'slice_bits_b': SLICE_BITS, 'truncated_sum_bits_W': TRUNCATED_SUM_BITS,
         'entries_per_configuration': args.entries,
         'moduli': coprime_moduli(14),
         'settings': {f: {'ss_lists': SETTINGS[f]['ss_lists'],
                          'ozaki2_moduli_counts': SETTINGS[f]['oz2_counts']} for f in SETTINGS},
-        'cost_model': 'engine products (low-precision dot products of length k) per output '
-                      'entry; Ozaki-I reuses slice products across slice counts (split_prefix) '
-                      'and on the exact path; the overlap bound adds one product (support '
-                      'indicators); Ozaki-II configurations cost one product per modulus, '
-                      'without reuse; the exact path costs s_e^2 (ozaki1ExactFallback). Not GPU time.',
+        'cost_model': 'products on the matrix multiplier (low-precision dot products of length k) '
+                      'per output entry; Ozaki-I reuses slice products across slice counts '
+                      '(split_prefix) and in the exact fallback; the overlap bound adds one '
+                      'product (support indicators); Ozaki-II configurations cost one product '
+                      'per modulus, without reuse; the exact fallback costs s_e^2 '
+                      '(ozaki1ExactFallback). Not GPU time.',
         'fallback_categories': 'exact_zero: x.y = 0; tie: x.y exactly halfway between two '
                                'neighbours in the output format; wide_bound: 4B >= ulp(x.y) at '
-                               'the last check; near_boundary: the rest (x.y within 2B of a '
+                               'the last rounding test; near_boundary: the rest (x.y within 2B of a '
                                'rounding boundary with 4B < ulp); representable: x.y a format '
                                'value (overlaps the others); H_already_exact: H = x.y at the '
-                               'last check yet B > 0.',
+                               'last rounding test yet B > 0.',
     }
     t_all = time.time()
     for fmt_name in args.formats.split(','):
@@ -1056,15 +1062,15 @@ def print_summary(data):
             cells = []
             for bd in ('normwise', 'entrywise', 'overlap'):
                 d = o[bd]
-                cells.append(f"{pct(d['settled_frac'][str(s1)])} / {pct(d['settled_frac'][str(s2)])}"
+                cells.append(f"{pct(d['test_succeeded_frac'][str(s1)])} / {pct(d['test_succeeded_frac'][str(s2)])}"
                              f" / **{pct(d['exact_frac'])}**")
             kp = r.get('kappa_log10_p10_p50_p90', [None] * 3)[1]
-            sef = o['normwise']['exact_path_slices_mean']
+            sef = o['normwise']['exact_fallback_slices_mean']
             print(f"| {r['dataset']} | {r['k']} | {('1e%.1f' % kp) if kp is not None else '-'} | "
                   + ' | '.join(cells) +
                   f" | {sef if sef is not None else '-'} | "
                   f"{o['normwise']['cost_mean']:.1f} / {o['overlap']['cost_mean']:.1f} vs "
-                  f"{r['exact_path_cost_mean']:.1f} |")
+                  f"{r['exact_fallback_cost_mean']:.1f} |")
         print(f'\n### {fmt_name}: Ozaki-I, ss = [{ssb}], exact-fallback % (normwise / entrywise / '
               f'nonzero-position / nonzero-position + W=96 truncated sum) and mean cost\n')
         print('| data | k | exact % | cost (normwise / nonzero-position) | adaptive cost (nonzero-position) | exact fallback |')
@@ -1075,7 +1081,7 @@ def print_summary(data):
                             ('normwise', 'entrywise', 'overlap', 'overlap_w96'))
             print(f"| {r['dataset']} | {r['k']} | {ex} | {o['normwise']['cost_mean']:.1f} / "
                   f"{o['overlap']['cost_mean']:.1f} | {o['overlap']['cost_mean_adaptive']:.1f} | "
-                  f"{r['exact_path_cost_mean']:.1f} |")
+                  f"{r['exact_fallback_cost_mean']:.1f} |")
         counts = [c['moduli_count'] for c in rows[0]['ozaki2_configs']]
         print(f'\n### {fmt_name}: Ozaki-II, {counts} moduli in turn (% decided at each / exact fallback)\n')
         print('| data | k | P | rational bound | integer bound (boundK) | cost (rational) vs exact fallback |')
@@ -1085,11 +1091,11 @@ def print_summary(data):
             cells = []
             for bd in ('rational', 'integer'):
                 d = o[bd]
-                cells.append(' / '.join(pct(d['settled_frac'][str(c)]) for c in counts) +
+                cells.append(' / '.join(pct(d['test_succeeded_frac'][str(c)]) for c in counts) +
                              f" / **{pct(d['exact_frac'])}**")
             Ps = ','.join(str(c['P']) for c in r['ozaki2_configs'])
             print(f"| {r['dataset']} | {r['k']} | {Ps} | " + ' | '.join(cells) +
-                  f" | {o['rational']['cost_mean']:.1f} vs {r['exact_path_cost_mean']:.1f} |")
+                  f" | {o['rational']['cost_mean']:.1f} vs {r['exact_fallback_cost_mean']:.1f} |")
         print(f'\n### {fmt_name}: what the fallbacks are (Ozaki-I ss = [{ssa}], nonzero-position bound; '
               f'Ozaki-II rational)\n')
         print('| data | k | O-I fallbacks | zero | tie | near | wide | H exact | O-II fallbacks | '
