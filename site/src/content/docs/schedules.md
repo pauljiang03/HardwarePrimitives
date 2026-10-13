@@ -327,9 +327,10 @@ and the incoming accumulator exactly and rounds once, so the products inside one
 no order of their own, and the reduction order is the chain of instructions. Yang, Riasanovsky,
 Deng and Sarkar ([arXiv:2609.11356](https://arxiv.org/abs/2609.11356), September 2026) state this
 assumption for NVIDIA's fp16, bf16 and tf32 instructions (their Section 3.2.1) and report that
-their measurements, made on GB300, agree with it. On the models of V100, A100 and CDNA 1–3 it is
-both unsound and incomplete, because an instruction whose `k` exceeds the FMA size is a chain of
-block FMAs.
+their measurements, made on GB300, agree with it. Their setting is Blackwell, which the models here
+do not cover, so nothing below is a claim about their results. On the older architectures that the
+models do cover, V100, A100 and CDNA 1–3, the abstraction is both unsound and incomplete, because an
+instruction whose `k` exceeds the FMA size is a chain of block FMAs.
 
 **Unsound: it accepts a rewrite that changes the bits.** Exchange the products at `k = 0` and
 `k = 15` inside one `k = 16` instruction. A single rounding cannot see the change; a chain of
@@ -806,7 +807,7 @@ analysts, who get exact statements in place of rules of thumb.
 | Library guarantees (cuBLAS, PyTorch) | Run-to-run reproducibility under fixed versions and hardware | Reasons tied to the schedule, valid across configurations |
 | Correctly rounded or order-invariant arithmetic (RepDL, Xie, Zhang and Chen, [arXiv:2510.09180](https://arxiv.org/abs/2510.09180)) | Bits independent of order and platform, by changing the arithmetic | Reproducibility of the native kernels, where it holds |
 | Revealing accumulation orders by testing (FPRev, Xie, Gao, Wang and Xue, [arXiv:2411.00442](https://arxiv.org/abs/2411.00442), USENIX ATC 2025) and bit-accurate models of MMA units (MMA-Sim, Xie, Xu, Wang, Yang and Yang, [arXiv:2511.10909](https://arxiv.org/abs/2511.10909); Khattak, Mikaitis and Graziani) | The order and semantics of the hardware | The equational theory that the semantics induce on schedules, with proofs |
-| Static bitwise-equivalence checking of compiled kernels (Yang et al., [arXiv:2609.11356](https://arxiv.org/abs/2609.11356)) | Equivalence classes of compiled Triton kernels from PTX and AMDGCN, validated on 51,152 configurations on GB300 and 4,500 on gfx942, used to prune Triton's autotuner; on reductions and GEMMs it returns 1.0 to 2.5 times the true number of classes, and it reports classes rather than separating inputs | Semantics from validated block-FMA models instead of one rounding per instruction; laws proved for every input on the Tensor Core models; completeness, with a separating input for every inequivalent pair it decides; the extra equivalences of CDNA 1 and CDNA 2 |
+| Static bitwise-equivalence checking of compiled kernels (Yang et al., [arXiv:2609.11356](https://arxiv.org/abs/2609.11356)) | Equivalence classes of compiled Triton kernels from PTX and AMDGCN, validated on 51,152 configurations on GB300 and 4,500 on gfx942, used to prune Triton's autotuner; on most kernels it returns 1.0 to 2.5 times the true number of classes, and exactly the true partition on its GEMM family; it reports classes rather than separating inputs | Semantics from validated block-FMA models instead of one rounding per instruction; laws proved for every input on the Tensor Core models; completeness, with a separating input for every inequivalent pair it decides; the extra equivalences of CDNA 1 and CDNA 2 |
 
 The closest work is Yang et al.'s checker, which already works on real compiled kernels, covers
 reductions beyond GEMM and attention, and was measured on Hopper and Blackwell GPUs, none of which
