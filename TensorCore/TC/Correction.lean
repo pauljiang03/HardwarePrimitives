@@ -12,7 +12,7 @@ theorem corrected_correct (t : BlockTrace) (hr : absQ t.block.exactDot ≤ maxFi
   exact round32_nearestEven_correct _ hr
 
 /-- Correct rounding of the independently defined ideal encoded-input sum. -/
-theorem evalBlock_corrected_correct {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_corrected_correct {p : Model} {x : BlockInput p} {t : BlockTrace}
     {z : ℚ} (h : evalBlock x = .ok t) (hz : exactDot x = some z)
     (hr : absQ z ≤ maxFinite32) :
     ∃ b, t.corrected = some b ∧ NearestEven32 z b := by
@@ -38,7 +38,7 @@ theorem correctedSchedule_correct (initial : Finite32) (ts : List BlockTrace)
   exact round32_nearestEven_correct _ hr
 
 /-- Every successful executable schedule has a correctly rounded correction when its exact ideal sum is in the specified finite range. -/
-theorem runBlocks_corrected_correct (p : Profile) (initial : Finite32)
+theorem runBlocks_corrected_correct (p : Model) (initial : Finite32)
     (ps : List (List (p.Word × p.Word))) (ts : List BlockTrace)
     (h : runBlocks p initial.bits ps = .ok ts)
     (hr : absQ (initial.value + sumQ (ts.map fun t => t.block.exactProducts)) ≤ maxFinite32) :

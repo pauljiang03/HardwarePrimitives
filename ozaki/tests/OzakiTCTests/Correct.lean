@@ -219,19 +219,19 @@ example : (do
 /-! ## How often the fast path settles an entry -/
 
 /-- Whether the enclosure from `s` slices certifies the entry. -/
-def settles (s : ℕ) (x y : List ℚ) : Bool :=
-  ((ozaki1Enclosure (tcEngine v100F16F32) 11 s x y).bind fun p =>
+def succeeds (s : ℕ) (x y : List ℚ) : Bool :=
+  ((ozaki1Enclosure (tcMultiplier v100F16F32) 11 s x y).bind fun p =>
     roundEnclosure round32Value p.1 p.2).isSome
 
 /-- How many entries of `AB` the enclosure from `s` slices certifies. -/
-def settled (s : ℕ) (A B : List (List F32)) : Option ℕ := do
+def successCount (s : ℕ) (A B : List (List F32)) : Option ℕ := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
-  pure ((A.flatMap fun x => (transpose B).map fun y => settles s x y).count true)
+  pure ((A.flatMap fun x => (transpose B).map fun y => succeeds s x y).count true)
 
-example : settled 4 A_narrow B_narrow = some 16 ∧ settled 4 A_wide B_wide = some 16 := by
+example : successCount 4 A_narrow B_narrow = some 16 ∧ successCount 4 A_wide B_wide = some 16 := by
   decide +kernel
 
-example : settled 3 A_narrow B_narrow = some 14 ∧ settled 3 A_wide B_wide = some 16 := by
+example : successCount 3 A_narrow B_narrow = some 14 ∧ successCount 3 A_wide B_wide = some 16 := by
   decide +kernel
 
 /-! ## The exact path on Tensor Core blocks
@@ -267,32 +267,32 @@ own ESC rule picks for these inputs (`8` slices of width `56` for `narrow64`, `1
 `wide64`), and fewer with fewer slices. -/
 
 /-- Whether the Ozaki-II enclosure of one configuration certifies the entry. -/
-def settles2 (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
-  ((ozaki2Enclosure (tcEngine v100F16F32) B P x y).bind fun p =>
+def succeeds2 (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
+  ((ozaki2Enclosure (tcMultiplier v100F16F32) B P x y).bind fun p =>
     roundEnclosure round32Value p.1 p.2).isSome
 
-def settled2 (B : CRTBasis) (P : ℕ) (A Bm : List (List F32)) : Option ℕ := do
+def successCount2 (B : CRTBasis) (P : ℕ) (A Bm : List (List F32)) : Option ℕ := do
   let A ← decodeMatrix A; let Bm ← decodeMatrix Bm
-  pure ((A.flatMap fun x => (transpose Bm).map fun y => settles2 B P x y).count true)
+  pure ((A.flatMap fun x => (transpose Bm).map fun y => succeeds2 B P x y).count true)
 
-example : settled2 z3Basis 22 A_narrow B_narrow = some 0 ∧
-    settled2 z3Basis 22 A_wide B_wide = some 0 := by decide +kernel
-example : settled2 basis5 28 A_narrow B_narrow = some 12 ∧
-    settled2 basis5 28 A_wide B_wide = some 9 := by decide +kernel
-example : settled2 basis6 34 A_narrow B_narrow = some 16 ∧
-    settled2 basis6 34 A_wide B_wide = some 16 := by decide +kernel
+example : successCount2 z3Basis 22 A_narrow B_narrow = some 0 ∧
+    successCount2 z3Basis 22 A_wide B_wide = some 0 := by decide +kernel
+example : successCount2 basis5 28 A_narrow B_narrow = some 12 ∧
+    successCount2 basis5 28 A_wide B_wide = some 9 := by decide +kernel
+example : successCount2 basis6 34 A_narrow B_narrow = some 16 ∧
+    successCount2 basis6 34 A_wide B_wide = some 16 := by decide +kernel
 
 /-- Whether the ADP enclosure of `s` slices of width `W` certifies the entry. -/
-def settlesADP (s W : ℕ) (x y : List ℚ) : Bool :=
+def succeedsADP (s W : ℕ) (x y : List ℚ) : Bool :=
   (roundEnclosure fp64Round (adpEnclosure s W x y).1 (adpEnclosure s W x y).2).isSome
 
-def settledADP (s W : ℕ) (A Bm : List (List (BitVec 64))) : Option ℕ := do
+def successCountADP (s W : ℕ) (A Bm : List (List (BitVec 64))) : Option ℕ := do
   let A ← decode64 A; let Bm ← decode64 Bm
-  pure ((A.flatMap fun x => (transpose Bm).map fun y => settlesADP s W x y).count true)
+  pure ((A.flatMap fun x => (transpose Bm).map fun y => succeedsADP s W x y).count true)
 
-example : settledADP 8 56 A_narrow64 B_narrow64 = some 16 := by decide +kernel
-example : settledADP 11 81 A_wide64 B_wide64 = some 16 := by decide +kernel
-example : settledADP 8 62 A_wide64 B_wide64 = some 5 ∧
-    settledADP 9 70 A_wide64 B_wide64 = some 11 := by decide +kernel
+example : successCountADP 8 56 A_narrow64 B_narrow64 = some 16 := by decide +kernel
+example : successCountADP 11 81 A_wide64 B_wide64 = some 16 := by decide +kernel
+example : successCountADP 8 62 A_wide64 B_wide64 = some 5 ∧
+    successCountADP 9 70 A_wide64 B_wide64 = some 11 := by decide +kernel
 
 end OzakiTCTests.Correct

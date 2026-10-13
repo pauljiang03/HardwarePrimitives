@@ -78,7 +78,7 @@ theorem decodeWord_inFormat32 (w : ℕ) : (decodeWord .binary32 w).InFormat 24 (
 integer arithmetic**: the words decoded by integer operations, the special cases decided on the
 stored data, the finite entries through the integer scheme with the integer sign oracle; the
 result meets the IEEE specification on the words as MatrixCore decodes them. -/
-theorem mcOzaki1CRILW_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRILW_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {ws vs : List F32}
     (hlen : ws.length = vs.length) :
     crIEEEWord .binary32 (mcOzaki1CRIL P b W ss smax)

@@ -8,7 +8,7 @@ open Lean TensorCore
 private def word (n : ℕ) : Except String F32 :=
   if n < 2 ^ 32 then pure (BitVec.ofNat 32 n) else throw "FP32 word is out of range"
 
-private def path : String → Except String EFMachine.Path
+private def variant : String → Except String EFMachine.Variant
   | "v100-fp16" => pure .v100F16
   | "a100-fp16" => pure .ampereF16
   | "h100-fp16" => pure .hopperF16
@@ -27,17 +27,17 @@ private def resultJson : Except EFMachine.Error EFMachine.Result → Json
         | .boundedExact _ => "boundedExact" | .outOfRange => "outOfRange"))]
 
 private def block (j : Json) : Except String Json := do
-  let p ← j.getObjValAs? String "profile" >>= path
+  let p ← j.getObjValAs? String "profile" >>= variant
   let as ← j.getObjValAs? (List ℕ) "a"
   let bs ← j.getObjValAs? (List ℕ) "b"
   if as.length != bs.length then throw "Operand lists have different lengths"
   let ps ← (as.zip bs).mapM fun (a, b) => do
-    if a ≥ 2 ^ p.profile.input.width || b ≥ 2 ^ p.profile.input.width then
+    if a ≥ 2 ^ p.model.input.width || b ≥ 2 ^ p.model.input.width then
       throw "Product word is out of range"
-    pure ((BitVec.ofNat _ a, BitVec.ofNat _ b) : p.profile.Word × p.profile.Word)
+    pure ((BitVec.ofNat _ a, BitVec.ofNat _ b) : p.model.Word × p.model.Word)
   let c ← j.getObjValAs? ℕ "c" >>= word
   let d ← j.getObjValAs? ℕ "D" >>= word
-  let x : BlockInput p.profile := ⟨ps, c⟩
+  let x : BlockInput p.model := ⟨ps, c⟩
   pure <| Json.mkObj [("reference", resultJson (EFMachine.tcEft p x d)),
     ("native", resultJson (EFMachine.tcEftWithLean p x d))]
 

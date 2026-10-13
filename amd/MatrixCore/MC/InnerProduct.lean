@@ -14,11 +14,11 @@ def InputFormat.wordValue (i : InputFormat) (w : i.Word) : ℚ :=
   ((i.read w).toFinite.map Unpacked.value).getD 0
 
 /-- The exact `Σ_ℓ a_ℓ b_ℓ` of two operand vectors. -/
-def exactProducts (P : Profile) (a : List P.a.Word) (b : List P.b.Word) : ℚ :=
+def exactProducts (P : Model) (a : List P.a.Word) (b : List P.b.Word) : ℚ :=
   sumQ (List.zipWith (fun x y => P.a.wordValue x * P.b.wordValue y) a b)
 
 /-- The exact inner product `c + Σ_ℓ a_ℓ b_ℓ` of Eq. (1). -/
-def exactDot (P : Profile) (a : List P.a.Word) (b : List P.b.Word) (c : F32) : ℚ :=
+def exactDot (P : Model) (a : List P.a.Word) (b : List P.b.Word) (c : F32) : ℚ :=
   wordValue c + exactProducts P a b
 
 /-! ## One block -/
@@ -50,7 +50,7 @@ theorem InputFormat.wordValue_zero (i : InputFormat) : i.wordValue 0 = 0 := by
     | nan => rfl
   | xf32 => decide +kernel
 
-theorem mapM_products {P : Profile} : ∀ (xa : List P.a.Word) (xb : List P.b.Word)
+theorem mapM_products {P : Model} : ∀ (xa : List P.a.Word) (xb : List P.b.Word)
     (A B : List Unpacked), xa.mapM (fun w => (P.a.read w).toFinite) = some A →
     xb.mapM (fun w => (P.b.read w).toFinite) = some B →
     sumQ (List.zipWith (fun u v => u.value * v.value) A B) = exactProducts P xa xb
@@ -80,7 +80,7 @@ theorem mapM_products {P : Profile} : ∀ (xa : List P.a.Word) (xb : List P.b.Wo
               Option.map_some, Option.getD_some]
 
 /-- The exact products of an accepted block are `Σ a_ℓ b_ℓ` of its operand words. -/
-theorem evalBlock_products {P : Profile} {xa : List P.a.Word} {xb : List P.b.Word} {c : F32}
+theorem evalBlock_products {P : Model} {xa : List P.a.Word} {xb : List P.b.Word} {c : F32}
     {t : BlockTrace P} (h : evalBlock (P := P) ⟨xa, xb, c⟩ = .ok t) :
     t.prepared.products = exactProducts P xa xb := by
   have hp := (evalBlock_ok h).2.2.1
@@ -103,7 +103,7 @@ theorem evalBlock_products {P : Profile} {xa : List P.a.Word} {xb : List P.b.Wor
 
 /-! ## The blocks of an inner product -/
 
-theorem runBlocks_products_blocks {P : Profile} {c : F32}
+theorem runBlocks_products_blocks {P : Model} {c : F32}
     {bs : List (List P.a.Word × List P.b.Word)} {ts : List (BlockTrace P)}
     (h : runBlocks P c bs = .ok ts) :
     sumQ (ts.map fun t => t.prepared.products) =
@@ -140,7 +140,7 @@ theorem padToBlocks_length (n : ℕ) (xs : List (BitVec w)) :
   simp [padToBlocks]
 
 /-- The blocks' exact products add up to `Σ_ℓ a_ℓ b_ℓ` of the whole vectors. -/
-theorem blocks_products (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word} {b : List P.b.Word}
+theorem blocks_products (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word} {b : List P.b.Word}
     (hlen : a.length = b.length) :
     sumQ ((blocks P a b).map fun ab => exactProducts P ab.1 ab.2) = exactProducts P a b := by
   unfold blocks
@@ -163,14 +163,14 @@ theorem blocks_products (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word} {b :
 
 /-- **Exact inner product.** The blocks of an accepted inner product have exact products
 `Σ_ℓ a_ℓ b_ℓ` over the whole vectors. -/
-theorem runBlocks_products (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word}
+theorem runBlocks_products (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word}
     {b : List P.b.Word} {c : F32} {ts : List (BlockTrace P)} (hlen : a.length = b.length)
     (h : runBlocks P c (blocks P a b) = .ok ts) :
     sumQ (ts.map fun t => t.prepared.products) = exactProducts P a b := by
   rw [runBlocks_products_blocks h, blocks_products P hn hlen]
 
 /-- The exact inner product equals the output plus the blocks' residuals. -/
-theorem dotBits_exact_ledger (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word}
+theorem dotBits_exact_ledger (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word}
     {b : List P.b.Word} {c d : F32} (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
     ∃ ts, runBlocks P c (blocks P a b) = .ok ts ∧ lastOutput c ts = d ∧
       exactDot P a b c = wordValue d + sumQ (ts.map BlockTrace.residual) := by
@@ -181,7 +181,7 @@ theorem dotBits_exact_ledger (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word}
 
 /-- **Error of an inner product.** If every accepted block's residual is bounded by `B`, the
 output is within the sum of the blocks' bounds of the exact `c + Σ_ℓ a_ℓ b_ℓ`. -/
-theorem dotBits_exact_error (P : Profile) (hn : 0 < P.nfma) {B : BlockTrace P → ℚ}
+theorem dotBits_exact_error (P : Model) (hn : 0 < P.nfma) {B : BlockTrace P → ℚ}
     (hB : ∀ x t, evalBlock x = .ok t → absQ t.residual ≤ B t)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :

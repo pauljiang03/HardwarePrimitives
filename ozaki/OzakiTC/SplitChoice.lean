@@ -13,7 +13,7 @@ Ozaki-I on a Tensor Core path has three knobs, each exact by a theorem of this d
   `tcSplitK_exactOn`): four for `11`-bit slices, sixteen for `10`-bit, `256` for `8`-bit; a chunk
   longer than the group `K` runs as chained groups;
 * **one or two passes**: the two-pass engine runs every group twice (`c = 0`, then `c = −D1`) and
-  is exact on full groups when `K · 2^(2b) ≤ 2^(F+1)` (`tcEngine2_exactOn`).
+  is exact on full groups when `K · 2^(2b) ≤ 2^(F+1)` (`tcMultiplier2_exactOn`).
 
 `candidates p bmax` lists every configuration these theorems make exact on path `p`
 (`candidates_exact`). `SliceRun.blocks K k` counts the Tensor Core blocks (one group of `K`
@@ -27,7 +27,7 @@ block, as a matrix instruction computes `K` products whatever their values.
 (`slicing_term_le_maxAbs`): `t = 24` for a binary32-level result, `t = 53` for FP64. The Ozaki-I
 triangle then has `s(s+1)/2` slice products, and the cost of a configuration is
 `s(s+1)/2 · blocks`. For the exact path of correctly rounded FP64 (`smax (b+1) > 2098`, all `s²`
-products) the worst case is `exactPathCost`.
+products) the worst case is `exactFallbackCost`.
 
 **The cost is in model blocks, not measured time.** It counts matrix-instruction groups; it ignores
 the integer work off the engine (slicing, adding chunk results), memory traffic, and the fact that
@@ -55,7 +55,7 @@ this cost the two-pass engine never wins: whenever two passes make a full group 
 products exact, `10`-bit slices make it exact in one pass, and the extra slice costs less than the
 second pass. Where `K = 4` (V100 fp16, the tf32 `wmma` paths) a group holds only four products
 whatever the width, so `11`-bit slices are best. The worst-case exact path follows the same pattern
-(`h100F16_exactPath`). -/
+(`h100F16_exactFallback`). -/
 
 open TensorCore
 
@@ -77,9 +77,9 @@ def SliceRun.width : SliceRun → ℕ
   | .twoPass b => b
 
 /-- The engine of a configuration. -/
-def SliceRun.engine (p : Profile) : SliceRun → Engine
+def SliceRun.multiplier (p : Model) : SliceRun → MatrixMultiplier
   | .splitK b => tcSplitK p b
-  | .twoPass _ => tcEngine2 p
+  | .twoPass _ => tcMultiplier2 p
 
 /-- **Blocks per slice product** of inner dimension `k` on a path with groups of `K`: split-K runs
 `⌈length / K⌉` groups per chunk (`groupsOf_count`), two passes run every group twice. -/
@@ -93,32 +93,32 @@ def SliceRun.cost (K t k : ℕ) (r : SliceRun) : ℕ :=
   (trianglePairs (slicesFor r.width t)).length * r.blocks K k
 
 /-- The worst-case exact path of correctly rounded FP64: all `s²` slice products. -/
-def SliceRun.exactPathCost (K k : ℕ) (r : SliceRun) : ℕ :=
+def SliceRun.exactFallbackCost (K k : ℕ) (r : SliceRun) : ℕ :=
   exactSlices r.width * exactSlices r.width * r.blocks K k
 
 /-- Split-K with `b`-bit slices is exact on path `p`: `1 ≤ b`, `2b ≤ 24`, `2b ≤ F`. -/
-def splitOK (p : Profile) (b : ℕ) : Bool :=
-  decide (1 ≤ b) && decide (2 * b ≤ 24) && decide (2 * (b : ℤ) ≤ p.alignMantissaBits)
+def splitOK (p : Model) (b : ℕ) : Bool :=
+  decide (1 ≤ b) && decide (2 * b ≤ 24) && decide (2 * (b : ℤ) ≤ p.alignFracBits)
 
 /-- Two passes with `b`-bit slices are exact on path `p`: `1 ≤ b`, `2b ≤ F ≤ 25`, and
 `K · 2^(2b) ≤ 2^(F+1)`. -/
-def twoPassOK (p : Profile) (b : ℕ) : Bool :=
-  decide (1 ≤ b) && decide (2 * (b : ℤ) ≤ p.alignMantissaBits) &&
-    decide (p.alignMantissaBits ≤ 25) &&
-    decide (p.products * 2 ^ (2 * b) ≤ 2 ^ (p.alignMantissaBits.toNat + 1))
+def twoPassOK (p : Model) (b : ℕ) : Bool :=
+  decide (1 ≤ b) && decide (2 * (b : ℤ) ≤ p.alignFracBits) &&
+    decide (p.alignFracBits ≤ 25) &&
+    decide (p.nfma * 2 ^ (2 * b) ≤ 2 ^ (p.alignFracBits.toNat + 1))
 
 /-- **Every configuration the exactness theorems allow** on path `p` with slices of at most `bmax`
 bits, widest first: split-K, then two passes. -/
-def candidates (p : Profile) (bmax : ℕ) : List SliceRun :=
+def candidates (p : Model) (bmax : ℕ) : List SliceRun :=
   ((List.range (bmax + 1)).reverse.filter (splitOK p)).map .splitK ++
     ((List.range (bmax + 1)).reverse.filter (twoPassOK p)).map .twoPass
 
 /-- **Every candidate is exact**, on vectors of every length. -/
-theorem candidates_exact {p : Profile} {bmax : ℕ}
-    (hfloor : ∀ f ∈ p.alignFloor, f ≤ p.alignMantissaBits) (hwide : 23 ≤ p.alignMantissaBits)
-    (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.products) :
-    ∀ r ∈ candidates p bmax, ∀ B, (r.engine p).ExactOn r.width B := by
-  have hint : ∀ b : ℕ, 1 ≤ b → 2 * (b : ℤ) ≤ p.alignMantissaBits → IntExact p b :=
+theorem candidates_exact {p : Model} {bmax : ℕ}
+    (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits) (hwide : 23 ≤ p.alignFracBits)
+    (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma) :
+    ∀ r ∈ candidates p bmax, ∀ B, (r.multiplier p).ExactOn r.width B := by
+  have hint : ∀ b : ℕ, 1 ≤ b → 2 * (b : ℤ) ≤ p.alignFracBits → IntExact p b :=
     fun b hb1 hb => ⟨hb, hwide, hfloor, by omega⟩
   have hholds : ∀ b : ℕ, b ≤ bmax → HoldsInts p b :=
     fun b hb => ⟨hh.wellFormed, Nat.le_trans hb hh.bits, hh.emin, hh.emax⟩
@@ -129,28 +129,28 @@ theorem candidates_exact {p : Profile} {bmax : ℕ}
     simp only [List.mem_reverse, List.mem_range] at hbr
     simp only [splitOK, Bool.and_eq_true, decide_eq_true_eq] at hok
     obtain ⟨⟨h1, h24⟩, hF⟩ := hok
-    exact tcSplitK_exactOn (tcEngine_exactOn (hint b h1 hF) (hholds b (by omega)) hK) h24 B
+    exact tcSplitK_exactOn (tcMultiplier_exactOn (hint b h1 hF) (hholds b (by omega)) hK) h24 B
   · obtain ⟨b, hb, rfl⟩ := List.mem_map.mp hr
     obtain ⟨hbr, hok⟩ := List.mem_filter.mp hb
     simp only [List.mem_reverse, List.mem_range] at hbr
     simp only [twoPassOK, Bool.and_eq_true, decide_eq_true_eq] at hok
     obtain ⟨⟨⟨h1, hF⟩, hF25⟩, hKn⟩ := hok
-    refine tcEngine2_exactOn (hint b h1 hF) (hholds b (by omega)) h1 hF25 hK ?_ B
-    have hc : ((p.products * 2 ^ (2 * b) : ℕ) : ℚ) ≤ ((2 ^ (p.alignMantissaBits.toNat + 1) : ℕ) : ℚ) :=
+    refine tcMultiplier2_exactOn (hint b h1 hF) (hholds b (by omega)) h1 hF25 hK ?_ B
+    have hc : ((p.nfma * 2 ^ (2 * b) : ℕ) : ℚ) ≤ ((2 ^ (p.alignFracBits.toNat + 1) : ℕ) : ℚ) :=
       Rat.natCast_le_natCast.mpr hKn
     rw [Rat.natCast_mul, ← two_pow_natCast, ← two_pow_natCast] at hc
     have e1 : (2 : ℚ) ^ (b : ℤ) * 2 ^ (b : ℤ) = 2 ^ (((2 * b : ℕ)) : ℤ) := by
       rw [← two_pow_add]; congr 1; push_cast; omega
-    have e2 : (((p.alignMantissaBits.toNat + 1 : ℕ)) : ℤ) = p.alignMantissaBits + 1 := by
+    have e2 : (((p.alignFracBits.toNat + 1 : ℕ)) : ℤ) = p.alignFracBits + 1 := by
       push_cast; omega
     rw [e1]; rw [e2] at hc; exact hc
 
 /-- **The cheapest candidate** for `t` bits at inner dimension `k`; the first in `candidates` order
 on a tie. -/
-def best (p : Profile) (bmax t k : ℕ) : Option SliceRun :=
+def best (p : Model) (bmax t k : ℕ) : Option SliceRun :=
   (candidates p bmax).foldl (fun acc r => match acc with
     | none => some r
-    | some a => if r.cost p.products t k < a.cost p.products t k then some r else some a) none
+    | some a => if r.cost p.nfma t k < a.cost p.nfma t k then some r else some a) none
 
 /-! ## The best configuration per path (`k = 1024`)
 
@@ -212,28 +212,28 @@ theorem h100TF32Mma_best :
 /-- **The worst-case exact path on H100 fp16** (all `s²` products, `s(b+1) > 2098`): `191²` products
 of `10`-bit slices in full groups cost `2334784` blocks, `175²` products of `11`-bit slices `7840000`
 in chunks of four and `3920000` with two passes. -/
-theorem h100F16_exactPath :
-    (SliceRun.splitK 10).exactPathCost 16 1024 = 2334784 ∧
-      (SliceRun.splitK 11).exactPathCost 16 1024 = 7840000 ∧
-      (SliceRun.twoPass 11).exactPathCost 16 1024 = 3920000 := by
+theorem h100F16_exactFallback :
+    (SliceRun.splitK 10).exactFallbackCost 16 1024 = 2334784 ∧
+      (SliceRun.splitK 11).exactFallbackCost 16 1024 = 7840000 ∧
+      (SliceRun.twoPass 11).exactFallbackCost 16 1024 = 3920000 := by
   decide +kernel
 
 /-! ## The chosen configurations are exact, and the schemes' theorems apply
 
 `10`-bit slices on the A100 and H100 fp16 paths and the H100 tf32 `mma` path; the other choices
 (`11`-bit slices on V100, A100 tf32 and the H100 tf32 `wmma` path, `8`-bit on bf16) are the
-instances of `OzakiTC.Profiles` and `OzakiTC.LongDot`. -/
+instances of `OzakiTC.Models` and `OzakiTC.LongDot`. -/
 
-theorem a100F16_exactOn10 : (tcEngine ampereF16F32).ExactOn 10 (2 ^ 24) :=
-  tcEngine_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem a100F16_exactOn10 : (tcMultiplier ampereF16F32).ExactOn 10 (2 ^ 24) :=
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
-theorem h100F16_exactOn10 : (tcEngine hopperF16F32).ExactOn 10 (2 ^ 24) :=
-  tcEngine_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem h100F16_exactOn10 : (tcMultiplier hopperF16F32).ExactOn 10 (2 ^ 24) :=
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
-theorem h100TF32Mma_exactOn10 : (tcEngine hopperTF32MmaF32).ExactOn 10 (2 ^ 24) :=
-  tcEngine_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem h100TF32Mma_exactOn10 : (tcMultiplier hopperTF32MmaF32).ExactOn 10 (2 ^ 24) :=
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 /-- Split-K with `10`-bit slices on H100 fp16 (chunks of sixteen, one full group each) is exact

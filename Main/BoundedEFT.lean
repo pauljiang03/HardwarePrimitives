@@ -5,7 +5,7 @@ import Lean
 
 open TensorCore Lean
 
-private def getPath : String → Option EFMachine.Path
+private def getVariant : String → Option EFMachine.Variant
   | "v100-fp16" => some .v100F16
   | "a100-fp16" => some .ampereF16
   | "h100-fp16" => some .hopperF16
@@ -16,27 +16,27 @@ private def getPath : String → Option EFMachine.Path
   | "h100-tf32" | "h100-tf32-mma" => some .hopperTF32Mma
   | _ => none
 
-private def pairs (path : EFMachine.Path) : List ℕ → Option (List (path.profile.Word × path.profile.Word))
+private def pairs (variant : EFMachine.Variant) : List ℕ → Option (List (variant.model.Word × variant.model.Word))
   | [] => some []
   | a :: b :: xs => do
-    if a ≥ 2 ^ path.profile.input.width || b ≥ 2 ^ path.profile.input.width then none
-    else return (BitVec.ofNat _ a, BitVec.ofNat _ b) :: (← pairs path xs)
+    if a ≥ 2 ^ variant.model.input.width || b ≥ 2 ^ variant.model.input.width then none
+    else return (BitVec.ofNat _ a, BitVec.ofNat _ b) :: (← pairs variant xs)
   | _ => none
 
 private def command (args : List String) : Option Json := do
   match args with
   | "block" :: name :: words =>
-    let path ← getPath name
+    let variant ← getVariant name
     let ns ← words.mapM String.toNat?
-    if ns.length != path.profile.products * 2 + 2 then none else do
-      let c := ns[path.profile.products * 2]!
-      let D := ns[path.profile.products * 2 + 1]!
+    if ns.length != variant.model.nfma * 2 + 2 then none else do
+      let c := ns[variant.model.nfma * 2]!
+      let D := ns[variant.model.nfma * 2 + 1]!
       if c ≥ 2 ^ 32 || D ≥ 2 ^ 32 then none else do
-        let ps ← pairs path (ns.take (path.profile.products * 2))
-        let x : BlockInput path.profile := ⟨ps, BitVec.ofNat _ c⟩
+        let ps ← pairs variant (ns.take (variant.model.nfma * 2))
+        let x : BlockInput variant.model := ⟨ps, BitVec.ofNat _ c⟩
         let d : F32 := BitVec.ofNat _ D
-        let result := EFMachine.tcEftWithLean path x d
-        let components := (EFMachine.prepare path x d).toOption.bind EFMachine.extract
+        let result := EFMachine.tcEftWithLean variant x d
+        let components := (EFMachine.prepare variant x d).toOption.bind EFMachine.extract
         return match result with
         | .error e => Json.mkObj [("error", toJson (reprStr e))]
         | .ok r => Json.mkObj [

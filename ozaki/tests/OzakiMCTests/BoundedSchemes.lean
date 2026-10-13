@@ -41,7 +41,7 @@ example : cases64.all (fun (A, B, _) =>
   decide +kernel
 
 /-- Ozaki-II with bounded registers returns the oracle's values on both cases. -/
-def agreesB (P : Profile) : Bool :=
+def agreesB (P : Model) : Bool :=
   cases64.all fun (A, B, C) =>
     let Aq := A.map (·.map val64)
     let Bq := transposeG (B.map (·.map val64))
@@ -49,7 +49,7 @@ def agreesB (P : Profile) : Bool :=
       (Bq.zip crow).all fun (y, c) => mcOzaki2CRB P [(basis12, 69)] 11 175 x y == some c
 
 /-- The integer pipeline returns the oracle's values on both cases. -/
-def agreesZ (P : Profile) : Bool :=
+def agreesZ (P : Model) : Bool :=
   cases64.all fun (A, B, C) =>
     let Ap := A.map (·.map pair64)
     let Bp := transposeG (B.map (·.map pair64))

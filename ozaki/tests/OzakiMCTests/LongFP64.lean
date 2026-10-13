@@ -73,7 +73,7 @@ def val64 (w : ℕ) : ℚ :=
   if w / 2 ^ 63 = 1 then -mag else mag
 
 /-- Correctly rounded FP64 by Ozaki-I on a path equals the oracle on both cases. -/
-def agrees64 (P : Profile) : Bool :=
+def agrees64 (P : Model) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Aq := A.map (·.map val64)
     let Bq := transpose (B.map (·.map val64))

@@ -27,9 +27,9 @@ stated here on encoded inputs.
 
 ```lean
 theorem nonmonotone_encoded (K p : ℕ) (floor : Option ℤ) (hfl : ∀ f ∈ floor, f ≤ -1)
-    (a b : (fp16Fp32Profile K p floor).Word) (da db : Decoded)
-    (ha : (fp16Fp32Profile K p floor).decode a = some da)
-    (hb : (fp16Fp32Profile K p floor).decode b = some db)
+    (a b : (fp16Fp32Model K p floor).Word) (da db : Decoded)
+    (ha : (fp16Fp32Model K p floor).decode a = some da)
+    (hb : (fp16Fp32Model K p floor).decode b = some db)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,

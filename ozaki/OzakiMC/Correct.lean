@@ -58,30 +58,30 @@ theorem round32Value_intervals : RoundsOnIntervals round32Value := by
 
 /-- Correctly rounded Ozaki-I on a matrix-core path: slice counts `ss` in turn, then the exact
 product. -/
-def mcOzaki1CR (P : Profile) (b : ℕ) (ss : List ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1CR (mcEngine P) round32Value b ss x y
+def mcOzaki1CR (P : Model) (b : ℕ) (ss : List ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1CR (mcMultiplier P) round32Value b ss x y
 
 /-- Correctly rounded Ozaki-II on a matrix-core path: configurations `(basis, P)` in turn, then the
 exact product. -/
-def mcOzaki2CR (P : Profile) (cfgs : List (CRTBasis × ℕ)) (x y : List ℚ) : Option ℚ :=
-  ozaki2CR (mcEngine P) round32Value cfgs x y
+def mcOzaki2CR (P : Model) (cfgs : List (CRTBasis × ℕ)) (x y : List ℚ) : Option ℚ :=
+  ozaki2CR (mcMultiplier P) round32Value cfgs x y
 
-def mcOzaki1CRGemm (P : Profile) (b : ℕ) (ss : List ℕ) (A B : List (List ℚ)) :
+def mcOzaki1CRGemm (P : Model) (b : ℕ) (ss : List ℕ) (A B : List (List ℚ)) :
     Option (List (List ℚ)) :=
   A.mapM fun x => (transpose B).mapM fun y => mcOzaki1CR P b ss x y
 
-def mcOzaki2CRGemm (P : Profile) (cfgs : List (CRTBasis × ℕ)) (A B : List (List ℚ)) :
+def mcOzaki2CRGemm (P : Model) (cfgs : List (CRTBasis × ℕ)) (A B : List (List ℚ)) :
     Option (List (List ℚ)) :=
   A.mapM fun x => (transpose B).mapM fun y => mcOzaki2CR P cfgs x y
 
 /-- **Ozaki-I on the matrix core, correctly rounded.** -/
-theorem mcOzaki1CR_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (ss : List ℕ) {x y : List ℚ}
+theorem mcOzaki1CR_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (ss : List ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :
     mcOzaki1CR P b ss x y = round32Value (dot x y) :=
   ozaki1CR_eq round32Value_nearest round32Value_intervals hP.exactOn ss hlen hk
 
 /-- **Ozaki-II on the matrix core, correctly rounded.** -/
-theorem mcOzaki2CR_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) {cfgs : List (CRTBasis × ℕ)}
+theorem mcOzaki2CR_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) {cfgs : List (CRTBasis × ℕ)}
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * x.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
@@ -92,7 +92,7 @@ theorem mcOzaki2CR_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) {cfgs : Lis
 /-- The Z3 models' Ozaki-I configuration on CDNA 3 fp16, correctly rounded. -/
 theorem cdna3F16_ozaki1CR_z3 (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length = z3K) : mcOzaki1CR cdna3F16 11 ss x y = round32Value (dot x y) :=
-  mcOzaki1CR_eq (cdna3F16_exactEngine (by decide)) ss hlen (by rw [hk]; decide)
+  mcOzaki1CR_eq (cdna3F16_exactMultiplier (by decide)) ss hlen (by rw [hk]; decide)
 
 /-! ## Entirely on the matrix core -/
 
@@ -116,12 +116,12 @@ theorem splitExp_le_128 {b : ℕ} (hb : b ≤ 129) {x : List ℚ} (hx : ∀ a �
     exact Rat.le_of_lt (lt_of_le_of_lt' (finiteValue32_abs_le (hx a ha)) maxFinite32_lt_two_pow)
 
 /-- Correctly rounded Ozaki-I with the exact path on matrix-core blocks as well. -/
-def mcOzaki1CRE (P : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1CRE (mcEngine P) round32Value b ss smax x y
+def mcOzaki1CRE (P : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1CRE (mcMultiplier P) round32Value b ss smax x y
 
 /-- **Ozaki-I on the matrix core, correctly rounded, with every engine product on matrix-core
 blocks.** The slicing, the exact sum and the check are exact arithmetic. -/
-theorem mcOzaki1CRE_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (ss : List ℕ) {smax : ℕ}
+theorem mcOzaki1CRE_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (ss : List ℕ) {smax : ℕ}
     (hsmax : 277 < smax * (b + 1)) (hb : b ≤ 129) {x y : List ℚ}
     (hx : ∀ a ∈ x, FiniteValue32 a) (hy : ∀ a ∈ y, FiniteValue32 a)
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :

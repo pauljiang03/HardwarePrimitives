@@ -20,24 +20,24 @@ theorem accumulateInvocation_recovery {p : InvocationSpec} (b : PreparedInvocati
     subst a
     simp [LocalAccumulation.loss, sumQ]
     grind
-  | aligned F floor cp =>
+  | aligned F eAlignMin cp =>
     cases cp with
-    | inGroup =>
+    | early =>
       simp [accumulateInvocation, hk] at h
       subst a
-      have hr := aligned_recovery (b.alignedBlock F floor true)
-      change b.exactDot = (b.alignedBlock F floor true).accumulator +
-        sumQ (b.alignedBlock F floor true).alignmentResiduals at hr
+      have hr := aligned_recovery (b.alignedBlock F eAlignMin true)
+      change b.exactDot = (b.alignedBlock F eAlignMin true).accumulator +
+        sumQ (b.alignedBlock F eAlignMin true).alignmentResiduals at hr
       simpa [LocalAccumulation.loss, sumQ, Rat.add_zero] using hr
-    | afterProducts ss =>
-      cases hc : runRoundings ss (b.alignedBlock F floor false).accumulator with
+    | late ss =>
+      cases hc : runRoundings ss (b.alignedBlock F eAlignMin false).accumulator with
       | none => simp [accumulateInvocation, hk, hc] at h
       | some r =>
         simp [accumulateInvocation, hk, hc] at h
         subst a
-        have hr := aligned_recovery (b.alignedBlock F floor false)
+        have hr := aligned_recovery (b.alignedBlock F eAlignMin false)
         have hs := runRoundings_recovery ss _ r hc
-        have hz : (b.alignedBlock F floor false).exactDot = b.exactProducts := by
+        have hz : (b.alignedBlock F eAlignMin false).exactDot = b.exactProducts := by
           simp [PreparedInvocation.alignedBlock, PreparedBlock.exactDot,
             PreparedBlock.exactProducts, PreparedInvocation.exactProducts, Decoded.value,
             Rat.zero_add]
@@ -67,7 +67,7 @@ theorem evalInvocationPrepared_spec {p : InvocationSpec} {b : PreparedInvocation
 /-- Successful encoded evaluation certifies its parameters, shape, decoding, and stages. -/
 theorem evalInvocation_spec {p : InvocationSpec} {x : InvocationInput p} {t : InvocationTrace p}
     (h : evalInvocation x = .ok t) :
-    p.Valid ∧ x.products.length = p.products ∧ prepareInvocation x = some t.prepared ∧
+    p.Valid ∧ x.products.length = p.nfma ∧ prepareInvocation x = some t.prepared ∧
     accumulateInvocation t.prepared = some t.accumulation ∧
     runRoundings p.intermediate t.accumulation.value = some t.intermediate ∧
     p.output.roundValue t.intermediate.value = some t.output := by

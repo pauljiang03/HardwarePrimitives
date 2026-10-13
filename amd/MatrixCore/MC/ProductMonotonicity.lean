@@ -28,11 +28,11 @@ only a product can, since `c` is aligned separately: the output is monotone in `
 namespace MatrixCore
 
 /-- The exact products `a_ℓ b_ℓ` of a block's operand words. -/
-def productValues (P : Profile) (a : List P.a.Word) (b : List P.b.Word) : List ℚ :=
+def productValues (P : Model) (a : List P.a.Word) (b : List P.b.Word) : List ℚ :=
   List.zipWith (fun x y => P.a.wordValue x * P.b.wordValue y) a b
 
 /-- `x'` has the same number of products as `x`, and each is at least as large. -/
-def productsLE {P : Profile} (x x' : BlockInput P) : Bool :=
+def productsLE {P : Model} (x x' : BlockInput P) : Bool :=
   (productValues P x.a x.b).length == (productValues P x'.a x'.b).length &&
     ((productValues P x.a x.b).zip (productValues P x'.a x'.b)).all fun q => decide (q.1 ≤ q.2)
 
@@ -46,7 +46,7 @@ theorem sumQ_le_of_all : ∀ (l l' : List ℚ), l.length = l'.length →
     have := sumQ_le_of_all xs ys (by simpa using hl) h.2
     simp only [sumQ]; grind
 
-theorem productsLE_exactProducts {P : Profile} {x x' : BlockInput P} (h : productsLE x x' = true) :
+theorem productsLE_exactProducts {P : Model} {x x' : BlockInput P} (h : productsLE x x' = true) :
     exactProducts P x.a x.b ≤ exactProducts P x'.a x'.b := by
   unfold productsLE at h
   simp only [Bool.and_eq_true, beq_iff_eq] at h
@@ -55,7 +55,7 @@ theorem productsLE_exactProducts {P : Profile} {x x' : BlockInput P} (h : produc
 /-! ## SFMA and CDNA 1 -/
 
 /-- SFMA and CDNA 1: the output depends only on the exact `Σ a_ℓ b_ℓ + c`, monotonically. -/
-theorem correctRounding_exact_monotone {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_exact_monotone {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x x' : BlockInput P} {t t' : BlockTrace P} (h : evalBlock x = .ok t) (h' : evalBlock x' = .ok t')
     (he : exactDot P x.a x.b x.c ≤ exactDot P x'.a x'.b x'.c) : wordValue t.d ≤ wordValue t'.d := by
@@ -74,7 +74,7 @@ theorem correctRounding_exact_monotone {P : Profile} (hacc : P.accumulation = .c
   exact fl32_mono (evalBlock_ok h).2.2.2.2 (evalBlock_ok h').2.2.2.2 (by rw [e1, e2, hx, hx']; exact he)
 
 /-- SFMA and CDNA 1 are monotone in the products and in `c`. -/
-theorem correctRounding_product_monotone {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_product_monotone {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x x' : BlockInput P} {t t' : BlockTrace P} (h : evalBlock x = .ok t) (h' : evalBlock x' = .ok t')
     (hp : productsLE x x' = true) (hc : wordValue x.c ≤ wordValue x'.c) :
@@ -85,7 +85,7 @@ theorem correctRounding_product_monotone {P : Profile} (hacc : P.accumulation = 
   grind
 
 /-- Blocks pairwise at least as large in their exact products. -/
-def BlocksLE (P : Profile) :
+def BlocksLE (P : Model) :
     List (List P.a.Word × List P.b.Word) → List (List P.a.Word × List P.b.Word) → Prop
   | [], [] => True
   | ab :: r, ab' :: r' => exactProducts P ab.1 ab.2 ≤ exactProducts P ab'.1 ab'.2 ∧ BlocksLE P r r'
@@ -93,7 +93,7 @@ def BlocksLE (P : Profile) :
 
 /-- SFMA and CDNA 1 inner products of any length: blockwise larger products and a larger `c` give
 a larger output. -/
-theorem runBlocks_correctRounding_monotone {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem runBlocks_correctRounding_monotone {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true) :
     ∀ (bs bs' : List (List P.a.Word × List P.b.Word)) (c c' : F32) (ts ts' : List (BlockTrace P)),
       BlocksLE P bs bs' → runBlocks P c bs = .ok ts → runBlocks P c' bs' = .ok ts' →
@@ -112,12 +112,12 @@ theorem runBlocks_correctRounding_monotone {P : Profile} (hacc : P.accumulation 
 /-! ## CDNA 2 and CDNA 3: non-monotonicity -/
 
 /-- Every product of `x'` is at least that of `x`, `c` is the same, and the output is smaller. -/
-def ProductNonmonotone {P : Profile} (x x' : BlockInput P) : Prop :=
+def ProductNonmonotone {P : Model} (x x' : BlockInput P) : Prop :=
   productsLE x x' = true ∧ x.c = x'.c ∧
     ∃ d d', blockBits x = .ok d ∧ blockBits x' = .ok d' ∧ wordValue d' < wordValue d
 
 /-- SFMA and CDNA 1 have no such pair. -/
-theorem correctRounding_not_nonmonotone {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_not_nonmonotone {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true) (x x' : BlockInput P) :
     ¬ ProductNonmonotone x x' := by
   rintro ⟨hp, hc, d, d', hd, hd', hlt⟩

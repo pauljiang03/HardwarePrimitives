@@ -1,6 +1,6 @@
 import TensorCore.Numerics.Binary.DirectedRounding
 import TensorCore.TC.InvocationProperties
-import TensorCore.TC.Profiles
+import TensorCore.TC.Models
 
 /-! Correctness of the final rounding stages. -/
 

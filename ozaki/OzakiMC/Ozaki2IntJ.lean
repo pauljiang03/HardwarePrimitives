@@ -14,21 +14,21 @@ namespace Ozaki.MC
 
 /-- Correctly rounded FP64 by Ozaki-II in integers with the jumping descent on matrix-core
 blocks. -/
-def mcOzaki2CRJ (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
+def mcOzaki2CRJ (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki2CRJ (mcSplitK P b) 53 (-1022) 1023 cfgs b smax xs ys
 
 /-- The same for binary32. -/
-def mcOzaki2CRJL (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
+def mcOzaki2CRJL (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki2CRJ (mcSplitK P b) 24 (-126) 127 cfgs b smax xs ys
 
 /-- Correctly rounded FP64 by Ozaki-II in integers with signed zeros on matrix-core blocks. -/
-def mcOzaki2CRJS (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List SEntry) :
+def mcOzaki2CRJS (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List SEntry) :
     Option Signed :=
   ozaki2CRJS (mcSplitK P b) 53 (-1022) 1023 cfgs b smax xs ys
 
-theorem mcOzaki2CRJ_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRJ_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -38,7 +38,7 @@ theorem mcOzaki2CRJ_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
     mcOzaki2CRJ P cfgs b smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) :=
   ozaki2CRJ64_eq (mcSplitK_exactOn hP hb _) (by omega) hsmax hcfg hlen (Nat.le_refl _) hx hy
 
-theorem mcOzaki2CRJL_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRJL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -48,7 +48,7 @@ theorem mcOzaki2CRJL_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
     mcOzaki2CRJL P cfgs b smax xs ys = rne32Q (dot (entryVals xs) (entryVals ys)) :=
   ozaki2CRJ32_eq (mcSplitK_exactOn hP hb _) (by omega) hsmax hcfg hlen (Nat.le_refl _) hx hy
 
-theorem mcOzaki2CRJS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRJS_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List SEntry}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧

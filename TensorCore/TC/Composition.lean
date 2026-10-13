@@ -57,7 +57,7 @@ theorem encoded_trace_ledger (initial : Finite32) (ts : List BlockTrace)
     grind
 
 /-- Runnable schedule under one profile. -/
-def runBlocks (p : Profile) :
+def runBlocks (p : Model) :
     F32 → List (List (p.Word × p.Word)) → Except ModelError (List BlockTrace)
   | _, [] => .ok []
   | c, ps :: rest =>
@@ -69,7 +69,7 @@ def runBlocks (p : Profile) :
 
 abbrev runV100 := runBlocks v100F16F32
 
-theorem runBlocks_chain (p : Profile) (initial : Finite32)
+theorem runBlocks_chain (p : Model) (initial : Finite32)
     (ps : List (List (p.Word × p.Word)))
     (ts : List BlockTrace) (h : runBlocks p initial.bits ps = .ok ts) :
     EncodedChain initial ts := by
@@ -92,7 +92,7 @@ theorem runBlocks_chain (p : Profile) (initial : Finite32)
         · exact ih t.output rest hr
 
 /-- Every successful executable schedule inherits the encoded-boundary ledger. -/
-theorem runBlocks_residual_ledger (p : Profile) (initial : Finite32)
+theorem runBlocks_residual_ledger (p : Model) (initial : Finite32)
     (ps : List (List (p.Word × p.Word))) (ts : List BlockTrace)
     (h : runBlocks p initial.bits ps = .ok ts) :
     initial.value + sumQ (ts.map fun t => t.block.exactProducts) =

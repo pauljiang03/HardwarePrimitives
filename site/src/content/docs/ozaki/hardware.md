@@ -30,8 +30,8 @@ integer up to `2^24`.
 | Fact | Lean |
 | --- | --- |
 | A block of `b`-bit integers with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ`; so does a chain of blocks. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L184), [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L335) |
-| The engine is exact on all eight NVIDIA paths (`b = 11` for fp16 and tf32, `8` for bf16). | [`tcEngine_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Engine.lean#L193), [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Profiles.lean#L31) and seven more |
-| The same on the AMD SFMA, CDNA 1, 2 and 3 fp16, bf16 and XF32 paths. | [`mcEngine_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Engine.lean#L326), [`cdna3F16_exactEngine`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Profiles.lean#L92) |
+| The engine is exact on all eight NVIDIA paths (`b = 11` for fp16 and tf32, `8` for bf16). | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L193), [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
+| The same on the AMD SFMA, CDNA 1, 2 and 3 fp16, bf16 and XF32 paths. | [`mcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326), [`cdna3F16_exactMultiplier`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Models.lean#L92) |
 
 The model shows why the output, not the accumulator, sets this budget. A
 Tensor Core adds a whole group exactly and rounds once, so an A100 block is
@@ -58,8 +58,8 @@ The AMD architectures differ:
 - **CDNA 1 and CDNA 3:** exact whenever every product, `c` and the exact
   sum are within `2^24`.
 - **CDNA 2:** it adds a pairwise tree of binary32 products, so every node of
-  the tree must also be within `2^24` ([`Ozaki.MC.pairTree_cancel`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Cancellation.lean#L41),
-  [`treeOK_of_budget`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Cancellation.lean#L66)). Cancellation inside a node is free; cancellation
+  the tree must also be within `2^24` ([`Ozaki.MC.pairwiseGroupSum_cancel`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Cancellation.lean#L41),
+  [`pairwiseSumsBounded_of_bound`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Cancellation.lean#L66)). Cancellation inside a node is free; cancellation
   across the tree is not.
 
 This is the precise boundary, not a scheduling rule: the running sums are
@@ -89,7 +89,7 @@ mechanism behind the non-monotonicity, the second pass is exact as long as
 `|D1| ≤ 2^(F+1)`, and it returns `S − D1`, so `D1 + D2 = S`
 ([`twoPass_exact`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L254)). `F` grows by one bit each time the group size doubles,
 so a full group of `11`-bit products always fits. The two-pass engine is
-exact for every length on all eight paths ([`tcEngine2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L401),
+exact for every length on all eight paths ([`tcMultiplier2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L401),
 [`h100F16_exactOn2`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/TwoPass.lean#L471) and seven more).
 
 This is the matrix-instruction analogue of the scalar TwoProdFMA, for a
@@ -107,7 +107,7 @@ not the cheapest way to fill a group, as the next section shows.
   what the final rounding lost: the full group that one pass returns as
   `29331464` comes back as `29331463` ([`cdna3F16_twoPass_full_group`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L632),
   [`mcTwoPass_exact_ga`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L438)). The two-pass engine is exact for every length
-  ([`mcEngine2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L510)).
+  ([`mcMultiplier2_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/TwoPass.lean#L510)).
 - **CDNA 2: it fails in general.** Its pairwise tree rounds before `c` is
   added, so the second pass sees the same rounded node; products `2^22` and
   `2^-14` return `2^22` on CDNA 2 and are recovered on CDNA 1

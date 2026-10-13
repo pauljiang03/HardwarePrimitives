@@ -21,16 +21,16 @@ pass truncated (`Ozaki.TC.twoPass_exact`). Here is what happens on each AMD arch
   is added. A second pass from `c = −D1` sees the same rounded tree, so it recovers what the final
   rounding lost but not what the tree lost; with operands whose tree rounds, two passes return the
   tree's value, not the exact sum (`cdna2_twoPass_fails`). For Ozaki's integer slices the tree
-  never rounds: a full group of four `11`-bit products is at most `2^24` (`treeOK_of_budget`).
+  never rounds: a full group of four `11`-bit products is at most `2^24` (`pairwiseSumsBounded_of_bound`).
 
 **Is a second pass ever needed?** On CDNA 1 and 2 (`4` fp16 products per block, `2` or `4` bf16) and
 CDNA 3 XF32 (`4`), a full group of the widest slices fits the `2^24` budget, so one pass is exact.
 On CDNA 3 fp16 a group holds `8` products and `8 · 2^22 = 2^25`, so `11`-bit slices in full groups
 need two passes; `10`-bit slices fit in one. On the SFMA two passes allow `24`-bit slices.
 
-`mcEngine2` runs every block twice and adds the results exactly; it is exact on vectors of every
+`mcMultiplier2` runs every block twice and adds the results exactly; it is exact on vectors of every
 length on the SFMA with `24`-bit slices and on CDNA 1 and CDNA 3 whenever a full group of products
-is at most `2^30` (`mcEngine2_exactOn`). -/
+is at most `2^30` (`mcMultiplier2_exactOn`). -/
 
 open MatrixCore
 
@@ -80,7 +80,7 @@ end IntPreparedW
 
 /-- **CDNA 3 with a wide `c`**: global alignment of integer products within `2^24` and an integer
 `c` within `2^31` is exact whenever the exact sum is within `2^31`. -/
-theorem alignedAccumulation_wide {P : Profile} (hacc : P.accumulation = .globalAlignment)
+theorem alignedAccumulation_wide {P : Model} (hacc : P.accumulation = .globalAlignment)
     (hneab : 1 ≤ P.neab) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
     (h : IntPreparedW x) : alignedAccumulation P x = x.exact := by
   have hprod := h.p
@@ -269,7 +269,7 @@ theorem rneValue_intSum (S : ℤ) {n : ℕ} (hn : n ≤ 48) (hS : Rat.abs (S : �
 
 /-- Integer operand words and an integer `c` prepare into integer operands whose exact sum is
 `c + Σ aᵢbᵢ`. -/
-theorem prepare_intW {P : Profile} (hfa : smallSubnormals P.a) (hfb : smallSubnormals P.b)
+theorem prepare_intW {P : Model} (hfa : smallSubnormals P.a) (hfb : smallSubnormals P.b)
     {x : BlockInput P} (ha : ∀ w ∈ x.a, IntWord P.a w) (hb : ∀ w ∈ x.b, IntWord P.b w)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ)) :
     ∃ px, prepare x = some px ∧ (∀ u ∈ px.a, IntOperand u) ∧ (∀ u ∈ px.b, IntOperand u) ∧
@@ -310,7 +310,7 @@ theorem prepare_intW {P : Profile} (hfa : smallSubnormals P.a) (hfb : smallSubno
 
 /-- A block whose accumulation is exact returns the binary32 round to nearest of its exact sum
 (with subnormals, so the final `fl{·}` is round to nearest even). -/
-theorem evalBlock_rne {P : Profile} (hsub : P.subnormals = true) {x : BlockInput P}
+theorem evalBlock_rne {P : Model} (hsub : P.subnormals = true) {x : BlockInput P}
     (hla : x.a.length = P.nfma) (hlb : x.b.length = P.nfma) {px : Prepared}
     (hprep : prepare x = some px) (hacc : accumulate P px = .ok px.exact)
     (hov : absQ px.exact < overflowThreshold32) :
@@ -325,7 +325,7 @@ theorem evalBlock_rne {P : Profile} (hsub : P.subnormals = true) {x : BlockInput
 
 /-- **Two passes of one block**: from `c = +0`, giving `D1`, then from `c = −D1`, giving `D2`; the
 result is `D1 + D2`. -/
-def mcTwoPass (P : Profile) (a : List P.a.Word) (b : List P.b.Word) : Option ℚ :=
+def mcTwoPass (P : Model) (a : List P.a.Word) (b : List P.b.Word) : Option ℚ :=
   match evalBlock (P := P) ⟨a, b, 0⟩ with
   | .ok t1 =>
     match value32 t1.d with
@@ -341,7 +341,7 @@ theorem pow2_48_lt : (2 : ℚ) ^ ((48 : ℕ) : ℤ) < overflowThreshold32 := by 
 /-- **Two passes recover an integer block**, on any configuration that adds integer operands and an
 integer `c` of at most `2^n` exactly when the exact sum is at most `2^n` (`24 ≤ n ≤ 48`): pass 1
 rounds `S` to an integer `D1` with `|S − D1| ≤ 2^24`, and pass 2 returns `S − D1` exactly. -/
-theorem twoPass_of_acc {P : Profile} (hsub : P.subnormals = true) (hfa : smallSubnormals P.a)
+theorem twoPass_of_acc {P : Model} (hsub : P.subnormals = true) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {a : List P.a.Word} {b : List P.b.Word} (hla : a.length = P.nfma)
     (hlb : b.length = P.nfma) (ha : ∀ w ∈ a, IntWord P.a w) (hb : ∀ w ∈ b, IntWord P.b w)
     {n : ℕ} (h24 : 24 ≤ n) (hn : n ≤ 48) {S : ℤ} (hS : exactProducts P a b = S)
@@ -402,12 +402,12 @@ theorem twoPass_of_acc {P : Profile} (hsub : P.subnormals = true) (hfa : smallSu
 /-! ## Where two passes are exact -/
 
 /-- `correct_rounding` without product-overflow detection (SFMA, CDNA 1) adds exactly. -/
-theorem accumulate_cr {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem accumulate_cr {P : Model} (hacc : P.accumulation = .correctRounding)
     (hpo : P.productOverflow = false) (x : Prepared) : accumulate P x = .ok x.exact := by
   unfold accumulate; rw [hpo, hacc]; simp
 
 /-- CDNA 3's global alignment adds an integer block with a wide `c` exactly. -/
-theorem accumulate_wide {P : Profile} (hacc : P.accumulation = .globalAlignment) (hn : 1 ≤ P.neab)
+theorem accumulate_wide {P : Model} (hacc : P.accumulation = .globalAlignment) (hn : 1 ≤ P.neab)
     (hl : P.late = {}) (hc : P.cZeroExp = some (-126)) {x : Prepared} (h : IntPreparedW x) :
     accumulate P x = .ok x.exact := by
   unfold accumulate
@@ -415,14 +415,14 @@ theorem accumulate_wide {P : Profile} (hacc : P.accumulation = .globalAlignment)
   simp only [Bool.false_eq_true, ↓reduceIte]
   rw [hacc]; simp only [alignedAccumulation_wide hacc hn hl hc h]
 
-theorem exactProducts_intZ {P : Profile} {a : List P.a.Word} {b : List P.b.Word}
+theorem exactProducts_intZ {P : Model} {a : List P.a.Word} {b : List P.b.Word}
     (ha : ∀ w ∈ a, IntWord P.a w) (hb : ∀ w ∈ b, IntWord P.b w) :
     ∃ S : ℤ, exactProducts P a b = S := by
   obtain ⟨Z, hZ, _⟩ := exactProducts_int a b ha hb; exact ⟨Z, hZ⟩
 
 /-- **SFMA and CDNA 1: two passes recover a block** of integer products whose sum is at most
 `2^48`; on the SFMA (one product per block) this is TwoProdFMA. -/
-theorem mcTwoPass_exact_cr {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem mcTwoPass_exact_cr {P : Model} (hacc : P.accumulation = .correctRounding)
     (hpo : P.productOverflow = false) (hsub : P.subnormals = true) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {a : List P.a.Word} {b : List P.b.Word} (hla : a.length = P.nfma)
     (hlb : b.length = P.nfma) (ha : ∀ w ∈ a, IntWord P.a w) (hb : ∀ w ∈ b, IntWord P.b w)
@@ -435,7 +435,7 @@ theorem mcTwoPass_exact_cr {P : Profile} (hacc : P.accumulation = .correctRoundi
 
 /-- **CDNA 3: two passes recover a block** of integer products each at most `2^24` whose sum is at
 most `2^30`. -/
-theorem mcTwoPass_exact_ga {P : Profile} (hacc : P.accumulation = .globalAlignment)
+theorem mcTwoPass_exact_ga {P : Model} (hacc : P.accumulation = .globalAlignment)
     (hn : 1 ≤ P.neab) (hl : P.late = {}) (hc : P.cZeroExp = some (-126))
     (hsub : P.subnormals = true) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {a : List P.a.Word} {b : List P.b.Word} (hla : a.length = P.nfma)
@@ -463,10 +463,10 @@ theorem mcTwoPass_exact_ga {P : Profile} (hacc : P.accumulation = .globalAlignme
 
 /-- Split-K with chunks of at most `m`, for an engine exact on vectors of at most `m` entries: exact
 on vectors of every length. -/
-theorem chunked_exactOn_short {eng : Engine} {b m : ℕ} (hm : 0 < m)
-    (heng : ∀ x y : List ℤ, x.length = y.length → x.length ≤ m → (∀ a ∈ x, a.natAbs ≤ 2 ^ b) →
-      (∀ a ∈ y, a.natAbs ≤ 2 ^ b) → eng x y = some (dotZ x y)) (B : ℕ) :
-    (chunked m eng).ExactOn b B := by
+theorem chunked_exactOn_short {mult : MatrixMultiplier} {b m : ℕ} (hm : 0 < m)
+    (hmult : ∀ x y : List ℤ, x.length = y.length → x.length ≤ m → (∀ a ∈ x, a.natAbs ≤ 2 ^ b) →
+      (∀ a ∈ y, a.natAbs ≤ 2 ^ b) → mult x y = some (dotZ x y)) (B : ℕ) :
+    (chunked m mult).ExactOn b B := by
   intro x y hlen hx hy _
   unfold chunked chunksOf
   rw [hlen]
@@ -476,30 +476,30 @@ theorem chunked_exactOn_short {eng : Engine} {b m : ℕ} (hm : 0 < m)
     rfl
   · intro p hp
     obtain ⟨h1, h2, h3, h4⟩ := hpairs p hp
-    exact heng _ _ h1 h2 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha))
+    exact hmult _ _ h1 h2 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha))
 
 /-- One block run twice: the integers padded with zeros to `N_FMA`, encoded, and run by
 `mcTwoPass`. -/
-def mcGroup2 (P : Profile) : Engine := fun x y => do
+def mcGroup2 (P : Model) : MatrixMultiplier := fun x y => do
   let a ← (x ++ List.replicate (P.nfma - x.length) 0).mapM fun z : ℤ => P.a.encodeExact (z : ℚ)
   let b ← (y ++ List.replicate (P.nfma - y.length) 0).mapM fun z : ℤ => P.b.encodeExact (z : ℚ)
   mcTwoPass P a b
 
 /-- **The two-pass matrix-core engine**: split-K with chunks of one block, every block run twice,
 the block results added exactly. -/
-def mcEngine2 (P : Profile) : Engine := chunked P.nfma (mcGroup2 P)
+def mcMultiplier2 (P : Model) : MatrixMultiplier := chunked P.nfma (mcGroup2 P)
 
 /-- The configurations and slice widths for which a block of `b`-bit integers run twice is exact:
 `correct_rounding` (no product-overflow detection) with `N_FMA · 2^(2b) ≤ 2^48`, or CDNA 3's global
 alignment with `2b ≤ 24` and `N_FMA · 2^(2b) ≤ 2^30`; subnormals supported. -/
-def TwoPassOK (P : Profile) (b : ℕ) : Prop :=
+def TwoPassOK (P : Model) (b : ℕ) : Prop :=
   P.subnormals = true ∧
     ((P.accumulation = .correctRounding ∧ P.productOverflow = false ∧
         P.nfma * 2 ^ (2 * b) ≤ 2 ^ 48) ∨
       (P.accumulation = .globalAlignment ∧ 1 ≤ P.neab ∧ P.late = {} ∧
         P.cZeroExp = some (-126) ∧ 2 * b ≤ 24 ∧ P.nfma * 2 ^ (2 * b) ≤ 2 ^ 30))
 
-instance (P : Profile) (b : ℕ) : Decidable (TwoPassOK P b) := by unfold TwoPassOK; infer_instance
+instance (P : Model) (b : ℕ) : Decidable (TwoPassOK P b) := by unfold TwoPassOK; infer_instance
 
 theorem dotZ_replicate_zero : ∀ k : ℕ, dotZ (List.replicate k 0) (List.replicate k 0) = 0
   | 0 => rfl
@@ -507,9 +507,9 @@ theorem dotZ_replicate_zero : ∀ k : ℕ, dotZ (List.replicate k 0) (List.repli
 
 /-- **The two-pass engine is exact on vectors of every length** with `b`-bit slices, whenever
 `TwoPassOK P b`. -/
-theorem mcEngine2_exactOn {P : Profile} {b : ℕ} (hok : TwoPassOK P b) (hfa : smallSubnormals P.a)
+theorem mcMultiplier2_exactOn {P : Model} {b : ℕ} (hok : TwoPassOK P b) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) (hn : 0 < P.nfma) (hea : EncodesInts P.a b)
-    (heb : EncodesInts P.b b) (B : ℕ) : (mcEngine2 P).ExactOn b B := by
+    (heb : EncodesInts P.b b) (B : ℕ) : (mcMultiplier2 P).ExactOn b B := by
   apply chunked_exactOn_short hn
   intro x y hlen hlx hx hy
   let x' := x ++ List.replicate (P.nfma - x.length) 0
@@ -596,22 +596,22 @@ theorem mcEngine2_exactOn {P : Profile} {b : ℕ} (hok : TwoPassOK P b) (hfa : s
 
 /-- **CDNA 3 fp16 with full groups**: eight products of `11`-bit slices (`8 · 2^22 = 2^25`), two
 passes each, exact for every length. -/
-theorem cdna3F16_exactOn2 (B : ℕ) : (mcEngine2 cdna3F16).ExactOn 11 B :=
-  mcEngine2_exactOn (by decide) binary16_small binary16_small (by decide)
+theorem cdna3F16_exactOn2 (B : ℕ) : (mcMultiplier2 cdna3F16).ExactOn 11 B :=
+  mcMultiplier2_exactOn (by decide) binary16_small binary16_small (by decide)
     (binary16_encodesInts (Nat.le_refl _)) (binary16_encodesInts (Nat.le_refl _)) B
 
 /-- **The SFMA with `24`-bit slices**: one product per block, two passes (TwoProdFMA), exact for
 every length; one pass allows only `12`-bit slices. -/
-theorem sfma_exactOn2 (B : ℕ) : (mcEngine2 sfmaF32).ExactOn 24 B :=
-  mcEngine2_exactOn (by decide) binary32_small binary32_small (by decide)
+theorem sfma_exactOn2 (B : ℕ) : (mcMultiplier2 sfmaF32).ExactOn 24 B :=
+  mcMultiplier2_exactOn (by decide) binary32_small binary32_small (by decide)
     (binary32_encodesInts (Nat.le_refl _)) (binary32_encodesInts (Nat.le_refl _)) B
 
-theorem cdna1F16_exactOn2 (B : ℕ) : (mcEngine2 cdna1F16).ExactOn 11 B :=
-  mcEngine2_exactOn (by decide) binary16_small binary16_small (by decide)
+theorem cdna1F16_exactOn2 (B : ℕ) : (mcMultiplier2 cdna1F16).ExactOn 11 B :=
+  mcMultiplier2_exactOn (by decide) binary16_small binary16_small (by decide)
     (binary16_encodesInts (Nat.le_refl _)) (binary16_encodesInts (Nat.le_refl _)) B
 
-theorem cdna3XF32_exactOn2 (B : ℕ) : (mcEngine2 cdna3XF32).ExactOn 11 B :=
-  mcEngine2_exactOn (P := cdna3XF32) (by decide) trivial trivial (by decide)
+theorem cdna3XF32_exactOn2 (B : ℕ) : (mcMultiplier2 cdna3XF32).ExactOn 11 B :=
+  mcMultiplier2_exactOn (P := cdna3XF32) (by decide) trivial trivial (by decide)
     (xf32_encodesInts_le (Nat.le_refl _)) (xf32_encodesInts_le (Nat.le_refl _)) B
 
 /-! ## When a second pass is needed, and when it fails -/

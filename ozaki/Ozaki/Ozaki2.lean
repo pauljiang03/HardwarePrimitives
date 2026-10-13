@@ -219,18 +219,18 @@ theorem toInt?_intCast (z : ℤ) : toInt? (z : ℚ) = some z := by
   simp [toInt?, Rat.den_intCast, Rat.num_intCast]
 
 /-- The product of the residues of `a` and `c` modulo `m`, on the engine, reduced modulo `m`. -/
-def residueProduct (eng : Engine) (m : ℕ) (a c : List ℤ) : Option ℤ := do
-  let v ← eng (a.map fun z => symMod z m) (c.map fun z => symMod z m)
+def residueProduct (mult : MatrixMultiplier) (m : ℕ) (a c : List ℤ) : Option ℤ := do
+  let v ← mult (a.map fun z => symMod z m) (c.map fun z => symMod z m)
   let z ← toInt? v
   return z % (m : ℤ)
 
 /-- **Ozaki-II** for one output entry `x · y`: scale and truncate to `P`-bit integers, one engine
 product per modulus, CRT reconstruction, one final rounding. -/
-def ozaki2 (eng : Engine) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
+def ozaki2 (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
     Option ℚ := do
   let a := scaleTrunc (scaleShift P x) x
   let c := scaleTrunc (scaleShift P y) y
-  let rs ← B.moduli.mapM fun m => residueProduct eng m a c
+  let rs ← B.moduli.mapM fun m => residueProduct mult m a c
   round ((crt B rs : ℚ) * 2 ^ (-(scaleShift P x + scaleShift P y)))
 
 theorem emod_sub_dvd (z m : ℤ) : m ∣ z % m - z := ⟨-(z / m), by rw [Int.emod_def, Int.mul_neg]; omega⟩
@@ -255,10 +255,10 @@ theorem dvd_dotZ_symMod (m : ℕ) :
       (Int.dvd_trans hx (Int.dvd_mul_right _ _))) ih
 
 /-- With an exact engine, each modulus returns the residue of `a · c`. -/
-theorem residueProduct_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) {m : ℕ}
+theorem residueProduct_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) {m : ℕ}
     (hm : 0 < m) (hmb : m ≤ 2 ^ (b + 1)) {a c : List ℤ} (hlen : a.length = c.length)
-    (hbudget : a.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    residueProduct eng m a c = some
+    (hbound : a.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    residueProduct mult m a c = some
       (dotZ (a.map fun z => symMod z m) (c.map fun z => symMod z m) % (m : ℤ)) := by
   have hres : ∀ z : ℤ, (symMod z m).natAbs ≤ 2 ^ b := by
     intro z
@@ -270,19 +270,19 @@ theorem residueProduct_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b 
   have hy : ∀ z ∈ c.map fun z => symMod z m, z.natAbs ≤ 2 ^ b := by
     intro z hz; obtain ⟨w, _, rfl⟩ := List.mem_map.mp hz; exact hres w
   unfold residueProduct
-  rw [heng _ _ (by simpa using hlen) hx hy (by
+  rw [hmult _ _ (by simpa using hlen) hx hy (by
     refine Nat.le_trans (dotAbs_le _ _ _ _ hx hy) ?_
-    simpa using hbudget)]
+    simpa using hbound)]
   simp [toInt?_intCast]
 
 /-- **Exact reconstruction.** With an engine exact on `b`-bit integers, moduli at most `2^(b+1)`,
 and `2 k 2^(2P) < M`, Ozaki-II rounds `2^(−sₓ−s_y) (a · c)` once. -/
-theorem ozaki2_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (round : ℚ → Option ℚ) {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus) :
-    ozaki2 eng round B P x y =
+    ozaki2 mult round B P x y =
       round ((dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
         2 ^ (-(scaleShift P x + scaleShift P y))) := by
   have hpos := hB.2.1
@@ -290,10 +290,10 @@ theorem ozaki2_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
   generalize hc : scaleTrunc (scaleShift P y) y = c
   have hla : a.length = x.length := by rw [← ha, scaleTrunc_length]
   have hlc : c.length = y.length := by rw [← hc, scaleTrunc_length]
-  have hrs : B.moduli.mapM (fun m => residueProduct eng m a c) = some (B.moduli.map fun m =>
+  have hrs : B.moduli.mapM (fun m => residueProduct mult m a c) = some (B.moduli.map fun m =>
       dotZ (a.map fun z => symMod z m) (c.map fun z => symMod z m) % (m : ℤ)) :=
-    mapM_eq_some_map fun m hm => residueProduct_eq heng (hpos m hm) (hmb m hm)
-      (by rw [hla, hlc, hlen]) (by rw [hla]; exact hbudget)
+    mapM_eq_some_map fun m hm => residueProduct_eq hmult (hpos m hm) (hmb m hm)
+      (by rw [hla, hlc, hlen]) (by rw [hla]; exact hbound)
   have hcrt : crt B (B.moduli.map fun m =>
       dotZ (a.map fun z => symMod z m) (c.map fun z => symMod z m) % (m : ℤ)) = dotZ a c := by
     have hab : (dotZ a c).natAbs ≤ x.length * (2 ^ P * 2 ^ P) := by
@@ -329,20 +329,20 @@ theorem ozaki2_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
 /-- **Ozaki-II error.** With an exact engine and a rounding of relative error `u` and absolute
 error `η`, the result `v` satisfies `|v − x · y| ≤ u |C| + η + Σᵢ (2^(−sₓ)|yᵢ| + 2^(−sₓ−s_y)|aᵢ|)`
 with `C = 2^(−sₓ−s_y) (a · c)`. -/
-theorem ozaki2_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {round : ℚ → Option ℚ} {u η : ℚ} (hround : RoundWithin round u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus) {v : ℚ}
-    (hv : ozaki2 eng round B P x y = some v) :
+    (hv : ozaki2 mult round B P x y = some v) :
     Rat.abs (v - dot x y) ≤
       u * Rat.abs ((dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
         2 ^ (-(scaleShift P x + scaleShift P y))) + η +
       (List.zipWith (fun a b => 2 ^ (-scaleShift P x) * Rat.abs b +
           2 ^ (-(scaleShift P x + scaleShift P y)) *
             Rat.abs (truncInt (a * 2 ^ scaleShift P x) : ℚ)) x y).sum := by
-  rw [ozaki2_eq heng round hB hmb P hlen hbudget hrange] at hv
+  rw [ozaki2_eq hmult round hB hmb P hlen hbound hrange] at hv
   have h1 := hround _ v hv
   have h2 := truncProduct_error (scaleShift P x) (scaleShift P y) x y hlen
   have h3 := abs_add_le (v - (dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
@@ -359,9 +359,9 @@ theorem ozaki2_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budge
   grind
 
 /-- `C = AB` entrywise with Ozaki-II; `A` by rows, `B` by rows. -/
-def ozaki2Gemm (eng : Engine) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ)
+def ozaki2Gemm (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ)
     (A Bm : List (List ℚ)) : Option (List (List ℚ)) :=
-  A.mapM fun x => (transpose Bm).mapM fun y => ozaki2 eng round B P x y
+  A.mapM fun x => (transpose Bm).mapM fun y => ozaki2 mult round B P x y
 
 /-- The largest `P` with `2 k 2^(2P) < M`, searched up to `fuel`. -/
 def ozaki2Bits (k M : ℕ) : ℕ → ℕ

@@ -13,8 +13,8 @@ def main (args : List String) : IO Unit := do
   for line in (← IO.FS.readFile file).splitOn "\n" do
     let words := (line.splitOn " ").filter (· != "")
     unless words.isEmpty do
-      let profile :: words := words | throw (IO.userError "Missing profile")
-      let path ← match profile with
+      let model :: words := words | throw (IO.userError "Missing profile")
+      let variant ← match model with
         | "V100" => pure v100Wmma16
         | "A100" => pure ampereWmma16
         | "H100" => pure hopperWmma16
@@ -22,5 +22,5 @@ def main (args : List String) : IO Unit := do
       let some words := words.mapM String.toNat? | throw (IO.userError "Invalid word")
       unless words.length = 33 && (words.take 32).all (· < 65536) &&
           words.getLast! < 4294967296 do throw (IO.userError "Invalid shape or width")
-      IO.println (toJson ((path.output (BitVec.ofNat 32 words.getLast!)
+      IO.println (toJson ((variant.output (BitVec.ofNat 32 words.getLast!)
         (pairs (words.take 32))).map BitVec.toNat)).compress

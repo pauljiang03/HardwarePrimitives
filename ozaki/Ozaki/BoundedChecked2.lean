@@ -16,12 +16,12 @@ import Ozaki.BoundedOzaki2J
 * the sums of the integer bound `K` (`boundKC`), the enclosure's exponent, and the enclosure test
   (`roundEnclosureBC` of `Ozaki.BoundedChecked`);
 * the exact path, by the checked jumping exact path of `Ozaki.BoundedChecked`
-  (`ozaki1ExactPathIC`).
+  (`ozaki1ExactFallbackIC`).
 
 The CRT basis's constants are guarded as they are read: each modulus, the weights in use and their
 product `M`. As there, comparisons, signs, absolute values, bit lengths and list lengths produce no
 new magnitudes and are not guarded. The engine's own arithmetic is guarded when it runs through
-`Ozaki.CheckedEngines.chunkedC` (split-K with its chunk sums guarded); the matrix engine's block
+`Ozaki.CheckedMultipliers.chunkedC` (split-K with its chunk sums guarded); the matrix engine's block
 arithmetic is the hardware model's.
 
 `ozaki2CRJC_eq` proves that on binary entries with an exact engine, if `R` and `X` meet explicit
@@ -114,11 +114,11 @@ def dropsZC (s : ℤ) (xs : List (ℤ × ℤ)) : Option Bool := do
 
 /-- `residueProduct`: the modulus as read, the residues, the engine output read back, and its
 residue. -/
-def residueProductC (eng : Engine) (m : ℕ) (a c : List ℤ) : Option (Option ℤ) := do
+def residueProductC (mult : MatrixMultiplier) (m : ℕ) (a c : List ℤ) : Option (Option ℤ) := do
   let _ ← B.gn m
   let ra ← a.mapM fun z => symModC B z m
   let rc ← c.mapM fun z => symModC B z m
-  match eng ra rc with
+  match mult ra rc with
   | none => pure none
   | some v =>
     match toInt? v with
@@ -137,13 +137,13 @@ def crtC (Bs : CRTBasis) (rs : List ℤ) : Option ℤ := do
   symModC B d M
 
 /-- `ozaki2IntZ`: scaling, truncation, the residue products on the engine, the CRT. -/
-def ozaki2IntZC (eng : Engine) (Bs : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
+def ozaki2IntZC (mult : MatrixMultiplier) (Bs : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (Option ℤ) := do
   let sx ← scaleShiftZC B P xs
   let sy ← scaleShiftZC B P ys
   let a ← scaleTruncZC B sx xs
   let c ← scaleTruncZC B sy ys
-  let rs ← Bs.moduli.mapM fun m => residueProductC B eng m a c
+  let rs ← Bs.moduli.mapM fun m => residueProductC B mult m a c
   match rs.mapM id with
   | none => pure none
   | some rs => do
@@ -158,9 +158,9 @@ def boundKC (a c : List ℤ) (dx dy : Bool) (k : ℕ) : Option ℤ := do
   B.gv ((if dx then (sck : ℤ) else 0) + (if dy then (sa : ℤ) else 0))
 
 /-- `ozaki2EnclosureZ`: the reconstructed product, its exponent, and the bound. -/
-def ozaki2EnclosureZC (eng : Engine) (Bs : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
+def ozaki2EnclosureZC (mult : MatrixMultiplier) (Bs : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (Option (ℤ × ℤ × ℤ × ℤ)) := do
-  let N ← ozaki2IntZC B eng Bs P xs ys
+  let N ← ozaki2IntZC B mult Bs P xs ys
   let sx ← scaleShiftZC B P xs
   let sy ← scaleShiftZC B P ys
   let a ← scaleTruncZC B sx xs
@@ -172,29 +172,29 @@ def ozaki2EnclosureZC (eng : Engine) (Bs : CRTBasis) (P : ℕ) (xs ys : List (�
   let K ← boundKC B a c dx dy xs.length
   pure (N.map fun N => (N, q, K, q))
 
-/-- `checkB`: the enclosure test on an integer enclosure. -/
-def checkBC (p : ℕ) (emin emax : ℤ) (e : ℤ × ℤ × ℤ × ℤ) : Option (Option ℚ) :=
+/-- `enclosureTestB`: the enclosure test on an integer enclosure. -/
+def enclosureTestBC (p : ℕ) (emin emax : ℤ) (e : ℤ × ℤ × ℤ × ℤ) : Option (Option ℚ) :=
   roundEnclosureBC B p emin emax e.1 e.2.1 e.2.2.1 e.2.2.2 0
 
-/-- `certifyB` with the checked enclosure test. -/
-def certifyBC (p : ℕ) (emin emax : ℤ) :
+/-- `roundingTestB` with the checked enclosure test. -/
+def roundingTestBC (p : ℕ) (emin emax : ℤ) :
     List (Option (ℤ × ℤ × ℤ × ℤ)) → Option ℚ → Option (Option ℚ)
   | [], exact => some exact
   | e :: es, exact =>
     match e with
-    | none => certifyBC p emin emax es exact
+    | none => roundingTestBC p emin emax es exact
     | some t => do
-      let r ← checkBC B p emin emax t
+      let r ← enclosureTestBC B p emin emax t
       match r with
       | some w => pure (some w)
-      | none => certifyBC p emin emax es exact
+      | none => roundingTestBC p emin emax es exact
 
 /-- **Correctly rounded Ozaki-II in integers, every integer guarded.** -/
-def ozaki2CRJC (eng : Engine) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
+def ozaki2CRJC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option (Option ℚ) := do
-  let es ← cfgs.mapM fun c => ozaki2EnclosureZC B eng c.1 c.2 xs ys
-  let ex ← ozaki1ExactPathIC B eng p emin emax b smax xs ys
-  certifyBC B p emin emax es ex
+  let es ← cfgs.mapM fun c => ozaki2EnclosureZC B mult c.1 c.2 xs ys
+  let ex ← ozaki1ExactFallbackIC B mult p emin emax b smax xs ys
+  roundingTestBC B p emin emax es ex
 
 end Checked
 
@@ -351,12 +351,12 @@ theorem dropsZC_eq {B : Widths} {P p EM : ℕ} {xs : List (ℤ × ℤ)} (hx : En
   simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, List.any_map]
   rfl
 
-theorem residueProductC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) {m : ℕ} (hm : 0 < m) (hmb : m ≤ 2 ^ (b + 1)) {a c : List ℤ}
-    (hlen : a.length = c.length) (hbudget : a.length * (2 ^ b * 2 ^ b) ≤ budget)
-    (hm2 : 2 * m < 2 ^ B.R) (hbud : budget < 2 ^ B.R) :
-    residueProductC B eng m a c = some (residueProduct eng m a c) := by
-  rw [residueProduct_eq heng hm hmb hlen hbudget]
+theorem residueProductC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) {m : ℕ} (hm : 0 < m) (hmb : m ≤ 2 ^ (b + 1)) {a c : List ℤ}
+    (hlen : a.length = c.length) (hbound : a.length * (2 ^ b * 2 ^ b) ≤ bound)
+    (hm2 : 2 * m < 2 ^ B.R) (hbud : bound < 2 ^ B.R) :
+    residueProductC B mult m a c = some (residueProduct mult m a c) := by
+  rw [residueProduct_eq hmult hm hmb hlen hbound]
   have hres : ∀ z : ℤ, (symMod z m).natAbs ≤ 2 ^ b := by
     intro z
     have := natAbs_symMod_le z hm
@@ -366,15 +366,15 @@ theorem residueProductC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
     intro z hz; obtain ⟨w, _, rfl⟩ := List.mem_map.mp hz; exact hres w
   have hy : ∀ z ∈ c.map fun z => symMod z m, z.natAbs ≤ 2 ^ b := by
     intro z hz; obtain ⟨w, _, rfl⟩ := List.mem_map.mp hz; exact hres w
-  have hab : dotAbs (a.map fun z => symMod z m) (c.map fun z => symMod z m) ≤ budget :=
-    Nat.le_trans (dotAbs_le _ _ _ _ hx hy) (by simpa using hbudget)
+  have hab : dotAbs (a.map fun z => symMod z m) (c.map fun z => symMod z m) ≤ bound :=
+    Nat.le_trans (dotAbs_le _ _ _ _ hx hy) (by simpa using hbound)
   unfold residueProductC
   rw [Widths.gn_ok (by omega)]
   simp only [Option.bind_eq_bind, Option.bind_some]
   rw [mapM_eq_some_map (g := fun z => symMod z m) fun _ _ => symModC_eq hm hm2,
     mapM_eq_some_map (g := fun z => symMod z m) fun _ _ => symModC_eq hm hm2]
   simp only [Option.bind_some]
-  rw [heng _ _ (by simpa using hlen) hx hy hab]
+  rw [hmult _ _ (by simpa using hlen) hx hy hab]
   simp only [Option.bind_eq_bind, Option.bind_some, Option.pure_def, toInt?_intCast]
   have hz := Nat.le_trans (natAbs_dotZ_le (a.map fun z => symMod z m) (c.map fun z => symMod z m))
     hab
@@ -448,18 +448,18 @@ theorem crtC_eq {B : Widths} {Bs : CRTBasis} {rs : List ℤ} (hM : 0 < Bs.modulu
 
 /-! ## The enclosure -/
 
-theorem residues_lt {eng : Engine} {a c : List ℤ} : ∀ {ms : List ℕ} {rs : List ℤ},
-    (∀ m ∈ ms, 0 < m) → (ms.mapM fun m => residueProduct eng m a c) = some rs → ResBelow rs ms
+theorem residues_lt {mult : MatrixMultiplier} {a c : List ℤ} : ∀ {ms : List ℕ} {rs : List ℤ},
+    (∀ m ∈ ms, 0 < m) → (ms.mapM fun m => residueProduct mult m a c) = some rs → ResBelow rs ms
   | [], rs, _, h => by
     simp only [List.mapM_nil, Option.pure_def, Option.some.injEq] at h
     subst h; trivial
   | m :: ms, rs, hm, h => by
     rw [List.mapM_cons] at h
     simp only [Option.bind_eq_bind, Option.pure_def] at h
-    cases hr : residueProduct eng m a c with
+    cases hr : residueProduct mult m a c with
     | none => simp [hr] at h
     | some r =>
-      cases hrs : ms.mapM fun m => residueProduct eng m a c with
+      cases hrs : ms.mapM fun m => residueProduct mult m a c with
       | none => simp [hr, hrs] at h
       | some rs' =>
         simp only [hr, hrs, Option.bind_some, Option.some.injEq] at h
@@ -468,7 +468,7 @@ theorem residues_lt {eng : Engine} {a c : List ℤ} : ∀ {ms : List ℕ} {rs : 
         have hm0 := hm m List.mem_cons_self
         unfold residueProduct at hr
         simp only [Option.bind_eq_bind] at hr
-        cases hv : eng (a.map fun z => symMod z m) (c.map fun z => symMod z m) with
+        cases hv : mult (a.map fun z => symMod z m) (c.map fun z => symMod z m) with
         | none => simp [hv] at hr
         | some v =>
           cases ht : toInt? v with
@@ -480,14 +480,14 @@ theorem residues_lt {eng : Engine} {a c : List ℤ} : ∀ {ms : List ℕ} {rs : 
             have h2 := Int.emod_lt_of_pos z (show (0 : ℤ) < m by omega)
             omega
 
-theorem ozaki2IntZC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2IntZC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {Bs : CRTBasis} {P p EM : ℕ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) (hx : EntriesIn p EM xs)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM xs)
     (hy : EntriesIn p EM ys) (hm : ∀ m ∈ Bs.moduli, 0 < m ∧ m ≤ 2 ^ (b + 1))
     (hM : 0 < Bs.modulus) (hsize : crtSize Bs < 2 ^ B.R) (hM2 : 2 * Bs.modulus < 2 ^ B.R)
-    (hpR : p + 1 ≤ B.R) (hPR : P < B.R) (hbR : b + 2 < B.R) (hbud : budget < 2 ^ B.R)
+    (hpR : p + 1 ≤ B.R) (hPR : P < B.R) (hbR : b + 2 < B.R) (hbud : bound < 2 ^ B.R)
     (hX : EM + P + p + 1 + EM < 2 ^ B.X) :
-    ozaki2IntZC B eng Bs P xs ys = some (ozaki2IntZ eng Bs P xs ys) := by
+    ozaki2IntZC B mult Bs P xs ys = some (ozaki2IntZ mult Bs P xs ys) := by
   have hP : 2 ^ P < 2 ^ B.R := Nat.pow_lt_pow_right (by decide) hPR
   have hb2 : 2 ^ (b + 2) < 2 ^ B.R := Nat.pow_lt_pow_right (by decide) hbR
   unfold ozaki2IntZC ozaki2IntZ
@@ -497,21 +497,21 @@ theorem ozaki2IntZC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.
   simp only [Option.bind_some]
   have hla : (scaleTruncZ (scaleShiftZ P xs) xs).length = (scaleTruncZ (scaleShiftZ P ys) ys).length :=
     by simp [scaleTruncZ, hlen]
-  have hba : (scaleTruncZ (scaleShiftZ P xs) xs).length * (2 ^ b * 2 ^ b) ≤ budget := by
-    simpa [scaleTruncZ] using hbudget
-  rw [mapM_eq_some_map (g := fun m => residueProduct eng m (scaleTruncZ (scaleShiftZ P xs) xs)
+  have hba : (scaleTruncZ (scaleShiftZ P xs) xs).length * (2 ^ b * 2 ^ b) ≤ bound := by
+    simpa [scaleTruncZ] using hbound
+  rw [mapM_eq_some_map (g := fun m => residueProduct mult m (scaleTruncZ (scaleShiftZ P xs) xs)
       (scaleTruncZ (scaleShiftZ P ys) ys)) fun m hmem => by
     obtain ⟨hm0, hmb⟩ := hm m hmem
     have : 2 * m < 2 ^ B.R := by rw [Nat.pow_succ] at hmb; rw [Nat.pow_succ, Nat.pow_succ] at hb2; omega
-    exact residueProductC_eq heng hm0 hmb hla hba this hbud]
+    exact residueProductC_eq hmult hm0 hmb hla hba this hbud]
   simp only [Option.bind_some]
-  have hmap : (Bs.moduli.map fun m => residueProduct eng m (scaleTruncZ (scaleShiftZ P xs) xs)
+  have hmap : (Bs.moduli.map fun m => residueProduct mult m (scaleTruncZ (scaleShiftZ P xs) xs)
       (scaleTruncZ (scaleShiftZ P ys) ys)).mapM id =
-      (Bs.moduli.mapM fun m => residueProduct eng m (scaleTruncZ (scaleShiftZ P xs) xs)
+      (Bs.moduli.mapM fun m => residueProduct mult m (scaleTruncZ (scaleShiftZ P xs) xs)
         (scaleTruncZ (scaleShiftZ P ys) ys)) := by
     rw [List.mapM_map]; rfl
   rw [hmap]
-  cases hrs : (Bs.moduli.mapM fun m => residueProduct eng m (scaleTruncZ (scaleShiftZ P xs) xs)
+  cases hrs : (Bs.moduli.mapM fun m => residueProduct mult m (scaleTruncZ (scaleShiftZ P xs) xs)
       (scaleTruncZ (scaleShiftZ P ys) ys)) with
   | none => rfl
   | some rs =>
@@ -550,23 +550,23 @@ def ozaki2R (Bs : CRTBasis) (P p k : ℕ) : ℕ :=
 def ozaki2X (Bs : CRTBasis) (P p EM k : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
   8 * (P + p + 1 + EM) + 2 * ozaki2R Bs P p k + emin.natAbs + emax.natAbs + 2 * p + 2 * R + 8
 
-theorem ozaki2EnclosureZC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) {Bs : CRTBasis} {P p EM : ℕ} {xs ys : List (ℤ × ℤ)}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki2EnclosureZC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) {Bs : CRTBasis} {P p EM : ℕ} {xs ys : List (ℤ × ℤ)}
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys)
     (hm : ∀ m ∈ Bs.moduli, 0 < m ∧ m ≤ 2 ^ (b + 1)) (hM : 0 < Bs.modulus)
     (hsize : crtSize Bs < 2 ^ B.R) (hM2 : 2 * Bs.modulus < 2 ^ B.R)
     (hpR : p + 1 ≤ B.R) (hRq : ozaki2R Bs P p xs.length ≤ B.R) (hbR : b + 2 < B.R)
-    (hbud : budget < 2 ^ B.R) (hX : EM + P + p + 1 + EM < 2 ^ B.X)
+    (hbud : bound < 2 ^ B.R) (hX : EM + P + p + 1 + EM < 2 ^ B.X)
     (hXq : 4 * (P + p + 1 + EM) < 2 ^ B.X) :
-    ozaki2EnclosureZC B eng Bs P xs ys = some (ozaki2EnclosureZ eng Bs P xs ys) := by
+    ozaki2EnclosureZC B mult Bs P xs ys = some (ozaki2EnclosureZ mult Bs P xs ys) := by
   unfold ozaki2R at hRq
   have hPR : P < B.R := by omega
   have hP : 2 ^ P < 2 ^ B.R := Nat.pow_lt_pow_right (by decide) hPR
   have hbx := scaleShiftZ_natAbs_le (P := P) hx
   have hby := scaleShiftZ_natAbs_le (P := P) hy
   unfold ozaki2EnclosureZC ozaki2EnclosureZ
-  rw [ozaki2IntZC_eq heng hlen hbudget hx hy hm hM hsize hM2 hpR hPR hbR hbud hX]
+  rw [ozaki2IntZC_eq hmult hlen hbound hx hy hm hM hsize hM2 hpR hPR hbR hbud hX]
   simp only [Option.bind_eq_bind, Option.bind_some]
   rw [scaleShiftZC_eq hx hpR (by omega), scaleShiftZC_eq hy hpR (by omega)]
   simp only [Option.bind_some]
@@ -598,51 +598,51 @@ theorem ozaki2EnclosureZC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
 
 /-! ## The check, the fallback and the scheme -/
 
-theorem checkBC_eq {B : Widths} {p E D : ℕ} {emin emax : ℤ} {N q K : ℤ}
+theorem enclosureTestBC_eq {B : Widths} {p E D : ℕ} {emin emax : ℤ} {N q K : ℤ}
     (hN : N.natAbs < 2 ^ E) (hK : K.natAbs < 2 ^ E) (hED : E + 2 ≤ D) (hpD : p + 2 ≤ D)
     (hR : D + 3 ≤ B.R)
     (hX : 4 * q.natAbs + 2 * D + emin.natAbs + emax.natAbs + 2 * p + 2 * B.R + 8 < 2 ^ B.X) :
-    checkBC B p emin emax (N, q, K, q) = some (checkB p emin emax (N, q, K, q)) := by
-  unfold checkBC checkB
+    enclosureTestBC B p emin emax (N, q, K, q) = some (enclosureTestB p emin emax (N, q, K, q)) := by
+  unfold enclosureTestBC enclosureTestB
   simp only
   have h0 : (q - min q q).toNat = 0 := by simp
   exact roundEnclosureBC_eq (E := E) (D := D) (by rw [h0]; simpa using hN)
     (by rw [h0]; simpa using hK) (by rw [h0]; simp; exact Nat.two_pow_pos E) hED hpD hR (by omega)
 
-theorem certifyBC_eq {B : Widths} {p : ℕ} {emin emax : ℤ} (exact : Option ℚ) :
+theorem roundingTestBC_eq {B : Widths} {p : ℕ} {emin emax : ℤ} (exact : Option ℚ) :
     ∀ es : List (Option (ℤ × ℤ × ℤ × ℤ)),
-      (∀ e ∈ es, ∀ t, e = some t → checkBC B p emin emax t = some (checkB p emin emax t)) →
-      certifyBC B p emin emax es exact = some (certifyB p emin emax es exact)
+      (∀ e ∈ es, ∀ t, e = some t → enclosureTestBC B p emin emax t = some (enclosureTestB p emin emax t)) →
+      roundingTestBC B p emin emax es exact = some (roundingTestB p emin emax es exact)
   | [], _ => rfl
   | e :: es, h => by
-    have ih := certifyBC_eq exact es fun e' he' => h e' (List.mem_cons_of_mem _ he')
-    unfold certifyBC certifyB
+    have ih := roundingTestBC_eq exact es fun e' he' => h e' (List.mem_cons_of_mem _ he')
+    unfold roundingTestBC roundingTestB
     cases e with
     | none => exact ih
     | some t =>
       dsimp only
       rw [h _ List.mem_cons_self t rfl]
       simp only [Option.bind_eq_bind, Option.bind_some]
-      cases checkB p emin emax t with
+      cases enclosureTestB p emin emax t with
       | some w => rfl
       | none => exact ih
 
 /-- The reconstructed product of a configuration is at most `M/2`, and the bound `K` at most
 `2k(2^P + 1)`. -/
-theorem ozaki2EnclosureZ_bounds {eng : Engine} {Bs : CRTBasis} {P : ℕ} {xs ys : List (ℤ × ℤ)}
+theorem ozaki2EnclosureZ_bounds {mult : MatrixMultiplier} {Bs : CRTBasis} {P : ℕ} {xs ys : List (ℤ × ℤ)}
     (hlen : xs.length = ys.length) (hM : 0 < Bs.modulus) {t : ℤ × ℤ × ℤ × ℤ}
-    (ht : ozaki2EnclosureZ eng Bs P xs ys = some t) :
+    (ht : ozaki2EnclosureZ mult Bs P xs ys = some t) :
     t.1.natAbs ≤ Bs.modulus ∧ t.2.2.1.natAbs ≤ 2 * xs.length * (2 ^ P + 1) ∧ t.2.1 = t.2.2.2 ∧
       t.2.1 = -(scaleShiftZ P xs + scaleShiftZ P ys) := by
   unfold ozaki2EnclosureZ at ht
-  cases hN : ozaki2IntZ eng Bs P xs ys with
+  cases hN : ozaki2IntZ mult Bs P xs ys with
   | none => simp [hN] at ht
   | some N =>
     simp only [hN, Option.map_some, Option.some.injEq] at ht
     subst ht
     refine ⟨?_, ?_, rfl, rfl⟩
     · unfold ozaki2IntZ crt at hN
-      cases hrs : Bs.moduli.mapM fun m => residueProduct eng m
+      cases hrs : Bs.moduli.mapM fun m => residueProduct mult m
           (scaleTruncZ (scaleShiftZ P xs) xs) (scaleTruncZ (scaleShiftZ P ys) ys) with
       | none => simp [hrs] at hN
       | some rs =>
@@ -662,30 +662,30 @@ exact engine, for configurations with moduli in `(0, 2^(b+1)]`, if `R` and `X` m
 requirements of every configuration (`ozaki2R`, `ozaki2X`, `crtSize`, `2M`) and of the exact path
 (`exactR`, `exactX`), the checked function returns exactly what `ozaki2CRJ` returns: no guard ever
 fails. -/
-theorem ozaki2CRJC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2CRJC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM smax : ℕ} {emin emax : ℤ} {cfgs : List (CRTBasis × ℕ)} {xs ys : List (ℤ × ℤ)}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys)
     (hcfg : ∀ c ∈ cfgs, (∀ m ∈ c.1.moduli, 0 < m ∧ m ≤ 2 ^ (b + 1)) ∧ 0 < c.1.modulus ∧
       crtSize c.1 < 2 ^ B.R ∧ 2 * c.1.modulus < 2 ^ B.R ∧ ozaki2R c.1 c.2 p xs.length ≤ B.R ∧
       ozaki2X c.1 c.2 p EM xs.length emin emax B.R < 2 ^ B.X)
-    (hRe : exactR p smax budget ≤ B.R) (hRb : p + b + 3 ≤ B.R)
-    (hXe : exactX p b EM smax budget emin emax B.R < 2 ^ B.X) :
-    ozaki2CRJC B eng p emin emax cfgs b smax xs ys =
-      some (ozaki2CRJ eng p emin emax cfgs b smax xs ys) := by
-  have hbud : budget < 2 ^ B.R := by
+    (hRe : exactR p smax bound ≤ B.R) (hRb : p + b + 3 ≤ B.R)
+    (hXe : exactX p b EM smax bound emin emax B.R < 2 ^ B.X) :
+    ozaki2CRJC B mult p emin emax cfgs b smax xs ys =
+      some (ozaki2CRJ mult p emin emax cfgs b smax xs ys) := by
+  have hbud : bound < 2 ^ B.R := by
     unfold exactR at hRe
-    exact Nat.lt_of_lt_of_le (lt_two_pow_bitlen budget) (Nat.pow_le_pow_right (by decide) (by omega))
+    exact Nat.lt_of_lt_of_le (lt_two_pow_bitlen bound) (Nat.pow_le_pow_right (by decide) (by omega))
   unfold ozaki2CRJC ozaki2CRJ
-  rw [mapM_eq_some_map (g := fun c => ozaki2EnclosureZ eng c.1 c.2 xs ys) fun c hc => by
+  rw [mapM_eq_some_map (g := fun c => ozaki2EnclosureZ mult c.1 c.2 xs ys) fun c hc => by
     obtain ⟨hm, hM, hsize, hM2, hRq, hXq⟩ := hcfg c hc
     unfold ozaki2X at hXq
-    exact ozaki2EnclosureZC_eq heng hlen hbudget hx hy hm hM hsize hM2 (by omega) hRq (by omega)
+    exact ozaki2EnclosureZC_eq hmult hlen hbound hx hy hm hM hsize hM2 (by omega) hRq (by omega)
       hbud (by omega) (by omega)]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [ozaki1ExactPathIC_eq heng hlen hbudget hx hy hRe hRb hXe]
+  rw [ozaki1ExactFallbackIC_eq hmult hlen hbound hx hy hRe hRb hXe]
   simp only [Option.bind_some]
-  apply certifyBC_eq
+  apply roundingTestBC_eq
   intro e he t het
   obtain ⟨c, hc, rfl⟩ := List.mem_map.mp he
   obtain ⟨hm, hM, hsize, hM2, hRq, hXq⟩ := hcfg c hc
@@ -716,7 +716,7 @@ theorem ozaki2CRJC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.E
         Nat.mul_lt_mul_of_pos_right hl (Nat.two_pow_pos c.2)
       grind
     exact Nat.lt_of_lt_of_le h1 (Nat.pow_le_pow_right (by decide) (by omega))
-  exact checkBC_eq (E := max (bitlen c.1.modulus) (c.2 + bitlen xs.length + 3))
+  exact enclosureTestBC_eq (E := max (bitlen c.1.modulus) (c.2 + bitlen xs.length + 3))
     (D := max (bitlen c.1.modulus) (c.2 + bitlen xs.length + 3) + p + 2) (by omega) (by omega)
     (by omega) (by omega) (by omega) (by omega)
 
@@ -745,21 +745,21 @@ theorem bitlen_length_le {k : ℕ} (hk : k ≤ 2 ^ 20) : bitlen k ≤ 21 := bitl
 /-- **Every integer of correctly rounded FP64 Ozaki-II fits 264 bits, every exponent and counter
 24 bits**: on binary64 entries, `k ≤ 2^20`, the twelve moduli at most `4096` with any `P ≤ 69`,
 `11`-bit slices and at most `175` slices on the exact path, with an exact engine. -/
-theorem ozaki2CRJC_binary64 {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki2CRJC_binary64 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp64Basis ∧ c.2 ≤ 69) :
-    ozaki2CRJC ⟨264, 24⟩ eng 53 (-1022) 1023 cfgs 11 175 xs ys =
-      some (ozaki2CRJ eng 53 (-1022) 1023 cfgs 11 175 xs ys) := by
+    ozaki2CRJC ⟨264, 24⟩ mult 53 (-1022) 1023 cfgs 11 175 xs ys =
+      some (ozaki2CRJ mult 53 (-1022) 1023 cfgs 11 175 xs ys) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hbk := bitlen_length_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hb2 : bitlen (175 * 175 + 2) = 15 := by decide
   obtain ⟨hm, hM, hsize, hM2, hbl⟩ := fp64Basis_facts
-  refine ozaki2CRJC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  refine ozaki2CRJC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) ?_ ?_ (by decide) ?_
   · intro c hc
     obtain ⟨h1, h2⟩ := hcfgs c hc
@@ -780,16 +780,16 @@ theorem ozaki2CRJC_binary64 {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs : L
 /-- **FP64 Ozaki-II, every integer within 264 bits, correctly rounded**: with configurations that
 also meet the CRT range condition, the checked function returns the IEEE binary64 round to nearest
 of `x · y`. -/
-theorem ozaki2CRJC_binary64_eq {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki2CRJC_binary64_eq {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp64Basis ∧ c.2 ≤ 69)
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
-    ozaki2CRJC ⟨264, 24⟩ eng 53 (-1022) 1023 cfgs 11 175 xs ys =
+    ozaki2CRJC ⟨264, 24⟩ mult 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) := by
-  rw [ozaki2CRJC_binary64 heng hlen hk hx hy hcfgs,
-    ozaki2CRJ64_eq heng (by decide) (by decide) (fun c hc => by
+  rw [ozaki2CRJC_binary64 hmult hlen hk hx hy hcfgs,
+    ozaki2CRJ64_eq hmult (by decide) (by decide) (fun c hc => by
       obtain ⟨h1, _⟩ := hcfgs c hc
       refine ⟨?_, ?_, hrange c hc⟩
       · rw [h1]; decide +kernel
@@ -802,21 +802,21 @@ theorem ozaki2CRJC_binary64_eq {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs 
 /-- **Every integer of correctly rounded binary32 Ozaki-II fits 161 bits, every exponent and
 counter 17 bits**: on binary32 entries, `k ≤ 2^20`, six moduli at most `4096` with any `P ≤ 34`,
 `11`-bit slices and at most `24` slices on the exact path. -/
-theorem ozaki2CRJC_binary32 {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki2CRJC_binary32 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
     (hy : ∀ a ∈ ys, FormatEntry 24 (-126) 127 a)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp32Basis6 ∧ c.2 ≤ 34) :
-    ozaki2CRJC ⟨161, 17⟩ eng 24 (-126) 127 cfgs 11 24 xs ys =
-      some (ozaki2CRJ eng 24 (-126) 127 cfgs 11 24 xs ys) := by
+    ozaki2CRJC ⟨161, 17⟩ mult 24 (-126) 127 cfgs 11 24 xs ys =
+      some (ozaki2CRJ mult 24 (-126) 127 cfgs 11 24 xs ys) := by
   have hE : ((-126 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 ∧
       ((127 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hbk := bitlen_length_le hk
   have hW : exactW 24 24 = 38 := by decide
   have hb2 : bitlen (24 * 24 + 2) = 10 := by decide
   obtain ⟨hm, hM, hsize, hM2, hbl⟩ := fp32Basis6_facts
-  refine ozaki2CRJC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  refine ozaki2CRJC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) ?_ ?_ (by decide) ?_
   · intro c hc
     obtain ⟨h1, h2⟩ := hcfgs c hc
@@ -835,16 +835,16 @@ theorem ozaki2CRJC_binary32 {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs : L
     omega
 
 /-- **Binary32 Ozaki-II, every integer within 161 bits, correctly rounded.** -/
-theorem ozaki2CRJC_binary32_eq {eng : Engine} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki2CRJC_binary32_eq {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
     (hy : ∀ a ∈ ys, FormatEntry 24 (-126) 127 a)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp32Basis6 ∧ c.2 ≤ 34)
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
-    ozaki2CRJC ⟨161, 17⟩ eng 24 (-126) 127 cfgs 11 24 xs ys =
+    ozaki2CRJC ⟨161, 17⟩ mult 24 (-126) 127 cfgs 11 24 xs ys =
       some (rne32Q (dot (entryVals xs) (entryVals ys))) := by
-  rw [ozaki2CRJC_binary32 heng hlen hk hx hy hcfgs,
-    ozaki2CRJ32_eq heng (by decide) (by decide) (fun c hc => by
+  rw [ozaki2CRJC_binary32 hmult hlen hk hx hy hcfgs,
+    ozaki2CRJ32_eq hmult (by decide) (by decide) (fun c hc => by
       obtain ⟨h1, _⟩ := hcfgs c hc
       refine ⟨?_, ?_, hrange c hc⟩
       · rw [h1]; decide +kernel

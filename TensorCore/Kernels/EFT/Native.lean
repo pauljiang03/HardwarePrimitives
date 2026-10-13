@@ -90,8 +90,8 @@ theorem Components.scalarWithLean_eq (c : Components) : c.scalarWithLean = c.sca
   simp only [Components.scalarWithLean, Components.scalar, scalarSumWithLean_eq, add32WithLean_eq]
 
 /-- Algorithm 1 with native scalar additions, retaining bounded exact consolidation when the scalar guard refuses the scalar branch. -/
-def tcEftWithLean (path : Path) (x : BlockInput path.profile) (D : F32) : Except Error Result := do
-  let p ← prepare path x D
+def tcEftWithLean (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Result := do
+  let p ← prepare variant x D
   if p.terms.all (fun t => t.word.magnitude == 0) then return .allZero
   let some c := extract p | throw .arithmeticOverflow
   match c.scalarWithLean with
@@ -102,30 +102,30 @@ def tcEftWithLean (path : Path) (x : BlockInput path.profile) (D : F32) : Except
     | none => return .outOfRange
 
 /-- Every input preserves the entire result, including branch tags and errors. -/
-theorem tcEftWithLean_eq (path : Path) (x : BlockInput path.profile) (D : F32) :
-    tcEftWithLean path x D = tcEft path x D := by
+theorem tcEftWithLean_eq (variant : Variant) (x : BlockInput variant.model) (D : F32) :
+    tcEftWithLean variant x D = tcEft variant x D := by
   simp only [tcEftWithLean, tcEft, Components.scalarWithLean_eq]
   rfl
 
-theorem tcEftWithLean_correct {path : Path} {x : BlockInput path.profile}
-    {D : F32} {s d : ℚ} (hlen : x.products.length = path.profile.products)
+theorem tcEftWithLean_correct {variant : Variant} {x : BlockInput variant.model}
+    {D : F32} {s d : ℚ} (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
-    ∃ r, tcEftWithLean path x D = .ok r ∧ r.bits = TensorCore.round32 .nearestEven s := by
+    ∃ r, tcEftWithLean variant x D = .ok r ∧ r.bits = TensorCore.round32 .nearestEven s := by
   rw [tcEftWithLean_eq]
   exact tcEft_correct hlen hx hD
 
-theorem tcEftWithLean_success {path : Path} {x : BlockInput path.profile}
-    {D : F32} {s d : ℚ} (hlen : x.products.length = path.profile.products)
+theorem tcEftWithLean_success {variant : Variant} {x : BlockInput variant.model}
+    {D : F32} {s d : ℚ} (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d)
     (hrange : absQ s ≤ maxFinite32) :
-    ∃ r b, tcEftWithLean path x D = .ok r ∧ r.bits = some b ∧ NearestEven32 s b := by
+    ∃ r b, tcEftWithLean variant x D = .ok r ∧ r.bits = some b ∧ NearestEven32 s b := by
   rw [tcEftWithLean_eq]
   exact tcEft_success hlen hx hD hrange
 
-theorem tcEftWithLean_range_iff {path : Path} {x : BlockInput path.profile}
-    {D : F32} {s d : ℚ} (hlen : x.products.length = path.profile.products)
+theorem tcEftWithLean_range_iff {variant : Variant} {x : BlockInput variant.model}
+    {D : F32} {s d : ℚ} (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
-    (∃ r b, tcEftWithLean path x D = .ok r ∧ r.bits = some b) ↔ absQ s ≤ maxFinite32 := by
+    (∃ r b, tcEftWithLean variant x D = .ok r ∧ r.bits = some b) ↔ absQ s ≤ maxFinite32 := by
   rw [tcEftWithLean_eq]
   exact tcEft_range_iff hlen hx hD
 

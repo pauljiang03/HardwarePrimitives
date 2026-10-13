@@ -42,7 +42,7 @@ example : (do
 The engine encodes integers as fp16 words, pads to groups of four, and runs `runBlocks` from
 `c = +0`. On `11`-bit integers with `Σ|aᵢbᵢ| ≤ 2^24` it is exact (`v100_exactOn`). -/
 
-example : tcEngine v100F16F32 [2047, -2048, 5, 7] [2048, 1, 3, -9] =
+example : tcMultiplier v100F16F32 [2047, -2048, 5, 7] [2048, 1, 3, -9] =
     some (dotZ [2047, -2048, 5, 7] [2048, 1, 3, -9]) := by decide +kernel
 
 #check @v100_exactOn
@@ -110,7 +110,7 @@ example : tcOzaki1CRE v100F16F32 11 [3, 4] 24 [1, 1 / 16777216] [1, 1] = some 1 
 
 /-! ## 8. The main theorems -/
 
-#check @tcEngine_exactOn
+#check @tcMultiplier_exactOn
 #check @tcOzaki1_error
 #check @tcOzaki2_error
 #check @sigma_split

@@ -30,12 +30,12 @@ example {a b : List (BitVec 16)} {c c' : F32} {t t' : BlockTrace cdna3F16}
     (h : evalBlock (P := cdna3F16) ⟨a, b, c⟩ = .ok t)
     (h' : evalBlock (P := cdna3F16) ⟨a, b, c'⟩ = .ok t') (hc : wordValue c ≤ wordValue c') :
     wordValue t.d ≤ wordValue t'.d :=
-  evalBlock_c_monotone paper_profiles_monotone.2.2.2.2.2.2.1 h h' hc
+  evalBlock_c_monotone paper_models_monotone.2.2.2.2.2.2.1 h h' hc
 
 /-- And for inner products of any length. -/
 example {a b : List (BitVec 16)} {c c' d d' : F32} (hlen : a.length = b.length)
     (h : dotBits cdna2F16 a b c = .ok d) (h' : dotBits cdna2F16 a b c' = .ok d')
     (hc : wordValue c ≤ wordValue c') : wordValue d ≤ wordValue d' :=
-  dotBits_c_monotone paper_profiles_monotone.2.2.2.1 hlen h h' hc
+  dotBits_c_monotone paper_models_monotone.2.2.2.1 hlen h h' hc
 
 end MatrixCoreTests.Monotonicity

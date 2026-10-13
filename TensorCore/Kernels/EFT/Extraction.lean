@@ -7,16 +7,16 @@ namespace TensorCore.EFMachine
 set_option exponentiation.threshold 1024
 
 /-- Both extracted lists fit within the original absolute coefficient budget. -/
-theorem split_budget (ts : List Term) (g : Grid) :
-    wordBudget ((ts.map fun t => t.word.split g).map WordSplit.coarse) ≤
-      wordBudget (ts.map Term.word) ∧
-    wordBudget ((ts.map fun t => t.word.split g).map WordSplit.low) ≤
-      wordBudget (ts.map Term.word) := by
+theorem split_magnitudeSum (ts : List Term) (g : Grid) :
+    wordMagnitudeSum ((ts.map fun t => t.word.split g).map WordSplit.coarse) ≤
+      wordMagnitudeSum (ts.map Term.word) ∧
+    wordMagnitudeSum ((ts.map fun t => t.word.split g).map WordSplit.low) ≤
+      wordMagnitudeSum (ts.map Term.word) := by
   induction ts with
-  | nil => simp [wordBudget]
+  | nil => simp [wordMagnitudeSum]
   | cons t ts ih =>
     have hs := t.word.split_magnitude g
-    simp only [List.map_cons, wordBudget, List.sum_cons] at *
+    simp only [List.map_cons, wordMagnitudeSum, List.sum_cons] at *
     omega
 
 theorem split_sum (ts : List Term) (g : Grid) :
@@ -32,13 +32,13 @@ theorem split_sum (ts : List Term) (g : Grid) :
 
 /-- Capacity comes from decoded inputs, including cancellation between products far outside FP32. -/
 theorem extract_exists {p : Prepared}
-    (hp : wordBudget (p.terms.map Term.word) < 2 ^ 555)
+    (hp : wordMagnitudeSum (p.terms.map Term.word) < 2 ^ 555)
     (hd : p.output.magnitude.toNat < 2 ^ 424) : ∃ c, extract p = some c := by
   let hi := (p.terms.map fun t => t.word.split p.grid).map WordSplit.coarse
   let lo := (p.terms.map fun t => t.word.split p.grid).map WordSplit.low
-  have hb := split_budget p.terms p.grid
-  have hhi : wordBudget hi < 2 ^ 555 := by dsimp [hi]; omega
-  have hlo : wordBudget lo < 2 ^ 555 := by dsimp [lo]; omega
+  have hb := split_magnitudeSum p.terms p.grid
+  have hhi : wordMagnitudeSum hi < 2 ^ 555 := by dsimp [hi]; omega
+  have hlo : wordMagnitudeSum lo < 2 ^ 555 := by dsimp [lo]; omega
   obtain ⟨h, hh, hmh⟩ := sumWords_exists hi (by omega)
   obtain ⟨o, ho⟩ := p.output.add_exists h.neg (by change _ + h.magnitude.toNat < _; omega)
   have hmo := Word.add_magnitude ho

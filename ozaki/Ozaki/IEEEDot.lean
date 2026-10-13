@@ -216,23 +216,23 @@ theorem finParts_inFormat : ∀ {xs : List FVal} {sx : List Signed},
 /-- **The sign of `x · y` from the exact path**: at the first slice count up to `smax` that leaves
 nothing over, the sign of the engine's integer slice products by the top-down descent `signSum`;
 `0` if there is no such slice count or the engine fails. -/
-def exactSignB (eng : Engine) (b smax : ℕ) (x y : List ℚ) : ℤ :=
+def exactSignB (mult : MatrixMultiplier) (b smax : ℕ) (x y : List ℚ) : ℤ :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | some s =>
     match (slicePairs (split b s x).1 (split b s y).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) with
+        (fun pr => sliceProductInt mult pr.1 pr.2) with
     | some ts => signSum (bitlen ts.length + 64) ts
     | none => 0
   | none => 0
 
 /-- **The oracle is the exact sign** on any exact engine, when the inputs leave nothing over after
 at most `smax` slices. -/
-theorem exactSignB_eq {eng : Engine} {b budget smax : ℕ} (heng : eng.ExactOn b budget)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem exactSignB_eq {mult : MatrixMultiplier} {b bound smax : ℕ} (hmult : mult.ExactOn b bound)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    exactSignB eng b smax x y = sgnQ (dot x y) := by
-  have hex := ozaki1ExactPath_eq heng hlen hbudget hvanish
-  unfold ozaki1ExactPath at hex
+    exactSignB mult b smax x y = sgnQ (dot x y) := by
+  have hex := ozaki1ExactFallback_eq hmult hlen hbound hvanish
+  unfold ozaki1ExactFallback at hex
   unfold exactSignB
   cases hf : (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | none => rw [hf] at hex; simp at hex
@@ -241,11 +241,11 @@ theorem exactSignB_eq {eng : Engine} {b budget smax : ℕ} (heng : eng.ExactOn b
     simp only at hex ⊢
     unfold ozaki1Full at hex
     rw [mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
-        sliceProductInt_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
-    rw [mapM_eq_some_map (f := fun pr : Slice × Slice => fullTerm eng pr.1 pr.2)
+        sliceProductInt_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
+    rw [mapM_eq_some_map (f := fun pr : Slice × Slice => fullTerm mult pr.1 pr.2)
         (g := fun pr : Slice × Slice => tval (exactSliceInt pr.1 pr.2)) fun pr hpr => by
         unfold fullTerm
-        rw [(engine_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2).1]
+        rw [(multiplier_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2).1]
         unfold tval exactSliceInt; simp only [Option.map_some]; rw [Rat.mul_comm]] at hex
     simp only [Option.map_some, Option.some.injEq] at hex
     simp only
@@ -258,7 +258,7 @@ theorem exactSignB_eq {eng : Engine} {b budget smax : ℕ} (heng : eng.ExactOn b
 `crIEEE_eq` from the finite scheme's theorem on vectors of the format whose length is the inputs'.
 This is how every correctly rounded scheme is given special values. -/
 theorem crIEEE_exactSign (hp : 0 < p) (hle : emin ≤ emax) {scheme : List ℚ → List ℚ → Option ℚ}
-    {eng : Engine} {b smax : ℕ} (heng : ∀ B, eng.ExactOn b B) {xs ys : List FVal}
+    {mult : MatrixMultiplier} {b smax : ℕ} (hmult : ∀ B, mult.ExactOn b B) {xs ys : List FVal}
     (hvanish : ∀ x y : List ℚ, (∀ a ∈ x, FormatValue p emin emax a) →
       (∀ a ∈ y, FormatValue p emin emax a) →
       ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true)
@@ -267,7 +267,7 @@ theorem crIEEE_exactSign (hp : 0 < p) (hle : emin ≤ emax) {scheme : List ℚ �
       scheme x y = roundRNE p emin emax (dot x y))
     (hx : ∀ a ∈ xs, a.InFormat p emin emax) (hy : ∀ a ∈ ys, a.InFormat p emin emax)
     (hlen : xs.length = ys.length) :
-    crIEEE scheme (exactSignB eng b smax) xs ys = dotIEEE p emin emax xs ys := by
+    crIEEE scheme (exactSignB mult b smax) xs ys = dotIEEE p emin emax xs ys := by
   apply crIEEE_eq hp hle
   intro sx sy hsx hsy
   have hfx := finParts_inFormat hx hsx
@@ -275,7 +275,7 @@ theorem crIEEE_exactSign (hp : 0 < p) (hle : emin ≤ emax) {scheme : List ℚ �
   have hlx := finParts_length hsx
   have hly := finParts_length hsy
   exact ⟨hscheme _ _ hfx hfy hlx (by rw [hly, hlen]),
-    exactSignB_eq (heng _) (by rw [hlx, hly, hlen]) (Nat.le_refl _) (hvanish _ _ hfx hfy)⟩
+    exactSignB_eq (hmult _) (by rw [hlx, hly, hlen]) (Nat.le_refl _) (hvanish _ _ hfx hfy)⟩
 
 /-! ## Native dot products with special values -/
 
@@ -386,13 +386,13 @@ theorem nativeDotIEEE_fin (hp : 0 < p) (hle : emin ≤ emax) {sx sy : List Signe
 /-- **Ozaki-I with IEEE special values**: the specification's special cases, otherwise the engine's
 scaled slice products added left to right from `+0` with IEEE addition (`±Inf` on overflow, signed
 zeros by IEEE addition). -/
-def ozaki1IEEE (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s : ℕ) (xs ys : List FVal) : FVal :=
+def ozaki1IEEE (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s : ℕ) (xs ys : List FVal) : FVal :=
   match dotSpecial xs ys with
   | some v => v
   | none =>
     match finParts xs, finParts ys with
     | some sx, some sy =>
-      match (trianglePairs s).mapM (pairTerm eng (split b s (vals sx)).1 (split b s (vals sy)).1) with
+      match (trianglePairs s).mapM (pairTerm mult (split b s (vals sx)).1 (split b s (vals sy)).1) with
       | some ts => (ts.map fun t => FVal.fin ⟨t, decide (t < 0)⟩).foldl (addF p emin emax)
           (.fin ⟨0, false⟩)
       | none => .nan
@@ -400,14 +400,14 @@ def ozaki1IEEE (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s : ℕ) (xs ys : L
 
 /-- **Plain Ozaki-I with special values agrees with Ozaki-I** with IEEE addition on every finite
 result. -/
-theorem ozaki1IEEE_fin {eng : Engine} {b s : ℕ} {sx sy : List Signed} {v : ℚ}
-    (h : ozaki1 eng (addOfRound (roundRNE p emin emax)) b s (vals sx) (vals sy) = some v) :
-    ∃ n, ozaki1IEEE eng p emin emax b s (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ := by
+theorem ozaki1IEEE_fin {mult : MatrixMultiplier} {b s : ℕ} {sx sy : List Signed} {v : ℚ}
+    (h : ozaki1 mult (addOfRound (roundRNE p emin emax)) b s (vals sx) (vals sy) = some v) :
+    ∃ n, ozaki1IEEE mult p emin emax b s (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ := by
   unfold ozaki1IEEE
   rw [dotSpecial_map, finParts_map, finParts_map]
   simp only
   unfold ozaki1 at h
-  cases hts : (trianglePairs s).mapM (pairTerm eng (split b s (vals sx)).1 (split b s (vals sy)).1)
+  cases hts : (trianglePairs s).mapM (pairTerm mult (split b s (vals sx)).1 (split b s (vals sy)).1)
     with
   | none => rw [hts] at h; simp at h
   | some ts =>
@@ -425,43 +425,43 @@ theorem ozaki1IEEE_fin {eng : Engine} {b s : ℕ} {sx sy : List Signed} {v : ℚ
     exact h
 
 /-- The value Ozaki-II rounds: the reconstructed integer product, rescaled. -/
-def ozaki2Value (eng : Engine) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ := do
+def ozaki2Value (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ := do
   let a := scaleTrunc (scaleShift P x) x
   let c := scaleTrunc (scaleShift P y) y
-  let rs ← B.moduli.mapM fun m => residueProduct eng m a c
+  let rs ← B.moduli.mapM fun m => residueProduct mult m a c
   pure ((crt B rs : ℚ) * 2 ^ (-(scaleShift P x + scaleShift P y)))
 
-theorem ozaki2_eq_bind (eng : Engine) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ)
-    (x y : List ℚ) : ozaki2 eng round B P x y = (ozaki2Value eng B P x y).bind round := by
+theorem ozaki2_eq_bind (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ)
+    (x y : List ℚ) : ozaki2 mult round B P x y = (ozaki2Value mult B P x y).bind round := by
   unfold ozaki2 ozaki2Value
   simp only [Option.bind_eq_bind, Option.pure_def]
   cases B.moduli.mapM fun m =>
-    residueProduct eng m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) <;> rfl
+    residueProduct mult m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) <;> rfl
 
 /-- **Ozaki-II with IEEE special values**: the specification's special cases, otherwise one IEEE
 rounding of the reconstructed product (`±Inf` on overflow; an exact zero is `−0` only when every
 product is `−0`). -/
-def ozaki2IEEE (eng : Engine) (p : ℕ) (emin emax : ℤ) (B : CRTBasis) (P : ℕ)
+def ozaki2IEEE (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (B : CRTBasis) (P : ℕ)
     (xs ys : List FVal) : FVal :=
   match dotSpecial xs ys with
   | some v => v
   | none =>
     match finParts xs, finParts ys with
     | some sx, some sy =>
-      match ozaki2Value eng B P (vals sx) (vals sy) with
+      match ozaki2Value mult B P (vals sx) (vals sy) with
       | some q => roundF p emin emax q (allNegZero sx sy)
       | none => .nan
     | _, _ => .nan
 
 /-- **Plain Ozaki-II with special values agrees with Ozaki-II** on every finite result. -/
-theorem ozaki2IEEE_fin {eng : Engine} {B : CRTBasis} {P : ℕ} {sx sy : List Signed} {v : ℚ}
-    (h : ozaki2 eng (roundRNE p emin emax) B P (vals sx) (vals sy) = some v) :
-    ∃ n, ozaki2IEEE eng p emin emax B P (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ := by
+theorem ozaki2IEEE_fin {mult : MatrixMultiplier} {B : CRTBasis} {P : ℕ} {sx sy : List Signed} {v : ℚ}
+    (h : ozaki2 mult (roundRNE p emin emax) B P (vals sx) (vals sy) = some v) :
+    ∃ n, ozaki2IEEE mult p emin emax B P (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ := by
   unfold ozaki2IEEE
   rw [dotSpecial_map, finParts_map, finParts_map]
   simp only
   rw [ozaki2_eq_bind] at h
-  cases hq : ozaki2Value eng B P (vals sx) (vals sy) with
+  cases hq : ozaki2Value mult B P (vals sx) (vals sy) with
   | none => rw [hq] at h; simp at h
   | some q =>
     rw [hq] at h

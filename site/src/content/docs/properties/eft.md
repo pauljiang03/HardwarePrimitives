@@ -130,7 +130,7 @@ rounded sum (`EFMachine.Components.scalar_of_guard`).
 
 **5. The paper's input-budget condition covers part of the check.** The
 TC-EFT paper's inequality (17) bounds the bit span from the inputs alone. For
-FP32 correction, `ExtractionGrid.inputBudget_scalarPredicate_fp32` derives five
+FP32 correction, `ExtractionGrid.inputGrid_scalarPredicate_fp32` derives five
 of the check's nine conditions from it and assumes the other four: a grid no
 lower than `2^-149`, the overlap and `H` fitting in FP32, and the sum being in
 range. These four depend on the particular sum, not only the input bound. A

@@ -26,7 +26,7 @@ def Prepared.productOverflows (x : Prepared) : Bool :=
   x.p.any fun p => decide (pow2 128 ≤ absQ p.value)
 
 /-- `S_acc`, the value converted to binary32 by the final `fl{·}`. -/
-def accumulate (P : Profile) (x : Prepared) : Except ModelError ℚ :=
+def accumulate (P : Model) (x : Prepared) : Except ModelError ℚ :=
   if P.productOverflow && x.productOverflows then .error .productOverflow
   else
     match P.accumulation with
@@ -38,7 +38,7 @@ def accumulate (P : Profile) (x : Prepared) : Except ModelError ℚ :=
     | .globalAlignment | .oddEvenGrouping => .ok (alignedAccumulation P x)
 
 /-- One evaluated block. -/
-structure BlockTrace (P : Profile) where
+structure BlockTrace (P : Model) where
   prepared : Prepared
   /-- `S_acc`. -/
   sAcc : ℚ
@@ -47,7 +47,7 @@ structure BlockTrace (P : Profile) where
   deriving Repr, DecidableEq
 
 /-- One block of `N_FMA` products: `d = fl{S_acc}` with RNE. -/
-def evalBlock {P : Profile} (x : BlockInput P) : Except ModelError (BlockTrace P) :=
+def evalBlock {P : Model} (x : BlockInput P) : Except ModelError (BlockTrace P) :=
   if x.a.length ≠ P.nfma ∨ x.b.length ≠ P.nfma then .error .wrongLength
   else
     match prepare x with
@@ -61,7 +61,7 @@ def evalBlock {P : Profile} (x : BlockInput P) : Except ModelError (BlockTrace P
         | some d => .ok ⟨px, s, d⟩
 
 /-- Output word of one block. -/
-def blockBits {P : Profile} (x : BlockInput P) : Except ModelError F32 :=
+def blockBits {P : Model} (x : BlockInput P) : Except ModelError F32 :=
   (evalBlock x).map BlockTrace.d
 
 end MatrixCore

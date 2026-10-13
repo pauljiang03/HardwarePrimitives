@@ -43,7 +43,7 @@ enough:
 ```lean
 /-- All encoded inputs have identical reference and machine results at any adequate width. -/
 theorem evalBlockMachine_eq {p : Profile} (x : BlockInput p) (w F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits)
+    (hF : p.alignFracBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits)
     (hw : F + 2 + carryBits + 1 ≤ w) : evalBlockMachine w x = evalBlock x
 ```
 

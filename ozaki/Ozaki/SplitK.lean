@@ -10,7 +10,7 @@ and add the chunk results, which are integers, exactly.
 
 * `chunksOf m l`: `l` cut into chunks of `m` (the last may be shorter);
 * `chunked m eng`: the split-K engine;
-* `chunked_exactOn`: if `eng` is exact on `b`-bit vectors within its budget and `m · 2^(2b)` fits
+* `chunked_exactOn`: if `mult` is exact on `b`-bit vectors within its budget and `m · 2^(2b)` fits
   the budget, the split-K engine is exact on `b`-bit vectors of every length, whatever their total.
 
 With it every theorem of the schemes holds for dot products of any length: take the budget
@@ -115,8 +115,8 @@ theorem chunksAux_dotAbs {m : ℕ} (hm : 0 < m) :
 
 /-- **Split-K.** Cut both vectors into chunks of `m`, run the engine on every chunk pair, and add
 the chunk results exactly. -/
-def chunked (m : ℕ) (eng : Engine) : Engine := fun x y =>
-  (((chunksOf m x).zip (chunksOf m y)).mapM fun p => eng p.1 p.2).map List.sum
+def chunked (m : ℕ) (mult : MatrixMultiplier) : MatrixMultiplier := fun x y =>
+  (((chunksOf m x).zip (chunksOf m y)).mapM fun p => mult p.1 p.2).map List.sum
 
 theorem intCast_sum_map (l : List α) (f : α → ℤ) :
     (((l.map f).sum : ℤ) : ℚ) = (l.map fun a => (f a : ℚ)).sum := by
@@ -124,11 +124,11 @@ theorem intCast_sum_map (l : List α) (f : α → ℤ) :
   | nil => simp
   | cons a l ih => simp only [List.map_cons, List.sum_cons, Rat.intCast_add, ih]
 
-/-- **Split-K is exact for every length.** If `eng` is exact on `b`-bit vectors whose products
-total at most `budget`, and `m · 2^(2b) ≤ budget`, the split-K engine with chunks of `m` is exact
+/-- **Split-K is exact for every length.** If `mult` is exact on `b`-bit vectors whose products
+total at most `bound`, and `m · 2^(2b) ≤ budget`, the split-K engine with chunks of `m` is exact
 on `b`-bit vectors of any length, with no budget at all. -/
-theorem chunked_exactOn {eng : Engine} {b budget m : ℕ} (heng : eng.ExactOn b budget)
-    (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ budget) (B : ℕ) : (chunked m eng).ExactOn b B := by
+theorem chunked_exactOn {mult : MatrixMultiplier} {b bound m : ℕ} (hmult : mult.ExactOn b bound)
+    (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ bound) (B : ℕ) : (chunked m mult).ExactOn b B := by
   intro x y hlen hx hy _
   unfold chunked chunksOf
   rw [hlen]
@@ -139,16 +139,16 @@ theorem chunked_exactOn {eng : Engine} {b budget m : ℕ} (heng : eng.ExactOn b 
     rfl
   · intro p hp
     obtain ⟨h1, h2, h3, h4⟩ := hpairs p hp
-    apply heng _ _ h1 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha))
+    apply hmult _ _ h1 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha))
     refine Nat.le_trans (dotAbs_le _ _ _ _ (fun a ha => hx a (h3 a ha))
       (fun a ha => hy a (h4 a ha))) ?_
     exact Nat.le_trans (Nat.mul_le_mul_right _ h2) hmb
 
 /-- The budget the scheme theorems ask for is met by any split-K engine: take `k · 2^(2b)`. -/
-theorem chunked_exactOn_self {eng : Engine} {b budget m : ℕ} (heng : eng.ExactOn b budget)
-    (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ budget) (x : List ℚ) :
-    (chunked m eng).ExactOn b (x.length * (2 ^ b * 2 ^ b)) :=
-  chunked_exactOn heng hm hmb _
+theorem chunked_exactOn_self {mult : MatrixMultiplier} {b bound m : ℕ} (hmult : mult.ExactOn b bound)
+    (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ bound) (x : List ℚ) :
+    (chunked m mult).ExactOn b (x.length * (2 ^ b * 2 ^ b)) :=
+  chunked_exactOn hmult hm hmb _
 
 /-- Chunk length for `b`-bit slices on an engine with budget `2^24`: `2^(24 − 2b)` products total at
 most `2^24` (four for `11`-bit slices, `256` for `8`-bit). -/
@@ -156,7 +156,7 @@ def chunkLen (b : ℕ) : ℕ := 2 ^ (24 - 2 * b)
 
 theorem chunkLen_pos (b : ℕ) : 0 < chunkLen b := Nat.two_pow_pos _
 
-theorem chunkLen_budget {b : ℕ} (hb : 2 * b ≤ 24) : chunkLen b * (2 ^ b * 2 ^ b) ≤ 2 ^ 24 := by
+theorem chunkLen_exactnessBound {b : ℕ} (hb : 2 * b ≤ 24) : chunkLen b * (2 ^ b * 2 ^ b) ≤ 2 ^ 24 := by
   unfold chunkLen
   rw [← Nat.pow_add, ← Nat.pow_add]
   apply Nat.le_of_eq; congr 1; omega

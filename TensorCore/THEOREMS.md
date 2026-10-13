@@ -18,7 +18,7 @@ for the Tensor Core model, and *the TC-EFT paper* for non-monotonicity and the T
 | A fixed-width wrapping accumulator gives the same output for every input when it is wide enough (29/31/33 bits for V100/A100/H100 FP16, a sign bit included). | `evalBlockMachine_eq` | [TC/MachineRefinement.lean](TC/MachineRefinement.lean) |
 | Every partial sum in that accumulator is exact, in any order. | `evalBlock_machinePrefix` | [TC/AlignmentExponent.lean](TC/AlignmentExponent.lean) |
 | A bitvector datapath (9-bit exponents, aligned terms of F + 2 bits, an accumulator of 28 to 32 magnitude bits plus a sign bit, shifts and a leading-zero count) returns the same output word, or the same error, as the model for every input on all 8 supported GPU paths. | `Datapath.evalBlock_eq` | [Kernels/Datapath/Correctness.lean](Kernels/Datapath/Correctness.lean) |
-| The guarantees above, bundled for any profile. | `profile_contract` | [TC/CanonicalFormats.lean](TC/CanonicalFormats.lean) |
+| The guarantees above, bundled for any profile. | `model_contract` | [TC/CanonicalFormats.lean](TC/CanonicalFormats.lean) |
 | For chained groups, the loss accounting holds across the whole chain. | `runBlocks_residual_ledger` | [TC/Composition.lean](TC/Composition.lean) |
 
 ## Non-monotonicity
@@ -37,7 +37,7 @@ for the Tensor Core model, and *the TC-EFT paper* for non-monotonicity and the T
 | TC-EFT returns a result exactly when that rounded sum is finite. | `tcEftEncoded_bits_isSome_iff` | [EFT/Encoded.lean](EFT/Encoded.lean) |
 | When the scalar safety check passes, the fast FP32 path gives the correctly rounded sum. | `scalarCorrected_correct` | [EFT/Extraction.lean](EFT/Extraction.lean) |
 | Exact sum = D − overlap + low parts. A definitional identity: the overlap is defined as D minus the retained part. | `overlap_recovery` | [EFT/Extraction.lean](EFT/Extraction.lean) |
-| The input-budget inequality establishes some of the fast-path check's conditions; for FP32 it derives five of the nine and assumes the other four (grid at least `2^-149`, overlap and H fit in FP32, sum in range). A concrete block satisfies all of them. | `ExtractionGrid.inputBudget_scalarPredicate`, `ExtractionGrid.inputBudget_scalarPredicate_fp32` | [EFT/ExtractionGrid.lean](EFT/ExtractionGrid.lean) |
+| The input-budget inequality establishes some of the fast-path check's conditions; for FP32 it derives five of the nine and assumes the other four (grid at least `2^-149`, overlap and H fit in FP32, sum in range). A concrete block satisfies all of them. | `ExtractionGrid.inputGrid_scalarPredicate`, `ExtractionGrid.inputGrid_scalarPredicate_fp32` | [EFT/ExtractionGrid.lean](EFT/ExtractionGrid.lean) |
 | The 576-bit implementation succeeds exactly when the rounded sum is finite, and never overflows. | `EFMachine.tcEft_success`, `EFMachine.tcEft_range_iff` | [Kernels/EFT/Correctness.lean](Kernels/EFT/Correctness.lean) |
 | The 576-bit implementation returns the same bits as the reference algorithm. | `EFMachine.tcEft_agrees` | [Kernels/EFT/Refinement.lean](Kernels/EFT/Refinement.lean) |
 | Using Lean's native `Float32` additions changes nothing (relative to Lean's `Float32` specification). | `EFMachine.tcEftWithLean_eq` | [Kernels/EFT/Native.lean](Kernels/EFT/Native.lean) |
@@ -73,7 +73,7 @@ open TensorCore
 #check evalBlockMachine_eq
 #check evalBlock_machinePrefix
 #check Datapath.evalBlock_eq
-#check profile_contract
+#check model_contract
 #check runBlocks_residual_ledger
 #check nonmonotone_encoded
 #check nonmonotone_range_encoded
@@ -83,8 +83,8 @@ open TensorCore
 #check tcEftEncoded_bits_isSome_iff
 #check scalarCorrected_correct
 #check overlap_recovery
-#check ExtractionGrid.inputBudget_scalarPredicate
-#check ExtractionGrid.inputBudget_scalarPredicate_fp32
+#check ExtractionGrid.inputGrid_scalarPredicate
+#check ExtractionGrid.inputGrid_scalarPredicate_fp32
 #check EFMachine.tcEft_success
 #check EFMachine.tcEft_range_iff
 #check EFMachine.tcEft_agrees

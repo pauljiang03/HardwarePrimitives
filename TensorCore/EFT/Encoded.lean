@@ -5,8 +5,8 @@ import TensorCore.EFT.TcEft
 namespace TensorCore
 
 /-- Lines 3–6: decode operands and supplied D, preserving unnormalized-product metadata. -/
-def prepareEncodedEFT {p : Profile} (x : BlockInput p) (D : F32) : Except ModelError BlockTrace :=
-  if x.products.length != p.products then .error .wrongProductCount
+def prepareEncodedEFT {p : Model} (x : BlockInput p) (D : F32) : Except ModelError BlockTrace :=
+  if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare x with
     | none => .error .nonfiniteInput
     | some b => match finite32 D with
@@ -27,15 +27,15 @@ def PreparedBlock.allZeroTerms (b : PreparedBlock) : Bool :=
   b.terms.all fun t => t.significand == 0
 
 /-- TC-EFT on encoded inputs: `+0` for all-zero terms, otherwise extraction and correction. -/
-def tcEftEncoded {p : Profile} (x : BlockInput p) (D : F32) :
+def tcEftEncoded {p : Model} (x : BlockInput p) (D : F32) :
     Except ModelError EncodedEFTResult :=
   match prepareEncodedEFT x D with
   | .error e => .error e
   | .ok t => .ok (if t.block.allZeroTerms then .allZero else .consolidated t.tcEft)
 
-theorem prepareEncodedEFT_spec {p : Profile} {x : BlockInput p} {D : F32} {t : BlockTrace}
+theorem prepareEncodedEFT_spec {p : Model} {x : BlockInput p} {D : F32} {t : BlockTrace}
     (h : prepareEncodedEFT x D = .ok t) :
-    x.products.length = p.products ∧ prepare x = some t.block ∧ finite32 D = some t.output := by
+    x.products.length = p.nfma ∧ prepare x = some t.block ∧ finite32 D = some t.output := by
   unfold prepareEncodedEFT at h
   split at h
   · contradiction
@@ -50,9 +50,9 @@ theorem prepareEncodedEFT_spec {p : Profile} {x : BlockInput p} {D : F32} {t : B
         subst t
         exact ⟨by simpa using hs, rfl, rfl⟩
 
-theorem prepareEncodedEFT_success_iff (p : Profile) (x : BlockInput p) (D : F32) :
+theorem prepareEncodedEFT_success_iff (p : Model) (x : BlockInput p) (D : F32) :
     (∃ t, prepareEncodedEFT x D = .ok t) ↔
-      x.products.length = p.products ∧ (∃ b, prepare x = some b) ∧ (∃ d, finite32 D = some d) := by
+      x.products.length = p.nfma ∧ (∃ b, prepare x = some b) ∧ (∃ d, finite32 D = some d) := by
   constructor
   · rintro ⟨t, ht⟩
     obtain ⟨hs, hp, hd⟩ := prepareEncodedEFT_spec ht
@@ -89,7 +89,7 @@ theorem tcEft_bits_eq_round (t : BlockTrace) :
     cases round32 .nearestEven t.block.exactDot <;> rfl
 
 /-- The all-zero shortcut agrees in bits with Algorithm 1 on the reconstructed trace. -/
-theorem tcEftEncoded_agrees {p : Profile} {x : BlockInput p} {D : F32} {t : BlockTrace}
+theorem tcEftEncoded_agrees {p : Model} {x : BlockInput p} {D : F32} {t : BlockTrace}
     (h : prepareEncodedEFT x D = .ok t) :
     (tcEftEncoded x D).map EncodedEFTResult.bits = .ok t.tcEft.bits := by
   simp only [tcEftEncoded, h, Except.map]
@@ -101,17 +101,17 @@ theorem tcEftEncoded_agrees {p : Profile} {x : BlockInput p} {D : F32} {t : Bloc
   · rfl
 
 /-- Nonzero inputs preserve the trace algorithm's branch as well as its bits. -/
-theorem tcEftEncoded_nonzero {p : Profile} {x : BlockInput p} {D : F32} {t : BlockTrace}
+theorem tcEftEncoded_nonzero {p : Model} {x : BlockInput p} {D : F32} {t : BlockTrace}
     (h : prepareEncodedEFT x D = .ok t) (hz : t.block.allZeroTerms = false) :
     tcEftEncoded x D = .ok (.consolidated t.tcEft) := by
   simp [tcEftEncoded, h, hz]
 
-theorem tcEftEncoded_allZero {p : Profile} {x : BlockInput p} {D : F32} {t : BlockTrace}
+theorem tcEftEncoded_allZero {p : Model} {x : BlockInput p} {D : F32} {t : BlockTrace}
     (h : prepareEncodedEFT x D = .ok t) (hz : t.block.allZeroTerms = true) :
     tcEftEncoded x D = .ok .allZero := by simp [tcEftEncoded, h, hz]
 
 /-- Returned bits round the independent decoded original-input ideal, for any finite D. -/
-theorem tcEftEncoded_correct {p : Profile} {x : BlockInput p} {D b : F32}
+theorem tcEftEncoded_correct {p : Model} {x : BlockInput p} {D b : F32}
     {r : EncodedEFTResult} (h : tcEftEncoded x D = .ok r) (hb : r.bits = some b) :
     ∃ z, exactDot x = some z ∧ NearestEven32 z b := by
   cases ht : prepareEncodedEFT x D with
@@ -125,7 +125,7 @@ theorem tcEftEncoded_correct {p : Profile} {x : BlockInput p} {D b : F32}
       tcEft_correct t b ha⟩
 
 /-- After finite input decoding, an encoding exists exactly when the independent ideal fits. -/
-theorem tcEftEncoded_bits_isSome_iff {p : Profile} {x : BlockInput p} {D : F32}
+theorem tcEftEncoded_bits_isSome_iff {p : Model} {x : BlockInput p} {D : F32}
     {t : BlockTrace} (h : prepareEncodedEFT x D = .ok t) :
     (tcEftEncoded x D).map (fun r => r.bits.isSome) = .ok true ↔
       ∃ z, exactDot x = some z ∧ absQ z ≤ maxFinite32 := by
@@ -140,9 +140,9 @@ theorem tcEftEncoded_bits_isSome_iff {p : Profile} {x : BlockInput p} {D : F32}
   simpa [exactDot, (prepareEncodedEFT_spec h).2.1] using tcEft_bits_isSome_iff t
 
 /-- A model evaluation supplies exactly the same decoded trace at this public interface. -/
-theorem prepareEncodedEFT_of_evalBlock {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem prepareEncodedEFT_of_evalBlock {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : prepareEncodedEFT x t.output.bits = .ok t := by
-  have hs : x.products.length = p.products := by
+  have hs : x.products.length = p.nfma := by
     unfold evalBlock at h
     split at h <;> simp_all
   have hd : finite32 t.output.bits = some t.output := by
@@ -158,7 +158,7 @@ theorem prepareEncodedEFT_of_evalBlock {p : Profile} {x : BlockInput p} {t : Blo
   simp only [prepareEncodedEFT, hs, bne_self_eq_false, Bool.false_eq_true, ↓reduceIte,
     evalBlock_prepared h, hd]
 
-theorem tcEftEncoded_of_evalBlock {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem tcEftEncoded_of_evalBlock {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) :
     (tcEftEncoded x t.output.bits).map EncodedEFTResult.bits = .ok t.tcEft.bits :=
   tcEftEncoded_agrees (prepareEncodedEFT_of_evalBlock h)

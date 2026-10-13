@@ -16,15 +16,15 @@ namespace Ozaki.MC
 open Ozaki.Checked
 
 /-- The guarded split-K engine on CDNA 3 fp16 blocks. -/
-def cdna3SplitKC (B : Widths) : Engine := chunkedC B (chunkLen 11) (mcEngine cdna3F16)
+def cdna3SplitKC (B : Widths) : MatrixMultiplier := chunkedC B (chunkLen 11) (mcMultiplier cdna3F16)
 
 theorem cdna3SplitKC_exactOn {B : Widths} (hR : 25 ≤ B.R) {D : ℕ} (hD : D < 2 ^ B.R) :
     (cdna3SplitKC B).ExactOn 11 D :=
-  chunkedC_exactOn (cdna3F16_exactEngine (by decide)).exactOn (chunkLen_pos 11)
-    (chunkLen_budget (by decide))
+  chunkedC_exactOn (cdna3F16_exactMultiplier (by decide)).exactOn (chunkLen_pos 11)
+    (chunkLen_exactnessBound (by decide))
     (Nat.lt_of_lt_of_le (by decide) (Nat.pow_le_pow_right (by decide) hR)) hD
 
-theorem budget_lt_pow {k R : ℕ} (hk : k ≤ 2 ^ 20) (hR : 43 ≤ R) :
+theorem dotAbsBound_lt_pow {k R : ℕ} (hk : k ≤ 2 ^ 20) (hR : 43 ≤ R) :
     k * (2 ^ 11 * 2 ^ 11) < 2 ^ R :=
   Nat.lt_of_lt_of_le (show k * (2 ^ 11 * 2 ^ 11) < 2 ^ 43 by omega)
     (Nat.pow_le_pow_right (by decide) hR)
@@ -36,7 +36,7 @@ theorem cdna3F16_fp64CRI_checked {xs ys : List (ℤ × ℤ)} (hlen : xs.length =
     ozaki1CRIC ⟨263, 17⟩ (cdna3SplitKC ⟨263, 17⟩) 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) :=
   ozaki1CRIC_binary64_tight
-    (cdna3SplitKC_exactOn (show 25 ≤ 263 by decide) (budget_lt_pow hk (show 43 ≤ 263 by decide)))
+    (cdna3SplitKC_exactOn (show 25 ≤ 263 by decide) (dotAbsBound_lt_pow hk (show 43 ≤ 263 by decide)))
     hlen hk hx hy hss
 
 /-- **Binary32 by Ozaki-I on CDNA 3 fp16, every integer guarded, split-K included**: 207 and 15
@@ -47,7 +47,7 @@ theorem cdna3F16_binary32CRI_checked {xs ys : List (ℤ × ℤ)} (hlen : xs.leng
     ozaki1CRIC ⟨207, 15⟩ (cdna3SplitKC ⟨207, 15⟩) 24 (-126) 127 11 96 ss 24 xs ys =
       some (rne32Q (dot (entryVals xs) (entryVals ys))) :=
   ozaki1CRIC_binary32_tight
-    (cdna3SplitKC_exactOn (show 25 ≤ 207 by decide) (budget_lt_pow hk (show 43 ≤ 207 by decide)))
+    (cdna3SplitKC_exactOn (show 25 ≤ 207 by decide) (dotAbsBound_lt_pow hk (show 43 ≤ 207 by decide)))
     hlen hk hx hy hss
 
 /-- **FP64 by Ozaki-II on CDNA 3 fp16, every integer guarded, split-K included.** -/
@@ -59,7 +59,7 @@ theorem cdna3F16_fp64CRJ_checked {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBa
     ozaki2CRJC ⟨263, 17⟩ (cdna3SplitKC ⟨263, 17⟩) 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) :=
   ozaki2CRJC_binary64_tight
-    (cdna3SplitKC_exactOn (show 25 ≤ 263 by decide) (budget_lt_pow hk (show 43 ≤ 263 by decide)))
+    (cdna3SplitKC_exactOn (show 25 ≤ 263 by decide) (dotAbsBound_lt_pow hk (show 43 ≤ 263 by decide)))
     hlen hk hx hy hcfgs hrange
 
 end Ozaki.MC

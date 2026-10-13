@@ -6,7 +6,7 @@ foundation uses Lean's standard-library arithmetic. Regression modules have a se
 source root under `tests/`.
 
 - Put reusable arithmetic, representations, encoding, rounding, and inverse laws in `Numerics`.
-- Put tensor-core assumptions in explicit `Profile` or `InvocationSpec` fields and theorem premises.
+- Put tensor-core assumptions in explicit `Model` or `InvocationSpec` fields and theorem premises.
 - Put extraction and consolidation in `EFT`. Keep TC model properties and non-monotonicity in `TC`.
 - Define representations before their operations. Keep a definition and its elementary properties together;
   split substantial correctness, bijection, and round-trip developments into named files.

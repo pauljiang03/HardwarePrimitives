@@ -7,9 +7,9 @@ import TensorCore.TC.CanonicalFormats
 namespace TensorCore.IndependentSpec
 
 @[implicit_reducible] def layoutOf (f : Format) : Layout := ⟨f.mantissaBits, f.exponentBits, f.bias⟩
-def parametersOf (p : Profile) : Parameters :=
-  ⟨layoutOf p.input, p.products, p.alignMantissaBits, p.alignFloor⟩
-def inputOf {p : Profile} (x : BlockInput p) : Input (parametersOf p) := ⟨x.products, x.c⟩
+def parametersOf (p : Model) : Parameters :=
+  ⟨layoutOf p.input, p.nfma, p.alignFracBits, p.eAlignMin⟩
+def inputOf {p : Model} (x : BlockInput p) : Input (parametersOf p) := ⟨x.products, x.c⟩
 def termOf (d : Decoded) : Term := ⟨d.value, d.unnormalizedExp⟩
 def unnormalizedTermOf (t : UnnormalizedProduct) : Term := ⟨t.value, t.unnormalizedExp⟩
 
@@ -42,7 +42,7 @@ theorem product_eq (a b : Decoded) :
   rw [unnormalizedProduct_value]
   rfl
 
-theorem decode_products_eq (p : Profile) (ps : List (p.Word × p.Word)) :
+theorem decode_products_eq (p : Model) (ps : List (p.Word × p.Word)) :
     (ps.mapM fun (a, b) => do
       return product (← decode (layoutOf p.input) a.toNat)
         (← decode (layoutOf p.input) b.toNat)) =
@@ -54,9 +54,9 @@ theorem decode_products_eq (p : Profile) (ps : List (p.Word × p.Word)) :
     simp only [prepareProducts, List.mapM_cons, decode_eq] at *
     cases ha : p.decode a <;> cases hb : p.decode b <;>
       cases hr : prepareProducts p rest <;>
-      simp_all [Profile.decode, classify, prepareProducts, product_eq]
+      simp_all [Model.decode, classify, prepareProducts, product_eq]
 
-theorem terms_eq {p : Profile} (x : BlockInput p) :
+theorem terms_eq {p : Model} (x : BlockInput p) :
     terms (parametersOf p) (inputOf x) =
       (prepare x).map (fun b => b.terms.map unnormalizedTermOf) := by
   unfold terms inputOf parametersOf
@@ -123,7 +123,7 @@ theorem largestExponent_eq (ts : List UnnormalizedProduct) :
       simpa [largestExponent, unnormalizedTermOf, hz, hv] using congrArg (joinExponent (some t.unnormalizedExp)) ih
 
 theorem exponent_eq (b : PreparedBlock) :
-    exponent (parametersOf b.profile) (b.terms.map unnormalizedTermOf) = b.alignExp := by
+    exponent (parametersOf b.model) (b.terms.map unnormalizedTermOf) = b.alignExp := by
   unfold exponent PreparedBlock.alignExp
   rw [largestExponent_eq]
   cases maxTermExp b.terms <;> rfl
@@ -134,7 +134,7 @@ theorem coefficient_eq (v : ℚ) (e : ℤ) :
   split <;> simp
 
 theorem accumulated_eq (b : PreparedBlock) :
-    accumulated (parametersOf b.profile) (b.terms.map unnormalizedTermOf) = b.accumulator := by
+    accumulated (parametersOf b.model) (b.terms.map unnormalizedTermOf) = b.accumulator := by
   unfold accumulated
   rw [exponent_eq]
   change ((b.terms.map unnormalizedTermOf).foldr (fun t z =>
@@ -146,16 +146,16 @@ theorem accumulated_eq (b : PreparedBlock) :
   | nil => rfl
   | cons t ts ih => simpa [unnormalizedTermOf, coefficient_eq, sumZ] using congrArg (truncBits t.value b.alignGridExponent + ·) ih
 
-theorem valid_iff {p : Profile} (x : BlockInput p) :
+theorem valid_iff {p : Model} (x : BlockInput p) :
     Valid (parametersOf p) (inputOf x) ↔ ∃ t, evalBlock x = .ok t := by
   rw [evalBlock_success_iff]
   unfold Valid
-  change (x.products.length = p.products ∧ _) ↔ _
+  change (x.products.length = p.nfma ∧ _) ↔ _
   rw [terms_eq]
   cases hp : prepare x with
   | none => simp
   | some b =>
-    have hprof := prepare_profile hp
+    have hprof := prepare_model hp
     simp only [Option.map_some, Option.some.injEq, exists_eq_left']
     have ha := accumulated_eq b
     rw [hprof] at ha

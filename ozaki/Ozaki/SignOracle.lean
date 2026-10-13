@@ -7,15 +7,15 @@ the range. This file rounds it correctly with registers whose width depends on t
 number of terms and the window `W`, never on the exponents; only the number of steps grows with the
 exponent span.
 
-* `descend`: windows from the top down. Each takes the `W` bits below the top of an accumulator
+* `topDownSum`: windows from the top down. Each takes the `W` bits below the top of an accumulator
   `A 2^qa`, cuts every term at the grid `q` (exactly above, truncated toward zero below, `hiPart`,
   `loPart`), adds the parts above `q` in a register of `W + log₂ n + 1` bits, and keeps the parts
   below as residual terms on their own grids, never larger than the original. It stops when nothing
   is left over or the window sum `N` reaches `2^T`; otherwise `N 2^q` becomes the accumulator (a
   heavy cancellation) and the next window starts below it. Every term it returns satisfies
-  `x = N 2^q + Σ residuals` with each residual below `2^q` (`descend_sound`), and it ends within
-  `qa − m` steps for terms on the grid `2^m` (`descend_spec`): at most `E − m` steps for terms on
-  the grid `2^m` below `2^E` (`descendAll_fuel_le`);
+  `x = N 2^q + Σ residuals` with each residual below `2^q` (`topDownSum_sound`), and it ends within
+  `qa − m` steps for terms on the grid `2^m` (`topDownSum_spec`): at most `E − m` steps for terms on
+  the grid `2^m` below `2^E` (`topDownSumAll_fuel_le`);
 * `signSum`: the sign of the sum (`signSum_eq`);
 * `roundSum`: the round to nearest even (`roundSum_eq`). If nothing is left over it rounds `N 2^q`
   with integer operations (`roundExact`); otherwise `N` has `p + 4` bits more than the residuals
@@ -23,8 +23,8 @@ exponent span.
   residuals and one more term `N − K 2^(h−q)` at the grid `q`, whose width is checked by the code
   itself.
 
-Register widths (`descend_parts_lt`, `fixedSum_natAbs_le`, `descendAll_spec`, `query_natAbs_lt`):
-window parts below `2^W` (checked by `descend`, which refuses otherwise and provably never does),
+Register widths (`topDownSum_parts_lt`, `fixedSum_natAbs_le`, `topDownSumAll_spec`, `query_natAbs_lt`):
+window parts below `2^W` (checked by `topDownSum`, which refuses otherwise and provably never does),
 window sums at most `2^(W + bitlen (n + 1))`, residuals no larger than an input coefficient or a
 query term, comparison multipliers below `2^(p+4)` and query terms below `2^(bitlen |N| + p + 6)`
 (guarded in `roundSum`). Exponents and the step count are the only quantities that grow with the
@@ -201,11 +201,11 @@ theorem loPart_top {q : ℤ} {t : ℤ × ℤ} (h : (loPart q t).1 ≠ 0) :
 /-! ## One window -/
 
 /-- The residual terms after the window at grid `q`. -/
-def winRest (q : ℤ) (ts : List (ℤ × ℤ)) : List (ℤ × ℤ) := nonzero (ts.map (loPart q))
+def rangeRest (q : ℤ) (ts : List (ℤ × ℤ)) : List (ℤ × ℤ) := nonzero (ts.map (loPart q))
 
-theorem tsum_window (q : ℤ) (ts : List (ℤ × ℤ)) :
-    tsum ts = (((ts.map (hiPart q)).sum : ℤ) : ℚ) * 2 ^ q + tsum (winRest q ts) := by
-  unfold winRest
+theorem tsum_range (q : ℤ) (ts : List (ℤ × ℤ)) :
+    tsum ts = (((ts.map (hiPart q)).sum : ℤ) : ℚ) * 2 ^ q + tsum (rangeRest q ts) := by
+  unfold rangeRest
   rw [tsum_nonzero]
   induction ts with
   | nil => simp [tsum]; exact (Rat.add_zero 0).symm
@@ -214,7 +214,7 @@ theorem tsum_window (q : ℤ) (ts : List (ℤ × ℤ)) :
       Rat.intCast_add]
     grind
 
-theorem mem_winRest {q : ℤ} {ts : List (ℤ × ℤ)} {t' : ℤ × ℤ} (h : t' ∈ winRest q ts) :
+theorem mem_rangeRest {q : ℤ} {ts : List (ℤ × ℤ)} {t' : ℤ × ℤ} (h : t' ∈ rangeRest q ts) :
     t'.1 ≠ 0 ∧ topOf t' ≤ q ∧
       ∃ t ∈ ts, t'.2 = t.2 ∧ t'.1.natAbs ≤ t.1.natAbs ∧ t.2 < q := by
   obtain ⟨hm, hne⟩ := mem_nonzero.mp h
@@ -222,15 +222,15 @@ theorem mem_winRest {q : ℤ} {ts : List (ℤ × ℤ)} {t' : ℤ × ℤ} (h : t'
   obtain ⟨htop, hlt⟩ := loPart_top hne
   exact ⟨hne, htop, t, ht, rfl, natAbs_loPart_le q t, hlt⟩
 
-theorem winRest_cons_of_le {q A qa : ℤ} {rs : List (ℤ × ℤ)} (h : q ≤ qa) :
-    winRest q ((A, qa) :: rs) = winRest q rs := by
-  unfold winRest nonzero
+theorem rangeRest_cons_of_le {q A qa : ℤ} {rs : List (ℤ × ℤ)} (h : q ≤ qa) :
+    rangeRest q ((A, qa) :: rs) = rangeRest q rs := by
+  unfold rangeRest nonzero
   rw [List.map_cons, List.filter_cons]
   have h0 : (loPart q (A, qa)).1 = 0 := loPart_fst_of_le h
   rw [if_neg (by simp [h0])]
 
-theorem length_winRest (q : ℤ) (ts : List (ℤ × ℤ)) : (winRest q ts).length ≤ ts.length := by
-  unfold winRest
+theorem length_rangeRest (q : ℤ) (ts : List (ℤ × ℤ)) : (rangeRest q ts).length ≤ ts.length := by
+  unfold rangeRest
   exact Nat.le_trans (length_nonzero _) (by simp)
 
 /-- Magnitudes below `B` add up to at most `length · B`. -/
@@ -244,7 +244,7 @@ theorem sum_natAbs_le {B : ℕ} : ∀ {ps : List ℤ}, (∀ z ∈ ps, z.natAbs <
     omega
 
 /-- **The window register.** Parts below `2^W` add up exactly in `W + bitlen n + 1` bits. -/
-theorem window_fixedSum {W : ℕ} {ps : List ℤ} (h : ∀ z ∈ ps, z.natAbs < 2 ^ W) :
+theorem register_fixedSum {W : ℕ} {ps : List ℤ} (h : ∀ z ∈ ps, z.natAbs < 2 ^ W) :
     fixedSum (W + bitlen ps.length + 1) ps = ps.sum := by
   apply fixedSum_eq (by omega)
   rw [show W + bitlen ps.length + 1 - 1 = bitlen ps.length + W by omega, Nat.pow_add]
@@ -283,35 +283,35 @@ theorem fixedSum_natAbs_le {w : ℕ} (hw : 0 < w) (zs : List ℤ) :
 Every part above `q` must be a `W`-bit integer (checked); they are added in a register of
 `W + bitlen n + 1` bits. Stops with `(N, q, residuals)` when nothing is left over or `|N| ≥ 2^T`;
 otherwise continues with `N 2^q` as the accumulator, at most `fuel` more times. -/
-def descend (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (ℤ × ℤ × List (ℤ × ℤ))
+def topDownSum (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (ℤ × ℤ × List (ℤ × ℤ))
   | fuel, A, qa, rs =>
     let ts := (A, qa) :: rs
     let q := topOf (A, qa) - W
     let parts := ts.map (hiPart q)
     let N := fixedSum (W + bitlen parts.length + 1) parts
-    let rs' := winRest q ts
+    let rs' := rangeRest q ts
     if parts.all (fun z => decide (z.natAbs < 2 ^ W)) then
       if rs' = [] ∨ T < bitlen N.natAbs then some (N, q, rs')
       else match fuel with
         | 0 => none
-        | k + 1 => descend W T k N q rs'
+        | k + 1 => topDownSum W T k N q rs'
     else none
 
-/-- **What `descend` returns is exact**: `A 2^qa + Σ residuals = N 2^q + Σ new residuals`, every new
+/-- **What `topDownSum` returns is exact**: `A 2^qa + Σ residuals = N 2^q + Σ new residuals`, every new
 residual is nonzero and below `2^q`, and it stopped because nothing was left over or `|N| ≥ 2^T`. -/
-theorem descend_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)) {N q : ℤ}
-    {rs' : List (ℤ × ℤ)}, descend W T fuel A qa rs = some (N, q, rs') →
+theorem topDownSum_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)) {N q : ℤ}
+    {rs' : List (ℤ × ℤ)}, topDownSum W T fuel A qa rs = some (N, q, rs') →
     tval (A, qa) + tsum rs = (N : ℚ) * 2 ^ q + tsum rs' ∧
       (∀ t ∈ rs', t.1 ≠ 0 ∧ topOf t ≤ q) ∧ (rs' = [] ∨ T < bitlen N.natAbs) := by
   intro fuel
   induction fuel with
   | zero =>
     intro A qa rs N q rs' h
-    unfold descend at h
+    unfold topDownSum at h
     simp only at h
     split at h
     · rename_i hall
-      have hsum := window_fixedSum (W := W)
+      have hsum := register_fixedSum (W := W)
         (ps := ((A, qa) :: rs).map (hiPart (topOf (A, qa) - W)))
         (fun z hz => by simpa using List.all_eq_true.mp hall z hz)
       split at h
@@ -319,17 +319,17 @@ theorem descend_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (�
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         rw [hsum, ← tsum_cons]
-        exact ⟨tsum_window _ _, fun t ht => (mem_winRest ht).imp_right fun h => h.1,
+        exact ⟨tsum_range _ _, fun t ht => (mem_rangeRest ht).imp_right fun h => h.1,
           by rw [← hsum]; exact hstop⟩
       · simp at h
     · simp at h
   | succ k ih =>
     intro A qa rs N q rs' h
-    unfold descend at h
+    unfold topDownSum at h
     simp only at h
     split at h
     · rename_i hall
-      have hsum := window_fixedSum (W := W)
+      have hsum := register_fixedSum (W := W)
         (ps := ((A, qa) :: rs).map (hiPart (topOf (A, qa) - W)))
         (fun z hz => by simpa using List.all_eq_true.mp hall z hz)
       split at h
@@ -337,19 +337,19 @@ theorem descend_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (�
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         rw [hsum, ← tsum_cons]
-        exact ⟨tsum_window _ _, fun t ht => (mem_winRest ht).imp_right fun h => h.1,
+        exact ⟨tsum_range _ _, fun t ht => (mem_rangeRest ht).imp_right fun h => h.1,
           by rw [← hsum]; exact hstop⟩
       · obtain ⟨h1, h2, h3⟩ := ih _ _ _ h
         refine ⟨?_, h2, h3⟩
-        rw [← h1, ← tsum_cons, tsum_window (topOf (A, qa) - W), hsum]
+        rw [← h1, ← tsum_cons, tsum_range (topOf (A, qa) - W), hsum]
         unfold tval; rfl
     · simp at h
 
-/-- **`descend` ends**, on terms on the grid `2^m` below `2^qa`, within `qa − m` steps, with no more
+/-- **`topDownSum` ends**, on terms on the grid `2^m` below `2^qa`, within `qa − m` steps, with no more
 residuals than it started with, each on the grid of an original term and no larger. -/
-theorem descend_spec {W T : ℕ} (hTW : T < W) {m : ℤ} : ∀ (fuel : ℕ) (A qa : ℤ)
+theorem topDownSum_spec {W T : ℕ} (hTW : T < W) {m : ℤ} : ∀ (fuel : ℕ) (A qa : ℤ)
     (rs : List (ℤ × ℤ)), bitlen A.natAbs ≤ T → (∀ t ∈ rs, t.1 ≠ 0 ∧ topOf t ≤ qa ∧ m ≤ t.2) →
-    qa - m ≤ fuel → ∃ N q rs', descend W T fuel A qa rs = some (N, q, rs') ∧
+    qa - m ≤ fuel → ∃ N q rs', topDownSum W T fuel A qa rs = some (N, q, rs') ∧
       rs'.length ≤ rs.length ∧
       (∀ t' ∈ rs', ∃ t ∈ rs, t'.2 = t.2 ∧ t'.1.natAbs ≤ t.1.natAbs) ∧
       N.natAbs ≤ 2 ^ (W + bitlen (rs.length + 1)) := by
@@ -370,12 +370,12 @@ theorem descend_spec {W T : ℕ} (hTW : T < W) {m : ℤ} : ∀ (fuel : ℕ) (A q
       rcases List.mem_cons.mp ht with rfl | ht
       · omega
       · have := (hrs t ht).2.1; omega
-    unfold descend
+    unfold topDownSum
     simp only
-    rw [if_pos hall, winRest_cons_of_le (by omega)]
+    rw [if_pos hall, rangeRest_cons_of_le (by omega)]
     split
-    · refine ⟨_, _, _, rfl, length_winRest _ _, fun t' ht' => ?_, ?_⟩
-      · obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_winRest ht'
+    · refine ⟨_, _, _, rfl, length_rangeRest _ _, fun t' ht' => ?_, ?_⟩
+      · obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_rangeRest ht'
         exact ⟨t, ht, h1, h2⟩
       · refine Nat.le_trans (fixedSum_natAbs_le (by omega) _) (Nat.le_of_eq ?_)
         simp only [List.length_map, List.length_cons]
@@ -383,7 +383,7 @@ theorem descend_spec {W T : ℕ} (hTW : T < W) {m : ℤ} : ∀ (fuel : ℕ) (A q
     · rename_i hstop
       exfalso
       obtain ⟨t', ht'⟩ := List.exists_mem_of_ne_nil _ (fun h => hstop (Or.inl h))
-      obtain ⟨hne, htop, t, ht, h1, _, _⟩ := mem_winRest ht'
+      obtain ⟨hne, htop, t, ht, h1, _, _⟩ := mem_rangeRest ht'
       have := (hrs t ht).2.2
       have hb := bitlen_pos (n := t'.1.natAbs) (by omega)
       generalize topOf (A, qa) - W = q at htop hq
@@ -404,42 +404,42 @@ theorem descend_spec {W T : ℕ} (hTW : T < W) {m : ℤ} : ∀ (fuel : ℕ) (A q
       rcases List.mem_cons.mp ht with rfl | ht
       · omega
       · have := (hrs t ht).2.1; omega
-    unfold descend
+    unfold topDownSum
     simp only
-    rw [if_pos hall, winRest_cons_of_le (by omega)]
+    rw [if_pos hall, rangeRest_cons_of_le (by omega)]
     split
-    · refine ⟨_, _, _, rfl, length_winRest _ _, fun t' ht' => ?_, ?_⟩
-      · obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_winRest ht'
+    · refine ⟨_, _, _, rfl, length_rangeRest _ _, fun t' ht' => ?_, ?_⟩
+      · obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_rangeRest ht'
         exact ⟨t, ht, h1, h2⟩
       · refine Nat.le_trans (fixedSum_natAbs_le (by omega) _) (Nat.le_of_eq ?_)
         simp only [List.length_map, List.length_cons]
         congr 1
     · rename_i hstop
       have hN := Nat.le_of_not_lt (fun h => hstop (Or.inr h))
-      have hrs' : ∀ t' ∈ winRest (topOf (A, qa) - W) rs,
+      have hrs' : ∀ t' ∈ rangeRest (topOf (A, qa) - W) rs,
           t'.1 ≠ 0 ∧ topOf t' ≤ topOf (A, qa) - W ∧ m ≤ t'.2 := fun t' ht' => by
-        obtain ⟨hne, htop, t, ht, h1, _, _⟩ := mem_winRest ht'
+        obtain ⟨hne, htop, t, ht, h1, _, _⟩ := mem_rangeRest ht'
         exact ⟨hne, htop, by rw [h1]; exact (hrs t ht).2.2⟩
       have hstep : topOf (A, qa) - W - m ≤ k := by
         obtain ⟨t', ht'⟩ := List.exists_mem_of_ne_nil _ (fun h => hstop (Or.inl h))
-        obtain ⟨hne, htop, t, ht, h1, _, _⟩ := mem_winRest ht'
+        obtain ⟨hne, htop, t, ht, h1, _, _⟩ := mem_rangeRest ht'
         have := (hrs t ht).2.2
         have hb := bitlen_pos (n := t'.1.natAbs) (by omega)
         generalize topOf (A, qa) - W = q at htop hq ⊢
         unfold topOf at htop
         omega
       obtain ⟨N', q', rs'', h, hlen, hsub, hN'⟩ := ih _ _ _ hN hrs' hstep
-      refine ⟨N', q', rs'', h, Nat.le_trans hlen (length_winRest _ _), fun t'' ht'' => ?_, ?_⟩
+      refine ⟨N', q', rs'', h, Nat.le_trans hlen (length_rangeRest _ _), fun t'' ht'' => ?_, ?_⟩
       · obtain ⟨t', ht', h1, h2⟩ := hsub t'' ht''
-        obtain ⟨_, _, t, ht, h3, h4, _⟩ := mem_winRest ht'
+        obtain ⟨_, _, t, ht, h3, h4, _⟩ := mem_rangeRest ht'
         exact ⟨t, ht, h1.trans h3, Nat.le_trans h2 h4⟩
       · refine Nat.le_trans hN' (Nat.pow_le_pow_right (by decide) ?_)
-        have := bitlen_mono (Nat.add_le_add_right (length_winRest (topOf (A, qa) - W) rs) 1)
+        have := bitlen_mono (Nat.add_le_add_right (length_rangeRest (topOf (A, qa) - W) rs) 1)
         omega
 
-/-- **The window parts are `W`-bit integers**: on every state `descend` reaches from terms below
-`2^qa`, the parts are below `2^W` (so `descend` never refuses). -/
-theorem descend_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)}
+/-- **The window parts are `W`-bit integers**: on every state `topDownSum` reaches from terms below
+`2^qa`, the parts are below `2^W` (so `topDownSum` never refuses). -/
+theorem topDownSum_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)}
     (hrs : ∀ t ∈ rs, topOf t ≤ qa) :
     ∀ z ∈ ((A, qa) :: rs).map (hiPart (topOf (A, qa) - W)), z.natAbs < 2 ^ W := by
   intro z hz
@@ -531,8 +531,8 @@ theorem le_minGridFrom : ∀ (ts : List (ℤ × ℤ)) {e m : ℤ}, m ≤ e → (
       (fun u hu => h u (List.mem_cons_of_mem _ hu))
 
 /-- **The number of windows is bounded by the exponent span**: for terms on the grid `2^m` below
-`2^E`, the fuel of `descendAll` is at most `E − m`. -/
-theorem descendAll_fuel_le {ts : List (ℤ × ℤ)} {m E : ℤ}
+`2^E`, the fuel of `topDownSumAll` is at most `E − m`. -/
+theorem topDownSumAll_fuel_le {ts : List (ℤ × ℤ)} {m E : ℤ}
     (h : ∀ t ∈ ts, m ≤ t.2 ∧ Rat.abs (tval t) < 2 ^ E) :
     (maxTop (nonzero ts) - minGrid (nonzero ts)).toNat ≤ (E - m).toNat := by
   have hn : ∀ t ∈ nonzero ts, m ≤ t.2 ∧ topOf t ≤ E := fun t ht =>
@@ -549,22 +549,22 @@ theorem descendAll_fuel_le {ts : List (ℤ × ℤ)} {m E : ℤ}
     show (maxTopFrom (topOf u) us - minGridFrom u.2 us).toNat ≤ _
     omega
 
-/-- `descend` from the top of the nonzero terms, with fuel the exponent span. -/
-def descendAll (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (ℤ × ℤ × List (ℤ × ℤ)) :=
+/-- `topDownSum` from the top of the nonzero terms, with fuel the exponent span. -/
+def topDownSumAll (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (ℤ × ℤ × List (ℤ × ℤ)) :=
   let rs := nonzero ts
-  descend W T (maxTop rs - minGrid rs).toNat 0 (maxTop rs) rs
+  topDownSum W T (maxTop rs - minGrid rs).toNat 0 (maxTop rs) rs
 
-theorem descendAll_spec {W T : ℕ} (hTW : T < W) (ts : List (ℤ × ℤ)) :
-    ∃ N q rs', descendAll W T ts = some (N, q, rs') ∧
+theorem topDownSumAll_spec {W T : ℕ} (hTW : T < W) (ts : List (ℤ × ℤ)) :
+    ∃ N q rs', topDownSumAll W T ts = some (N, q, rs') ∧
       tsum ts = (N : ℚ) * 2 ^ q + tsum rs' ∧ (∀ t ∈ rs', t.1 ≠ 0 ∧ topOf t ≤ q) ∧
       (rs' = [] ∨ T < bitlen N.natAbs) ∧ rs'.length ≤ (nonzero ts).length ∧
       (∀ t' ∈ rs', ∃ t ∈ ts, t'.2 = t.2 ∧ t'.1.natAbs ≤ t.1.natAbs) ∧
       N.natAbs ≤ 2 ^ (W + bitlen ((nonzero ts).length + 1)) := by
-  obtain ⟨N, q, rs', h, hlen, hsub, hN⟩ := descend_spec hTW (m := minGrid (nonzero ts))
+  obtain ⟨N, q, rs', h, hlen, hsub, hN⟩ := topDownSum_spec hTW (m := minGrid (nonzero ts))
     (maxTop (nonzero ts) - minGrid (nonzero ts)).toNat 0 (maxTop (nonzero ts)) (nonzero ts)
     (by simp [bitlen]) (fun t ht => ⟨(mem_nonzero.mp ht).2, le_maxTop ht, minGrid_le ht⟩)
     (by omega)
-  obtain ⟨h1, h2, h3⟩ := descend_sound _ _ _ _ h
+  obtain ⟨h1, h2, h3⟩ := topDownSum_sound _ _ _ _ h
   refine ⟨N, q, rs', h, ?_, h2, h3, hlen, fun t' ht' => ?_, hN⟩
   · rw [← tsum_nonzero ts, ← h1, tval_zero, Rat.zero_add]
   · obtain ⟨t, ht, h4, h5⟩ := hsub t' ht'
@@ -636,7 +636,7 @@ theorem abs_tsum_lt_of_bitlen {N q : ℤ} {T : ℕ} {rs : List (ℤ × ℤ)} {n 
 
 /-- **The sign of a sum of terms**, from windows of `W` bits. -/
 def signSum (W : ℕ) (ts : List (ℤ × ℤ)) : ℤ :=
-  match descendAll W (bitlen (nonzero ts).length) ts with
+  match topDownSumAll W (bitlen (nonzero ts).length) ts with
   | some (N, _, _) => N.sign
   | none => 0
 
@@ -646,7 +646,7 @@ theorem signSum_eq {W : ℕ} {ts : List (ℤ × ℤ)} (hW : bitlen ts.length < W
   have hbl : bitlen (nonzero ts).length ≤ bitlen ts.length :=
     bitlen_le_iff.mpr (Nat.lt_of_le_of_lt (length_nonzero ts) (lt_two_pow_bitlen _))
   obtain ⟨N, q, rs', h, hval, htop, hstop, hlen, _⟩ :=
-    descendAll_spec (W := W) (T := bitlen (nonzero ts).length) (by omega) ts
+    topDownSumAll_spec (W := W) (T := bitlen (nonzero ts).length) (by omega) ts
   unfold signSum
   rw [h]
   simp only
@@ -705,7 +705,7 @@ half the smallest subnormal, return `0`; otherwise answer the comparisons of `ro
 sign oracle on the residuals and one query term, refusing any query outside the ranges proved to
 suffice (so every query term is below `2^(bitlen |N| + p + 6)`). -/
 def roundSum (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : Option ℚ :=
-  match descendAll W (bitlen (nonzero ts).length + p + 3) ts with
+  match topDownSumAll W (bitlen (nonzero ts).length + p + 3) ts with
   | none => none
   | some (N, q, rs') =>
     if rs' = [] then roundExact p emin emax N q
@@ -767,7 +767,7 @@ theorem roundSum_eq {p : ℕ} (emin emax : ℤ) {W : ℕ} {ts : List (ℤ × ℤ
   have hbl : bitlen (nonzero ts).length ≤ bitlen (ts.length + 1) :=
     hmono (Nat.le_trans (length_nonzero ts) (Nat.le_succ _))
   obtain ⟨N, q, rs', h, hval, htop, hstop, hlen, _⟩ :=
-    descendAll_spec (W := W) (T := bitlen (nonzero ts).length + p + 3) (by omega) ts
+    topDownSumAll_spec (W := W) (T := bitlen (nonzero ts).length + p + 3) (by omega) ts
   unfold roundSum
   rw [h]
   simp only

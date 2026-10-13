@@ -4,14 +4,14 @@ description: How V100, A100, and H100 Tensor Core paths are parameterized, and t
 ---
 
 The pipeline is the same on every GPU. Architectures differ only in a few
-parameters, and a `Profile` collects them:
+parameters, and a `Model` collects them:
 
 ```lean
 structure Profile where
   input : Format          -- fp16, bf16, or tf19
   products : ℕ            -- K
-  alignMantissaBits : ℤ       -- F = 23 + p
-  alignFloor : Option ℤ   -- minimum alignment exponent
+  alignFracBits : ℤ       -- F = 23 + p
+  eAlignMin : Option ℤ   -- minimum alignment exponent
 ```
 
 ## The supported paths
@@ -33,11 +33,11 @@ All of them have FP32 `C` and FP32 output. The parameters follow Table 3 of
 They are built from generic constructors, for example:
 
 ```lean
-def fp16Fp32Profile (K extraBits : ℕ) (floor : Option ℤ := none) : Profile :=
+def fp16Fp32Model (K extraBits : ℕ) (floor : Option ℤ := none) : Profile :=
   ⟨fp16, K, (23 + extraBits : ℕ), floor⟩
 
-def ampereF16F32 : Profile := fp16Fp32Profile 8 1 (some (-132))
-def hopperF16F32 : Profile := fp16Fp32Profile 16 2 (some (-133))
+def ampereF16F32 : Profile := fp16Fp32Model 8 1 (some (-132))
+def hopperF16F32 : Profile := fp16Fp32Model 16 2 (some (-133))
 ```
 
 Most theorems are stated for **arbitrary** `K`, `p`, and floor, and the named
@@ -61,7 +61,7 @@ inductive CPlacement where
   | afterProducts (stages : List RoundingStage)  -- products rounded first, then C added exactly
 
 inductive AccumulationKind where
-  | aligned (alignMantissaBits : ℕ) (floor : Option ℤ) (cPlacement : CPlacement)
+  | aligned (alignFracBits : ℕ) (floor : Option ℤ) (cPlacement : CPlacement)
   | fused                                          -- exact single-product FMA (e.g. FP64 DMMA)
 
 structure InvocationSpec where

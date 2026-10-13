@@ -4,7 +4,7 @@ import TensorCore.TC.Specification.Defs
 
 namespace TensorCore.IndependentSpec
 
-inductive Path where
+inductive Variant where
   | v100F16
   | ampereF16
   | hopperF16
@@ -15,7 +15,7 @@ inductive Path where
   | hopperTF32Mma
   deriving Repr, DecidableEq
 
-def parameters : Path → Parameters
+def parameters : Variant → Parameters
   | .v100F16 => ⟨⟨10, 5, 15⟩, 4, 23, none⟩
   | .ampereF16 => ⟨⟨10, 5, 15⟩, 8, 24, some (-132)⟩
   | .hopperF16 => ⟨⟨10, 5, 15⟩, 16, 25, some (-133)⟩
@@ -32,10 +32,10 @@ def paddedTF32 (ps : List (BitVec 32 × BitVec 32)) : Bool :=
 def unpackTF32 (ps : List (BitVec 32 × BitVec 32)) : List (BitVec 19 × BitVec 19) :=
   ps.map fun (a, b) => (BitVec.ofNat 19 (a.toNat / 8192), BitVec.ofNat 19 (b.toNat / 8192))
 
-noncomputable def tf32Bits (K extra : ℕ) (floor : Option ℤ)
+noncomputable def tf32Bits (K neab : ℕ) (eAlignMin : Option ℤ)
     (ps : List (BitVec 32 × BitVec 32)) (c : BitVec 32) : Option (BitVec 32) :=
   if paddedTF32 ps then
-    bits ⟨⟨10, 8, 127⟩, K, 23 + extra, floor⟩ ⟨unpackTF32 ps, c⟩
+    bits ⟨⟨10, 8, 127⟩, K, 23 + neab, eAlignMin⟩ ⟨unpackTF32 ps, c⟩
   else none
 
 end TensorCore.IndependentSpec

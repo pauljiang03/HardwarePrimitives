@@ -6,9 +6,9 @@ import Ozaki.SignedZero
 `ozaki2CRE` checks a rational enclosure: the reconstructed product `H` and the truncation bound
 `B`, a rational computed from the inputs. Here the check is integer arithmetic of bounded width:
 
-* **an integer enclosure** `H = N 2^q`, `B = K 2^c` (`enclVal`), tested by `checkB`: both ends
-  rounded at the grid `min q c` with `roundExact` (`checkB_eq`); `certifyB` tries integer
-  enclosures in turn, then a fallback (`certifyB_eq`);
+* **an integer enclosure** `H = N 2^q`, `B = K 2^c` (`enclVal`), tested by `enclosureTestB`: both ends
+  rounded at the grid `min q c` with `roundExact` (`enclosureTestB_eq`); `roundingTestB` tries integer
+  enclosures in turn, then a fallback (`roundingTestB_eq`);
 * **a bound from the scaled integers** (`scaledBound_le`): when `x` and `y` are scaled by `2^sₓ`,
   `2^s_y` and rounded to integers `a`, `c` (truncated or floored), the bound of `dot_approx_error`
   is at most `K 2^(−sₓ−s_y)` with `K = [x drops bits] (Σ|cⱼ| + k) + [y drops bits] Σ|aᵢ|`
@@ -25,9 +25,9 @@ import Ozaki.SignedZero
 whole unit where the rational bound uses the largest actual loss, so the integer check can settle
 fewer entries.
 
-**Signed zeros.** `certifySignedB` is `certifySigned` on integer enclosures, with the sign of a
+**Signed zeros.** `roundingTestSignedB` is `roundingTestSigned` on integer enclosures, with the sign of a
 zero result read off the integer ends (`signB`) or, on the exact path, from the sign of the exact
-sum computed by `signSum` (`ozaki1ExactPathBS`). `ozaki2CRS` (rational) and `ozaki2CRBS` (bounded)
+sum computed by `signSum` (`ozaki1ExactFallbackBS`). `ozaki2CRS` (rational) and `ozaki2CRBS` (bounded)
 return the IEEE-signed correctly rounded product `crSigned` (`ozaki2CRS_eq`, `ozaki2CRBS_eq`). -/
 
 local notation "ℕ" => Nat
@@ -43,52 +43,52 @@ def enclVal (e : ℤ × ℤ × ℤ × ℤ) : ℚ × ℚ := ((e.1 : ℚ) * 2 ^ e.
 
 /-- The enclosure test on an integer enclosure: both ends rounded with `roundExact` at the grid
 `min q c`. -/
-def checkB (p : ℕ) (emin emax : ℤ) (e : ℤ × ℤ × ℤ × ℤ) : Option ℚ :=
+def enclosureTestB (p : ℕ) (emin emax : ℤ) (e : ℤ × ℤ × ℤ × ℤ) : Option ℚ :=
   roundEnclosureB p emin emax e.1 e.2.1 e.2.2.1 e.2.2.2 0
 
-theorem checkB_eq (p : ℕ) (emin emax : ℤ) (e : ℤ × ℤ × ℤ × ℤ) :
-    checkB p emin emax e = roundEnclosure (roundRNE p emin emax) (enclVal e).1 (enclVal e).2 := by
-  unfold checkB enclVal
+theorem enclosureTestB_eq (p : ℕ) (emin emax : ℤ) (e : ℤ × ℤ × ℤ × ℤ) :
+    enclosureTestB p emin emax e = roundEnclosure (roundRNE p emin emax) (enclVal e).1 (enclVal e).2 := by
+  unfold enclosureTestB enclVal
   rw [roundEnclosureB_eq]
   rw [show ((((0 : ℕ) : ℚ)) : ℚ) = 0 from rfl, Rat.zero_mul, Rat.add_zero]
 
 /-- Integer enclosures tried in turn (`none` for one that could not be computed), each by the
 integer test, then the fallback. -/
-def certifyB (p : ℕ) (emin emax : ℤ) : List (Option (ℤ × ℤ × ℤ × ℤ)) → Option ℚ → Option ℚ
+def roundingTestB (p : ℕ) (emin emax : ℤ) : List (Option (ℤ × ℤ × ℤ × ℤ)) → Option ℚ → Option ℚ
   | [], exact => exact
   | e :: es, exact =>
-    match e.bind (checkB p emin emax) with
+    match e.bind (enclosureTestB p emin emax) with
     | some w => some w
-    | none => certifyB p emin emax es exact
+    | none => roundingTestB p emin emax es exact
 
-/-- `certifyB` is `certify` with `rnd = roundRNE p emin emax` on the enclosures' values, when the
+/-- `roundingTestB` is `roundingTest` with `rnd = roundRNE p emin emax` on the enclosures' values, when the
 fallback is the rounding of `v`. -/
-theorem certifyB_eq_certify (p : ℕ) (emin emax : ℤ) {v : ℚ} :
+theorem roundingTestB_eq_roundingTest (p : ℕ) (emin emax : ℤ) {v : ℚ} :
     ∀ (es : List (Option (ℤ × ℤ × ℤ × ℤ))) (exact : Option ℚ), exact = roundRNE p emin emax v →
-      certifyB p emin emax es exact =
-        certify (roundRNE p emin emax) (es.map (Option.map enclVal)) (some v)
+      roundingTestB p emin emax es exact =
+        roundingTest (roundRNE p emin emax) (es.map (Option.map enclVal)) (some v)
   | [], exact, hex => by subst hex; rfl
   | e :: es, exact, hex => by
-    have ih := certifyB_eq_certify p emin emax es exact hex
-    have he : e.bind (checkB p emin emax) =
+    have ih := roundingTestB_eq_roundingTest p emin emax es exact hex
+    have he : e.bind (enclosureTestB p emin emax) =
         (Option.map enclVal e).bind fun q => roundEnclosure (roundRNE p emin emax) q.1 q.2 := by
-      cases e <;> simp [checkB_eq]
+      cases e <;> simp [enclosureTestB_eq]
     simp only [List.map_cons]
-    unfold certifyB certify
+    unfold roundingTestB roundingTest
     rw [he]
     cases (Option.map enclVal e).bind fun q => roundEnclosure (roundRNE p emin emax) q.1 q.2 with
     | some w => rfl
     | none => exact ih
 
 /-- **The integer check is correct rounding.** If every integer enclosure contains `v` and the
-fallback is the rounding of `v`, `certifyB` returns the rounding of `v`. -/
-theorem certifyB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {v : ℚ}
+fallback is the rounding of `v`, `roundingTestB` returns the rounding of `v`. -/
+theorem roundingTestB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {v : ℚ}
     (es : List (Option (ℤ × ℤ × ℤ × ℤ))) (exact : Option ℚ)
     (hes : ∀ e ∈ es, ∀ t, e = some t → Rat.abs (v - (enclVal t).1) ≤ (enclVal t).2)
     (hex : exact = roundRNE p emin emax v) :
-    certifyB p emin emax es exact = roundRNE p emin emax v := by
-  rw [certifyB_eq_certify p emin emax es exact hex]
-  apply certify_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp) _ _ _ rfl
+    roundingTestB p emin emax es exact = roundRNE p emin emax v := by
+  rw [roundingTestB_eq_roundingTest p emin emax es exact hex]
+  apply roundingTest_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp) _ _ _ rfl
   intro c hc H B hcB
   obtain ⟨e, he, rfl⟩ := List.mem_map.mp hc
   cases e with
@@ -161,36 +161,36 @@ theorem signOfSgn_sgnQ (v : ℚ) (z : Bool) : signOfSgn (sgnQ v) z = sumNeg v z 
 
 /-- The signed check on integer enclosures: try them in order, accepting one whose ends round alike
 and whose sign is settled; after the last, the fallback's rounding and the sign of the exact sum. -/
-def certifySignedB (p : ℕ) (emin emax : ℤ) :
+def roundingTestSignedB (p : ℕ) (emin emax : ℤ) :
     List (Option (ℤ × ℤ × ℤ × ℤ)) → Option (ℚ × ℤ) → Bool → Option Signed
   | [], exact, z => exact.map fun rs => ⟨rs.1, signOfSgn rs.2 z⟩
   | e :: es, exact, z =>
-    match e.bind (fun t => (checkB p emin emax t).bind fun r =>
+    match e.bind (fun t => (enclosureTestB p emin emax t).bind fun r =>
         (signB t r).map fun n => (⟨r, n⟩ : Signed)) with
     | some w => some w
-    | none => certifySignedB p emin emax es exact z
+    | none => roundingTestSignedB p emin emax es exact z
 
-theorem certifySignedB_eq_certifySigned (p : ℕ) (emin emax : ℤ) {v : ℚ} (z : Bool) :
+theorem roundingTestSignedB_eq_roundingTestSigned (p : ℕ) (emin emax : ℤ) {v : ℚ} (z : Bool) :
     ∀ (es : List (Option (ℤ × ℤ × ℤ × ℤ))) (exact : Option (ℚ × ℤ)),
       exact = (roundRNE p emin emax v).map (fun r => (r, sgnQ v)) →
-      certifySignedB p emin emax es exact z =
-        certifySigned (roundRNE p emin emax) (es.map (Option.map enclVal)) (some v) z
+      roundingTestSignedB p emin emax es exact z =
+        roundingTestSigned (roundRNE p emin emax) (es.map (Option.map enclVal)) (some v) z
   | [], exact, hex => by
     subst hex
-    unfold certifySignedB certifySigned
+    unfold roundingTestSignedB roundingTestSigned
     simp only [Option.map_map]
     congr 1
     funext r
     simp only [Function.comp, signOfSgn_sgnQ]
   | e :: es, exact, hex => by
-    have ih := certifySignedB_eq_certifySigned p emin emax z es exact hex
-    have he : e.bind (fun t => (checkB p emin emax t).bind fun r =>
+    have ih := roundingTestSignedB_eq_roundingTestSigned p emin emax z es exact hex
+    have he : e.bind (fun t => (enclosureTestB p emin emax t).bind fun r =>
         (signB t r).map fun n => (⟨r, n⟩ : Signed)) =
         (Option.map enclVal e).bind (fun q => (roundEnclosure (roundRNE p emin emax) q.1 q.2).bind
           fun r => (signFromEnclosure q.1 q.2 r).map fun n => (⟨r, n⟩ : Signed)) := by
-      cases e <;> simp [checkB_eq, signB_eq]
+      cases e <;> simp [enclosureTestB_eq, signB_eq]
     simp only [List.map_cons]
-    unfold certifySignedB certifySigned
+    unfold roundingTestSignedB roundingTestSigned
     rw [he]
     cases (Option.map enclVal e).bind (fun q => (roundEnclosure (roundRNE p emin emax) q.1 q.2).bind
           fun r => (signFromEnclosure q.1 q.2 r).map fun n => (⟨r, n⟩ : Signed)) with
@@ -198,14 +198,14 @@ theorem certifySignedB_eq_certifySigned (p : ℕ) (emin emax : ℤ) {v : ℚ} (z
     | none => exact ih
 
 /-- **The signed integer check returns the correctly rounded value with the IEEE sign.** -/
-theorem certifySignedB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {v : ℚ}
+theorem roundingTestSignedB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {v : ℚ}
     (z : Bool) (es : List (Option (ℤ × ℤ × ℤ × ℤ))) (exact : Option (ℚ × ℤ))
     (hes : ∀ e ∈ es, ∀ t, e = some t → Rat.abs (v - (enclVal t).1) ≤ (enclVal t).2)
     (hex : exact = (roundRNE p emin emax v).map (fun r => (r, sgnQ v))) :
-    certifySignedB p emin emax es exact z =
+    roundingTestSignedB p emin emax es exact z =
       (roundRNE p emin emax v).map fun r => ⟨r, sumNeg v z⟩ := by
-  rw [certifySignedB_eq_certifySigned p emin emax z es exact hex]
-  apply certifySigned_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp)
+  rw [roundingTestSignedB_eq_roundingTestSigned p emin emax z es exact hex]
+  apply roundingTestSigned_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp)
     (roundRNE_zero' p emin emax) z _ _ _ rfl
   intro c hc H B hcB
   obtain ⟨e, he, rfl⟩ := List.mem_map.mp hc
@@ -221,40 +221,40 @@ theorem certifySignedB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin �
 
 /-- Ozaki-I's bounded exact path, returning also the sign of the exact sum (`signSum` on the same
 integer terms, with the same windows). -/
-def ozaki1ExactPathBS (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ) (x y : List ℚ) :
+def ozaki1ExactFallbackBS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ) (x y : List ℚ) :
     Option (ℚ × ℤ) :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | some s =>
     match (slicePairs (split b s x).1 (split b s y).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) with
+        (fun pr => sliceProductInt mult pr.1 pr.2) with
     | some ts => (roundSum p emin emax (bitlen (ts.length + 1) + p + 4) ts).map fun r =>
         (r, signSum (bitlen (ts.length + 1) + p + 4) ts)
     | none => none
   | none => none
 
-theorem ozaki1ExactPathBS_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1ExactFallbackBS_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (smax : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1ExactPathBS eng p emin emax b smax x y =
+    ozaki1ExactFallbackBS mult p emin emax b smax x y =
       (roundRNE p emin emax (dot x y)).map fun r => (r, sgnQ (dot x y)) := by
-  unfold ozaki1ExactPathBS
+  unfold ozaki1ExactFallbackBS
   obtain ⟨s, hs⟩ := Option.isSome_iff_exists.mp (List.find?_isSome.mpr hvanish)
   rw [hs]
   have hv := List.find?_some hs
   simp only [residualsVanish, Bool.and_eq_true, List.all_eq_true, beq_iff_eq] at hv
   simp only
   rw [mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
-    sliceProductInt_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
+    sliceProductInt_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
   simp only
   have htsum : tsum ((slicePairs (split b s x).1 (split b s y).1).map
       fun pr => exactSliceInt pr.1 pr.2) = dot x y := by
-    have hfull := ozaki1Full_eq heng hlen hbudget hv.1 hv.2
+    have hfull := ozaki1Full_eq hmult hlen hbound hv.1 hv.2
     unfold ozaki1Full at hfull
-    rw [mapM_eq_some_map (f := fun pr : Slice × Slice => fullTerm eng pr.1 pr.2)
+    rw [mapM_eq_some_map (f := fun pr : Slice × Slice => fullTerm mult pr.1 pr.2)
         (g := fun pr : Slice × Slice => tval (exactSliceInt pr.1 pr.2)) fun pr hpr => by
         unfold fullTerm
-        rw [(engine_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2).1]
+        rw [(multiplier_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2).1]
         unfold tval exactSliceInt; simp only [Option.map_some]; rw [Rat.mul_comm]] at hfull
     simp only [Option.map_some, Option.some.injEq] at hfull
     unfold tsum
@@ -416,18 +416,18 @@ theorem scaledBound_le {g : ℚ → ℤ} (hg : ∀ t, Rat.abs (t - g t) ≤ 1) (
 
 /-- Ozaki-II's reconstructed integer product `a · c`: the residue products from the engine and the
 CRT reconstruction. -/
-def ozaki2Int (eng : Engine) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℤ :=
+def ozaki2Int (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℤ :=
   (B.moduli.mapM fun m =>
-    residueProduct eng m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y)).map
+    residueProduct mult m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y)).map
     (crt B)
 
-theorem ozaki2_eq_int (eng : Engine) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
-    ozaki2 eng round B P x y = (ozaki2Int eng B P x y).bind fun N =>
+theorem ozaki2_eq_int (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
+    ozaki2 mult round B P x y = (ozaki2Int mult B P x y).bind fun N =>
       round ((N : ℚ) * 2 ^ (-(scaleShift P x + scaleShift P y))) := by
   unfold ozaki2 ozaki2Int
   simp only
   cases h : B.moduli.mapM fun m =>
-    residueProduct eng m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) with
+    residueProduct mult m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) with
   | none => simp
   | some rs => simp
 
@@ -438,9 +438,9 @@ def ozaki2K (P : ℕ) (x y : List ℚ) : ℤ :=
 
 /-- **Ozaki-II's integer enclosure**: `H = N 2^q` with `N` the reconstructed product and
 `q = −(sₓ + s_y)`, and `B = K 2^q` on the same grid. -/
-def ozaki2EnclosureB (eng : Engine) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
+def ozaki2EnclosureB (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (x y : List ℚ) :
     Option (ℤ × ℤ × ℤ × ℤ) :=
-  (ozaki2Int eng B P x y).map fun N =>
+  (ozaki2Int mult B P x y).map fun N =>
     (N, -(scaleShift P x + scaleShift P y), ozaki2K P x y, -(scaleShift P x + scaleShift P y))
 
 theorem truncInt_close (t : ℚ) : Rat.abs (t - truncInt t) ≤ 1 :=
@@ -457,25 +457,25 @@ theorem ozaki2Bound_le (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length) :
   exact scaledBound_le truncInt_close _ _ hlen
 
 /-- **Ozaki-II's integer enclosure contains `x · y`** on an exact engine with a valid basis. -/
-theorem ozaki2EnclosureB_sound {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2EnclosureB_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (P : ℕ) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus) {t : ℤ × ℤ × ℤ × ℤ}
-    (ht : ozaki2EnclosureB eng B P x y = some t) :
+    (ht : ozaki2EnclosureB mult B P x y = some t) :
     Rat.abs (dot x y - (enclVal t).1) ≤ (enclVal t).2 := by
   unfold ozaki2EnclosureB at ht
-  cases hN : ozaki2Int eng B P x y with
+  cases hN : ozaki2Int mult B P x y with
   | none => rw [hN] at ht; simp at ht
   | some N =>
     rw [hN, Option.map_some, Option.some.injEq] at ht
     subst ht
-    have hval : ozaki2 eng some B P x y =
+    have hval : ozaki2 mult some B P x y =
         some ((N : ℚ) * 2 ^ (-(scaleShift P x + scaleShift P y))) := by
       rw [ozaki2_eq_int, hN]; rfl
-    have henc : ozaki2Enclosure eng B P x y =
+    have henc : ozaki2Enclosure mult B P x y =
         some ((N : ℚ) * 2 ^ (-(scaleShift P x + scaleShift P y)), ozaki2Bound P x y) := by
       unfold ozaki2Enclosure; rw [hval]; rfl
-    exact Rat.le_trans (ozaki2Enclosure_sound heng hB hmb P hlen hbudget hrange henc)
+    exact Rat.le_trans (ozaki2Enclosure_sound hmult hB hmb P hlen hbound hrange henc)
       (ozaki2Bound_le P hlen)
 
 theorem sum_natAbs_le_mul {a : List ℤ} {n : ℕ} (h : ∀ z ∈ a, z.natAbs ≤ n) :
@@ -503,16 +503,16 @@ theorem boundK_le {a c : List ℤ} {dx dy : Bool} {k n : ℕ} (ha : a.length = k
 /-- **The widths of Ozaki-II's integer enclosure**, independent of the exponents: `2|N| ≤ M`,
 `0 ≤ K ≤ k (2^(P+1) + 1)`, the bound on `H`'s grid; so the integers `N ± K` the test rounds are at
 most `M/2 + k (2^(P+1) + 1)` in magnitude. -/
-theorem ozaki2EnclosureB_width {eng : Engine} {B : CRTBasis} {P : ℕ} {x y : List ℚ}
+theorem ozaki2EnclosureB_width {mult : MatrixMultiplier} {B : CRTBasis} {P : ℕ} {x y : List ℚ}
     (hM : 0 < B.modulus) (hlen : x.length = y.length) {t : ℤ × ℤ × ℤ × ℤ}
-    (ht : ozaki2EnclosureB eng B P x y = some t) :
+    (ht : ozaki2EnclosureB mult B P x y = some t) :
     2 * t.1.natAbs ≤ B.modulus ∧ t.2.2.2 = t.2.1 ∧ 0 ≤ t.2.2.1 ∧
       t.2.2.1.natAbs ≤ x.length * (2 * 2 ^ P + 1) ∧
       2 * (t.1 - t.2.2.1).natAbs ≤ B.modulus + 2 * (x.length * (2 * 2 ^ P + 1)) ∧
       2 * (t.1 + t.2.2.1).natAbs ≤ B.modulus + 2 * (x.length * (2 * 2 ^ P + 1)) := by
   unfold ozaki2EnclosureB ozaki2Int at ht
   cases hrs : B.moduli.mapM fun m =>
-      residueProduct eng m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) with
+      residueProduct mult m (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) with
   | none => rw [hrs] at ht; simp at ht
   | some rs =>
     rw [hrs] at ht
@@ -538,51 +538,51 @@ theorem ozaki2EnclosureB_width {eng : Engine} {B : CRTBasis} {P : ℕ} {x y : Li
 
 /-- **Correctly rounded Ozaki-II with bounded registers**: the configurations `(basis, P)` in turn,
 each checked on its integer enclosure, then Ozaki-I's bounded exact path. -/
-def ozaki2CRB (eng : Engine) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
+def ozaki2CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
-  certifyB p emin emax (cfgs.map fun c => ozaki2EnclosureB eng c.1 c.2 x y)
-    (ozaki1ExactPathB eng p emin emax b smax x y)
+  roundingTestB p emin emax (cfgs.map fun c => ozaki2EnclosureB mult c.1 c.2 x y)
+    (ozaki1ExactFallbackB mult p emin emax b smax x y)
 
 /-- **Ozaki-II with bounded registers is correctly rounded** on an exact engine, for every input
 whose exact path ends within `smax` slices. -/
-theorem ozaki2CRB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
+theorem ozaki2CRB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * x.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki2CRB eng p emin emax cfgs b smax x y = roundRNE p emin emax (dot x y) := by
-  apply certifyB_eq hp hle
+    ozaki2CRB mult p emin emax cfgs b smax x y = roundRNE p emin emax (dot x y) := by
+  apply roundingTestB_eq hp hle
   · intro e he t het
     obtain ⟨cfg, hmem, rfl⟩ := List.mem_map.mp he
     obtain ⟨hB, hmb, hrange⟩ := hcfg cfg hmem
-    exact ozaki2EnclosureB_sound heng hB hmb cfg.2 hlen hbudget hrange het
-  · rw [ozaki1ExactPathB_eq heng p emin emax smax hlen hbudget,
-      ozaki1ExactPath_eq heng hlen hbudget hvanish]
+    exact ozaki2EnclosureB_sound hmult hB hmb cfg.2 hlen hbound hrange het
+  · rw [ozaki1ExactFallbackB_eq hmult p emin emax smax hlen hbound,
+      ozaki1ExactFallback_eq hmult hlen hbound hvanish]
     rfl
 
 /-- **Binary64 inputs**: correctly rounded to binary64 with bounded registers. -/
-theorem ozaki2CRB64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2CRB64_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hb : b ≤ 1025) (hsmax : 2098 < smax * (b + 1))
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * x.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a) :
-    ozaki2CRB eng 53 (-1022) 1023 cfgs b smax x y = rne64 (dot x y) :=
-  ozaki2CRB_eq (by decide) (by decide) heng hcfg hlen hbudget (vanish64 hb hsmax hx hy)
+    ozaki2CRB mult 53 (-1022) 1023 cfgs b smax x y = rne64 (dot x y) :=
+  ozaki2CRB_eq (by decide) (by decide) hmult hcfg hlen hbound (vanish64 hb hsmax hx hy)
 
 /-- **Binary32 inputs**: correctly rounded to binary32 with bounded registers. -/
-theorem ozaki2CRB32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2CRB32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hb : b ≤ 129) (hsmax : 277 < smax * (b + 1))
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * x.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a) :
-    ozaki2CRB eng 24 (-126) 127 cfgs b smax x y = rne32Q (dot x y) :=
-  ozaki2CRB_eq (by decide) (by decide) heng hcfg hlen hbudget (vanish32Q hb hsmax hx hy)
+    ozaki2CRB mult 24 (-126) 127 cfgs b smax x y = rne32Q (dot x y) :=
+  ozaki2CRB_eq (by decide) (by decide) hmult hcfg hlen hbound (vanish32Q hb hsmax hx hy)
 
 /-! ## Signed zeros for Ozaki-II -/
 
@@ -595,50 +595,50 @@ theorem vals_all {xs : List Signed} {Q : ℚ → Prop} (h : ∀ a ∈ xs, Q a.va
 
 /-- **Correctly rounded Ozaki-II with signed zeros**: Ozaki-II's enclosures, then Ozaki-I's exact
 path, the sign of a zero result from the enclosure or the exact value. -/
-def ozaki2CRS (eng : Engine) (rnd : ℚ → Option ℚ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
+def ozaki2CRS (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
-  certifySigned rnd (cfgs.map fun c => ozaki2Enclosure eng c.1 c.2 (vals xs) (vals ys))
-    (ozaki1ExactPath eng b smax (vals xs) (vals ys)) (allNegZero xs ys)
+  roundingTestSigned rnd (cfgs.map fun c => ozaki2Enclosure mult c.1 c.2 (vals xs) (vals ys))
+    (ozaki1ExactFallback mult b smax (vals xs) (vals ys)) (allNegZero xs ys)
 
 theorem ozaki2CRS_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} {xs ys : List Signed}
+    (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} {xs ys : List Signed}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s (vals xs) (vals ys) = true) :
-    ozaki2CRS eng rnd cfgs b smax xs ys = crSigned rnd xs ys := by
+    ozaki2CRS mult rnd cfgs b smax xs ys = crSigned rnd xs ys := by
   have hl : (vals xs).length = (vals ys).length := by rw [vals_length, vals_length, hlen]
-  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by rw [vals_length]; exact hbudget
+  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by rw [vals_length]; exact hbound
   unfold ozaki2CRS crSigned
-  apply certifySigned_eq h hI h0 _ _ _ _ (ozaki1ExactPath_eq heng hl hb hvanish)
+  apply roundingTestSigned_eq h hI h0 _ _ _ _ (ozaki1ExactFallback_eq hmult hl hb hvanish)
   intro c hc H Bd hcB
   obtain ⟨cfg, hmem, rfl⟩ := List.mem_map.mp hc
   obtain ⟨hB, hmb, hrange⟩ := hcfg cfg hmem
-  exact ozaki2Enclosure_sound heng hB hmb cfg.2 hl hb (by rw [vals_length]; exact hrange) hcB
+  exact ozaki2Enclosure_sound hmult hB hmb cfg.2 hl hb (by rw [vals_length]; exact hrange) hcB
 
 /-- **Correctly rounded Ozaki-II with signed zeros and bounded registers.** -/
-def ozaki2CRBS (eng : Engine) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
+def ozaki2CRBS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
-  certifySignedB p emin emax (cfgs.map fun c => ozaki2EnclosureB eng c.1 c.2 (vals xs) (vals ys))
-    (ozaki1ExactPathBS eng p emin emax b smax (vals xs) (vals ys)) (allNegZero xs ys)
+  roundingTestSignedB p emin emax (cfgs.map fun c => ozaki2EnclosureB mult c.1 c.2 (vals xs) (vals ys))
+    (ozaki1ExactFallbackBS mult p emin emax b smax (vals xs) (vals ys)) (allNegZero xs ys)
 
-theorem ozaki2CRBS_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
+theorem ozaki2CRBS_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
     {xs ys : List Signed}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s (vals xs) (vals ys) = true) :
-    ozaki2CRBS eng p emin emax cfgs b smax xs ys = crSigned (roundRNE p emin emax) xs ys := by
+    ozaki2CRBS mult p emin emax cfgs b smax xs ys = crSigned (roundRNE p emin emax) xs ys := by
   have hl : (vals xs).length = (vals ys).length := by rw [vals_length, vals_length, hlen]
-  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by rw [vals_length]; exact hbudget
+  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by rw [vals_length]; exact hbound
   unfold ozaki2CRBS crSigned
-  apply certifySignedB_eq hp hle
+  apply roundingTestSignedB_eq hp hle
   · intro e he t het
     obtain ⟨cfg, hmem, rfl⟩ := List.mem_map.mp he
     obtain ⟨hB, hmb, hrange⟩ := hcfg cfg hmem
-    exact ozaki2EnclosureB_sound heng hB hmb cfg.2 hl hb (by rw [vals_length]; exact hrange) het
-  · exact ozaki1ExactPathBS_eq heng p emin emax smax hl hb hvanish
+    exact ozaki2EnclosureB_sound hmult hB hmb cfg.2 hl hb (by rw [vals_length]; exact hrange) het
+  · exact ozaki1ExactFallbackBS_eq hmult p emin emax smax hl hb hvanish
 
 end Ozaki

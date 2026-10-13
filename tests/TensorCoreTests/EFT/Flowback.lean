@@ -22,12 +22,12 @@ theorem v100_witness_flowback :
 
 
 theorem flowback_without_increase :
-    flowback (fp16Fp32Profile 2 0 none) (List.replicate 2 (halfDecoded (-12), halfDecoded (-12)))
+    flowback (fp16Fp32Model 2 0 none) (List.replicate 2 (halfDecoded (-12), halfDecoded (-12)))
       oneDecoded belowOneDecoded = 2 / 16777216 ∧
-    accumulatorShift (fp16Fp32Profile 2 0 none)
+    accumulatorShift (fp16Fp32Model 2 0 none)
       (List.replicate 2 (halfDecoded (-12), halfDecoded (-12))) oneDecoded belowOneDecoded =
       1 / 16777216 ∧
-    (evalPrepared ⟨fp16Fp32Profile 2 0 none,
+    (evalPrepared ⟨fp16Fp32Model 2 0 none,
       List.replicate 2 (halfDecoded (-12), halfDecoded (-12)), belowOneDecoded⟩).map
       (fun t => (t.output.bits.toNat, t.block.accumulator)) =
       .ok (0x3f800000, 16777217 / 16777216) := by

@@ -30,17 +30,17 @@ it is on hardware.
 ## Instruction paths
 
 ```lean
-structure InstructionPath where
+structure InstructionVariant where
   name : String
   k : ℕ                 -- inner dimension of the instruction
   products : ℕ          -- K, products per group
   extraBits : ℕ
   floor : Option ℤ
   evidence : String     -- where the parameters come from
-  productsPos : 0 < products
+  nfmaPos : 0 < products
   kDiv : products ∣ k
 
-def InstructionPath.schedule (p : InstructionPath) (pairs : List (F16 × F16)) :=
+def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F16)) :=
   chunks p.products p.groups pairs          -- k / K contiguous groups, increasing k
 ```
 
@@ -59,7 +59,7 @@ def InstructionPath.schedule (p : InstructionPath) (pairs : List (F16 × F16)) :
   finite `C` unchanged. The theorem excludes `C = −0`.
 - `single_group_output`: if only the first group has nonzero products, the
   instruction returns that group's output.
-- `InstructionPath.schedule_flatten`: the schedule is a partition of the
+- `InstructionVariant.schedule_flatten`: the schedule is a partition of the
   inputs in order.
 
 `Conforms p device` is a predicate, not a theorem: whenever the model

@@ -18,8 +18,8 @@ exact path's slicing are rational definitions. Here the inputs are integer pairs
   (`dropsBits_eq`);
 * **Ozaki-II's integer enclosure** from these integers (`ozaki2EnclosureZ`), equal to
   `ozaki2EnclosureB` on the values (`ozaki2EnclosureZ_eq`);
-* **the exact path with integer slicing** (`ozaki1ExactPathZ`): `splitInt` for the slices and the
-  test that nothing is left over, equal to `ozaki1ExactPathB` on the values (`ozaki1ExactPathZ_eq`);
+* **the exact path with integer slicing** (`ozaki1ExactFallbackZ`): `splitInt` for the slices and the
+  test that nothing is left over, equal to `ozaki1ExactFallbackB` on the values (`ozaki1ExactFallbackZ_eq`);
 * `ozaki2CRZ`: correctly rounded Ozaki-II from integer pairs to the IEEE round to nearest, every step
   integer (`ozaki2CRZ_eq`; binary64 and binary32 instances `ozaki2CRZ64_eq`, `ozaki2CRZ32_eq`).
 
@@ -442,15 +442,15 @@ theorem dropsZ_trunc_eq (s : ℤ) (xs : List (ℤ × ℤ)) :
 
 /-- **Ozaki-II's reconstructed product from integer inputs**: scaling exponents from bit lengths,
 truncation by shifts, the residue products on the engine, and the CRT. -/
-def ozaki2IntZ (eng : Engine) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ :=
+def ozaki2IntZ (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ :=
   (B.moduli.mapM fun m =>
-    residueProduct eng m (scaleTruncZ (scaleShiftZ P xs) xs) (scaleTruncZ (scaleShiftZ P ys) ys)).map
+    residueProduct mult m (scaleTruncZ (scaleShiftZ P xs) xs) (scaleTruncZ (scaleShiftZ P ys) ys)).map
     (crt B)
 
 /-- **Ozaki-II's integer enclosure from integer inputs.** -/
-def ozaki2EnclosureZ (eng : Engine) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
+def ozaki2EnclosureZ (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (ℤ × ℤ × ℤ × ℤ) :=
-  (ozaki2IntZ eng B P xs ys).map fun N =>
+  (ozaki2IntZ mult B P xs ys).map fun N =>
     (N, -(scaleShiftZ P xs + scaleShiftZ P ys),
       boundK (scaleTruncZ (scaleShiftZ P xs) xs) (scaleTruncZ (scaleShiftZ P ys) ys)
         (dropsZ (scaleShiftZ P xs) xs) (dropsZ (scaleShiftZ P ys) ys) xs.length,
@@ -460,8 +460,8 @@ theorem entryVals_length (xs : List (ℤ × ℤ)) : (entryVals xs).length = xs.l
   simp [entryVals]
 
 /-- **The integer pipeline's enclosure is Ozaki-II's integer enclosure of the values.** -/
-theorem ozaki2EnclosureZ_eq (eng : Engine) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
-    ozaki2EnclosureZ eng B P xs ys = ozaki2EnclosureB eng B P (entryVals xs) (entryVals ys) := by
+theorem ozaki2EnclosureZ_eq (mult : MatrixMultiplier) (B : CRTBasis) (P : ℕ) (xs ys : List (ℤ × ℤ)) :
+    ozaki2EnclosureZ mult B P xs ys = ozaki2EnclosureB mult B P (entryVals xs) (entryVals ys) := by
   unfold ozaki2EnclosureZ ozaki2EnclosureB ozaki2IntZ ozaki2Int ozaki2K
   rw [scaleShiftZ_eq, scaleShiftZ_eq, scaleTruncZ_eq, scaleTruncZ_eq, dropsZ_trunc_eq,
     dropsZ_trunc_eq, entryVals_length]
@@ -499,24 +499,24 @@ theorem residualsVanishZ_eq (b s : ℕ) (xs ys : List (ℤ × ℤ)) :
 
 /-- **The bounded exact path with integer slicing**: `splitInt` for the test that nothing is left
 over and for the slices, the slice products from the engine as integer terms, `roundSum`. -/
-def ozaki1ExactPathZ (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
+def ozaki1ExactFallbackZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   match (List.range' 1 smax).find? fun s => residualsVanishZ b s xs ys with
   | some s =>
     match (slicePairs (splitInt b s xs).1 (splitInt b s ys).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) with
+        (fun pr => sliceProductInt mult pr.1 pr.2) with
     | some ts => roundSum p emin emax (bitlen (ts.length + 1) + p + 4) ts
     | none => none
   | none => none
 
-theorem ozaki1ExactPathZ_eq (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
+theorem ozaki1ExactFallbackZ_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) :
-    ozaki1ExactPathZ eng p emin emax b smax xs ys =
-      ozaki1ExactPathB eng p emin emax b smax (entryVals xs) (entryVals ys) := by
+    ozaki1ExactFallbackZ mult p emin emax b smax xs ys =
+      ozaki1ExactFallbackB mult p emin emax b smax (entryVals xs) (entryVals ys) := by
   have hf : (fun s => residualsVanishZ b s xs ys) =
       fun s => residualsVanish b s (entryVals xs) (entryVals ys) := by
     funext s; exact residualsVanishZ_eq b s xs ys
-  unfold ozaki1ExactPathZ ozaki1ExactPathB
+  unfold ozaki1ExactFallbackZ ozaki1ExactFallbackB
   rw [hf]
   cases (List.range' 1 smax).find? fun s => residualsVanish b s (entryVals xs) (entryVals ys) with
   | none => rfl
@@ -524,66 +524,66 @@ theorem ozaki1ExactPathZ_eq (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax :
     simp only
     rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
     cases (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).mapM
-      (fun pr => sliceProductInt eng pr.1 pr.2) <;> rfl
+      (fun pr => sliceProductInt mult pr.1 pr.2) <;> rfl
 
 /-! ## Correctly rounded Ozaki-II from integer inputs -/
 
 /-- **Correctly rounded Ozaki-II as an integer pipeline**: integer pairs in, the integer enclosures
 of the configurations in turn, then the exact path with integer slicing; every step integer
 arithmetic, and the result the IEEE round to nearest. -/
-def ozaki2CRZ (eng : Engine) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
+def ozaki2CRZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
-  certifyB p emin emax (cfgs.map fun c => ozaki2EnclosureZ eng c.1 c.2 xs ys)
-    (ozaki1ExactPathZ eng p emin emax b smax xs ys)
+  roundingTestB p emin emax (cfgs.map fun c => ozaki2EnclosureZ mult c.1 c.2 xs ys)
+    (ozaki1ExactFallbackZ mult p emin emax b smax xs ys)
 
-theorem ozaki2CRZ_eq_CRB (eng : Engine) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ))
+theorem ozaki2CRZ_eq_CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ))
     (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
-    ozaki2CRZ eng p emin emax cfgs b smax xs ys =
-      ozaki2CRB eng p emin emax cfgs b smax (entryVals xs) (entryVals ys) := by
+    ozaki2CRZ mult p emin emax cfgs b smax xs ys =
+      ozaki2CRB mult p emin emax cfgs b smax (entryVals xs) (entryVals ys) := by
   unfold ozaki2CRZ ozaki2CRB
-  rw [ozaki1ExactPathZ_eq]
+  rw [ozaki1ExactFallbackZ_eq]
   congr 1
   apply List.map_congr_left
   intro c _
-  exact ozaki2EnclosureZ_eq eng c.1 c.2 xs ys
+  exact ozaki2EnclosureZ_eq mult c.1 c.2 xs ys
 
 /-- **The integer pipeline is correctly rounded.** -/
-theorem ozaki2CRZ_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
+theorem ozaki2CRZ_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ}
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax,
       residualsVanish b s (entryVals xs) (entryVals ys) = true) :
-    ozaki2CRZ eng p emin emax cfgs b smax xs ys =
+    ozaki2CRZ mult p emin emax cfgs b smax xs ys =
       roundRNE p emin emax (dot (entryVals xs) (entryVals ys)) := by
   rw [ozaki2CRZ_eq_CRB]
-  exact ozaki2CRB_eq hp hle heng (by rw [entryVals_length]; exact hcfg)
-    (by rw [entryVals_length, entryVals_length, hlen]) (by rw [entryVals_length]; exact hbudget)
+  exact ozaki2CRB_eq hp hle hmult (by rw [entryVals_length]; exact hcfg)
+    (by rw [entryVals_length, entryVals_length, hlen]) (by rw [entryVals_length]; exact hbound)
     hvanish
 
 /-- **Binary64 inputs as integer pairs**: correctly rounded to binary64. -/
-theorem ozaki2CRZ64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2CRZ64_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hb : b ≤ 1025) (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ v ∈ entryVals xs, Binary64Value v) (hy : ∀ v ∈ entryVals ys, Binary64Value v) :
-    ozaki2CRZ eng 53 (-1022) 1023 cfgs b smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) :=
-  ozaki2CRZ_eq (by decide) (by decide) heng hcfg hlen hbudget (vanish64 hb hsmax hx hy)
+    ozaki2CRZ mult 53 (-1022) 1023 cfgs b smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) :=
+  ozaki2CRZ_eq (by decide) (by decide) hmult hcfg hlen hbound (vanish64 hb hsmax hx hy)
 
 /-- **Binary32 inputs as integer pairs**: correctly rounded to binary32. -/
-theorem ozaki2CRZ32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2CRZ32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hb : b ≤ 129) (hsmax : 277 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ v ∈ entryVals xs, Binary32Value v) (hy : ∀ v ∈ entryVals ys, Binary32Value v) :
-    ozaki2CRZ eng 24 (-126) 127 cfgs b smax xs ys = rne32Q (dot (entryVals xs) (entryVals ys)) :=
-  ozaki2CRZ_eq (by decide) (by decide) heng hcfg hlen hbudget (vanish32Q hb hsmax hx hy)
+    ozaki2CRZ mult 24 (-126) 127 cfgs b smax xs ys = rne32Q (dot (entryVals xs) (entryVals ys)) :=
+  ozaki2CRZ_eq (by decide) (by decide) hmult hcfg hlen hbound (vanish32Q hb hsmax hx hy)
 
 /-! ## Widths of the integer pipeline -/
 

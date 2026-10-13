@@ -1,4 +1,4 @@
-import TensorCore.TC.Profiles
+import TensorCore.TC.Models
 import TensorCore.TC.CanonicalDefs
 import TensorCore.TC.CanonicalFormatDefs
 import Lean
@@ -15,7 +15,7 @@ private def getFormat : String → Option TensorCore.Format
   | "fp64" => some fp64
   | _ => none
 
-private def getProfile : String → Option InvocationSpec
+private def getModel : String → Option InvocationSpec
   | "v100" => some v100Invocation
   | "a100-f16" => some a100F16Invocation
   | "a100-bf16" => some a100BF16Invocation
@@ -64,15 +64,15 @@ private def parseFp16Pairs : List ℕ → Option (List (F16 × F16))
     else return (BitVec.ofNat 16 a, BitVec.ofNat 16 b) :: (← parseFp16Pairs rest)
   | _ => none
 
-private def parseProfilePairs (p : Profile) : List ℕ → Option (List (p.Word × p.Word))
+private def parseModelPairs (p : Model) : List ℕ → Option (List (p.Word × p.Word))
   | [] => some []
   | a :: b :: rest => do
     if a ≥ 2 ^ p.input.width || b ≥ 2 ^ p.input.width then none
-    else return (BitVec.ofNat _ a, BitVec.ofNat _ b) :: (← parseProfilePairs p rest)
+    else return (BitVec.ofNat _ a, BitVec.ofNat _ b) :: (← parseModelPairs p rest)
   | _ => none
 
 /-- Evaluate one block through a proved profile rather than through a descriptor. -/
-private def profileJson (p : Profile) (ps : List (p.Word × p.Word)) (c : ℕ) : Json :=
+private def modelJson (p : Model) (ps : List (p.Word × p.Word)) (c : ℕ) : Json :=
   let x : BlockInput p := ⟨ps, BitVec.ofNat 32 c⟩
   match evalBlock x with
   | .error e => Json.mkObj [("error", toJson (reprStr e))]
@@ -81,14 +81,14 @@ private def profileJson (p : Profile) (ps : List (p.Word × p.Word)) (c : ℕ) :
     ("ideal", toJson (qText t.block.exactDot)), ("residual", toJson (qText t.residual)),
     ("accumulated", toJson (qText t.block.accumulator))]
 
-private def bf16Json (K extra : ℕ) (floor : Option ℤ) (ns : List ℕ) : Option Json := do
+private def bf16Json (K neab : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
   let c ← ns.getLast?
   if c ≥ 2 ^ 32 then none else do
-    let ps ← parseProfilePairs (bf16Fp32Profile K extra floor) ns.dropLast
-    return profileJson (bf16Fp32Profile K extra floor) ps c
+    let ps ← parseModelPairs (bf16Fp32Model K neab eAlignMin) ns.dropLast
+    return modelJson (bf16Fp32Model K neab eAlignMin) ps c
 
 /-- TF32 register words: the thirteen low bits must be zero, then the value word is used. -/
-private def tf32Json (K extra : ℕ) (floor : Option ℤ) (ns : List ℕ) : Option Json := do
+private def tf32Json (K neab : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
   let c ← ns.getLast?
   if c ≥ 2 ^ 32 then none else do
     let words ← parseFp32Words ns.dropLast
@@ -96,7 +96,7 @@ private def tf32Json (K extra : ℕ) (floor : Option ℤ) (ns : List ℕ) : Opti
       return Json.mkObj [("error", toJson "invalidPadding")]
     else
       let ps := tf32UnpackPairs (pairUp words)
-      return profileJson (tf19Fp32Profile K extra floor) ps c
+      return modelJson (tf19Fp32Model K neab eAlignMin) ps c
 where
   parseFp32Words : List ℕ → Option (List tf32Register.Word)
     | [] => some []
@@ -122,28 +122,28 @@ private def command (args : List String) : Option Json := do
     let s ← if fmt = "tf32-register" then some tf32Register else (getFormat fmt).map packedIEEE
     if bits ≥ 2 ^ s.width then none else
       return Json.mkObj [("value", toJson ((s.decode (BitVec.ofNat _ bits)).map (qText ∘ Decoded.value)))]
-  | "block" :: profile :: words =>
-    let p ← getProfile profile
+  | "block" :: name :: words =>
+    let p ← getModel name
     let ns ← words.mapM String.toNat?
     invocationJson p ns
-  | "canonical" :: k :: extra :: floorText :: words =>
+  | "canonical" :: k :: neab :: eAlignMinText :: words =>
     let K ← k.toNat?
-    let E ← extra.toNat?
-    let floor ← if floorText = "none" then some none else floorText.toInt? |>.map some
+    let E ← neab.toNat?
+    let eAlignMin ← if eAlignMinText = "none" then some none else eAlignMinText.toInt? |>.map some
     let ns ← words.mapM String.toNat?
-    invocationJson (fp16Fp32Invocation K E floor) ns
-  | "bf16" :: k :: extra :: floorText :: words =>
+    invocationJson (fp16Fp32Invocation K E eAlignMin) ns
+  | "bf16" :: k :: neab :: eAlignMinText :: words =>
     let K ← k.toNat?
-    let E ← extra.toNat?
-    let floor ← if floorText = "none" then some none else floorText.toInt? |>.map some
+    let E ← neab.toNat?
+    let eAlignMin ← if eAlignMinText = "none" then some none else eAlignMinText.toInt? |>.map some
     let ns ← words.mapM String.toNat?
-    bf16Json K E floor ns
-  | "tf32" :: k :: extra :: floorText :: words =>
+    bf16Json K E eAlignMin ns
+  | "tf32" :: k :: neab :: eAlignMinText :: words =>
     let K ← k.toNat?
-    let E ← extra.toNat?
-    let floor ← if floorText = "none" then some none else floorText.toInt? |>.map some
+    let E ← neab.toNat?
+    let eAlignMin ← if eAlignMinText = "none" then some none else eAlignMinText.toInt? |>.map some
     let ns ← words.mapM String.toNat?
-    if ns.dropLast.length % 2 != 0 then none else tf32Json K E floor ns
+    if ns.dropLast.length % 2 != 0 then none else tf32Json K E eAlignMin ns
   | _ => none
 
 def main (args : List String) : IO Unit := do

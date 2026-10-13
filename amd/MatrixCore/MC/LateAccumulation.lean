@@ -49,7 +49,7 @@ theorem alignedSum_none_exact {neab : ℕ} {ps : List Unpacked} {S : ℚ}
   · simp at h
 
 /-- Error of `S_{p_i,sum}` against the exact product sum, for either configuration. -/
-theorem productSum_error (P : Profile) {ps : List Unpacked} {e : ℤ} {S : ℚ}
+theorem productSum_error (P : Model) {ps : List Unpacked} {e : ℤ} {S : ℚ}
     (h : productSum P ps = (some e, S)) :
     absQ (sumQ (ps.map Unpacked.value) - S) ≤ (ps.length + 2) * pow2 (e - (23 + P.neab : ℕ)) := by
   have hg := pow2_pos (e - (23 + P.neab : ℕ))
@@ -132,7 +132,7 @@ theorem productSum_error (P : Profile) {ps : List Unpacked} {e : ℤ} {S : ℚ}
 
 /-- `s'_c` is within one step of `2^(e_max − 24)` of `c`. With the binary8 cutoff, `s'_c = 0` only
 for `|c| < 2^(e_c + 1) ≤ 2^(e_max − 25)`. -/
-theorem shiftedC_error (P : Profile) {eMax eC : ℤ} (c : Unpacked) (hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n)
+theorem shiftedC_error (P : Model) {eMax eC : ℤ} (c : Unpacked) (hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n)
     (hc : absQ c.value < pow2 (eC + 1)) :
     absQ (c.value - shiftedC P eMax eC c) < pow2 (eMax - P.late.cFracBits) := by
   have hrd := rdGrid_bounds c.value (eMax - P.late.cFracBits)
@@ -153,7 +153,7 @@ theorem shiftedC_error (P : Profile) {eMax eC : ℤ} (c : Unpacked) (hcut : ∀ 
 
 /-- When `e_c > e_max`, `S_acc` rounds `S_{p_i,sum} + c` down, by less than
 `2^(e_c − 32) + 2^(e' − 31)`. -/
-theorem shiftedSum_bounds (P : Profile) (eC : ℤ) (S : ℚ) (c : Unpacked) :
+theorem shiftedSum_bounds (P : Model) (eC : ℤ) (S : ℚ) (c : Unpacked) :
     let T := rdGrid S (eC - P.late.sumFracBits) + c.value
     shiftedSum P eC S c ≤ S + c.value ∧
       S + c.value < shiftedSum P eC S c + pow2 (eC - P.late.sumFracBits) +
@@ -170,7 +170,7 @@ theorem shiftedSum_bounds (P : Profile) (eC : ℤ) (S : ℚ) (c : Unpacked) :
     constructor <;> grind
 
 /-- `S_acc` of Algorithms 1 and 2 against the exact `S_{p_i,sum} + c`. -/
-theorem lateSum_cases (P : Profile) (eMax : Option ℤ) (S : ℚ) (c : Unpacked) :
+theorem lateSum_cases (P : Model) (eMax : Option ℤ) (S : ℚ) (c : Unpacked) :
     (cExp P c = none ∧ lateSum P eMax S c = S) ∨
     (∃ e eC, eMax = some e ∧ cExp P c = some eC ∧ eC ≤ e ∧
       lateSum P eMax S c = S + shiftedC P e eC c) ∨
@@ -191,7 +191,7 @@ theorem lateSum_cases (P : Profile) (eMax : Option ℤ) (S : ℚ) (c : Unpacked)
 
 /-! ## Error of `S_acc` -/
 
-theorem productSum_none (P : Profile) {ps : List Unpacked} {S : ℚ}
+theorem productSum_none (P : Model) {ps : List Unpacked} {S : ℚ}
     (h : productSum P ps = (none, S)) : S = 0 ∧ sumQ (ps.map Unpacked.value) = 0 := by
   unfold productSum at h
   split at h
@@ -212,7 +212,7 @@ theorem productSum_none (P : Profile) {ps : List Unpacked} {S : ℚ}
     · simp at h
   · exact alignedSum_none_exact h
 
-theorem cExp_none {P : Profile} {c : Unpacked} (h : cExp P c = none) : c.value = 0 := by
+theorem cExp_none {P : Model} {c : Unpacked} (h : cExp P c = none) : c.value = 0 := by
   unfold cExp at h
   split at h
   · rename_i hm; exact (Unpacked.value_eq_zero_iff c).mpr hm
@@ -225,7 +225,7 @@ theorem cExp_none {P : Profile} {c : Unpacked} (h : cExp P c = none) : c.value =
 * `e_c > e_max`: `S_acc` is below `Σ p_ℓ + c` up to the product error, by less than
   `(n + 2)·2^(e_max − F) + 2^(e_c − 32) + 2^(e' − 31)`, `e'` the normalised exponent of `T`;
 * no product exponent (all products zero): the second branch with no product error. -/
-theorem alignedAccumulation_error (P : Profile) (x : Prepared)
+theorem alignedAccumulation_error (P : Model) (x : Prepared)
     (hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n)
     (hc : ∀ eC, cExp P x.c = some eC → absQ x.c.value < pow2 (eC + 1)) :
     let s := productSum P x.p

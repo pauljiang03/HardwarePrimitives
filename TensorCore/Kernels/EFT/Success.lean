@@ -27,19 +27,19 @@ private theorem unit_product (a b : ℚ) (ha : absQ a ≤ 1) (hb : absQ b ≤ 1)
     grind
 
 /-- A concrete input-only success family, requiring no bound on the ideal: all decoded input operands and c have magnitude at most one. -/
-theorem tcEft_unitInputs_success {path : Path} {x : BlockInput path.profile} {D : F32}
+theorem tcEft_unitInputs_success {variant : Variant} {x : BlockInput variant.model} {D : F32}
     {b : PreparedBlock} {d : ℚ}
-    (shape : x.products.length = path.profile.products)
+    (shape : x.products.length = variant.model.nfma)
     (inputs : TensorCore.prepare x = some b)
     (hc : absQ b.c.value ≤ 1)
     (hp : ∀ ab ∈ b.products, absQ ab.1.value ≤ 1 ∧ absQ ab.2.value ≤ 1)
     (hD : TensorCore.value32 D = some d) :
     absQ b.exactDot ≤ 17 ∧
-      ∃ r bits, tcEft path x D = .ok r ∧ r.bits = some bits ∧ NearestEven32 b.exactDot bits := by
-  have hlen : b.products.length = path.profile.products := by
+      ∃ r bits, tcEft variant x D = .ok r ∧ r.bits = some bits ∧ NearestEven32 b.exactDot bits := by
+  have hlen : b.products.length = variant.model.nfma := by
     unfold TensorCore.prepare at inputs
     cases hd : TensorCore.decode32 x.c <;>
-      cases hs : TensorCore.prepareProducts path.profile x.products <;>
+      cases hs : TensorCore.prepareProducts variant.model x.products <;>
       simp only [hd, hs, Option.some.injEq] at inputs
     · contradiction
     · contradiction
@@ -55,7 +55,7 @@ theorem tcEft_unitInputs_success {path : Path} {x : BlockInput path.profile} {D 
   simp only [List.map_map, Function.comp_def] at hs
   have ha := absQ_add_le b.c.value b.exactProducts
   have hn : (b.products.length : ℚ) ≤ 16 :=
-    Rat.natCast_le_natCast.mpr (by rw [hlen]; exact path_count path)
+    Rat.natCast_le_natCast.mpr (by rw [hlen]; exact variant_count variant)
   have hbound : absQ b.exactDot ≤ 17 := by
     dsimp only [PreparedBlock.exactProducts] at ha
     dsimp only [PreparedBlock.exactDot, PreparedBlock.exactProducts]

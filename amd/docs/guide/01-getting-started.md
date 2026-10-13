@@ -75,7 +75,7 @@ represents exactly, and `none` otherwise. The tests build every input this way
 | Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Numerics/Format.lean](../../MatrixCore/Numerics/Format.lean) |
 | Truncation and RD | `truncGrid`, `truncFrac`, `rdGrid`, `rdFrac` | [Numerics/Grid.lean](../../MatrixCore/Numerics/Grid.lean) |
 | `fl{·}` | `rne32`, `fl32`, `normExp` | [Numerics/Round32.lean](../../MatrixCore/Numerics/Round32.lean) |
-| Profiles | `Profile`, `Accumulation`, `cdna1F16`, …, `Architecture.profile` | [MC/Defs.lean](../../MatrixCore/MC/Defs.lean), [MC/Profiles.lean](../../MatrixCore/MC/Profiles.lean) |
+| Profiles | `Model`, `Accumulation`, `cdna1F16`, …, `Architecture.profile` | [MC/Defs.lean](../../MatrixCore/MC/Defs.lean), [MC/Profiles.lean](../../MatrixCore/MC/Models.lean) |
 | Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [MC/Stages.lean](../../MatrixCore/MC/Stages.lean) |
 | Evaluation | `evalBlock`, `blockBits`, `accumulate` | [MC/Eval.lean](../../MatrixCore/MC/Eval.lean) |
 | Special values | `blockOutcome`, `Outcome`, `XVal` | [MC/Special.lean](../../MatrixCore/MC/Special.lean) |
@@ -84,7 +84,7 @@ represents exactly, and `none` otherwise. The tests build every input this way
 | Runs of blocks | `runBlocks`, `Chain`, `lastOutput`, `runBlocks_all`, `dotBits_residual_ledger` | [MC/Chain.lean](../../MatrixCore/MC/Chain.lean) |
 | Output error | `halfUlp32`, `flBound`, `correctRounding_error`, `pairwise_error`, `aligned_error`, `dotBits_error_bound` | [MC/ErrorBounds.lean](../../MatrixCore/MC/ErrorBounds.lean) |
 | Bounds from the inputs | `Prepared.absSum`, `correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori` | [MC/AprioriBounds.lean](../../MatrixCore/MC/AprioriBounds.lean) |
-| Monotonicity in `c` | `evalBlock_c_monotone`, `dotBits_c_monotone`, `paper_profiles_monotone` | [MC/Monotonicity.lean](../../MatrixCore/MC/Monotonicity.lean) |
+| Monotonicity in `c` | `evalBlock_c_monotone`, `dotBits_c_monotone`, `paper_models_monotone` | [MC/Monotonicity.lean](../../MatrixCore/MC/Monotonicity.lean) |
 | Monotonicity in the products | `correctRounding_exact_monotone`, `ProductNonmonotone`, `cdna3F16_nonmonotonic`, … | [MC/ProductMonotonicity.lean](../../MatrixCore/MC/ProductMonotonicity.lean) |
 | Exact inner products | `exactDot`, `runBlocks_products`, `dotBits_exact_error` | [MC/InnerProduct.lean](../../MatrixCore/MC/InnerProduct.lean) |
 | `D = AB + C` | `mfma_entry`, `mfma_finite`, `mfma_error` | [MC/MFMA.lean](../../MatrixCore/MC/MFMA.lean) |

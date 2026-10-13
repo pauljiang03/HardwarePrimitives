@@ -8,7 +8,7 @@ Reads lines `<profile> <a> <b> <c>`, where `a` and `b` are comma-separated hexad
 
 open MatrixCore
 
-def profileOf : String → Option Profile
+def modelOf : String → Option Model
   | "cdna1F16" => some cdna1F16
   | "cdna1BF16" => some cdna1BF16
   | "cdna2F16" => some cdna2F16
@@ -40,7 +40,7 @@ def evalLine (line : String) : String := Id.run do
   let clean := String.ofList (line.toList.filter fun c => c ≠ '\n' ∧ c ≠ '\r')
   match clean.splitOn " " with
   | [p, a, b, c] =>
-    match profileOf p, (a.splitOn ",").mapM parseHex, (b.splitOn ",").mapM parseHex, parseHex c with
+    match modelOf p, (a.splitOn ",").mapM parseHex, (b.splitOn ",").mapM parseHex, parseHex c with
     | some P, some as, some bs, some cw =>
       match dotOutcome P (as.map (BitVec.ofNat _)) (bs.map (BitVec.ofNat _)) (BitVec.ofNat 32 cw) with
       | some (.finite d) => return s!"F {hex8 d.toNat}"

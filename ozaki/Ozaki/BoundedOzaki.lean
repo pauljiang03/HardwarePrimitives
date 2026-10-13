@@ -1,4 +1,4 @@
-import Ozaki.Window
+import Ozaki.TruncatedSum
 import Ozaki.Exact64
 import Ozaki.SignOracle
 
@@ -9,14 +9,14 @@ arithmetic of bounded width, equal to it:
 
 * the engine's slice products are integer terms `(v, gₜ + hᵤ)`, worth `v 2^(gₜ+hᵤ)`
   (`sliceProductInt`);
-* **the check** (`ozaki1CheckB`): each term rounded down to the window grid `q` by a shift, the
+* **the check** (`ozaki1TestB`): each term rounded down to the window grid `q` by a shift, the
   results added in a two's-complement register of `W + bitlen (n (k + 2)) + 1` bits, which never
-  wraps (`ozaki1CheckB_register`); the bound `(s + 1) k 2^c + n 2^q` as integers at the grid
+  wraps (`ozaki1TestB_register`); the bound `(s + 1) k 2^c + n 2^q` as integers at the grid
   `min q c`; both ends rounded with `roundExact`. It equals `roundEnclosure` of the window
-  enclosure (`ozaki1CheckB_eq`);
-* **the exact path** (`ozaki1ExactPathB`): the `s²` slice products as integer terms, rounded by
+  enclosure (`ozaki1TestB_eq`);
+* **the exact path** (`ozaki1ExactFallbackB`): the `s²` slice products as integer terms, rounded by
   `roundSum` with windows of `bitlen (s² + 1) + p + 4` bits, equal to rounding the exact path's
-  value (`ozaki1ExactPathB_eq`);
+  value (`ozaki1ExactFallbackB_eq`);
 * `ozaki1CRB` is `ozaki1CRW` with `rnd = roundRNE p emin emax` (`ozaki1CRB_eq_CRW`), hence correctly
   rounded (`ozaki1CRB_eq`), for binary64 and binary32 inputs in particular (`ozaki1CRB64_eq`,
   `ozaki1CRB32_eq`).
@@ -35,49 +35,49 @@ namespace Ozaki
 
 /-- The engine's product of two slices as an integer term `(v, g + h)`, if the engine returned an
 integer `v`. -/
-def sliceProductInt (eng : Engine) (sl sl' : Slice) : Option (ℤ × ℤ) :=
-  (eng sl.coeffs sl'.coeffs).bind fun v =>
+def sliceProductInt (mult : MatrixMultiplier) (sl sl' : Slice) : Option (ℤ × ℤ) :=
+  (mult sl.coeffs sl'.coeffs).bind fun v =>
     if v.den = 1 then some (v.num, sl.grid + sl'.grid) else none
 
-theorem sliceProductInt_of_eq {eng : Engine} {sl sl' : Slice} {z : ℤ}
-    (h : eng sl.coeffs sl'.coeffs = some (z : ℚ)) :
-    sliceProductInt eng sl sl' = some (z, sl.grid + sl'.grid) := by
+theorem sliceProductInt_of_eq {mult : MatrixMultiplier} {sl sl' : Slice} {z : ℤ}
+    (h : mult sl.coeffs sl'.coeffs = some (z : ℚ)) :
+    sliceProductInt mult sl sl' = some (z, sl.grid + sl'.grid) := by
   unfold sliceProductInt
   rw [h, Option.bind_some, if_pos (Rat.den_intCast z), Rat.num_intCast]
 
 /-- The exact integer term of two slices. -/
 def exactSliceInt (sl sl' : Slice) : ℤ × ℤ := (dotZ sl.coeffs sl'.coeffs, sl.grid + sl'.grid)
 
-theorem engine_exact {eng : Engine} {b budget s : ℕ} (heng : eng.ExactOn b budget)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem multiplier_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.ExactOn b bound)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {sl sl' : Slice} (hsl : sl ∈ (split b s x).1) (hsl' : sl' ∈ (split b s y).1) :
-    eng sl.coeffs sl'.coeffs = some (dotZ sl.coeffs sl'.coeffs : ℚ) ∧
-      dotAbs sl.coeffs sl'.coeffs ≤ budget := by
+    mult sl.coeffs sl'.coeffs = some (dotZ sl.coeffs sl'.coeffs : ℚ) ∧
+      dotAbs sl.coeffs sl'.coeffs ≤ bound := by
   obtain ⟨_, hcx, _⟩ := split_length b s x
   obtain ⟨_, hcy, _⟩ := split_length b s y
-  have hb : dotAbs sl.coeffs sl'.coeffs ≤ budget := by
+  have hb : dotAbs sl.coeffs sl'.coeffs ≤ bound := by
     refine Nat.le_trans (dotAbs_le _ _ _ _ (split_coeff_bound b s x _ hsl)
       (split_coeff_bound b s y _ hsl')) ?_
-    rw [hcx _ hsl]; exact hbudget
-  exact ⟨heng _ _ (by rw [hcx _ hsl, hcy _ hsl', hlen]) (split_coeff_bound b s x _ hsl)
+    rw [hcx _ hsl]; exact hbound
+  exact ⟨hmult _ _ (by rw [hcx _ hsl, hcy _ hsl', hlen]) (split_coeff_bound b s x _ hsl)
     (split_coeff_bound b s y _ hsl') hb, hb⟩
 
-theorem sliceProductInt_exact {eng : Engine} {b budget s : ℕ} (heng : eng.ExactOn b budget)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem sliceProductInt_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.ExactOn b bound)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {sl sl' : Slice} (hsl : sl ∈ (split b s x).1) (hsl' : sl' ∈ (split b s y).1) :
-    sliceProductInt eng sl sl' = some (exactSliceInt sl sl') :=
-  sliceProductInt_of_eq (engine_exact heng hlen hbudget hsl hsl').1
+    sliceProductInt mult sl sl' = some (exactSliceInt sl sl') :=
+  sliceProductInt_of_eq (multiplier_exact hmult hlen hbound hsl hsl').1
 
 /-- **Slice products are bounded by the engine's budget**, whatever the exponents. -/
-theorem sliceProductInt_natAbs_le {eng : Engine} {b budget s : ℕ} (heng : eng.ExactOn b budget)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem sliceProductInt_natAbs_le {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.ExactOn b bound)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {sl sl' : Slice} (hsl : sl ∈ (split b s x).1) (hsl' : sl' ∈ (split b s y).1) :
-    (exactSliceInt sl sl').1.natAbs ≤ budget :=
-  Nat.le_trans (natAbs_dotZ_le _ _) (engine_exact heng hlen hbudget hsl hsl').2
+    (exactSliceInt sl sl').1.natAbs ≤ bound :=
+  Nat.le_trans (natAbs_dotZ_le _ _) (multiplier_exact hmult hlen hbound hsl hsl').2
 
 /-- The slice pair `(t, u)` of Ozaki-I as an integer term. -/
-def pairInt (eng : Engine) (sx sy : List Slice) (p : ℕ × ℕ) : Option (ℤ × ℤ) :=
-  sliceProductInt eng (sx.getD p.1 default) (sy.getD p.2 default)
+def pairInt (mult : MatrixMultiplier) (sx sy : List Slice) (p : ℕ × ℕ) : Option (ℤ × ℤ) :=
+  sliceProductInt mult (sx.getD p.1 default) (sy.getD p.2 default)
 
 /-- The exact integer term of the slice pair `(t, u)`. -/
 def exactPairInt (sx sy : List Slice) (p : ℕ × ℕ) : ℤ × ℤ :=
@@ -87,16 +87,16 @@ theorem tval_exactPairInt (sx sy : List Slice) (p : ℕ × ℕ) :
     tval (exactPairInt sx sy p) = exactTerm sx sy p := by
   unfold tval exactPairInt exactSliceInt exactTerm; simp only; rw [Rat.mul_comm]
 
-theorem pairInt_exact {eng : Engine} {b budget s : ℕ} (heng : eng.ExactOn b budget)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem pairInt_exact {mult : MatrixMultiplier} {b bound s : ℕ} (hmult : mult.ExactOn b bound)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {p : ℕ × ℕ} (hp : p ∈ trianglePairs s) :
-    pairInt eng (split b s x).1 (split b s y).1 p =
+    pairInt mult (split b s x).1 (split b s y).1 p =
       some (exactPairInt (split b s x).1 (split b s y).1 p) := by
   obtain ⟨t, u⟩ := p
   have htu := mem_trianglePairs.mp hp
   obtain ⟨hlx, _, _⟩ := split_length b s x
   obtain ⟨hly, _, _⟩ := split_length b s y
-  exact sliceProductInt_exact heng hlen hbudget (getD_mem (by omega)) (getD_mem (by omega))
+  exact sliceProductInt_exact hmult hlen hbound (getD_mem (by omega)) (getD_mem (by omega))
 
 /-! ## The window in integers -/
 
@@ -144,12 +144,12 @@ theorem floor_floorPart (q : ℤ) (t : ℤ × ℤ) : (tval t * 2 ^ (-q)).floor =
 theorem floorGrid_tval (q : ℤ) (t : ℤ × ℤ) : floorGrid q (tval t) = (floorPart q t : ℚ) * 2 ^ q := by
   unfold floorGrid; rw [floor_floorPart]
 
-theorem windowSum_int (q : ℤ) (ts : List (ℤ × ℤ)) :
-    windowSum q (ts.map tval) = (((ts.map (floorPart q)).sum : ℤ) : ℚ) * 2 ^ q := by
+theorem truncatedSum_int (q : ℤ) (ts : List (ℤ × ℤ)) :
+    truncatedSum q (ts.map tval) = (((ts.map (floorPart q)).sum : ℤ) : ℚ) * 2 ^ q := by
   induction ts with
-  | nil => simp [windowSum]
+  | nil => simp [truncatedSum]
   | cons t ts ih =>
-    simp only [windowSum, List.map_cons, List.sum_cons] at ih ⊢
+    simp only [truncatedSum, List.map_cons, List.sum_cons] at ih ⊢
     rw [ih, floorGrid_tval, Rat.intCast_add, Rat.add_mul]
 
 theorem abs_floor_le (v : ℚ) : Rat.abs ((v.floor : ℤ) : ℚ) ≤ Rat.abs v + 1 := by
@@ -210,15 +210,15 @@ theorem roundEnclosureB_eq (p : ℕ) (emin emax N q K c : ℤ) (n : ℕ) :
 
 /-- **The bounded check for `s` slices**: the engine's slice products as integer terms, the window
 sum in a `W + bitlen (n (k + 2)) + 1`-bit register, and the integer enclosure test. -/
-def ozaki1CheckB (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (x y : List ℚ) :
+def ozaki1TestB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (x y : List ℚ) :
     Option ℚ :=
-  match (trianglePairs s).mapM (pairInt eng (split b s x).1 (split b s y).1) with
+  match (trianglePairs s).mapM (pairInt mult (split b s x).1 (split b s y).1) with
   | none => none
   | some ts =>
     roundEnclosureB p emin emax
       (fixedSum (W + bitlen (ts.length * (x.length + 2)) + 1)
-        (ts.map (floorPart (windowGrid b W x y))))
-      (windowGrid b W x y) (((s + 1) * x.length : ℕ) : ℤ)
+        (ts.map (floorPart (truncationGrid b W x y))))
+      (truncationGrid b W x y) (((s + 1) * x.length : ℕ) : ℤ)
       (splitExp b x + splitExp b y - s * (b + 1)) ts.length
 
 theorem exactTerms_eq_map (b s : ℕ) (x y : List ℚ) :
@@ -230,19 +230,19 @@ theorem exactTerms_eq_map (b s : ℕ) (x y : List ℚ) :
 
 /-- **The window register never wraps**: the window parts of the `n` slice products add up, in
 magnitude, below `2^(W + bitlen (n (k + 2)))`. -/
-theorem ozaki1CheckB_register (b s W : ℕ) (x y : List ℚ) :
+theorem ozaki1TestB_register (b s W : ℕ) (x y : List ℚ) :
     ((((trianglePairs s).map (exactPairInt (split b s x).1 (split b s y).1)).map
-        (floorPart (windowGrid b W x y))).map Int.natAbs).sum <
+        (floorPart (truncationGrid b W x y))).map Int.natAbs).sum <
       2 ^ (W + bitlen ((trianglePairs s).length * (x.length + 2))) := by
   have hpart : ∀ z ∈ ((trianglePairs s).map (exactPairInt (split b s x).1 (split b s y).1)).map
-      (floorPart (windowGrid b W x y)), z.natAbs < x.length * 2 ^ W + 2 := by
+      (floorPart (truncationGrid b W x y)), z.natAbs < x.length * 2 ^ W + 2 := by
     intro z hz
     obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hz
     obtain ⟨pr, hpr, rfl⟩ := List.mem_map.mp ht
     apply natAbs_floorPart_lt
     rw [tval_exactPairInt]
     have := abs_exactTerm_le b s x y hpr
-    rw [show windowGrid b W x y + (W : ℤ) = splitExp b x + splitExp b y by unfold windowGrid; omega]
+    rw [show truncationGrid b W x y + (W : ℤ) = splitExp b x + splitExp b y by unfold truncationGrid; omega]
     exact this
   have h1 := sum_natAbs_le hpart
   simp only [List.length_map] at h1
@@ -258,20 +258,20 @@ theorem ozaki1CheckB_register (b s W : ℕ) (x y : List ℚ) :
 
 /-- **The bounded check is the enclosure test** on the window enclosure, with
 `rnd = roundRNE p emin emax`. -/
-theorem ozaki1CheckB_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1TestB_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ozaki1CheckB eng p emin emax b s W x y =
-      (ozaki1WindowEnclosure eng b s W x y).bind
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ozaki1TestB mult p emin emax b s W x y =
+      (ozaki1TruncatedEnclosure mult b s W x y).bind
         fun e => roundEnclosure (roundRNE p emin emax) e.1 e.2 := by
-  unfold ozaki1CheckB ozaki1WindowEnclosure
-  rw [mapM_eq_some_map fun _ hp => pairInt_exact heng hlen hbudget hp,
-    ozaki1Terms_eq heng s hlen hbudget, Option.map_some, Option.bind_some]
+  unfold ozaki1TestB ozaki1TruncatedEnclosure
+  rw [mapM_eq_some_map fun _ hp => pairInt_exact hmult hlen hbound hp,
+    ozaki1Terms_eq hmult s hlen hbound, Option.map_some, Option.bind_some]
   simp only
   rw [fixedSum_eq (by omega) (by
       rw [List.length_map, show ∀ a c : ℕ, a + c + 1 - 1 = a + c from fun _ _ => rfl]
-      exact ozaki1CheckB_register b s W x y),
-    roundEnclosureB_eq, exactTerms_eq_map, windowSum_int, List.length_map, List.length_map]
+      exact ozaki1TestB_register b s W x y),
+    roundEnclosureB_eq, exactTerms_eq_map, truncatedSum_int, List.length_map, List.length_map]
   congr 2
   unfold ozaki1Bound
   rw [Rat.intCast_natCast, Rat.natCast_mul]
@@ -282,12 +282,12 @@ theorem ozaki1CheckB_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b bu
 /-- **The exact path with bounded registers**: the first slice count up to `smax` that leaves
 nothing over, all `s²` slice products from the engine as integer terms, rounded by `roundSum` with
 windows of `bitlen (s² + 1) + p + 4` bits. -/
-def ozaki1ExactPathB (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ) (x y : List ℚ) :
+def ozaki1ExactFallbackB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   match (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | some s =>
     match (slicePairs (split b s x).1 (split b s y).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) with
+        (fun pr => sliceProductInt mult pr.1 pr.2) with
     | some ts => roundSum p emin emax (bitlen (ts.length + 1) + p + 4) ts
     | none => none
   | none => none
@@ -298,23 +298,23 @@ theorem mem_slicePairs {sx sy : List Slice} {pr : Slice × Slice} (h : pr ∈ sl
   obtain ⟨sl', hsl', rfl⟩ := List.mem_map.mp hp
   exact ⟨hsl, hsl'⟩
 
-theorem ozaki1ExactPathB_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1ExactFallbackB_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (smax : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ozaki1ExactPathB eng p emin emax b smax x y =
-      (ozaki1ExactPath eng b smax x y).bind (roundRNE p emin emax) := by
-  unfold ozaki1ExactPathB ozaki1ExactPath
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ozaki1ExactFallbackB mult p emin emax b smax x y =
+      (ozaki1ExactFallback mult b smax x y).bind (roundRNE p emin emax) := by
+  unfold ozaki1ExactFallbackB ozaki1ExactFallback
   cases (List.range' 1 smax).find? fun s => residualsVanish b s x y with
   | none => rfl
   | some s =>
     simp only
     unfold ozaki1Full
     rw [mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
-        sliceProductInt_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2,
-      mapM_eq_some_map (f := fun pr : Slice × Slice => fullTerm eng pr.1 pr.2)
+        sliceProductInt_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2,
+      mapM_eq_some_map (f := fun pr : Slice × Slice => fullTerm mult pr.1 pr.2)
         (g := fun pr : Slice × Slice => tval (exactSliceInt pr.1 pr.2)) fun pr hpr => by
         unfold fullTerm
-        rw [(engine_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2).1]
+        rw [(multiplier_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2).1]
         unfold tval exactSliceInt; simp only [Option.map_some]; rw [Rat.mul_comm]]
     simp only [Option.map_some, Option.bind_some]
     rw [roundSum_eq _ _ (by omega)]
@@ -326,87 +326,87 @@ theorem ozaki1ExactPathB_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn 
 
 /-- **Correctly rounded Ozaki-I with bounded registers**: the bounded checks for the slice counts
 `ss` in turn, then the bounded exact path. -/
-def ozaki1CRB (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
   match ss with
-  | [] => ozaki1ExactPathB eng p emin emax b smax x y
+  | [] => ozaki1ExactFallbackB mult p emin emax b smax x y
   | s :: ss =>
-    match ozaki1CheckB eng p emin emax b s W x y with
+    match ozaki1TestB mult p emin emax b s W x y with
     | some w => some w
-    | none => ozaki1CRB eng p emin emax b W ss smax x y
+    | none => ozaki1CRB mult p emin emax b W ss smax x y
 
 /-- **The bounded scheme is the rational one** with `rnd = roundRNE p emin emax`. -/
-theorem ozaki1CRB_eq_CRW {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1CRB_eq_CRW {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (W : ℕ) (smax : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ∀ ss : List ℕ, ozaki1CRB eng p emin emax b W ss smax x y =
-      ozaki1CRW eng (roundRNE p emin emax) b W ss smax x y
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ∀ ss : List ℕ, ozaki1CRB mult p emin emax b W ss smax x y =
+      ozaki1CRW mult (roundRNE p emin emax) b W ss smax x y
   | [] => by
     unfold ozaki1CRB ozaki1CRW
-    rw [ozaki1ExactPathB_eq heng p emin emax smax hlen hbudget]
+    rw [ozaki1ExactFallbackB_eq hmult p emin emax smax hlen hbound]
     rfl
   | s :: ss => by
-    have ih := ozaki1CRB_eq_CRW heng p emin emax W smax hlen hbudget ss
+    have ih := ozaki1CRB_eq_CRW hmult p emin emax W smax hlen hbound ss
     unfold ozaki1CRW at ih ⊢
     unfold ozaki1CRB
-    rw [ozaki1CheckB_eq heng p emin emax s W hlen hbudget, List.map_cons]
-    unfold certify
+    rw [ozaki1TestB_eq hmult p emin emax s W hlen hbound, List.map_cons]
+    unfold roundingTest
     rw [← ih]
-    cases (ozaki1WindowEnclosure eng b s W x y).bind
+    cases (ozaki1TruncatedEnclosure mult b s W x y).bind
       (fun e => roundEnclosure (roundRNE p emin emax) e.1 e.2) <;> rfl
 
 /-- **Correctly rounded Ozaki-I with bounded registers is correctly rounded**: on an exact engine,
 for every input whose exact path ends within `smax` slices. -/
-theorem ozaki1CRB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ}
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1CRB_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRB eng p emin emax b W ss smax x y = roundRNE p emin emax (dot x y) := by
-  rw [ozaki1CRB_eq_CRW heng p emin emax W smax hlen hbudget ss]
-  exact ozaki1CRW_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp) heng W ss hlen hbudget
+    ozaki1CRB mult p emin emax b W ss smax x y = roundRNE p emin emax (dot x y) := by
+  rw [ozaki1CRB_eq_CRW hmult p emin emax W smax hlen hbound ss]
+  exact ozaki1CRW_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp) hmult W ss hlen hbound
     hvanish
 
 /-- **Binary64 inputs**: correctly rounded to binary64 with bounded registers, when
 `smax (b + 1) > 2098`. -/
-theorem ozaki1CRB64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRB64_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 1025) (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a) :
-    ozaki1CRB eng 53 (-1022) 1023 b W ss smax x y = rne64 (dot x y) :=
-  ozaki1CRB_eq (by decide) (by decide) heng W ss hlen hbudget (vanish64 hb hsmax hx hy)
+    ozaki1CRB mult 53 (-1022) 1023 b W ss smax x y = rne64 (dot x y) :=
+  ozaki1CRB_eq (by decide) (by decide) hmult W ss hlen hbound (vanish64 hb hsmax hx hy)
 
 /-- **Binary32 inputs**: correctly rounded to binary32 with bounded registers, when
 `smax (b + 1) > 277`. -/
-theorem ozaki1CRB32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRB32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 129) (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a) :
-    ozaki1CRB eng 24 (-126) 127 b W ss smax x y = rne32Q (dot x y) :=
-  ozaki1CRB_eq (by decide) (by decide) heng W ss hlen hbudget (vanish32Q hb hsmax hx hy)
+    ozaki1CRB mult 24 (-126) 127 b W ss smax x y = rne32Q (dot x y) :=
+  ozaki1CRB_eq (by decide) (by decide) hmult W ss hlen hbound (vanish32Q hb hsmax hx hy)
 
 /-- **The exact path's integer terms are bounded by the engine's budget**: every term handed to
 `roundSum` has `|v| ≤ budget`, and `roundSum`'s own registers are bounded by its window, `p` and the
-number of terms (`descend_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt`). -/
-theorem ozaki1ExactPathB_terms {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+number of terms (`topDownSum_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt`). -/
+theorem ozaki1ExactFallbackB_terms {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {s : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    (slicePairs (split b s x).1 (split b s y).1).mapM (fun pr => sliceProductInt eng pr.1 pr.2) =
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    (slicePairs (split b s x).1 (split b s y).1).mapM (fun pr => sliceProductInt mult pr.1 pr.2) =
         some ((slicePairs (split b s x).1 (split b s y).1).map fun pr => exactSliceInt pr.1 pr.2) ∧
-      ∀ pr ∈ slicePairs (split b s x).1 (split b s y).1, (exactSliceInt pr.1 pr.2).1.natAbs ≤ budget :=
+      ∀ pr ∈ slicePairs (split b s x).1 (split b s y).1, (exactSliceInt pr.1 pr.2).1.natAbs ≤ bound :=
   ⟨mapM_eq_some_map fun _ hpr =>
-      sliceProductInt_exact heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2,
+      sliceProductInt_exact hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2,
     fun _ hpr =>
-      sliceProductInt_natAbs_le heng hlen hbudget (mem_slicePairs hpr).1 (mem_slicePairs hpr).2⟩
+      sliceProductInt_natAbs_le hmult hlen hbound (mem_slicePairs hpr).1 (mem_slicePairs hpr).2⟩
 
 /-! ## Examples, checked by the kernel -/
 
 /-- The window check settles `x · y` for a non-dyadic product with `4` slices and `W = 40`. -/
-example : ozaki1CheckB exactEngine 24 (-126) 127 8 4 40 [3, 5/4, -7/8] [1/2, 3, 2/3] =
+example : ozaki1TestB exactMultiplier 24 (-126) 127 8 4 40 [3, 5/4, -7/8] [1/2, 3, 2/3] =
     rne32Q (dot [3, 5/4, -7/8] [1/2, 3, 2/3]) := by decide +kernel
 
 /-- A binary32 tie with a heavy cancellation, `2^40 + 1 + 2^-24 − 2^40`: two slices do not settle
 it, and the bounded exact path rounds it to the even `1`. -/
-example : ozaki1CRB exactEngine 24 (-126) 127 8 20 [2] 40 [2 ^ 40, 1, 2 ^ (-24 : ℤ), -(2 ^ 40)]
+example : ozaki1CRB exactMultiplier 24 (-126) 127 8 20 [2] 40 [2 ^ 40, 1, 2 ^ (-24 : ℤ), -(2 ^ 40)]
       [1, 1, 1, 1] = some 1 ∧
     rne32Q (dot [2 ^ 40, 1, 2 ^ (-24 : ℤ), -(2 ^ 40)] [1, 1, 1, 1]) = some 1 := by decide +kernel
 

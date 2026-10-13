@@ -7,10 +7,10 @@ namespace TensorCore.EFMachine
 set_option exponentiation.threshold 1024
 
 /-- A shape-correct block with finite inputs and finite supplied D always prepares. -/
-theorem prepare_exists {path : Path} {x : BlockInput path.profile} {D : F32} {s d : ℚ}
-    (hlen : x.products.length = path.profile.products)
+theorem prepare_exists {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
+    (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
-    ∃ p, prepare path x D = .ok p := by
+    ∃ p, prepare variant x D = .ok p := by
   cases hc : decode32Term x.c with
   | none =>
     have hz : TensorCore.value32 x.c = none := by rw [← decode32Word_value]; simp [decode32Word, hc]
@@ -18,11 +18,11 @@ theorem prepare_exists {path : Path} {x : BlockInput path.profile} {D : F32} {s 
     | none => simp [TensorCore.exactDot, TensorCore.prepare, hd] at hx
     | some a => simp [TensorCore.value32, hd] at hz
   | some c =>
-    cases hps : x.products.mapM (decodeProduct path) with
+    cases hps : x.products.mapM (decodeProduct variant) with
     | none =>
-      have hp := decodeProducts_values path x.products
+      have hp := decodeProducts_values variant x.products
       rw [hps] at hp
-      cases hr : TensorCore.prepareProducts path.profile x.products with
+      cases hr : TensorCore.prepareProducts variant.model x.products with
       | none => simp [TensorCore.exactDot, TensorCore.prepare, hr] at hx
       | some ps => simp [hr] at hp
     | some ps =>
@@ -52,9 +52,9 @@ theorem Prepared.ideal_allZero {p : Prepared}
     simp [sumQ, hv, hs, Rat.zero_add]
 
 /-- Full bounded execution terminates without workspace overflow. -/
-theorem tcEft_prepared {path : Path} {x : BlockInput path.profile} {D : F32} {p : Prepared}
-    (hp : prepare path x D = .ok p) :
-    ∃ r, tcEft path x D = .ok r ∧
+theorem tcEft_prepared {variant : Variant} {x : BlockInput variant.model} {D : F32} {p : Prepared}
+    (hp : prepare variant x D = .ok p) :
+    ∃ r, tcEft variant x D = .ok r ∧
       r.bits = TensorCore.round32 .nearestEven p.ideal := by
   have hcap := prepare_capacity hp
   obtain ⟨c, hc⟩ := extract_exists hcap.1 hcap.2
@@ -77,10 +77,10 @@ theorem tcEft_prepared {path : Path} {x : BlockInput path.profile} {D : F32} {p 
       | some b => exact ⟨.boundedExact b, by rw [if_neg hz, hc]; dsimp +instances only; rw [hb, hf]; rfl, hf.symm.trans hr⟩
 
 /-- Universal finite-input theorem for all eight paths and any finite supplied D. -/
-theorem tcEft_correct {path : Path} {x : BlockInput path.profile} {D : F32} {s d : ℚ}
-    (hlen : x.products.length = path.profile.products)
+theorem tcEft_correct {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
+    (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
-    ∃ r, tcEft path x D = .ok r ∧ r.bits = TensorCore.round32 .nearestEven s := by
+    ∃ r, tcEft variant x D = .ok r ∧ r.bits = TensorCore.round32 .nearestEven s := by
   obtain ⟨p, hp⟩ := prepare_exists hlen hx hD
   have hi := (prepare_spec hp).2.1
   have hv : p.ideal = s := Option.some.inj (hi.symm.trans hx)
@@ -88,20 +88,20 @@ theorem tcEft_correct {path : Path} {x : BlockInput path.profile} {D : F32} {s d
   exact ⟨r, hr, by simpa [hv] using hb⟩
 
 /-- Useful success family: every shape-correct finite block whose *independent* ideal is within the finite FP32 interval. -/
-theorem tcEft_success {path : Path} {x : BlockInput path.profile} {D : F32} {s d : ℚ}
-    (hlen : x.products.length = path.profile.products)
+theorem tcEft_success {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
+    (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d)
     (hrange : absQ s ≤ maxFinite32) :
-    ∃ r b, tcEft path x D = .ok r ∧ r.bits = some b ∧ NearestEven32 s b := by
+    ∃ r b, tcEft variant x D = .ok r ∧ r.bits = some b ∧ NearestEven32 s b := by
   obtain ⟨r, hr, hb⟩ := tcEft_correct hlen hx hD
   obtain ⟨b, hround, hn⟩ := round32_nearestEven_correct s hrange
   exact ⟨r, b, hr, hb.trans hround, hn⟩
 
 /-- After valid decoding, range acceptance is both necessary and sufficient. -/
-theorem tcEft_range_iff {path : Path} {x : BlockInput path.profile} {D : F32} {s d : ℚ}
-    (hlen : x.products.length = path.profile.products)
+theorem tcEft_range_iff {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
+    (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
-    (∃ r b, tcEft path x D = .ok r ∧ r.bits = some b) ↔ absQ s ≤ maxFinite32 := by
+    (∃ r b, tcEft variant x D = .ok r ∧ r.bits = some b) ↔ absQ s ≤ maxFinite32 := by
   constructor
   · rintro ⟨r, b, hr, hb⟩
     obtain ⟨r', hr', hb'⟩ := tcEft_correct hlen hx hD

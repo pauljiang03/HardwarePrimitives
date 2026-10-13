@@ -15,20 +15,20 @@ structure Prepared where
   deriving Repr, DecidableEq
 
 /-- Select the common extraction grid from unnormalized unnormalized exponents. -/
-def selectedGrid (path : Path) (ts : List Term) (D : F32) : Grid :=
+def selectedGrid (variant : Variant) (ts : List Term) (D : F32) : Grid :=
   let alignExp := ts.foldl (fun e t => if t.word.magnitude == 0 then e
-    else if e ≤ t.biasedExp then t.biasedExp else e) path.floor
-  let offset := path.alignmentBits + 240
+    else if e ≤ t.biasedExp then t.biasedExp else e) variant.eAlignMin
+  let offset := variant.alignmentBits + 240
   let qa := if alignExp < offset then 0 else alignExp - offset
   if qa ≤ outputGrid D then outputGrid D else qa
 
-def prepare (path : Path) (x : BlockInput path.profile) (D : F32) : Except Error Prepared := do
-  if x.products.length != path.profile.products then throw .wrongProductCount
+def prepare (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Prepared := do
+  if x.products.length != variant.model.nfma then throw .wrongProductCount
   let some c := decode32Term x.c | throw .nonfiniteInput
-  let some ps := x.products.mapM (decodeProduct path) | throw .nonfiniteInput
+  let some ps := x.products.mapM (decodeProduct variant) | throw .nonfiniteInput
   let some d := decode32Word D | throw .nonfiniteOutput
   let ts := c :: ps
-  return ⟨ts, d, selectedGrid path ts D⟩
+  return ⟨ts, d, selectedGrid variant ts D⟩
 
 structure Components where
   prepared : Prepared
@@ -112,8 +112,8 @@ def Result.bits : Result → Option F32
   | .outOfRange => none
 
 /-- Full bounded Algorithm 1, on each of the eight supported encoded input paths. -/
-def tcEft (path : Path) (x : BlockInput path.profile) (D : F32) : Except Error Result := do
-  let p ← prepare path x D
+def tcEft (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Result := do
+  let p ← prepare variant x D
   if p.terms.all (fun t => t.word.magnitude == 0) then return .allZero
   let some c := extract p | throw .arithmeticOverflow
   match c.scalar with

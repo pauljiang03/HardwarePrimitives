@@ -15,12 +15,12 @@ theorem rne64_zero : rne64 0 = some 0 := by decide +kernel
 theorem rne32Q_zero : rne32Q 0 = some 0 := by decide +kernel
 
 /-- Correctly rounded FP64 Ozaki-I with signed zeros. -/
-def mcOzaki1CRDS (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List Signed) :
+def mcOzaki1CRDS (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List Signed) :
     Option Signed :=
   ozaki1CRWS (mcSplitK P b) rne64 b W ss smax xs ys
 
 /-- Correctly rounded binary32 Ozaki-I with signed zeros. -/
-def mcOzaki1CRLS (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List Signed) :
+def mcOzaki1CRLS (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List Signed) :
     Option Signed :=
   ozaki1CRWS (mcSplitK P b) rne32Q b W ss smax xs ys
 
@@ -31,7 +31,7 @@ theorem vals_mem {xs : List Signed} {Q : ℚ → Prop} (h : ∀ a ∈ xs, Q a.va
 
 /-- **Signed correct rounding of FP64 GEMM**, any inner dimension: the binary64 round to nearest of
 `x · y` with IEEE's sign for zero results. -/
-theorem mcOzaki1CRDS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRDS_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List Signed}
     (hx : ∀ a ∈ xs, Binary64Value a.val) (hy : ∀ a ∈ ys, Binary64Value a.val)
     (hlen : xs.length = ys.length) :
@@ -40,7 +40,7 @@ theorem mcOzaki1CRDS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
     (vanish64 (by omega) hsmax (vals_mem hx) (vals_mem hy))
 
 /-- **Signed correct rounding of binary32 GEMM**, any inner dimension. -/
-theorem mcOzaki1CRLS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRLS_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List Signed}
     (hx : ∀ a ∈ xs, Binary32Value a.val) (hy : ∀ a ∈ ys, Binary32Value a.val)
     (hlen : xs.length = ys.length) :

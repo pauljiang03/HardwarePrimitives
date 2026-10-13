@@ -572,11 +572,11 @@ theorem reduceApprox_eq {M : ℕ} (hM : 0 < M) {q c : ℤ} {S ε : ℚ}
 /-- **Ozaki-II with an approximate CRT accumulation**: the residue products are exact on the
 engine, `Σ wⱼ rⱼ` is computed by `acc` (for instance in floating point, `none` on overflow), and
 the reduction is `reduceApprox`. -/
-def ozaki2Approx (eng : Engine) (round : ℚ → Option ℚ) (acc : List ℤ → List ℤ → Option ℚ)
+def ozaki2Approx (mult : MatrixMultiplier) (round : ℚ → Option ℚ) (acc : List ℤ → List ℤ → Option ℚ)
     (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ := do
   let a := scaleTrunc (scaleShift P x) x
   let c := scaleTrunc (scaleShift P y) y
-  let rs ← B.moduli.mapM fun m => residueProduct eng m a c
+  let rs ← B.moduli.mapM fun m => residueProduct mult m a c
   let S ← acc B.weights rs
   round (reduceApprox B.modulus S * 2 ^ (-(scaleShift P x + scaleShift P y)))
 
@@ -617,10 +617,10 @@ theorem mapM_length {α β : Type} {f : α → Option β} :
         simp [mapM_length hl]
 
 /-- A residue product is in `[0, m)`. -/
-theorem residueProduct_range {eng : Engine} {m : ℕ} (hm : 0 < m) {a c : List ℤ} {r : ℤ}
-    (h : residueProduct eng m a c = some r) : 0 ≤ r ∧ r < m := by
+theorem residueProduct_range {mult : MatrixMultiplier} {m : ℕ} (hm : 0 < m) {a c : List ℤ} {r : ℤ}
+    (h : residueProduct mult m a c = some r) : 0 ≤ r ∧ r < m := by
   unfold residueProduct at h
-  cases hv : eng (a.map fun z => symMod z m) (c.map fun z => symMod z m) with
+  cases hv : mult (a.map fun z => symMod z m) (c.map fun z => symMod z m) with
   | none => simp [hv] at h
   | some v =>
     cases hz : toInt? v with
@@ -634,17 +634,17 @@ theorem residueProduct_range {eng : Engine} {m : ℕ} (hm : 0 < m) {a c : List �
 of `Σ wⱼ rⱼ` and `2 k 2^(2P) + 2ε < M`, the reduction recovers the product of the truncated inputs
 within `ε`, and the result is within `u (|C| + ε 2^(−s)) + η + ε 2^(−s)` plus the truncation bound
 of `x · y`, where `C = 2^(−s) (a · c)` and `s = sₓ + s_y`. The exact case is `ε = 0`. -/
-theorem ozaki2Approx_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2Approx_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {round : ℚ → Option ℚ} {u η : ℚ} (hu : 0 ≤ u) (hround : RoundWithin round u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     {acc : List ℤ → List ℤ → Option ℚ} {ε : ℚ}
     (hacc : ∀ rs : List ℤ, rs.length = B.weights.length → (∀ r ∈ rs, 0 ≤ r ∧ r < 2 ^ (b + 1)) →
       ∀ S, acc B.weights rs = some S → Rat.abs (S - (dotZ B.weights rs : ℚ)) ≤ ε)
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus)
     (hmargin : 2 * ((x.length * (2 ^ P * 2 ^ P) : ℕ) : ℚ) + 2 * ε < B.modulus) {v : ℚ}
-    (hv : ozaki2Approx eng round acc B P x y = some v) :
+    (hv : ozaki2Approx mult round acc B P x y = some v) :
     Rat.abs (v - dot x y) ≤
       u * (Rat.abs ((dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
           2 ^ (-(scaleShift P x + scaleShift P y))) + ε * 2 ^ (-(scaleShift P x + scaleShift P y))) +
@@ -654,14 +654,14 @@ theorem ozaki2Approx_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b
             Rat.abs (truncInt (a * 2 ^ scaleShift P x) : ℚ)) x y).sum := by
   have hM : 0 < B.modulus := by omega
   -- the exact reconstruction, from `ozaki2_eq` with the identity rounding
-  have hexact := ozaki2_eq heng some hB hmb P hlen hbudget hrange
+  have hexact := ozaki2_eq hmult some hB hmb P hlen hbound hrange
   unfold ozaki2 at hexact
   unfold ozaki2Approx at hv
   dsimp only at hexact hv
   generalize ha : scaleTrunc (scaleShift P x) x = a at hexact hv ⊢
   generalize hc : scaleTrunc (scaleShift P y) y = c at hexact hv ⊢
   generalize hs : scaleShift P x + scaleShift P y = sh at hexact hv ⊢
-  cases hrs : B.moduli.mapM (fun m => residueProduct eng m a c) with
+  cases hrs : B.moduli.mapM (fun m => residueProduct mult m a c) with
   | none => rw [hrs] at hv; simp at hv
   | some rs =>
     rw [hrs] at hv hexact
@@ -810,16 +810,16 @@ theorem crtAccFP64_error {b : ℕ} {ws rs : List ℤ} (hr : ∀ r ∈ rs, 0 ≤ 
 
 /-- **Ozaki-II with the CRT sum accumulated in binary64**: with `ε = n 2^-53 2^(b+1) Σ|wⱼ|` from
 `crtAccFP64_error`, `ozaki2Approx_error` applies whenever `2 k 2^(2P) + 2ε < M`. -/
-theorem ozaki2FP64_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2FP64_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {round : ℚ → Option ℚ} {u η : ℚ} (hu : 0 ≤ u) (hround : RoundWithin round u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus)
     (hmargin : 2 * ((x.length * (2 ^ P * 2 ^ P) : ℕ) : ℚ) +
       2 * (B.weights.length * 2 ^ (-53 : ℤ) *
         (2 ^ (b + 1 : ℤ) * (B.weights.map fun w : ℤ => Rat.abs (w : ℚ)).sum)) < B.modulus) {v : ℚ}
-    (hv : ozaki2Approx eng round crtAccFP64 B P x y = some v) :
+    (hv : ozaki2Approx mult round crtAccFP64 B P x y = some v) :
     Rat.abs (v - dot x y) ≤
       u * (Rat.abs ((dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
           2 ^ (-(scaleShift P x + scaleShift P y))) +
@@ -832,7 +832,7 @@ theorem ozaki2FP64_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b b
       (List.zipWith (fun a b => 2 ^ (-scaleShift P x) * Rat.abs b +
           2 ^ (-(scaleShift P x + scaleShift P y)) *
             Rat.abs (truncInt (a * 2 ^ scaleShift P x) : ℚ)) x y).sum :=
-  ozaki2Approx_error heng hu hround hB hmb (fun _ _ hr _ h => crtAccFP64_error hr h) P hlen
-    hbudget hrange hmargin hv
+  ozaki2Approx_error hmult hu hround hB hmb (fun _ _ hr _ h => crtAccFP64_error hr h) P hlen
+    hbound hrange hmargin hv
 
 end Ozaki

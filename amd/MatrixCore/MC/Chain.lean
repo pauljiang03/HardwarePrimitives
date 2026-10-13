@@ -21,7 +21,7 @@ namespace MatrixCore
 /-! ## Runs of blocks -/
 
 /-- Evaluate blocks from `c`, each block's `d` being the next block's `c`, and keep every trace. -/
-def runBlocks (P : Profile) :
+def runBlocks (P : Model) :
     F32 → List (List P.a.Word × List P.b.Word) → Except ModelError (List (BlockTrace P))
   | _, [] => .ok []
   | c, ab :: rest =>
@@ -43,7 +43,7 @@ def Chain : F32 → List (BlockTrace P) → Prop
   | _, [] => True
   | c, t :: ts => (binary32.decode c).toFinite = some t.prepared.c ∧ Chain t.d ts
 
-theorem foldlM_blockBits (P : Profile) (bs : List (List P.a.Word × List P.b.Word)) (c : F32) :
+theorem foldlM_blockBits (P : Model) (bs : List (List P.a.Word × List P.b.Word)) (c : F32) :
     bs.foldlM (fun c ab => blockBits (P := P) ⟨ab.1, ab.2, c⟩) c =
       (runBlocks P c bs).map (lastOutput c) := by
   induction bs generalizing c with
@@ -61,14 +61,14 @@ theorem foldlM_blockBits (P : Profile) (bs : List (List P.a.Word × List P.b.Wor
       cases runBlocks P t.d rest <;> rfl
 
 /-- An inner product is the last output of its run of blocks. -/
-theorem dotBits_eq_runBlocks (P : Profile) {a : List P.a.Word} {b : List P.b.Word} (c : F32)
+theorem dotBits_eq_runBlocks (P : Model) {a : List P.a.Word} {b : List P.b.Word} (c : F32)
     (h : a.length = b.length) :
     dotBits P a b c = (runBlocks P c (blocks P a b)).map (lastOutput c) := by
   unfold dotBits
   rw [if_neg (by omega)]
   exact foldlM_blockBits P _ c
 
-theorem dotBits_ok_iff (P : Profile) {a : List P.a.Word} {b : List P.b.Word} (c d : F32)
+theorem dotBits_ok_iff (P : Model) {a : List P.a.Word} {b : List P.b.Word} (c d : F32)
     (h : a.length = b.length) :
     dotBits P a b c = .ok d ↔
       ∃ ts, runBlocks P c (blocks P a b) = .ok ts ∧ lastOutput c ts = d := by
@@ -77,7 +77,7 @@ theorem dotBits_ok_iff (P : Profile) {a : List P.a.Word} {b : List P.b.Word} (c 
   | error e => simp [Except.map]
   | ok ts => simp [Except.map]
 
-theorem runBlocks_cons {P : Profile} {c : F32} {ab : List P.a.Word × List P.b.Word}
+theorem runBlocks_cons {P : Model} {c : F32} {ab : List P.a.Word × List P.b.Word}
     {rest : List (List P.a.Word × List P.b.Word)} {ts : List (BlockTrace P)}
     (h : runBlocks P c (ab :: rest) = .ok ts) :
     ∃ t ts', evalBlock (P := P) ⟨ab.1, ab.2, c⟩ = .ok t ∧ runBlocks P t.d rest = .ok ts' ∧
@@ -95,7 +95,7 @@ theorem runBlocks_cons {P : Profile} {c : F32} {ab : List P.a.Word × List P.b.W
       simp only [Except.ok.injEq] at h
       exact ⟨t, ts', rfl, hr, h.symm⟩
 
-theorem runBlocks_length {P : Profile} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
+theorem runBlocks_length {P : Model} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
     {ts : List (BlockTrace P)} (h : runBlocks P c bs = .ok ts) : ts.length = bs.length := by
   induction bs generalizing c ts with
   | nil => simp [runBlocks] at h; subst h; rfl
@@ -104,7 +104,7 @@ theorem runBlocks_length {P : Profile} {c : F32} {bs : List (List P.a.Word × Li
     simp [ih hr]
 
 /-- Every block of a run is an accepted block. -/
-theorem runBlocks_mem {P : Profile} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
+theorem runBlocks_mem {P : Model} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
     {ts : List (BlockTrace P)} (h : runBlocks P c bs = .ok ts) :
     ∀ t ∈ ts, ∃ x : BlockInput P, evalBlock x = .ok t := by
   induction bs generalizing c ts with
@@ -117,7 +117,7 @@ theorem runBlocks_mem {P : Profile} {c : F32} {bs : List (List P.a.Word × List 
     · exact ih hr u hu
 
 /-- **Lifting.** Any property that every accepted block has holds for every block of a run. -/
-theorem runBlocks_all {P : Profile} {Q : BlockInput P → BlockTrace P → Prop}
+theorem runBlocks_all {P : Model} {Q : BlockInput P → BlockTrace P → Prop}
     (hQ : ∀ x t, evalBlock x = .ok t → Q x t) {c : F32}
     {bs : List (List P.a.Word × List P.b.Word)} {ts : List (BlockTrace P)}
     (h : runBlocks P c bs = .ok ts) : ∀ t ∈ ts, ∃ x, Q x t := by
@@ -125,12 +125,12 @@ theorem runBlocks_all {P : Profile} {Q : BlockInput P → BlockTrace P → Prop}
   obtain ⟨x, hx⟩ := runBlocks_mem h t ht
   exact ⟨x, hQ x t hx⟩
 
-theorem evalBlock_c {P : Profile} {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
+theorem evalBlock_c {P : Model} {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     (binary32.decode x.c).toFinite = some t.prepared.c :=
   prepare_c (evalBlock_ok h).2.2.1
 
 /-- A run is linked through the words it passes on. -/
-theorem runBlocks_chain {P : Profile} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
+theorem runBlocks_chain {P : Model} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
     {ts : List (BlockTrace P)} (h : runBlocks P c bs = .ok ts) : Chain c ts := by
   induction bs generalizing c ts with
   | nil => simp [runBlocks] at h; subst h; trivial
@@ -144,7 +144,7 @@ theorem decode_infinity32 (s : Bool) : binary32.decode (infinity32 s) = .infinit
   cases s <;> decide
 
 /-- No block accepts an infinite `c`. -/
-theorem blockBits_infinity32 {P : Profile} (a : List P.a.Word) (b : List P.b.Word) (s : Bool)
+theorem blockBits_infinity32 {P : Model} (a : List P.a.Word) (b : List P.b.Word) (s : Bool)
     (d : F32) : blockBits (P := P) ⟨a, b, infinity32 s⟩ ≠ .ok d := by
   intro h
   unfold blockBits at h
@@ -155,7 +155,7 @@ theorem blockBits_infinity32 {P : Profile} (a : List P.a.Word) (b : List P.b.Wor
     simp only [decode_infinity32, Datum.toFinite] at hc
     exact absurd hc (by simp)
 
-theorem foldlM_outcome_finite {P : Profile} (bs : List (List P.a.Word × List P.b.Word)) (d : F32) :
+theorem foldlM_outcome_finite {P : Model} (bs : List (List P.a.Word × List P.b.Word)) (d : F32) :
     ∀ o : Outcome, bs.foldlM (fun o ab =>
         match o with
         | .finite c => blockOutcome (P := P) ⟨ab.1, ab.2, c⟩
@@ -190,7 +190,7 @@ theorem foldlM_outcome_finite {P : Profile} (bs : List (List P.a.Word × List P.
       | nan => simp at hs
 
 /-- A finite observed inner product is the finite-domain inner product. -/
-theorem dotOutcome_finite (P : Profile) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
+theorem dotOutcome_finite (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (h : dotOutcome P a b c = some (.finite d)) : a.length = b.length ∧ dotBits P a b c = .ok d := by
   unfold dotOutcome at h
   split at h
@@ -258,7 +258,7 @@ theorem chain_residual_ledger (c : F32) (ts : List (BlockTrace P)) (hc : Chain c
     simp only [List.map_cons, sumQ, lastOutput, BlockTrace.residual]
     grind
 
-theorem runBlocks_residual_ledger {P : Profile} {c : F32}
+theorem runBlocks_residual_ledger {P : Model} {c : F32}
     {bs : List (List P.a.Word × List P.b.Word)} {ts : List (BlockTrace P)}
     (h : runBlocks P c bs = .ok ts) :
     wordValue c + sumQ (ts.map fun t => t.prepared.products) =
@@ -267,7 +267,7 @@ theorem runBlocks_residual_ledger {P : Profile} {c : F32}
 
 /-- **Inner products.** An accepted inner product decomposes into accepted, linked blocks whose
 products and initial `c` equal the output plus the blocks' residuals. -/
-theorem dotBits_residual_ledger (P : Profile) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
+theorem dotBits_residual_ledger (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
     ∃ ts, runBlocks P c (blocks P a b) = .ok ts ∧ lastOutput c ts = d ∧ Chain c ts ∧
       (∀ t ∈ ts, ∃ x : BlockInput P, evalBlock x = .ok t) ∧

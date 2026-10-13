@@ -40,9 +40,9 @@ theorem sumQ_eq (xs : List ℚ) : sumQ xs = xs.sum := by
 /-- If every nonzero term is a multiple of `2^g` with exponent at most `g + F`, and the floor is at
 most `g + F`, alignment loses nothing. -/
 theorem accumulator_eq_exactDot_of_grid (b : PreparedBlock) (g : ℤ)
-    (hfloor : ∀ f ∈ b.profile.alignFloor, f ≤ g + b.profile.alignMantissaBits)
+    (hfloor : ∀ f ∈ b.model.eAlignMin, f ≤ g + b.model.alignFracBits)
     (hterm : ∀ t ∈ b.terms, t.significand ≠ 0 →
-      t.unnormalizedExp ≤ g + b.profile.alignMantissaBits ∧ ∃ k : ℤ, t.value = k * pow2 g) :
+      t.unnormalizedExp ≤ g + b.model.alignFracBits ∧ ∃ k : ℤ, t.value = k * pow2 g) :
     b.accumulator = b.exactDot := by
   rw [accumulator_value, ← terms_value]
   congr 1
@@ -101,55 +101,55 @@ theorem decoded_value_eq_zero {d : Decoded} : d.value = 0 ↔ d.significand = 0 
   · intro h; simp [h]
 
 /-- The decoded operand of a word, `0` if it is not finite. -/
-def decodeD (p : Profile) (w : p.Word) : Decoded := (p.decode w).getD ⟨0, 0, 0⟩
+def decodeD (p : Model) (w : p.Word) : Decoded := (p.decode w).getD ⟨0, 0, 0⟩
 
 /-- The value of an operand word, `0` if it is not finite. -/
-def wordValue (p : Profile) (w : p.Word) : ℚ := (decodeD p w).value
+def wordValue (p : Model) (w : p.Word) : ℚ := (decodeD p w).value
 
 /-- The value of a binary32 word, `0` if it is not finite. -/
 def value32D (c : F32) : ℚ := (value32 c).getD 0
 
 /-- A finite word whose value is an integer of magnitude at most `2^b`. -/
-def IntWord (p : Profile) (b : ℕ) (w : p.Word) : Prop :=
+def IntWord (p : Model) (b : ℕ) (w : p.Word) : Prop :=
   (p.decode w).isSome ∧ ∃ z : ℤ, wordValue p w = z ∧ z.natAbs ≤ 2 ^ b
 
 /-- `Σ aᵢbᵢ` of encoded operand pairs. -/
-def wordProducts (p : Profile) (ps : List (p.Word × p.Word)) : ℚ :=
+def wordProducts (p : Model) (ps : List (p.Word × p.Word)) : ℚ :=
   (ps.map fun q => wordValue p q.1 * wordValue p q.2).sum
 
 /-- `Σ |aᵢbᵢ|` of encoded operand pairs. -/
-def wordBudget (p : Profile) (ps : List (p.Word × p.Word)) : ℚ :=
+def wordDotAbs (p : Model) (ps : List (p.Word × p.Word)) : ℚ :=
   (ps.map fun q => Rat.abs (wordValue p q.1 * wordValue p q.2)).sum
 
-theorem wordBudget_nonneg (p : Profile) (ps : List (p.Word × p.Word)) : 0 ≤ wordBudget p ps :=
+theorem wordDotAbs_nonneg (p : Model) (ps : List (p.Word × p.Word)) : 0 ≤ wordDotAbs p ps :=
   sum_nonneg fun _ _ => abs_nonneg _
 
-theorem wordBudget_append (p : Profile) (xs ys : List (p.Word × p.Word)) :
-    wordBudget p (xs ++ ys) = wordBudget p xs + wordBudget p ys := by
-  unfold wordBudget; rw [sum_map_append]
+theorem wordDotAbs_append (p : Model) (xs ys : List (p.Word × p.Word)) :
+    wordDotAbs p (xs ++ ys) = wordDotAbs p xs + wordDotAbs p ys := by
+  unfold wordDotAbs; rw [sum_map_append]
 
-theorem wordProducts_append (p : Profile) (xs ys : List (p.Word × p.Word)) :
+theorem wordProducts_append (p : Model) (xs ys : List (p.Word × p.Word)) :
     wordProducts p (xs ++ ys) = wordProducts p xs + wordProducts p ys := by
   unfold wordProducts; rw [sum_map_append]
 
 /-- Products of integer words add up to an integer within their budget. -/
-theorem wordProducts_int {p : Profile} {b : ℕ} :
+theorem wordProducts_int {p : Model} {b : ℕ} :
     ∀ ps : List (p.Word × p.Word), (∀ q ∈ ps, IntWord p b q.1 ∧ IntWord p b q.2) →
-      ∃ z : ℤ, wordProducts p ps = z ∧ Rat.abs (z : ℚ) ≤ wordBudget p ps
-  | [], _ => ⟨0, by simp [wordProducts], by simp [wordBudget]⟩
+      ∃ z : ℤ, wordProducts p ps = z ∧ Rat.abs (z : ℚ) ≤ wordDotAbs p ps
+  | [], _ => ⟨0, by simp [wordProducts], by simp [wordDotAbs]⟩
   | q :: ps, h => by
     obtain ⟨⟨_, za, hza, _⟩, ⟨_, zb, hzb, _⟩⟩ := h q (by simp)
     obtain ⟨z, hz, hb⟩ := wordProducts_int ps (fun q' hq => h q' (by simp [hq]))
     refine ⟨za * zb + z, ?_, ?_⟩
     · simp only [wordProducts, List.map_cons, List.sum_cons] at hz ⊢
       rw [hz, hza, hzb, Rat.intCast_add, Rat.intCast_mul]
-    · simp only [wordBudget, List.map_cons, List.sum_cons] at hb ⊢
+    · simp only [wordDotAbs, List.map_cons, List.sum_cons] at hb ⊢
       rw [hza, hzb, Rat.intCast_add, Rat.intCast_mul]
       have := abs_add_le ((za : ℚ) * zb) (z : ℚ)
       grind
 
 /-- Preparation of finite operand pairs. -/
-theorem prepareProducts_eq (p : Profile) :
+theorem prepareProducts_eq (p : Model) :
     ∀ ps : List (p.Word × p.Word), (∀ q ∈ ps, (p.decode q.1).isSome ∧ (p.decode q.2).isSome) →
       prepareProducts p ps = some (ps.map fun q => (decodeD p q.1, decodeD p q.2))
   | [], _ => rfl
@@ -173,19 +173,19 @@ theorem decode32_isSome_of_value32 {c : F32} {v : ℚ} (h : value32 c = some v) 
 
 /-- Profile conditions for exact `b`-bit integer blocks: `2b ≤ F`, `F ≥ 23`, a floor at most `F`,
 and a minimum normal exponent at most `b` (every format in use). -/
-structure IntExact (p : Profile) (b : ℕ) : Prop where
-  align : 2 * (b : ℤ) ≤ p.alignMantissaBits
-  wide : 23 ≤ p.alignMantissaBits
-  floor : ∀ f ∈ p.alignFloor, f ≤ p.alignMantissaBits
+structure IntExact (p : Model) (b : ℕ) : Prop where
+  align : 2 * (b : ℤ) ≤ p.alignFracBits
+  wide : 23 ≤ p.alignFracBits
+  eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits
   emin : 1 - p.input.bias ≤ b
 
 /-- **Exact integer block.** Operands that are integers of magnitude at most `2^b` and an integer
 `c` with `|c| + Σ|aᵢbᵢ| ≤ 2^24` give `c + Σ aᵢbᵢ` exactly. -/
-theorem evalBlock_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
-    (hlen : x.products.length = p.products)
+theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
+    (hlen : x.products.length = p.nfma)
     (hops : ∀ q ∈ x.products, IntWord p b q.1 ∧ IntWord p b q.2)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ))
-    (hbudget : Rat.abs (zc : ℚ) + wordBudget p x.products ≤ 2 ^ (24 : ℤ)) :
+    (hbound : Rat.abs (zc : ℚ) + wordDotAbs p x.products ≤ 2 ^ (24 : ℤ)) :
     ∃ t, evalBlock x = .ok t ∧ t.output.value = zc + wordProducts p x.products := by
   obtain ⟨dc, hdc, hdcv⟩ := decode32_isSome_of_value32 hc
   have hpp := prepareProducts_eq p x.products (fun q hq => ⟨(hops q hq).1.1, (hops q hq).2.1⟩)
@@ -201,11 +201,11 @@ theorem evalBlock_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInpu
     rw [sumQ_eq, List.map_map]; rfl
   have hexact : blk.exactDot = zc + wordProducts p x.products := by
     unfold PreparedBlock.exactDot; rw [hprods, ← hblk]; simp only; rw [hdcv]
-  have hbudget0 := wordBudget_nonneg p x.products
+  have hbound0 := wordDotAbs_nonneg p x.products
   have hzc : (zc.natAbs : ℚ) ≤ 2 ^ (24 : ℤ) := by rw [← abs_intCast]; grind
   -- every product term
   have hprod : ∀ q ∈ x.products, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
-      (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignMantissaBits ∧
+      (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignFracBits ∧
       ∃ k : ℤ, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
     intro q hq hnz
     obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hops q hq
@@ -235,13 +235,13 @@ theorem evalBlock_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInpu
   have hterms : blk.terms = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ ::
       x.products.map fun q => unnormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
-  have hprof : blk.profile = p := by rw [← hblk]
+  have hprof : blk.model = p := by rw [← hblk]
   -- two cases: `|c| < 2^24` (every term on the grid `2^0`), or `|c| = 2^24` and every product
   -- is zero (`c` alone, on the grid `2^1`)
   have hacc : blk.accumulator = blk.exactDot := by
     by_cases hsmall : zc.natAbs < 2 ^ 24
     · apply accumulator_eq_exactDot_of_grid blk 0
-      · intro f hf; rw [hprof] at hf ⊢; have := hp.floor f hf; omega
+      · intro f hf; rw [hprof] at hf ⊢; have := hp.eAlignMin f hf; omega
       · intro t ht hnz
         rw [hterms] at ht
         rcases List.mem_cons.mp ht with rfl | ht
@@ -250,7 +250,7 @@ theorem evalBlock_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInpu
               (by rw [hdcv, abs_intCast]
                   have : ((zc.natAbs : ℕ) : ℚ) < ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_lt_natCast.mpr hsmall
                   rw [← two_pow_natCast] at this; exact this) hnz
-            show dc.unnormalizedExp ≤ 0 + blk.profile.alignMantissaBits
+            show dc.unnormalizedExp ≤ 0 + blk.model.alignFracBits
             rw [hprof]; have := hp.wide; omega
           · change dc.value = _; rw [hdcv, pow2_zero, Rat.mul_one]
         · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht
@@ -262,27 +262,27 @@ theorem evalBlock_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInpu
         have : ((zc.natAbs : ℕ) : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := by rw [← two_pow_natCast]; exact hzc
         have := Rat.natCast_le_natCast.mp this; omega
       have hzero : ∀ q ∈ x.products, wordValue p q.1 * wordValue p q.2 = 0 := by
-        have hb0 : wordBudget p x.products ≤ 0 := by
+        have hb0 : wordDotAbs p x.products ≤ 0 := by
           have h24 : Rat.abs (zc : ℚ) = 2 ^ (24 : ℤ) := by
             rw [abs_intCast, hceq]; exact (two_pow_natCast 24).symm
-          rw [h24] at hbudget
+          rw [h24] at hbound
           grind
         intro q hq
-        have hle : Rat.abs (wordValue p q.1 * wordValue p q.2) ≤ wordBudget p x.products := by
-          unfold wordBudget
+        have hle : Rat.abs (wordValue p q.1 * wordValue p q.2) ≤ wordDotAbs p x.products := by
+          unfold wordDotAbs
           exact le_sum_of_mem (l := x.products) (f := fun q => Rat.abs (wordValue p q.1 * wordValue p q.2))
             (fun _ _ => abs_nonneg _) hq
         have := abs_nonneg (wordValue p q.1 * wordValue p q.2)
         exact abs_eq_zero.mp (by grind)
       apply accumulator_eq_exactDot_of_grid blk 1
-      · intro f hf; rw [hprof] at hf ⊢; have := hp.floor f hf; omega
+      · intro f hf; rw [hprof] at hf ⊢; have := hp.eAlignMin f hf; omega
       · intro t ht hnz
         rw [hterms] at ht
         rcases List.mem_cons.mp ht with rfl | ht
         · refine ⟨?_, zc / 2, ?_⟩
           · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := 24) (by decide)
               (by rw [hdcv, abs_intCast, hceq, ← two_pow_natCast]; exact two_pow_lt (by omega)) hnz
-            show dc.unnormalizedExp ≤ 1 + blk.profile.alignMantissaBits
+            show dc.unnormalizedExp ≤ 1 + blk.model.alignFracBits
             rw [hprof]; have := hp.wide; omega
           · change dc.value = _
             rw [hdcv, pow2_one]
@@ -332,27 +332,27 @@ theorem runValue_cons (c : F32) (t : BlockTrace) (ts : List BlockTrace) :
 
 /-- **Exact chain.** Blocks of `b`-bit integer operands, chained through their binary32 outputs
 from an integer `c`, return `c + Σ aᵢbᵢ` exactly when `|c| + Σ|aᵢbᵢ| ≤ 2^24`. -/
-theorem runBlocks_int {p : Profile} {b : ℕ} (hp : IntExact p b) :
+theorem runBlocks_int {p : Model} {b : ℕ} (hp : IntExact p b) :
     ∀ (groups : List (List (p.Word × p.Word))) (c : F32) (zc : ℤ), value32 c = some (zc : ℚ) →
-      (∀ g ∈ groups, g.length = p.products ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
-      Rat.abs (zc : ℚ) + wordBudget p groups.flatten ≤ 2 ^ (24 : ℤ) →
+      (∀ g ∈ groups, g.length = p.nfma ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
+      Rat.abs (zc : ℚ) + wordDotAbs p groups.flatten ≤ 2 ^ (24 : ℤ) →
       ∃ ts, runBlocks p c groups = .ok ts ∧
         runValue c ts = zc + wordProducts p groups.flatten
   | [], c, zc, hc, _, _ => ⟨[], rfl, by simp [runValue, value32D, hc, wordProducts]; grind⟩
-  | g :: rest, c, zc, hc, hg, hbudget => by
+  | g :: rest, c, zc, hc, hg, hbound => by
     obtain ⟨hlen, hops⟩ := hg g (by simp)
-    rw [List.flatten_cons, wordBudget_append] at hbudget
-    have hrest0 := wordBudget_nonneg p rest.flatten
+    rw [List.flatten_cons, wordDotAbs_append] at hbound
+    have hrest0 := wordDotAbs_nonneg p rest.flatten
     obtain ⟨t, ht, hv⟩ := evalBlock_int (x := ⟨g, c⟩) hp hlen hops hc (by grind)
     obtain ⟨Z, hZ, hZb⟩ := wordProducts_int g hops
     have hc' : value32 t.output.bits = some ((zc + Z : ℤ) : ℚ) := by
       rw [value32_output, hv, hZ, Rat.intCast_add]
-    have hbudget' : Rat.abs ((zc + Z : ℤ) : ℚ) + wordBudget p rest.flatten ≤ 2 ^ (24 : ℤ) := by
+    have hbound' : Rat.abs ((zc + Z : ℤ) : ℚ) + wordDotAbs p rest.flatten ≤ 2 ^ (24 : ℤ) := by
       have := abs_add_le (zc : ℚ) (Z : ℚ)
       rw [← Rat.intCast_add] at this
       grind
     obtain ⟨ts, hts, hval⟩ := runBlocks_int hp rest t.output.bits (zc + Z) hc'
-      (fun g' hg' => hg g' (by simp [hg'])) hbudget'
+      (fun g' hg' => hg g' (by simp [hg'])) hbound'
     refine ⟨t :: ts, ?_, ?_⟩
     · simp only [runBlocks]; rw [ht]; simp only; rw [hts]
     · rw [runValue_cons, hval, List.flatten_cons, wordProducts_append, hZ, Rat.intCast_add]

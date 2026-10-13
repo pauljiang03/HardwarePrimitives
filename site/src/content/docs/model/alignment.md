@@ -16,12 +16,12 @@ def maxTermExp (ts : List UnnormalizedProduct) : Option ℤ :=
     (fun acc e => some (match acc with | none => e | some v => max v e)) none
 
 /-- The floor only raises a nonempty maximum; an all-zero block stays `none`. -/
-def Profile.applyFloor (p : Profile) : Option ℤ → Option ℤ
+def Profile.applyEAlignMin (p : Profile) : Option ℤ → Option ℤ
   | none => none
-  | some e => some (match p.alignFloor with | none => e | some f => max e f)
+  | some e => some (match p.eAlignMin with | none => e | some f => max e f)
 
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
-  b.profile.applyFloor (maxTermExp b.terms)
+  b.profile.applyEAlignMin (maxTermExp b.terms)
 ```
 
 - η is the **largest unnormalized exponent among the nonzero terms**. Zero terms are
@@ -37,10 +37,10 @@ def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
 
 ```lean
 def PreparedBlock.alignGridExponent (b : PreparedBlock) : ℤ :=
-  b.alignExp.getD 0 - b.profile.alignMantissaBits
+  b.alignExp.getD 0 - b.profile.alignFracBits
 ```
 
-The grid spacing is `2^(η − F)`, where `F = alignMantissaBits = 23 + p`. Here `p`
+The grid spacing is `2^(η − F)`, where `F = alignFracBits = 23 + p`. Here `p`
 is the number of **extra alignment bits** the architecture keeps beyond
 FP32's 23 mantissa bits: 0 on V100, 1 on A100, 2 on H100. A larger `p` gives
 a finer grid, so less is lost.

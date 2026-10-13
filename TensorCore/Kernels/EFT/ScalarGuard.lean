@@ -166,9 +166,9 @@ theorem Components.scalar_of_conditions {p : Prepared} {c : Components} {ell s :
   have hv : c.low.map Word.value = zs.map fun (z : ℤ) => (z : ℚ) * pow2 ℓ := by
     simp only [zs, List.map_map]
     exact List.map_congr_left fun x hx => Word.value_eq_stepsAt (hgrid x hx)
-  have hbudget : magnitudeSum zs < 2 ^ 24 := by
+  have hbound : magnitudeSum zs < 2 ^ 24 := by
     rw [magnitudeSum_stepsAt, ← magnitudeSumWords_toNat hs]; exact hs24
-  obtain ⟨eb, he, hve⟩ := scalarSum_exact c.low ℓ zs (by omega) (by omega) hv hbudget
+  obtain ⟨eb, he, hve⟩ := scalarSum_exact c.low ℓ zs (by omega) (by omega) hv hbound
   rw [← hres] at hve
   obtain ⟨db, hdb, hvdb⟩ := Word.round32_of_finite (x := c.prepared.output) (by rw [hcp]; exact hout)
   obtain ⟨ob0, hob0⟩ := Option.isSome_iff_exists.mp hov
@@ -187,8 +187,8 @@ theorem Components.scalar_of_conditions {p : Prepared} {c : Components} {ell s :
     Option.bind_eq_bind, Option.bind_some, hdb, hob, hadd, hfinal]
 
 /-- When the guard accepts, the scalar branch returns the correctly rounded exact sum. -/
-theorem Components.scalar_of_guard {path : Path} {x : BlockInput path.profile} {D : F32}
-    {p : Prepared} {c : Components} (hp : prepare path x D = .ok p) (hc : extract p = some c)
+theorem Components.scalar_of_guard {variant : Variant} {x : BlockInput variant.model} {D : F32}
+    {p : Prepared} {c : Components} (hp : prepare variant x D = .ok p) (hc : extract p = some c)
     (hg : c.scalarGuard = true) :
     c.scalar = TensorCore.round32 .nearestEven p.ideal := by
   obtain ⟨_, _, hD, _⟩ := prepare_spec hp
@@ -201,8 +201,8 @@ theorem Components.scalar_of_guard {path : Path} {x : BlockInput path.profile} {
     hgrid hs (by have := BitVec.lt_def.mp hs24; simpa using this) hov hret hout
 
 /-- When the guard accepts, the scalar branch returns a value. -/
-theorem Components.scalar_isSome_of_guard {path : Path} {x : BlockInput path.profile} {D : F32}
-    {p : Prepared} {c : Components} (hp : prepare path x D = .ok p) (hc : extract p = some c)
+theorem Components.scalar_isSome_of_guard {variant : Variant} {x : BlockInput variant.model} {D : F32}
+    {p : Prepared} {c : Components} (hp : prepare variant x D = .ok p) (hc : extract p = some c)
     (hg : c.scalarGuard = true) : c.scalar.isSome = true := by
   rw [Components.scalar_of_guard hp hc hg]
   have hrec := hg
@@ -212,8 +212,8 @@ theorem Components.scalar_isSome_of_guard {path : Path} {x : BlockInput path.pro
   exact (Word.round32_isSome_iff _).mpr ((Word.range_iff _).mpr hrec.2)
 
 /-- Any scalar-branch result is the correctly rounded exact sum. -/
-theorem Components.scalar_correct {path : Path} {x : BlockInput path.profile} {D : F32}
-    {p : Prepared} {c : Components} {b : F32} (hp : prepare path x D = .ok p)
+theorem Components.scalar_correct {variant : Variant} {x : BlockInput variant.model} {D : F32}
+    {p : Prepared} {c : Components} {b : F32} (hp : prepare variant x D = .ok p)
     (hc : extract p = some c) (hb : c.scalar = some b) :
     TensorCore.round32 .nearestEven p.ideal = some b := by
   cases hg : c.scalarGuard
@@ -221,10 +221,10 @@ theorem Components.scalar_correct {path : Path} {x : BlockInput path.profile} {D
   · rw [← Components.scalar_of_guard hp hc hg, hb]
 
 /-- A nonzero block that passes the guard takes the scalar branch, with the correctly rounded sum. -/
-theorem tcEft_scalar_of_guard {path : Path} {x : BlockInput path.profile} {D : F32}
-    {p : Prepared} {c : Components} (hp : prepare path x D = .ok p) (hc : extract p = some c)
+theorem tcEft_scalar_of_guard {variant : Variant} {x : BlockInput variant.model} {D : F32}
+    {p : Prepared} {c : Components} (hp : prepare variant x D = .ok p) (hc : extract p = some c)
     (hnz : ¬ p.terms.all (fun t => t.word.magnitude == 0) = true) (hg : c.scalarGuard = true) :
-    ∃ b, tcEft path x D = .ok (.scalar b) ∧ TensorCore.round32 .nearestEven p.ideal = some b := by
+    ∃ b, tcEft variant x D = .ok (.scalar b) ∧ TensorCore.round32 .nearestEven p.ideal = some b := by
   obtain ⟨b, hb⟩ := Option.isSome_iff_exists.mp (Components.scalar_isSome_of_guard hp hc hg)
   refine ⟨b, ?_, (Components.scalar_of_guard hp hc hg).symm.trans hb⟩
   unfold tcEft

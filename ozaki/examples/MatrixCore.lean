@@ -17,12 +17,12 @@ all three are exact. -/
 def xs : List ℤ := [2047, -2048, 5, 7, 1024, -3]
 def ys : List ℤ := [2048, 1, 3, -9, -1000, 2047]
 
-example : mcEngine cdna1F16 xs ys = some (dotZ xs ys) := by decide +kernel
-example : mcEngine cdna2F16 xs ys = some (dotZ xs ys) := by decide +kernel
-example : mcEngine cdna3F16 xs ys = some (dotZ xs ys) := by decide +kernel
+example : mcMultiplier cdna1F16 xs ys = some (dotZ xs ys) := by decide +kernel
+example : mcMultiplier cdna2F16 xs ys = some (dotZ xs ys) := by decide +kernel
+example : mcMultiplier cdna3F16 xs ys = some (dotZ xs ys) := by decide +kernel
 
-#check @mcEngine_exactOn
-#check @cdna3F16_exactEngine
+#check @mcMultiplier_exactOn
+#check @cdna3F16_exactMultiplier
 
 /-! ## 2. Ozaki-I and Ozaki-II on CDNA 3
 
@@ -57,7 +57,7 @@ same word as on the Tensor Core model. -/
 #eval mcOzaki1CR cdna3F16 11 [3, 4] x y
 
 example : mcOzaki1CR cdna3F16 11 [3, 4] x y = round32Value (dot x y) :=
-  mcOzaki1CR_eq (cdna3F16_exactEngine (by decide)) [3, 4] rfl (by decide)
+  mcOzaki1CR_eq (cdna3F16_exactMultiplier (by decide)) [3, 4] rfl (by decide)
 
 /-! ## 5. The main theorems -/
 

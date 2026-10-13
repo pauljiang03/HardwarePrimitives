@@ -27,8 +27,8 @@ variable (B : Widths)
 
 /-- **Split-K with its arithmetic guarded**: each chunk result read back as an integer and
 guarded, and every partial sum of the chunk results guarded. -/
-def chunkedC (m : ℕ) (eng : Engine) : Engine := fun x y =>
-  match ((chunksOf m x).zip (chunksOf m y)).mapM (fun p => eng p.1 p.2) with
+def chunkedC (m : ℕ) (mult : MatrixMultiplier) : MatrixMultiplier := fun x y =>
+  match ((chunksOf m x).zip (chunksOf m y)).mapM (fun p => mult p.1 p.2) with
   | none => none
   | some vs =>
     match vs.mapM (fun v => if v.den = 1 then B.gv v.num else none) with
@@ -45,18 +45,18 @@ theorem readInt_ok {B : Widths} {z : ℤ} (h : z.natAbs < 2 ^ B.R) :
   exact Widths.gv_ok h
 
 /-- **The guarded split-K engine is exact**: if the engine is exact on `b`-bit chunks whose products
-total at most `budget`, `m · 2^(2b) ≤ budget`, and the budget and `D` are below `2^R`, then on
+total at most `bound`, `m · 2^(2b) ≤ budget`, and the budget and `D` are below `2^R`, then on
 `b`-bit vectors whose products total at most `D` no guard fails and the result is exact. -/
-theorem chunkedC_exactOn {B : Widths} {eng : Engine} {b budget m : ℕ}
-    (heng : eng.ExactOn b budget) (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ budget)
-    (hbud : budget < 2 ^ B.R) {D : ℕ} (hD : D < 2 ^ B.R) : (chunkedC B m eng).ExactOn b D := by
+theorem chunkedC_exactOn {B : Widths} {mult : MatrixMultiplier} {b bound m : ℕ}
+    (hmult : mult.ExactOn b bound) (hm : 0 < m) (hmb : m * (2 ^ b * 2 ^ b) ≤ bound)
+    (hbud : bound < 2 ^ B.R) {D : ℕ} (hD : D < 2 ^ B.R) : (chunkedC B m mult).ExactOn b D := by
   intro x y hlen hx hy hd
   unfold chunkedC chunksOf
   rw [hlen]
   obtain ⟨hpairs, hsum⟩ := chunksAux_pairs hm y.length x y hlen (by omega)
   have habs := chunksAux_dotAbs hm y.length x y hlen (by omega)
   have hchunk : ∀ p ∈ (chunksAux m y.length x).zip (chunksAux m y.length y),
-      dotAbs p.1 p.2 ≤ budget := by
+      dotAbs p.1 p.2 ≤ bound := by
     intro p hp
     obtain ⟨h1, h2, h3, h4⟩ := hpairs p hp
     refine Nat.le_trans (dotAbs_le _ _ _ _ (fun a ha => hx a (h3 a ha))
@@ -64,7 +64,7 @@ theorem chunkedC_exactOn {B : Widths} {eng : Engine} {b budget m : ℕ}
     exact Nat.le_trans (Nat.mul_le_mul_right _ h2) hmb
   rw [mapM_eq_some_map (g := fun p : List ℤ × List ℤ => ((dotZ p.1 p.2 : ℤ) : ℚ)) fun p hp => by
     obtain ⟨h1, _, h3, h4⟩ := hpairs p hp
-    exact heng _ _ h1 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha)) (hchunk p hp)]
+    exact hmult _ _ h1 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha)) (hchunk p hp)]
   simp only
   rw [List.mapM_map, mapM_eq_some_map (g := fun p : List ℤ × List ℤ => dotZ p.1 p.2) fun p hp => by
     simp only [Function.comp_def]

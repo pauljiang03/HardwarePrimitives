@@ -7,7 +7,7 @@ open TensorCore
 namespace TensorCoreExamples.GettingStarted
 
 /-- Observe output words through the production evaluator. -/
-def modelBits {p : Profile} (x : BlockInput p) : Except ModelError F32 :=
+def modelBits {p : Model} (x : BlockInput p) : Except ModelError F32 :=
   (evalBlock x).map fun t => t.output.bits
 
 /-- Four products of one and a zero accumulator. -/
@@ -30,7 +30,7 @@ example : tcEftEncoded tiny 0x3f800000 =
     .ok (.consolidated (.scalar 0x3f800002)) := by decide +kernel
 
 /-- The same executable evaluator has a symbolic, input-parametric recovery law. -/
-example {p : Profile} {x : BlockInput p} {t : BlockTrace} (h : evalBlock x = .ok t) :
+example {p : Model} {x : BlockInput p} {t : BlockTrace} (h : evalBlock x = .ok t) :
     exactDot x = some (t.output.value + t.residual) :=
   evalBlock_residual_identity h
 

@@ -7,7 +7,7 @@ import TensorCore.TC.Composition
 namespace TensorCore.IndependentSpec
 
 /-- All encoded intermediate outputs, and failures, agree for every finite schedule. -/
-theorem runBlocks_eq_spec (p : Profile) (c : F32) (groups : List (List (p.Word × p.Word))) :
+theorem runBlocks_eq_spec (p : Model) (c : F32) (groups : List (List (p.Word × p.Word))) :
     (runBlocks p c groups).toOption.map (fun ts => ts.map fun t => t.output.bits) =
       runGroups (parametersOf p) c groups := by
   induction groups generalizing c with
@@ -26,7 +26,7 @@ theorem runBlocks_eq_spec (p : Profile) (c : F32) (groups : List (List (p.Word �
       | ok ts => simp [runBlocks, he, ht, Except.toOption] at hr ⊢; rw [← hr]; rfl
 
 /-- Projection of the preceding stronger theorem to just the final output bits. -/
-theorem schedule_last_eq_spec (p : Profile) (c : F32)
+theorem schedule_last_eq_spec (p : Model) (c : F32)
     (groups : List (List (p.Word × p.Word))) :
     (runBlocks p c groups).toOption.map (fun ts =>
       (ts.map fun t => t.output.bits).getLast?.getD c) =

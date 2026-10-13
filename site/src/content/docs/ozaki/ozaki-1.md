@@ -74,9 +74,9 @@ whatever the exponents ([`splitInt_width`](https://github.com/pauljiang03/TC-EFT
 
 ## Step 2: every slice product is exact on the hardware
 
-An `Engine` is a function from two integer vectors to the value the hardware
+An `MatrixMultiplier` is a function from two integer vectors to the value the hardware
 returns. `Engine.ExactOn b budget` says it returns `Σ xᵢyᵢ` exactly when every
-entry has magnitude at most `2^b` and the products total at most `budget`.
+entry has magnitude at most `2^b` and the products total at most `bound`.
 
 On the Tensor Core model, the engine encodes the integers as fp16, bf16 or
 tf32 words, pads them to groups, and chains the groups through `C`, starting
@@ -88,16 +88,16 @@ integer up to `2^24`:
 | --- | --- |
 | A block of integer operands with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L184) |
 | So does a chain of blocks. | [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Exactness.lean#L335) |
-| The engine is exact on `b`-bit vectors whose products total at most `2^24`, on any path with `2b ≤ F` whose input format holds `b`-bit integers. | [`tcEngine_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Engine.lean#L193) |
-| This holds on all eight GPU paths, with `b = 11` for fp16 and tf32 and `b = 8` for bf16. | [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Profiles.lean#L31) and seven more |
+| The engine is exact on `b`-bit vectors whose products total at most `2^24`, on any path with `2b ≤ F` whose input format holds `b`-bit integers. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L193) |
+| This holds on all eight GPU paths, with `b = 11` for fp16 and tf32 and `b = 8` for bf16. | [`v100_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
 
 ```lean
-theorem tcEngine_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) : (tcEngine p).ExactOn b (2 ^ 24)
+theorem tcMultiplier_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.products) : (tcMultiplier p).ExactOn b (2 ^ 24)
 ```
 
 The same holds on the AMD model for the binary32 SFMA, CDNA 1, 2 and 3 fp16,
-CDNA 3 XF32 and the bf16 paths ([`mcEngine_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Engine.lean#L326)).
+CDNA 3 XF32 and the bf16 paths ([`mcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326)).
 
 **What the hardware models add.** That a slice product must fit the binary32
 output is the familiar slice-width rule of the Ozaki literature. The models
@@ -199,7 +199,7 @@ otherwise takes an exact path that also runs on the engine: Ozaki-I with all
 `s²` slice products once nothing is left over ([`ozaki1Full_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L472)).
 
 ```lean
-theorem tcOzaki1CRD_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRD_eq {p : Profile} {b : ℕ} (heng : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :

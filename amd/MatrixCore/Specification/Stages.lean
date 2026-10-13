@@ -10,10 +10,10 @@ namespace MatrixCore.Spec
 open MatrixCore
 
 /-- The specification's late-addition parameters of a profile. -/
-def lateOf (P : Profile) : Late :=
+def lateOf (P : Model) : Late :=
   ⟨P.neab, P.late.cFracBits, P.late.sumFracBits, P.late.accFracBits, P.late.cCutoff, P.cZeroExp⟩
 
-theorem cExp_eq (P : Profile) (c : Unpacked) : cExp (lateOf P) (numOf c) = MatrixCore.cExp P c := rfl
+theorem cExp_eq (P : Model) (c : Unpacked) : cExp (lateOf P) (numOf c) = MatrixCore.cExp P c := rfl
 
 theorem log2Floor_natCast {n : ℕ} (hn : n ≠ 0) : log2Floor (n : ℚ) = (n.log2 : ℤ) := by
   apply log2Floor_eq
@@ -33,7 +33,7 @@ theorem c_onGrid (c : Unpacked) (ec : ℤ) (k : ℕ) (hc : c.t ≤ k)
   · rw [(Unpacked.value_eq_zero_iff c).mpr hm]; exact OnGrid.zero _
   · rw [hec hm]; exact c.value_onGrid.mono (by omega)
 
-theorem shiftedBranch_eq (P : Profile) (S : ℤ) (g : ℤ) (c : Unpacked) (ec : ℤ)
+theorem shiftedBranch_eq (P : Model) (S : ℤ) (g : ℤ) (c : Unpacked) (ec : ℤ)
     (hc : c.t ≤ P.late.sumFracBits) (hec : c.m ≠ 0 → ec = c.e) :
     shiftedBranch (lateOf P) S g (numOf c) ec = shiftedSum P ec ((S : ℚ) * pow2 g) c := by
   unfold shiftedBranch shiftedSum normaliseRD
@@ -65,7 +65,7 @@ theorem shiftedBranch_eq (P : Profile) (S : ℤ) (g : ℤ) (c : Unpacked) (ec : 
         log2Floor_natCast (by omega)]
     rw [hlead, shiftRD_eq]
 
-theorem cExp_some {P : Profile} {c : Unpacked} {x : ℤ} (h : MatrixCore.cExp P c = some x)
+theorem cExp_some {P : Model} {c : Unpacked} {x : ℤ} (h : MatrixCore.cExp P c = some x)
     (hm : c.m ≠ 0) : x = c.e := by
   unfold MatrixCore.cExp at h; simp [hm] at h; exact h.symm
 
@@ -73,7 +73,7 @@ theorem F_cast (n : ℕ) : ((23 + n : ℕ) : ℤ) = 23 + (n : ℤ) := by omega
 
 /-- The late addition of `c` (Algorithm 1 lines 3–11), for a product sum `S` on the grid
 `2^(e_max − F)`. -/
-theorem lateC_eq (P : Profile) (e : Option ℤ) (S : ℤ) (c : Unpacked)
+theorem lateC_eq (P : Model) (e : Option ℤ) (S : ℤ) (c : Unpacked)
     (hc : c.t ≤ P.late.sumFracBits) (hS : e = none → S = 0) :
     lateC (lateOf P) e S (numOf c) =
       lateSum P e ((S : ℚ) * pow2 (e.getD 0 - (23 + P.neab : ℕ))) c := by
@@ -122,7 +122,7 @@ theorem sum_alignTrunc (ps : List Unpacked) (e : ℤ) (k : ℕ) :
     simp only [List.map_cons, List.sum_cons, Rat.intCast_add, Rat.add_mul, sumQ, ih, alignTrunc_eq]
 
 /-- Algorithm 1 computes the implementation's `S_acc` for `global_alignment`. -/
-theorem algorithm1_eq (P : Profile) (hP : P.accumulation = .globalAlignment) (ps : List Unpacked)
+theorem algorithm1_eq (P : Model) (hP : P.accumulation = .globalAlignment) (ps : List Unpacked)
     (c : Unpacked) (hc : c.t ≤ P.late.sumFracBits) :
     algorithm1 (lateOf P) (ps.map numOf) (numOf c) = lateSum P (productSum P ps).1 (productSum P ps).2 c := by
   unfold algorithm1 productSum alignedSum
@@ -246,7 +246,7 @@ theorem part_eq (neab : ℕ) (qs : List Unpacked) (e : ℤ) :
     rw [shiftRD_eq, sum_alignTrunc]
 
 /-- Algorithm 2 computes the implementation's `S_acc` for `odd_even_grouping`. -/
-theorem algorithm2_eq (P : Profile) (hP : P.accumulation = .oddEvenGrouping) (ps : List Unpacked)
+theorem algorithm2_eq (P : Model) (hP : P.accumulation = .oddEvenGrouping) (ps : List Unpacked)
     (c : Unpacked) (hc : c.t ≤ P.late.sumFracBits) :
     algorithm2 (lateOf P) (ps.map numOf) (numOf c) = lateSum P (productSum P ps).1 (productSum P ps).2 c := by
   unfold algorithm2 productSum

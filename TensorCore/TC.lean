@@ -5,7 +5,7 @@ import TensorCore.TC.AlignmentExponent
 import TensorCore.TC.Block
 import TensorCore.TC.Canonical
 import TensorCore.TC.CanonicalDefs
-import TensorCore.TC.CanonicalFloor
+import TensorCore.TC.CanonicalEAlignMin
 import TensorCore.TC.CanonicalFormatDefs
 import TensorCore.TC.CanonicalFormats
 import TensorCore.TC.Compatibility
@@ -24,12 +24,12 @@ import TensorCore.TC.InvocationProperties
 import TensorCore.TC.MachineRefinement
 import TensorCore.TC.Monotonicity
 import TensorCore.TC.MonotonicityRange
-import TensorCore.TC.Padding
-import TensorCore.TC.Profiles
+import TensorCore.TC.ExtraAlignmentBits
+import TensorCore.TC.Models
 import TensorCore.TC.Specification.Composition
 import TensorCore.TC.Specification.Defs
 import TensorCore.TC.Specification.Equivalence
-import TensorCore.TC.Specification.Profiles
+import TensorCore.TC.Specification.Variants
 import TensorCore.TC.Specification.Rounding
 import TensorCore.TC.Specification.Schedule
 import TensorCore.TC.Specification.Stages

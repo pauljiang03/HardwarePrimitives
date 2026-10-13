@@ -131,8 +131,8 @@ theorem crIEEEI_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax
 entries of the format, wrapped by `crIEEEI` with the sign from `exactSignI` on the same engine,
 meets the IEEE specification for every input of the format. -/
 theorem crIEEEI_exactSign {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax)
-    {scheme : List (ℤ × ℤ) → List (ℤ × ℤ) → Option ℚ} {eng : Engine} {b smax : ℕ}
-    (heng : ∀ B, eng.ExactOn b B) {xs ys : List IDatum}
+    {scheme : List (ℤ × ℤ) → List (ℤ × ℤ) → Option ℚ} {mult : MatrixMultiplier} {b smax : ℕ}
+    (hmult : ∀ B, mult.ExactOn b B) {xs ys : List IDatum}
     (hvanish : ∀ x y : List (ℤ × ℤ), (∀ a ∈ x, FormatValue p emin emax (entryVal a)) →
       (∀ a ∈ y, FormatValue p emin emax (entryVal a)) →
       ∃ s ∈ List.range' 1 smax, vanishInt b s x y = true)
@@ -141,7 +141,7 @@ theorem crIEEEI_exactSign {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin �
       y.length = xs.length → scheme x y = roundRNE p emin emax (dot (entryVals x) (entryVals y)))
     (hx : ∀ a ∈ xs, a.InFormat p emin emax) (hy : ∀ a ∈ ys, a.InFormat p emin emax)
     (hlen : xs.length = ys.length) :
-    crIEEEI scheme (fun x y => (exactSignI eng b smax x y).getD 0) xs ys =
+    crIEEEI scheme (fun x y => (exactSignI mult b smax x y).getD 0) xs ys =
       dotIEEE p emin emax (xs.map IDatum.toFVal) (ys.map IDatum.toFVal) := by
   apply crIEEEI_eq hp hle
   intro sx sy hsx hsy
@@ -153,7 +153,7 @@ theorem crIEEEI_exactSign {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin �
     intro a ha; obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact hfy c hc
   have hl : (sx.map (·.1)).length = (sy.map (·.1)).length := by simp [hlx, hly, hlen]
   refine ⟨hscheme _ _ hfx' hfy' (by simp [hlx]) (by simp [hly, hlen]), ?_⟩
-  rw [exactSignI_eq (heng _) hl (Nat.le_refl _) (hvanish _ _ hfx' hfy')]
+  rw [exactSignI_eq (hmult _) hl (Nat.le_refl _) (hvanish _ _ hfx' hfy')]
   rfl
 
 /-- Binary64 entries leave nothing over after at most `smax` integer slices, `smax (b+1) > 2098`. -/

@@ -21,9 +21,9 @@ def evalPreparedMachine (w : ℕ) (b : PreparedBlock) : Except ModelError BlockT
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 
-def evalBlockMachine (w : ℕ) {p : Profile} (x : BlockInput p) :
+def evalBlockMachine (w : ℕ) {p : Model} (x : BlockInput p) :
     Except ModelError BlockTrace :=
-  if x.products.length != p.products then .error .wrongProductCount
+  if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare x with
     | none => .error .nonfiniteInput
     | some b => evalPreparedMachine w b

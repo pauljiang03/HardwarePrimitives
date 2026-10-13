@@ -29,29 +29,29 @@ namespace Ozaki.TC
 
 /-- Correctly rounded binary32 Ozaki-I of any inner dimension: slice products on Tensor Core
 blocks, the check and the exact path in bounded integer registers. -/
-def tcOzaki1CRBL (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRBL (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRB (tcSplitK p b) 24 (-126) 127 b W ss smax x y
 
 /-- Correctly rounded FP64 by Ozaki-I: slice products on Tensor Core blocks, the check and the
 exact path in bounded integer registers. -/
-def tcOzaki1CRBD (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRBD (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRB (tcSplitK p b) 53 (-1022) 1023 b W ss smax x y
 
-theorem tcOzaki1CRBL_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRBL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {x y : List ℚ} (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRBL p b W ss smax x y = rne32Q (dot x y) :=
-  ozaki1CRB32_eq (tcSplitK_exactOn heng hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRB32_eq (tcSplitK_exactOn hmult hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
 /-- **Correctly rounded FP64 GEMM on Tensor Cores with bounded registers**, for binary64 inputs of
 any length. -/
-theorem tcOzaki1CRBD_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRBD_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRBD p b W ss smax x y = rne64 (dot x y) :=
-  ozaki1CRB64_eq (tcSplitK_exactOn heng hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRB64_eq (tcSplitK_exactOn hmult hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
 /-- FP64 on V100 fp16 with bounded registers: correctly rounded for every length. -/
 theorem v100_fp64CRB (W : ℕ) (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
@@ -63,55 +63,55 @@ theorem v100_fp64CRB (W : ℕ) (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ 
 
 /-- Correctly rounded FP64 by Ozaki-I from binary64 entries: slice products on Tensor Core blocks,
 everything else in integer operations. -/
-def tcOzaki1CRID (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
+def tcOzaki1CRID (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki1CRI (tcSplitK p b) 53 (-1022) 1023 b W ss smax xs ys
 
 /-- Correctly rounded binary32 Ozaki-I from binary32 entries. -/
-def tcOzaki1CRIL (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
+def tcOzaki1CRIL (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki1CRI (tcSplitK p b) 24 (-126) 127 b W ss smax xs ys
 
 /-- FP64 with signed zeros. -/
-def tcOzaki1CRIDS (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List SEntry) :
+def tcOzaki1CRIDS (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List SEntry) :
     Option Signed :=
   ozaki1CRIS (tcSplitK p b) 53 (-1022) 1023 b W ss smax xs ys
 
 /-- Binary32 with signed zeros. -/
-def tcOzaki1CRILS (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List SEntry) :
+def tcOzaki1CRILS (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : List SEntry) :
     Option Signed :=
   ozaki1CRIS (tcSplitK p b) 24 (-126) 127 b W ss smax xs ys
 
 /-- **Correctly rounded FP64 GEMM on Tensor Cores, every step off the Tensor Core in integers**,
 for binary64 entries of any length. -/
-theorem tcOzaki1CRID_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRID_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)} (hx : ∀ a ∈ xs, Binary64Value (entryVal a))
     (hy : ∀ a ∈ ys, Binary64Value (entryVal a)) (hlen : xs.length = ys.length) :
     tcOzaki1CRID p b W ss smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) :=
-  ozaki1CRI64_eq (tcSplitK_exactOn heng hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRI64_eq (tcSplitK_exactOn hmult hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
-theorem tcOzaki1CRIL_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRIL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)} (hx : ∀ a ∈ xs, Binary32Value (entryVal a))
     (hy : ∀ a ∈ ys, Binary32Value (entryVal a)) (hlen : xs.length = ys.length) :
     tcOzaki1CRIL p b W ss smax xs ys = rne32Q (dot (entryVals xs) (entryVals ys)) :=
-  ozaki1CRI32_eq (tcSplitK_exactOn heng hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRI32_eq (tcSplitK_exactOn hmult hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
 /-- **The same with signed zeros**: the IEEE binary64 result, sign of a zero included. -/
-theorem tcOzaki1CRIDS_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRIDS_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List SEntry} (hx : ∀ a ∈ xs, Binary64Value (entryVal a.1))
     (hy : ∀ a ∈ ys, Binary64Value (entryVal a.1)) (hlen : xs.length = ys.length) :
     tcOzaki1CRIDS p b W ss smax xs ys = crSigned rne64 (xs.map toSigned) (ys.map toSigned) :=
-  ozaki1CRIS64_eq (tcSplitK_exactOn heng hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRIS64_eq (tcSplitK_exactOn hmult hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
-theorem tcOzaki1CRILS_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRILS_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {xs ys : List SEntry} (hx : ∀ a ∈ xs, Binary32Value (entryVal a.1))
     (hy : ∀ a ∈ ys, Binary32Value (entryVal a.1)) (hlen : xs.length = ys.length) :
     tcOzaki1CRILS p b W ss smax xs ys = crSigned rne32Q (xs.map toSigned) (ys.map toSigned) :=
-  ozaki1CRIS32_eq (tcSplitK_exactOn heng hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRIS32_eq (tcSplitK_exactOn hmult hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
 /-- FP64 on V100 fp16 from binary64 entries, every step off the Tensor Core in integers. -/
 theorem v100_fp64CRI (W : ℕ) (ss : List ℕ) {xs ys : List (ℤ × ℤ)}

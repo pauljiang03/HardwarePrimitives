@@ -21,13 +21,13 @@ theorem Prepared.exact_eq (x : Prepared) :
     | nil => simp
     | cons b bs => simp [sumQ, Unpacked.value_mul]
 
-theorem accumulate_correctRounding {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem accumulate_correctRounding {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (x : Prepared) : accumulate P x = .ok x.exact := by
   unfold accumulate; simp [hov, hacc]
 
 /-- CDNA 1 and SFMA: an accepted block returns the binary32 value nearest to the exact
 `Σ a_ℓ b_ℓ + c`, ties to even. -/
-theorem correctRounding_nearestEven {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_nearestEven {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     t.sAcc = t.prepared.exact ∧ NearestEven32 t.prepared.exact t.d := by
@@ -39,7 +39,7 @@ theorem correctRounding_nearestEven {P : Profile} (hacc : P.accumulation = .corr
 
 /-- CDNA 1 and SFMA accept exactly the finite inputs of the right shape whose exact sum lies
 below the overflow threshold `2^128 − 2^103`; products themselves may exceed `2^128`. -/
-theorem correctRounding_success_iff {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_success_iff {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (x : BlockInput P) :
     (∃ t, evalBlock x = .ok t) ↔
       x.a.length = P.nfma ∧ x.b.length = P.nfma ∧
@@ -83,7 +83,7 @@ theorem rneValue_neg (x : ℚ) : rneValue (-x) = -rneValue x := by
       simp [h, this]
 
 /-- With every input of a correctly rounded block negated, the output value is negated. -/
-theorem correctRounding_value {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_value {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     value32 t.d = some (rneValue t.prepared.exact) := by
@@ -94,7 +94,7 @@ theorem correctRounding_value {P : Profile} (hacc : P.accumulation = .correctRou
   rw [ha]
   exact rne32_value (by simpa [fl32_false] using hd)
 
-theorem correctRounding_neg {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_neg {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x y : BlockInput P} {t u : BlockTrace P} (hx : evalBlock x = .ok t)
     (hy : evalBlock y = .ok u) (hneg : u.prepared.exact = -t.prepared.exact) :

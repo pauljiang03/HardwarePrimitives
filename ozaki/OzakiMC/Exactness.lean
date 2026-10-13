@@ -254,20 +254,20 @@ theorem sumQ_absQ_cast (zs : List ℤ) :
 /-! ## The pairwise tree -/
 
 /-- The pairwise tree of integers whose magnitudes total at most `2^24` is their exact sum. -/
-theorem pairTree_int (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ depth + 1 →
+theorem pairwiseGroupSum_int (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ depth + 1 →
     (zs.map Int.natAbs).sum ≤ 2 ^ 24 →
-    pairTree ftz depth (zs.map fun z : ℤ => (z : ℚ)) = some ((zs.sum : ℤ) : ℚ)
-  | _, [], _, _ => by simp [pairTree]
-  | _, [z], _, _ => by simp [pairTree]
+    pairwiseGroupSum ftz depth (zs.map fun z : ℤ => (z : ℚ)) = some ((zs.sum : ℤ) : ℚ)
+  | _, [], _, _ => by simp [pairwiseGroupSum]
+  | _, [z], _, _ => by simp [pairwiseGroupSum]
   | 0, _ :: _ :: _, hl, _ => by simp at hl
   | depth + 1, z1 :: z2 :: rest, hl, hb => by
     generalize hzs : z1 :: z2 :: rest = zs at hl hb
     have h2 : 2 ≤ zs.length := by rw [← hzs]; simp
-    have hunfold : pairTree ftz (depth + 1) (zs.map fun z : ℤ => (z : ℚ)) =
-        (pairTree ftz depth ((zs.take (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun u =>
-          (pairTree ftz depth ((zs.drop (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun v =>
+    have hunfold : pairwiseGroupSum ftz (depth + 1) (zs.map fun z : ℤ => (z : ℚ)) =
+        (pairwiseGroupSum ftz depth ((zs.take (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun u =>
+          (pairwiseGroupSum ftz depth ((zs.drop (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun v =>
             flValue ftz (u + v) := by
-      rw [← hzs, List.map_cons, List.map_cons, pairTree]
+      rw [← hzs, List.map_cons, List.map_cons, pairwiseGroupSum]
       simp only [List.length_cons, List.map_take, List.map_drop, List.map_cons, List.length_map,
         Option.bind_eq_bind]
       all_goals simp
@@ -279,8 +279,8 @@ theorem pairTree_int (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), zs.length
     have hsum : zs.sum = (zs.take (zs.length / 2)).sum + (zs.drop (zs.length / 2)).sum := by
       conv => lhs; rw [← htd]
       rw [List.sum_append]
-    rw [hunfold, pairTree_int ftz depth _ (by simp; omega) (by omega),
-      pairTree_int ftz depth _ (by simp; omega) (by omega)]
+    rw [hunfold, pairwiseGroupSum_int ftz depth _ (by simp; omega) (by omega),
+      pairwiseGroupSum_int ftz depth _ (by simp; omega) (by omega)]
     simp only [Option.bind_some]
     rw [← Rat.intCast_add, ← hsum]
     exact flValue_int ftz _ (Nat.le_trans (natAbs_sum_le zs) hb)
@@ -292,7 +292,7 @@ structure IntPrepared (x : Prepared) : Prop where
   a : ∀ u ∈ x.a, IntOperand u
   b : ∀ u ∈ x.b, IntOperand u
   c : IntOperand x.c
-  budget : absQ x.c.value + sumQ (x.p.map fun p => absQ p.value) ≤ pow2 24
+  bound : absQ x.c.value + sumQ (x.p.map fun p => absQ p.value) ≤ pow2 24
 
 theorem natAbs_le_of_absQ {z : ℤ} (h : absQ (z : ℚ) ≤ pow2 24) : z.natAbs ≤ 2 ^ 24 := by
   rw [absQ_intCast, show (24 : ℤ) = ((24 : ℕ) : ℤ) from rfl, pow2_natCast] at h
@@ -316,11 +316,11 @@ theorem p_le : ∀ q ∈ x.p, absQ q.value ≤ pow2 24 := by
   have h1 : absQ q.value ≤ sumQ (x.p.map fun p => absQ p.value) := by
     rw [sumQ_eq]
     exact le_sum_of_mem (l := x.p) (f := fun p => absQ p.value) (fun _ _ => absQ_nonneg _) hq
-  have := h.budget; have := absQ_nonneg x.c.value
+  have := h.bound; have := absQ_nonneg x.c.value
   grind
 
 theorem c_le : absQ x.c.value ≤ pow2 24 := by
-  have := h.budget; have := sum_absQ_nonneg x; grind
+  have := h.bound; have := sum_absQ_nonneg x; grind
 
 theorem flushed : x.flushed = x := by
   obtain ⟨a, b, c⟩ := x
@@ -352,7 +352,7 @@ theorem ints : ∃ zs : List ℤ, x.p.map Unpacked.value = zs.map (fun z : ℤ =
   have hs := sumQ_absQ_cast zs
   rw [← hzs, List.map_map] at hs
   have hb : sumQ (x.p.map fun p => absQ p.value) ≤ pow2 24 := by
-    have := h.budget; have := absQ_nonneg x.c.value; grind
+    have := h.bound; have := absQ_nonneg x.c.value; grind
   have : sumQ (List.map (absQ ∘ Unpacked.value) x.p) = sumQ (x.p.map fun p => absQ p.value) := rfl
   rw [this] at hs
   rw [hs, show (24 : ℤ) = ((24 : ℕ) : ℤ) from rfl, pow2_natCast] at hb
@@ -363,7 +363,7 @@ theorem c_int : ∃ z : ℤ, x.c.value = z := h.c.1
 end IntPrepared
 
 /-- CDNA 2: the pairwise tree of integer products is their exact sum. -/
-theorem pairwiseSum_int (P : Profile) {x : Prepared} (h : IntPrepared x) :
+theorem pairwiseSum_int (P : Model) {x : Prepared} (h : IntPrepared x) :
     pairwiseSum P x = some x.exact := by
   have hx' : (if P.subnormals then x else x.flushed) = x := by
     split
@@ -377,7 +377,7 @@ theorem pairwiseSum_int (P : Profile) {x : Prepared} (h : IntPrepared x) :
     obtain ⟨⟨z, hz⟩, _⟩ := h.p q hq
     rw [hz]
     exact flValue_int _ z (natAbs_le_of_absQ (by rw [← hz]; exact h.p_le q hq))
-  have htree := pairTree_int (!P.subnormals) zs.length zs (by omega) hb
+  have htree := pairwiseGroupSum_int (!P.subnormals) zs.length zs (by omega) hb
   unfold pairwiseSum
   simp only [hx', hps, Option.bind_eq_bind, Option.bind_some, List.length_map, htree]
   unfold Prepared.exact
@@ -407,7 +407,7 @@ theorem maxExp_upper {ps : List Unpacked} {U : ℤ} (hps : ∀ p ∈ ps, p.m ≠
   foldl_maxExpStep_upper U ps none (by simp) hps
 
 /-- CDNA 3 (`global_alignment` with the paper's late-`c` parameters): integer blocks are exact. -/
-theorem alignedAccumulation_int {P : Profile} (hacc : P.accumulation = .globalAlignment)
+theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlignment)
     (hneab : 1 ≤ P.neab) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
     (h : IntPrepared x) : alignedAccumulation P x = x.exact := by
   have hprod := h.p
@@ -452,7 +452,7 @@ theorem alignedAccumulation_int {P : Profile} (hacc : P.accumulation = .globalAl
       exact rdGrid_of_onGrid (OnGrid.mono ⟨T, by rw [pow2_zero, Rat.mul_one]⟩ (by omega))
   have hsumbound : absQ ((zs.sum + zc : ℤ) : ℚ) ≤ pow2 24 := by
     have h1 := natAbs_sum_le zs
-    have h2 := h.budget
+    have h2 := h.bound
     rw [Rat.intCast_add]
     have h3 := absQ_add_le ((zs.sum : ℤ) : ℚ) (zc : ℚ)
     rw [← hzc] at h3 ⊢
@@ -493,13 +493,13 @@ theorem alignedAccumulation_int {P : Profile} (hacc : P.accumulation = .globalAl
 
 /-- The configurations on which integer blocks are exact: correct rounding (SFMA, CDNA 1), the
 pairwise sum (CDNA 2), and global alignment with the paper's CDNA 3 parameters. -/
-def ExactConfig (P : Profile) : Prop :=
+def ExactConfig (P : Model) : Prop :=
   P.accumulation = .correctRounding ∨ P.accumulation = .pairWiseSum ∨
     (P.accumulation = .globalAlignment ∧ 1 ≤ P.neab ∧ P.late = {} ∧ P.cZeroExp = some (-126))
 
 /-- **Exact accumulation.** On an exact configuration, `S_acc` of an integer block is its exact
 sum `Σ p_ℓ + c`. -/
-theorem accumulate_int {P : Profile} (hP : ExactConfig P) {x : Prepared} (h : IntPrepared x) :
+theorem accumulate_int {P : Model} (hP : ExactConfig P) {x : Prepared} (h : IntPrepared x) :
     accumulate P x = .ok x.exact := by
   unfold accumulate
   rw [h.productOverflows, Bool.and_false]
@@ -516,7 +516,7 @@ def IntWord (i : InputFormat) (w : i.Word) : Prop :=
   ∃ u, (i.read w).toFinite = some u ∧ ∃ z : ℤ, u.value = z
 
 /-- `Σ |aᵢ bᵢ|` of operand words. -/
-def wordBudget (P : Profile) (a : List P.a.Word) (b : List P.b.Word) : ℚ :=
+def wordDotAbs (P : Model) (a : List P.a.Word) (b : List P.b.Word) : ℚ :=
   sumQ (List.zipWith (fun x y => absQ (P.a.wordValue x * P.b.wordValue y)) a b)
 
 theorem mapM_exists {f : α → Option β} :
@@ -528,7 +528,7 @@ theorem mapM_exists {f : α → Option β} :
     exact ⟨b :: l', by simp [List.mapM_cons, hb, hl']⟩
 
 /-- Pairing decoded operands is pairing the values of their words. -/
-theorem mapM_zipWith {P : Profile} (g : ℚ → ℚ → ℚ) :
+theorem mapM_zipWith {P : Model} (g : ℚ → ℚ → ℚ) :
     ∀ (xa : List P.a.Word) (xb : List P.b.Word) (A B : List Unpacked),
       xa.mapM (fun w => (P.a.read w).toFinite) = some A →
       xb.mapM (fun w => (P.b.read w).toFinite) = some B →
@@ -560,11 +560,11 @@ theorem wordValue_of_read {i : InputFormat} {w : i.Word} {u : Unpacked}
   unfold InputFormat.wordValue; rw [h]; rfl
 
 /-- The products of integer words add up to an integer within their budget. -/
-theorem exactProducts_int {P : Profile} :
+theorem exactProducts_int {P : Model} :
     ∀ (a : List P.a.Word) (b : List P.b.Word), (∀ w ∈ a, IntWord P.a w) → (∀ w ∈ b, IntWord P.b w) →
-      ∃ Z : ℤ, exactProducts P a b = Z ∧ absQ (Z : ℚ) ≤ wordBudget P a b
-  | [], _, _, _ => ⟨0, rfl, by simp [wordBudget, sumQ]; decide⟩
-  | _ :: _, [], _, _ => ⟨0, rfl, by simp [wordBudget, sumQ]; decide⟩
+      ∃ Z : ℤ, exactProducts P a b = Z ∧ absQ (Z : ℚ) ≤ wordDotAbs P a b
+  | [], _, _, _ => ⟨0, rfl, by simp [wordDotAbs, sumQ]; decide⟩
+  | _ :: _, [], _, _ => ⟨0, rfl, by simp [wordDotAbs, sumQ]; decide⟩
   | x :: xs, y :: ys, ha, hb => by
     obtain ⟨u, hu, zu, hzu⟩ := ha x (by simp)
     obtain ⟨v, hv, zv, hzv⟩ := hb y (by simp)
@@ -574,19 +574,19 @@ theorem exactProducts_int {P : Profile} :
     · unfold exactProducts at hZ ⊢
       simp only [List.zipWith_cons_cons, sumQ, hZ, wordValue_of_read hu, wordValue_of_read hv,
         hzu, hzv, Rat.intCast_add, Rat.intCast_mul]
-    · unfold wordBudget at hZb ⊢
+    · unfold wordDotAbs at hZb ⊢
       simp only [List.zipWith_cons_cons, sumQ, wordValue_of_read hu, wordValue_of_read hv, hzu, hzv]
       rw [Rat.intCast_add, Rat.intCast_mul]
       have := absQ_add_le ((zu : ℚ) * zv) (Z : ℚ)
       grind
 
-theorem wordBudget_nonneg (P : Profile) :
-    ∀ (a : List P.a.Word) (b : List P.b.Word), 0 ≤ wordBudget P a b
-  | [], _ => by simp [wordBudget, sumQ]
-  | _ :: _, [] => by simp [wordBudget, sumQ]
+theorem wordDotAbs_nonneg (P : Model) :
+    ∀ (a : List P.a.Word) (b : List P.b.Word), 0 ≤ wordDotAbs P a b
+  | [], _ => by simp [wordDotAbs, sumQ]
+  | _ :: _, [] => by simp [wordDotAbs, sumQ]
   | x :: xs, y :: ys => by
-    have := wordBudget_nonneg P xs ys
-    unfold wordBudget at this ⊢
+    have := wordDotAbs_nonneg P xs ys
+    unfold wordDotAbs at this ⊢
     simp only [List.zipWith_cons_cons, sumQ]
     have := absQ_nonneg (P.a.wordValue x * P.b.wordValue y)
     grind
@@ -606,11 +606,11 @@ theorem binary32_sub {w : F32} {u : Unpacked} (h : (binary32.decode w).toFinite 
 
 /-- **Exact integer block.** On an exact configuration, integer operands and an integer `c` with
 `|c| + Σ|aᵢbᵢ| ≤ 2^24` give the binary32 word of `c + Σ aᵢbᵢ`. -/
-theorem evalBlock_int {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
+theorem evalBlock_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {x : BlockInput P} (hla : x.a.length = P.nfma)
     (hlb : x.b.length = P.nfma) (ha : ∀ w ∈ x.a, IntWord P.a w) (hb : ∀ w ∈ x.b, IntWord P.b w)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ))
-    (hbudget : absQ (zc : ℚ) + wordBudget P x.a x.b ≤ pow2 24) :
+    (hbound : absQ (zc : ℚ) + wordDotAbs P x.a x.b ≤ pow2 24) :
     ∃ t, evalBlock x = .ok t ∧ value32 t.d = some ((zc : ℚ) + exactProducts P x.a x.b) := by
   obtain ⟨A, hA⟩ := mapM_exists x.a fun w hw => by
     obtain ⟨u, hu, _⟩ := ha w hw; exact ⟨u, hu⟩
@@ -635,12 +635,12 @@ theorem evalBlock_int {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals 
     refine ⟨hops _ _ _ hfa ha hA, hops _ _ _ hfb hb hB,
       ⟨⟨zc, hcv⟩, int_normal (binary32_sub hC) hcv⟩, ?_⟩
     have hbud : sumQ ((Prepared.p ⟨A, B, uc⟩).map fun p => absQ p.value) =
-        wordBudget P x.a x.b := by
-      unfold Prepared.p wordBudget
+        wordDotAbs P x.a x.b := by
+      unfold Prepared.p wordDotAbs
       simp only [List.map_zipWith, Unpacked.value_mul]
       rw [← mapM_zipWith (fun a b => absQ (a * b)) x.a x.b A B hA hB]
     simp only [hcv, hbud]
-    exact hbudget
+    exact hbound
   have hexact : (Prepared.exact ⟨A, B, uc⟩) = (zc : ℚ) + exactProducts P x.a x.b := by
     rw [Prepared.exact_eq]
     simp only
@@ -665,32 +665,32 @@ theorem evalBlock_int {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals 
 
 /-- **Exact chain.** Blocks of integer operands, chained through their binary32 outputs from an
 integer `c`, return `c + Σ aᵢbᵢ` exactly when `|c| + Σ|aᵢbᵢ| ≤ 2^24`. -/
-theorem runBlocks_int {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
+theorem runBlocks_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) :
     ∀ (groups : List (List P.a.Word × List P.b.Word)) (c : F32) (zc : ℤ),
       value32 c = some (zc : ℚ) →
       (∀ g ∈ groups, g.1.length = P.nfma ∧ g.2.length = P.nfma ∧
         (∀ w ∈ g.1, IntWord P.a w) ∧ ∀ w ∈ g.2, IntWord P.b w) →
-      absQ (zc : ℚ) + sumQ (groups.map fun g => wordBudget P g.1 g.2) ≤ pow2 24 →
+      absQ (zc : ℚ) + sumQ (groups.map fun g => wordDotAbs P g.1 g.2) ≤ pow2 24 →
       ∃ ts, runBlocks P c groups = .ok ts ∧
         value32 (lastOutput c ts) = some ((zc : ℚ) + sumQ (groups.map fun g =>
           exactProducts P g.1 g.2))
   | [], c, zc, hc, _, _ => ⟨[], rfl, by simp [lastOutput, hc, sumQ]; grind⟩
-  | g :: rest, c, zc, hc, hg, hbudget => by
+  | g :: rest, c, zc, hc, hg, hbound => by
     obtain ⟨hl1, hl2, ha, hb⟩ := hg g (by simp)
-    simp only [List.map_cons, sumQ] at hbudget ⊢
-    have hrest0 : 0 ≤ sumQ (rest.map fun g => wordBudget P g.1 g.2) := by
-      rw [sumQ_eq]; exact Ozaki.sum_nonneg fun g' _ => wordBudget_nonneg P g'.1 g'.2
-    have hg0 := wordBudget_nonneg P g.1 g.2
+    simp only [List.map_cons, sumQ] at hbound ⊢
+    have hrest0 : 0 ≤ sumQ (rest.map fun g => wordDotAbs P g.1 g.2) := by
+      rw [sumQ_eq]; exact Ozaki.sum_nonneg fun g' _ => wordDotAbs_nonneg P g'.1 g'.2
+    have hg0 := wordDotAbs_nonneg P g.1 g.2
     obtain ⟨t, ht, hv⟩ := evalBlock_int (x := ⟨g.1, g.2, c⟩) hP hfa hfb hl1 hl2 ha hb hc
       (by grind)
     obtain ⟨Z, hZ, hZb⟩ := exactProducts_int g.1 g.2 ha hb
     have hc' : value32 t.d = some ((zc + Z : ℤ) : ℚ) := by rw [hv, hZ, Rat.intCast_add]
-    have hbudget' : absQ ((zc + Z : ℤ) : ℚ) + sumQ (rest.map fun g => wordBudget P g.1 g.2) ≤
+    have hbound' : absQ ((zc + Z : ℤ) : ℚ) + sumQ (rest.map fun g => wordDotAbs P g.1 g.2) ≤
         pow2 24 := by
       have := absQ_add_le (zc : ℚ) (Z : ℚ); rw [Rat.intCast_add]; grind
     obtain ⟨ts, hts, hval⟩ := runBlocks_int hP hfa hfb rest t.d (zc + Z) hc'
-      (fun g' hg' => hg g' (by simp [hg'])) hbudget'
+      (fun g' hg' => hg g' (by simp [hg'])) hbound'
     refine ⟨t :: ts, ?_, ?_⟩
     · simp only [runBlocks]; rw [ht]; simp only; rw [hts]
     · simp only [lastOutput]; rw [hval, hZ, Rat.intCast_add]; grind
@@ -744,9 +744,9 @@ theorem mem_padToBlocks {n : ℕ} {xs : List (BitVec w)} {v : BitVec w}
   · exact Or.inr (List.mem_replicate.mp h).2
 
 /-- The blocks' budgets add up to the budget of the whole vectors. -/
-theorem blocks_budget (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word} {b : List P.b.Word}
+theorem blocks_dotAbs (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word} {b : List P.b.Word}
     (hlen : a.length = b.length) :
-    sumQ ((blocks P a b).map fun ab => wordBudget P ab.1 ab.2) = wordBudget P a b := by
+    sumQ ((blocks P a b).map fun ab => wordDotAbs P ab.1 ab.2) = wordDotAbs P a b := by
   unfold blocks
   dsimp only
   have hpl : (padToBlocks P.nfma a).length = (padToBlocks P.nfma b).length := by
@@ -754,7 +754,7 @@ theorem blocks_budget (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word} {b : L
   rw [← hpl]
   have := sum_chunks (fun x y => absQ (P.a.wordValue x * P.b.wordValue y)) P.nfma hn
     (padToBlocks P.nfma a).length (padToBlocks P.nfma a) (padToBlocks P.nfma b) hpl (Nat.le_refl _)
-  unfold wordBudget
+  unfold wordDotAbs
   rw [this]
   unfold padToBlocks
   rw [List.zipWith_append hlen, sumQ_append, hlen, List.zipWith_replicate,
@@ -768,11 +768,11 @@ theorem blocks_budget (P : Profile) (hn : 0 < P.nfma) {a : List P.a.Word} {b : L
 
 /-- **Exact inner product.** On an exact configuration, integer vectors and an integer `c` with
 `|c| + Σ|aᵢbᵢ| ≤ 2^24` give the binary32 word of `c + Σ aᵢbᵢ`, block by block. -/
-theorem dotBits_int {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
+theorem dotBits_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) (hn : 0 < P.nfma) (h0a : IntWord P.a 0) (h0b : IntWord P.b 0)
     {a : List P.a.Word} {b : List P.b.Word} (hlen : a.length = b.length)
     (ha : ∀ w ∈ a, IntWord P.a w) (hb : ∀ w ∈ b, IntWord P.b w) {c : F32} {zc : ℤ}
-    (hc : value32 c = some (zc : ℚ)) (hbudget : absQ (zc : ℚ) + wordBudget P a b ≤ pow2 24) :
+    (hc : value32 c = some (zc : ℚ)) (hbound : absQ (zc : ℚ) + wordDotAbs P a b ≤ pow2 24) :
     ∃ d, dotBits P a b c = .ok d ∧ value32 d = some ((zc : ℚ) + exactProducts P a b) := by
   have hgroups : ∀ g ∈ blocks P a b, g.1.length = P.nfma ∧ g.2.length = P.nfma ∧
       (∀ w ∈ g.1, IntWord P.a w) ∧ ∀ w ∈ g.2, IntWord P.b w := by
@@ -791,7 +791,7 @@ theorem dotBits_int {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals P.
       · exact hb w h
       · rw [h]; exact h0b
   obtain ⟨ts, hts, hv⟩ := runBlocks_int hP hfa hfb (blocks P a b) c zc hc hgroups
-    (by rw [blocks_budget P hn hlen]; exact hbudget)
+    (by rw [blocks_dotAbs P hn hlen]; exact hbound)
   refine ⟨lastOutput c ts, ?_, ?_⟩
   · rw [dotBits_eq_runBlocks P c hlen, hts]; rfl
   · rw [hv, blocks_products P hn hlen]

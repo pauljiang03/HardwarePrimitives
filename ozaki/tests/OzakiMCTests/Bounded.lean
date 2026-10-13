@@ -14,7 +14,7 @@ open MatrixCore Ozaki Ozaki.MC OzakiMCTests.LongFP64
 namespace OzakiMCTests.Bounded
 
 /-- Correctly rounded FP64 with bounded registers equals the oracle on both cases. -/
-def agreesB (P : Profile) (ss : List ℕ) : Bool :=
+def agreesB (P : Model) (ss : List ℕ) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Aq := A.map (·.map val64)
     let Bq := transpose (B.map (·.map val64))
@@ -36,7 +36,7 @@ def cols {α : Type} [Inhabited α] (B : List (List α)) : List (List α) :=
   (List.range (B.headD []).length).map fun j => B.map fun r => r.getD j default
 
 /-- Correctly rounded FP64 from the stored entries equals the oracle on both cases. -/
-def agreesI (P : Profile) (ss : List ℕ) : Bool :=
+def agreesI (P : Model) (ss : List ℕ) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Ae := A.map (·.map entry64)
     let Be := cols (B.map (·.map entry64))

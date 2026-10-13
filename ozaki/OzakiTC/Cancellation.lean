@@ -1,4 +1,4 @@
-import OzakiTC.Profiles
+import OzakiTC.Models
 import OzakiTC.Limits
 
 /-! # Exact blocks with cancellation
@@ -18,7 +18,7 @@ whatever the magnitudes of the products (`evalBlock_cancel`); cancellation insid
 The condition on the sum is also necessary: a block's output is a binary32 value
 (`evalBlock_exact_needs_binary32`). A chain of blocks is exact when every running value it passes
 on stays below `2^24` (`runBlocks_cancel`), and so is the engine when the dot products of the
-prefixes at its group boundaries do (`tcEngine_cancel`).
+prefixes at its group boundaries do (`tcMultiplier_cancel`).
 
 Witnesses where the old condition fails and the new one holds: on A100, four products `2^22` and four
 `−2^22` (total magnitude `2^25`) return `0`, and four products `2047²` and three `−2047²` return
@@ -34,10 +34,10 @@ open TensorCore
 namespace Ozaki.TC
 
 /-- The products of two `b`-bit integer words are integer terms of exponent at most `F`. -/
-theorem int_product_term {p : Profile} {b : ℕ} (hp : IntExact p b) {q : p.Word × p.Word}
+theorem int_product_term {p : Model} {b : ℕ} (hp : IntExact p b) {q : p.Word × p.Word}
     (hq : IntWord p b q.1 ∧ IntWord p b q.2)
     (hnz : (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0) :
-    (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignMantissaBits ∧
+    (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignFracBits ∧
       ∃ k : ℤ, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
   obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hq
   simp only [unnormalizedMul] at hnz ⊢
@@ -67,11 +67,11 @@ theorem int_product_term {p : Profile} {b : ℕ} (hp : IntExact p b) {q : p.Word
 /-- **Exact block with cancellation.** Operands that are integers of magnitude at most `2^b`
 (`2b ≤ F`), an integer `c` with `|c| < 2^(F+1)`, and an exact sum `c + Σ aᵢbᵢ` that is a binary32
 value: the block returns that sum, however large `Σ|aᵢbᵢ|` is. -/
-theorem evalBlock_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
-    (hlen : x.products.length = p.products)
+theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
+    (hlen : x.products.length = p.nfma)
     (hops : ∀ q ∈ x.products, IntWord p b q.1 ∧ IntWord p b q.2)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ))
-    (hcF : Rat.abs (zc : ℚ) < 2 ^ (p.alignMantissaBits + 1))
+    (hcF : Rat.abs (zc : ℚ) < 2 ^ (p.alignFracBits + 1))
     (hfin : FiniteValue32 ((zc : ℚ) + wordProducts p x.products)) :
     ∃ t, evalBlock x = .ok t ∧ t.output.value = zc + wordProducts p x.products := by
   obtain ⟨dc, hdc, hdcv⟩ := decode32_isSome_of_value32 hc
@@ -90,20 +90,20 @@ theorem evalBlock_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockI
   have hterms : blk.terms = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ ::
       x.products.map fun q => unnormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
-  have hprof : blk.profile = p := by rw [← hblk]
-  have hbias : (1 : ℤ) - fp32.bias ≤ p.alignMantissaBits := by
+  have hprof : blk.model = p := by rw [← hblk]
+  have hbias : (1 : ℤ) - fp32.bias ≤ p.alignFracBits := by
     have : fp32.bias = 127 := rfl
     have := hp.wide; omega
   have hacc : blk.accumulator = blk.exactDot := by
     apply accumulator_eq_exactDot_of_grid blk 0
-    · intro f hf; rw [hprof] at hf ⊢; have := hp.floor f hf; omega
+    · intro f hf; rw [hprof] at hf ⊢; have := hp.eAlignMin f hf; omega
     · intro t ht hnz
       rw [hterms] at ht
       rcases List.mem_cons.mp ht with rfl | ht
       · refine ⟨?_, zc, ?_⟩
-        · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := p.alignMantissaBits)
+        · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := p.alignFracBits)
             hbias (by rw [hdcv]; exact hcF) hnz
-          show dc.unnormalizedExp ≤ 0 + blk.profile.alignMantissaBits
+          show dc.unnormalizedExp ≤ 0 + blk.model.alignFracBits
           rw [hprof]; omega
         · change dc.value = _; rw [hdcv, pow2_zero, Rat.mul_one]
       · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht
@@ -115,18 +115,18 @@ theorem evalBlock_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockI
 
 /-- **The condition on the sum is necessary.** A block that returns its exact sum returns a
 binary32 value. -/
-theorem evalBlock_exact_needs_binary32 {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_exact_needs_binary32 {p : Model} {x : BlockInput p} {t : BlockTrace}
     (_ht : evalBlock x = .ok t) {v : ℚ} (hv : t.output.value = v) : FiniteValue32 v := by
   rw [← hv]; exact value32_finite _ _ (value32_output t)
 
 /-- `2^24 ≤ 2^(F+1)` on every path (`F ≥ 23`). -/
-theorem two_pow_24_le {p : Profile} {b : ℕ} (hp : IntExact p b) :
-    (2 : ℚ) ^ (24 : ℤ) ≤ 2 ^ (p.alignMantissaBits + 1) :=
+theorem two_pow_24_le {p : Model} {b : ℕ} (hp : IntExact p b) :
+    (2 : ℚ) ^ (24 : ℤ) ≤ 2 ^ (p.alignFracBits + 1) :=
   two_pow_le (by have := hp.wide; omega)
 
 /-- **Exact integer block with cancellation**: `|c| < 2^24` and `|c + Σ aᵢbᵢ| ≤ 2^24` suffice. -/
-theorem evalBlock_cancel_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
-    (hlen : x.products.length = p.products)
+theorem evalBlock_cancel_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
+    (hlen : x.products.length = p.nfma)
     (hops : ∀ q ∈ x.products, IntWord p b q.1 ∧ IntWord p b q.2)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ)) (hc24 : Rat.abs (zc : ℚ) < 2 ^ (24 : ℤ))
     (hsum : Rat.abs ((zc : ℚ) + wordProducts p x.products) ≤ 2 ^ (24 : ℤ)) :
@@ -144,7 +144,7 @@ theorem evalBlock_cancel_int {p : Profile} {b : ℕ} (hp : IntExact p b) {x : Bl
 /-- Every running value a chain passes on is below `2^24`, and the last one at most `2^24`:
 starting from `v`, each group's result `v + Σ_group` is at most `2^24` in magnitude, and is below
 `2^24` if another group follows. -/
-def ChainOK (p : Profile) : ℚ → List (List (p.Word × p.Word)) → Prop
+def ChainOK (p : Model) : ℚ → List (List (p.Word × p.Word)) → Prop
   | _, [] => True
   | v, g :: rest => Rat.abs v < 2 ^ (24 : ℤ) ∧ Rat.abs (v + wordProducts p g) ≤ 2 ^ (24 : ℤ) ∧
       ChainOK p (v + wordProducts p g) rest
@@ -152,9 +152,9 @@ def ChainOK (p : Profile) : ℚ → List (List (p.Word × p.Word)) → Prop
 /-- **Exact chain with cancellation.** Blocks of `b`-bit integer operands chained from an integer
 `c` return `c + Σ aᵢbᵢ` exactly when every running value stays within `2^24`, however large the
 products' magnitudes. -/
-theorem runBlocks_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) :
+theorem runBlocks_cancel {p : Model} {b : ℕ} (hp : IntExact p b) :
     ∀ (groups : List (List (p.Word × p.Word))) (c : F32) (zc : ℤ), value32 c = some (zc : ℚ) →
-      (∀ g ∈ groups, g.length = p.products ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
+      (∀ g ∈ groups, g.length = p.nfma ∧ ∀ q ∈ g, IntWord p b q.1 ∧ IntWord p b q.2) →
       ChainOK p (zc : ℚ) groups →
       ∃ ts, runBlocks p c groups = .ok ts ∧
         runValue c ts = zc + wordProducts p groups.flatten
@@ -175,7 +175,7 @@ theorem runBlocks_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) :
       grind
 
 /-- A chain whose running values at every group boundary, and its total, stay within `2^24`. -/
-theorem chainOK_of_prefixes (p : Profile) :
+theorem chainOK_of_prefixes (p : Model) :
     ∀ (groups : List (List (p.Word × p.Word))) (v : ℚ),
       (∀ j < groups.length, Rat.abs (v + wordProducts p (groups.take j).flatten) < 2 ^ (24 : ℤ)) →
       Rat.abs (v + wordProducts p groups.flatten) ≤ 2 ^ (24 : ℤ) → ChainOK p v groups
@@ -247,17 +247,17 @@ theorem intCast_abs_le {z : ℤ} {n : ℕ} (h : z.natAbs ≤ 2 ^ n) : Rat.abs (z
 /-- **The engine with cancellation.** On `b`-bit integer vectors whose dot products of the prefixes
 at the group boundaries stay below `2^24`, and whose dot product is within `2^24`, the Tensor Core
 engine is exact, however large `Σ|xᵢyᵢ|` is. -/
-theorem tcEngine_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) {x y : List ℤ} (hlen : x.length = y.length)
+theorem tcMultiplier_cancel {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) {x y : List ℤ} (hlen : x.length = y.length)
     (hx : ∀ a ∈ x, a.natAbs ≤ 2 ^ b) (hy : ∀ a ∈ y, a.natAbs ≤ 2 ^ b)
-    (hok : PrefixesOK p.products x y) : tcEngine p x y = some (dotZ x y) := by
+    (hok : PrefixesOK p.nfma x y) : tcMultiplier p x y = some (dotZ x y) := by
   have henc : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → ∃ w, encodeInt p.input z = some w ∧
       (p.decode w).isSome ∧ wordValue p w = z := by
     intro z hz
     obtain ⟨w, hw, d, hd, hv⟩ := encodeInt_spec hh.wellFormed hh.emin hh.emax
       (Nat.le_trans hz (Nat.pow_le_pow_right (by decide) hh.bits))
-    refine ⟨w, hw, by simp [Profile.decode, hd], ?_⟩
-    unfold wordValue decodeD Profile.decode; rw [hd]; exact hv
+    refine ⟨w, hw, by simp [Model.decode, hd], ?_⟩
+    unfold wordValue decodeD Model.decode; rw [hd]; exact hv
   let E : ℤ → p.Word := fun z => (encodeInt p.input z).getD 0
   have hE : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → encodeInt p.input z = some (E z) ∧
       IntWord p b (E z) ∧ wordValue p (E z) = z := by
@@ -271,12 +271,12 @@ theorem tcEngine_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsI
     mapM_eq_some_map fun z hz => (hE z (hy z hz)).1
   have hzip : List.zip (x.map E) (y.map E) = (List.zip x y).map (Prod.map E E) := List.zip_map
   have hz0 : IntWord p b (0 : p.Word) := by
-    refine ⟨by rw [Profile.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
-    unfold wordValue decodeD Profile.decode; rw [decode_zero_word p.input hh.wellFormed]
+    refine ⟨by rw [Model.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
+    unfold wordValue decodeD Model.decode; rw [decode_zero_word p.input hh.wellFormed]
     simp [Decoded.value]
   generalize hps : (List.zip x y).map (Prod.map E E) = ps
   obtain ⟨hglen, hflat⟩ := groupsOf_spec hK ((0 : p.Word), (0 : p.Word)) ps
-  generalize hpad : groupCount p.products ps.length * p.products - ps.length = n at hflat
+  generalize hpad : groupCount p.nfma ps.length * p.nfma - ps.length = n at hflat
   -- the products of every prefix of the encoded pairs
   have hpre_val : ∀ m, wordProducts p (ps.take m) = (dotZ (x.take m) (y.take m) : ℚ) := by
     intro m
@@ -292,22 +292,22 @@ theorem tcEngine_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsI
       wordProducts p (ps.take m) := by
     intro m
     rw [List.take_append, wordProducts_append, List.take_replicate,
-      (wordBudget_replicate_zero p hh.wellFormed _).2, Rat.add_zero]
+      (wordDotAbs_replicate_zero p hh.wellFormed _).2, Rat.add_zero]
   have hpslen : ps.length = x.length := by rw [← hps]; simp [hlen]
-  have hchain : ChainOK p 0 (groupsOf p.products (0, 0) ps) := by
+  have hchain : ChainOK p 0 (groupsOf p.nfma (0, 0) ps) := by
     apply chainOK_of_prefixes
     · intro j hj
       rw [groupsOf_count] at hj
       rw [take_flatten_groups _ j hglen, hflat, hpadded, hpre_val, Rat.zero_add]
       exact intCast_abs_lt (hok.1 j (by rw [← hpslen]; exact groupCount_lt hK hj))
-    · rw [hflat, wordProducts_append, (wordBudget_replicate_zero p hh.wellFormed n).2, Rat.add_zero,
+    · rw [hflat, wordProducts_append, (wordDotAbs_replicate_zero p hh.wellFormed n).2, Rat.add_zero,
         ← List.take_length (l := ps), hpre_val, hpslen, List.take_length,
         show y.take x.length = y by rw [hlen]; exact List.take_length, Rat.zero_add]
       exact intCast_abs_le hok.2
-  obtain ⟨ts, hts, hval⟩ := runBlocks_cancel hp (groupsOf p.products (0, 0) ps) 0 0
+  obtain ⟨ts, hts, hval⟩ := runBlocks_cancel hp (groupsOf p.nfma (0, 0) ps) 0 0
     (by decide +kernel)
     (fun g hg => ⟨hglen g hg, fun q hq => by
-      have hq' : q ∈ (groupsOf p.products (0, 0) ps).flatten := List.mem_flatten.mpr ⟨g, hg, hq⟩
+      have hq' : q ∈ (groupsOf p.nfma (0, 0) ps).flatten := List.mem_flatten.mpr ⟨g, hg, hq⟩
       rw [hflat] at hq'
       rcases List.mem_append.mp hq' with hq' | hq'
       · rw [← hps] at hq'
@@ -316,16 +316,16 @@ theorem tcEngine_cancel {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsI
         exact ⟨(hE r.1 (hx _ this.1)).2.1, (hE r.2 (hy _ this.2)).2.1⟩
       · rw [(List.mem_replicate.mp hq').2]; exact ⟨hz0, hz0⟩⟩)
     (by rw [Rat.intCast_zero]; exact hchain)
-  unfold tcEngine
+  unfold tcMultiplier
   simp only [hmx, hmy, Option.bind_eq_bind, Option.bind_some, hzip, hps, hts]
-  rw [hval, hflat, wordProducts_append, (wordBudget_replicate_zero p hh.wellFormed n).2,
+  rw [hval, hflat, wordProducts_append, (wordDotAbs_replicate_zero p hh.wellFormed n).2,
     ← List.take_length (l := ps), hpre_val, hpslen, List.take_length,
     show y.take x.length = y by rw [hlen]; exact List.take_length, Rat.intCast_zero]
   congr 1; grind
 
 /-- An engine exact on every pair of vectors that satisfies `P`. -/
-def ExactWhen (eng : Engine) (P : List ℤ → List ℤ → Prop) : Prop :=
-  ∀ x y, P x y → eng x y = some (dotZ x y)
+def ExactWhen (mult : MatrixMultiplier) (P : List ℤ → List ℤ → Prop) : Prop :=
+  ∀ x y, P x y → mult x y = some (dotZ x y)
 
 /-- `b`-bit vectors of equal length whose prefix dot products at the group boundaries of `K` stay
 within `2^24`. -/
@@ -333,9 +333,9 @@ def CancelOK (b K : ℕ) (x y : List ℤ) : Prop :=
   x.length = y.length ∧ (∀ a ∈ x, a.natAbs ≤ 2 ^ b) ∧ (∀ a ∈ y, a.natAbs ≤ 2 ^ b) ∧
     PrefixesOK K x y
 
-theorem tcEngine_exactWhen {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) : ExactWhen (tcEngine p) (CancelOK b p.products) :=
-  fun _ _ ⟨hlen, hx, hy, hok⟩ => tcEngine_cancel hp hh hK hlen hx hy hok
+theorem tcMultiplier_exactWhen {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) : ExactWhen (tcMultiplier p) (CancelOK b p.nfma) :=
+  fun _ _ ⟨hlen, hx, hy, hok⟩ => tcMultiplier_cancel hp hh hK hlen hx hy hok
 
 /-! ## Witnesses -/
 
@@ -349,7 +349,7 @@ twice the old budget, and the block returns the exact `0`. -/
 theorem a100_cancel_zero :
     (evalBlock (p := ampereF16F32) ⟨List.replicate 4 posPair ++ List.replicate 4 negPair, 0⟩).map
       (fun t => t.output.value) = .ok 0 ∧
-    wordBudget ampereF16F32 (List.replicate 4 posPair ++ List.replicate 4 negPair) =
+    wordDotAbs ampereF16F32 (List.replicate 4 posPair ++ List.replicate 4 negPair) =
       2 ^ (25 : ℤ) := by
   decide +kernel
 
@@ -371,19 +371,19 @@ theorem h100_cancel_zero :
   decide +kernel
 
 /-- The engine-level witness: `x = [2048 ×4, −2048 ×4]`, `y = [2048 ×8]` on A100. `Σ|xᵢyᵢ| = 2^25`
-exceeds the budget of `tcEngine_exactOn`, but every prefix stays within `2^24`, so the engine is
-exact by `tcEngine_cancel`. -/
+exceeds the budget of `tcMultiplier_exactOn`, but every prefix stays within `2^24`, so the engine is
+exact by `tcMultiplier_cancel`. -/
 def cancelX : List ℤ := List.replicate 4 2048 ++ List.replicate 4 (-2048)
 def cancelY : List ℤ := List.replicate 8 2048
 
-theorem a100_engine_cancel :
-    tcEngine ampereF16F32 cancelX cancelY = some 0 ∧ dotAbs cancelX cancelY = 2 ^ 25 := by
+theorem a100_multiplier_cancel :
+    tcMultiplier ampereF16F32 cancelX cancelY = some 0 ∧ dotAbs cancelX cancelY = 2 ^ 25 := by
   refine ⟨?_, by decide⟩
-  have := tcEngine_cancel (p := ampereF16F32) (b := 11)
-    ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+  have := tcMultiplier_cancel (p := ampereF16F32) (b := 11)
+    ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (x := cancelX) (y := cancelY)
     (by decide) (by decide) (by decide) ⟨fun j hj => by
-      have h8 : ampereF16F32.products = 8 := rfl
+      have h8 : ampereF16F32.nfma = 8 := rfl
       have hl : cancelX.length = 8 := rfl
       rw [h8, hl] at hj
       have : j = 0 := by omega

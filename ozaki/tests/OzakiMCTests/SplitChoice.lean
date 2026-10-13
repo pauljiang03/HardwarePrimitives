@@ -13,7 +13,7 @@ open MatrixCore Ozaki Ozaki.MC OzakiMCTests.LongFP64
 namespace OzakiMCTests.SplitChoice
 
 /-- Correctly rounded FP64 with `10`-bit slices equals the oracle on both cases. -/
-def agrees10 (P : Profile) : Bool :=
+def agrees10 (P : Model) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Aq := A.map (·.map val64)
     let Bq := transpose (B.map (·.map val64))

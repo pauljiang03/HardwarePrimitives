@@ -79,17 +79,17 @@ def decode32Term (bits : F32) : Option Term := (decode32Fields bits).map Accumul
 
 def decode32Word (bits : F32) : Option Word := (decode32Term bits).map Term.word
 
-inductive Path where
+inductive Variant where
   | v100F16 | ampereF16 | hopperF16 | ampereBF16 | hopperBF16
   | ampereTF32 | hopperTF32Wmma | hopperTF32Mma
   deriving Repr, DecidableEq
 
-def Path.kind : Path → InputKind
+def Variant.kind : Variant → InputKind
   | .v100F16 | .ampereF16 | .hopperF16 => .fp16
   | .ampereBF16 | .hopperBF16 => .bf16
   | .ampereTF32 | .hopperTF32Wmma | .hopperTF32Mma => .tf32
 
-def Path.profile : Path → Profile
+def Variant.model : Variant → Model
   | .v100F16 => v100F16F32
   | .ampereF16 => ampereF16F32
   | .hopperF16 => hopperF16F32
@@ -99,19 +99,19 @@ def Path.profile : Path → Profile
   | .hopperTF32Wmma => hopperTF32WmmaF32
   | .hopperTF32Mma => hopperTF32MmaF32
 
-def Path.alignmentBits : Path → Grid
+def Variant.alignmentBits : Variant → Grid
   | .v100F16 => 23
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 24
   | _ => 25
 
-def Path.floor : Path → Grid
+def Variant.eAlignMin : Variant → Grid
   | .v100F16 => 0
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 380
   | _ => 379
 
-def decodeProduct (path : Path) (pair : path.profile.Word × path.profile.Word) : Option Term := do
-  let a ← decodeFactor path.kind (pair.1.zeroExtend 32)
-  let b ← decodeFactor path.kind (pair.2.zeroExtend 32)
+def decodeProduct (variant : Variant) (pair : variant.model.Word × variant.model.Word) : Option Term := do
+  let a ← decodeFactor variant.kind (pair.1.zeroExtend 32)
+  let b ← decodeFactor variant.kind (pair.2.zeroExtend 32)
   return product a b
 
 /-- Finite-range FP32 scalar addition using the same bounded integer converter. -/

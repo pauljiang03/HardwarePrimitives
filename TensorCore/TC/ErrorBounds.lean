@@ -78,7 +78,7 @@ theorem evalPrepared_error_bound {b : PreparedBlock} {t : BlockTrace}
   exact block_error_bound b t.output (round32_range hout) hout
 
 /-- The model error is below (number of terms) · (alignment grid step) + (one output ulp). -/
-theorem evalBlock_error_bound {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_error_bound {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +

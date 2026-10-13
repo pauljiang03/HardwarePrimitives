@@ -13,7 +13,7 @@ Algorithm 2. The late addition of `c` and the final `fl{·}` are unchanged. -/
 namespace MatrixCore
 
 /-- `23 + n_eab`: fractional bits kept by product alignment. -/
-abbrev Profile.alignFracBits (P : Profile) : ℕ := 23 + P.neab
+abbrev Model.alignFracBits (P : Model) : ℕ := 23 + P.neab
 
 /-- The aligned significands of the products as integers: steps of `2^(e − 23 − n_eab)`. -/
 def alignedBits (neab : ℕ) (e : ℤ) (ps : List Unpacked) : List ℤ :=
@@ -37,7 +37,7 @@ def shiftRegister (e : ℤ) (s : Option ℤ × BitVec w) : BitVec w :=
   s.2.sshiftRight (e - s.1.getD e).toNat
 
 /-- `(e_max, S_{p_i,sum})` of the configuration, computed in `w`-bit registers. -/
-def machineProductSum (w : ℕ) (P : Profile) (ps : List Unpacked) : Option ℤ × ℚ :=
+def machineProductSum (w : ℕ) (P : Model) (ps : List Unpacked) : Option ℤ × ℚ :=
   match P.accumulation with
   | .oddEvenGrouping =>
     let odd := machineAlignedSum w P.neab (oddIndexed ps)
@@ -52,12 +52,12 @@ def machineProductSum (w : ℕ) (P : Profile) (ps : List Unpacked) : Option ℤ 
     (s.1, (s.2.toInt : ℚ) * pow2 (s.1.getD 0 - (23 + P.neab : ℕ)))
 
 /-- `S_acc` of Algorithms 1 and 2 with `w`-bit product accumulation. -/
-def machineAlignedAccumulation (w : ℕ) (P : Profile) (x : Prepared) : ℚ :=
+def machineAlignedAccumulation (w : ℕ) (P : Model) (x : Prepared) : ℚ :=
   let s := machineProductSum w P x.p
   lateSum P s.1 s.2 x.c
 
 /-- `accumulate` with the CDNA 3 product sums in `w`-bit registers. -/
-def accumulateMachine (w : ℕ) (P : Profile) (x : Prepared) : Except ModelError ℚ :=
+def accumulateMachine (w : ℕ) (P : Model) (x : Prepared) : Except ModelError ℚ :=
   if P.productOverflow && x.productOverflows then .error .productOverflow
   else
     match P.accumulation with
@@ -69,7 +69,7 @@ def accumulateMachine (w : ℕ) (P : Profile) (x : Prepared) : Except ModelError
     | .globalAlignment | .oddEvenGrouping => .ok (machineAlignedAccumulation w P x)
 
 /-- `evalBlock` with `w`-bit product accumulation, then the ordinary final `fl{·}`. -/
-def evalBlockMachine (w : ℕ) {P : Profile} (x : BlockInput P) : Except ModelError (BlockTrace P) :=
+def evalBlockMachine (w : ℕ) {P : Model} (x : BlockInput P) : Except ModelError (BlockTrace P) :=
   if x.a.length ≠ P.nfma ∨ x.b.length ≠ P.nfma then .error .wrongLength
   else
     match prepare x with

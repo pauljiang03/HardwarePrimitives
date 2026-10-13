@@ -79,14 +79,14 @@ def roundOutcome (ftz : Bool) (s : ℚ) : Outcome :=
   | some d => .finite d
   | none => .infinity (decide (s < 0))
 
-/-- Balanced pairwise tree over extended values, as `pairTree`. -/
-def pairTreeX (ftz : Bool) : ℕ → List XVal → XVal
+/-- Balanced pairwise tree over extended values, as `pairwiseGroupSum`. -/
+def pairwiseGroupSumX (ftz : Bool) : ℕ → List XVal → XVal
   | _, [] => .fin 0
   | _, [x] => x
   | 0, _ => .nan
   | depth + 1, xs =>
     let h := xs.length / 2
-    XVal.fl ftz (XVal.add (pairTreeX ftz depth (xs.take h)) (pairTreeX ftz depth (xs.drop h)))
+    XVal.fl ftz (XVal.add (pairwiseGroupSumX ftz depth (xs.take h)) (pairwiseGroupSumX ftz depth (xs.drop h)))
 
 /-- Final `fl{·}` of an extended value. -/
 def finishOutcome (ftz : Bool) : XVal → Outcome
@@ -95,13 +95,13 @@ def finishOutcome (ftz : Bool) : XVal → Outcome
   | .nan => .nan
 
 /-- CDNA 2 with binary32 special-value arithmetic, for finite inputs. -/
-def pairwiseOutcome (P : Profile) (x : Prepared) : Outcome :=
+def pairwiseOutcome (P : Model) (x : Prepared) : Outcome :=
   let x' := if P.subnormals then x else x.flushed
   let ps := x'.p.map fun p => XVal.fl (!P.subnormals) (.fin p.value)
-  finishOutcome (!P.subnormals) (XVal.add (.fin x'.c.value) (pairTreeX (!P.subnormals) ps.length ps))
+  finishOutcome (!P.subnormals) (XVal.add (.fin x'.c.value) (pairwiseGroupSumX (!P.subnormals) ps.length ps))
 
 /-- Outcome for finite inputs. -/
-def finiteOutcome (P : Profile) (x : Prepared) : Outcome :=
+def finiteOutcome (P : Model) (x : Prepared) : Outcome :=
   if P.productOverflow && x.productOverflows then
     (combineSpecial (x.p.map fun p =>
       if pow2 128 ≤ absQ p.value then .inf (decide (p.value < 0)) else .fin p.value)).getD .nan
@@ -114,7 +114,7 @@ def finiteOutcome (P : Profile) (x : Prepared) : Outcome :=
 /-- A product as the hardware detects special values before accumulation: infinities and NaN
 from the operands; for finite operands, an infinity when CDNA 3 sees `|p_ℓ| ≥ 2^128` or when
 CDNA 2's conversion of `p_ℓ` to binary32 overflows. -/
-def productX (P : Profile) : Datum → Datum → XVal
+def productX (P : Model) : Datum → Datum → XVal
   | .finite u, .finite v =>
     let q := (u.mul v).value
     if P.productOverflow && decide (pow2 128 ≤ absQ q) then .inf (decide (q < 0))
@@ -124,14 +124,14 @@ def productX (P : Profile) : Datum → Datum → XVal
   | x, y => XVal.mul (.ofDatum x) (.ofDatum y)
 
 /-- Products `a_ℓ · b_ℓ` of the decoded words, with special values. -/
-def blockProducts {P : Profile} (x : BlockInput P) : List XVal :=
+def blockProducts {P : Model} (x : BlockInput P) : List XVal :=
   List.zipWith (fun a b => productX P (P.a.read a) (P.b.read b)) x.a x.b
 
 /-- The observed output of one block for any input words; `none` only when `a` or `b` does not
 have `N_FMA` entries. Finite inputs follow the model, including its overflows. Otherwise the
 special values are detected at the input: NaN dominates, `+∞` with `−∞` gives NaN, and an
 infinity (of an operand, of `c`, or of an overflowing product) is the result. -/
-def blockOutcome {P : Profile} (x : BlockInput P) : Option Outcome :=
+def blockOutcome {P : Model} (x : BlockInput P) : Option Outcome :=
   if x.a.length ≠ P.nfma ∨ x.b.length ≠ P.nfma then none
   else
     match prepare x with

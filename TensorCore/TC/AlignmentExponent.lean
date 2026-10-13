@@ -58,9 +58,9 @@ theorem alignExp_term (b : PreparedBlock) (t : UnnormalizedProduct) (ht : t ∈ 
     (hnz : t.significand ≠ 0) :
     ∃ alignExp, b.alignExp = some alignExp ∧ t.unnormalizedExp ≤ alignExp := by
   obtain ⟨e, he, hle⟩ := maxTermExp_term b.terms t ht hnz
-  cases hf : b.profile.alignFloor with
-  | none => exact ⟨e, by simp [PreparedBlock.alignExp, Profile.applyFloor, he, hf], hle⟩
-  | some f => exact ⟨max e f, by simp [PreparedBlock.alignExp, Profile.applyFloor, he, hf], by omega⟩
+  cases hf : b.model.eAlignMin with
+  | none => exact ⟨e, by simp [PreparedBlock.alignExp, Model.applyEAlignMin, he, hf], hle⟩
+  | some f => exact ⟨max e f, by simp [PreparedBlock.alignExp, Model.applyEAlignMin, he, hf], by omega⟩
 
 theorem aligned_term_coefficient_bound (t : UnnormalizedProduct) (alignExp : ℤ) (F : ℕ)
     (ht : t.Bounded) (he : t.unnormalizedExp ≤ alignExp) :
@@ -81,7 +81,7 @@ theorem aligned_term_coefficient_bound (t : UnnormalizedProduct) (alignExp : ℤ
   apply Rat.natCast_lt_natCast.mp
   grind
 
-theorem prepareProducts_bounds (p : Profile) (ps : List (p.Word × p.Word))
+theorem prepareProducts_bounds (p : Model) (ps : List (p.Word × p.Word))
     (qs : List (Decoded × Decoded)) (h : prepareProducts p ps = some qs) :
     qs.length = ps.length ∧ ∀ q ∈ qs, q.1.Bounded ∧ q.2.Bounded := by
   induction ps generalizing qs with
@@ -118,7 +118,7 @@ theorem prepareProducts_bounds (p : Profile) (ps : List (p.Word × p.Word))
                 classifyNat_bounded p.input b.toNat db hb⟩
             · exact hi.2 q hq
 
-theorem prepare_terms_bounded {p : Profile} {x : BlockInput p} {b : PreparedBlock}
+theorem prepare_terms_bounded {p : Model} {x : BlockInput p} {b : PreparedBlock}
     (h : prepare x = some b) :
     b.terms.length = x.products.length + 1 ∧ ∀ t ∈ b.terms, t.Bounded := by
   unfold prepare at h
@@ -142,7 +142,7 @@ theorem prepare_terms_bounded {p : Profile} {x : BlockInput p} {b : PreparedBloc
           exact unnormalizedMul_bounded q.1 q.2 (hps.2 q hq).1 (hps.2 q hq).2
 
 theorem prepared_coefficient_bound (b : PreparedBlock) (F : ℕ)
-    (hF : b.profile.alignMantissaBits = F) (ht : ∀ t ∈ b.terms, t.Bounded) :
+    (hF : b.model.alignFracBits = F) (ht : ∀ t ∈ b.terms, t.Bounded) :
     ∀ z ∈ b.alignedBits, z.natAbs < 2 ^ (F + 2) := by
   intro z hz
   obtain ⟨t, hmem, rfl⟩ := List.mem_map.mp hz
@@ -156,36 +156,36 @@ theorem prepared_coefficient_bound (b : PreparedBlock) (F : ℕ)
     exact aligned_term_coefficient_bound t alignExp F (ht t hmem) hle
 
 /-- Capacity follows from finite decoded inputs and shape, before any output-range check. -/
-theorem prepare_coefficient_capacity {p : Profile} {x : BlockInput p} {b : PreparedBlock}
-    (hp : prepare x = some b) (hshape : x.products.length = p.products) (F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits) :
+theorem prepare_coefficient_capacity {p : Model} {x : BlockInput p} {b : PreparedBlock}
+    (hp : prepare x = some b) (hshape : x.products.length = p.nfma) (F carryBits : ℕ)
+    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits) :
     magnitudeSum b.alignedBits < 2 ^ ((F + 2 + carryBits + 1) - 1) := by
   have hb := prepare_terms_bounded hp
-  have hprof := prepare_profile hp
+  have hprof := prepare_model hp
   apply coefficient_width_sufficient
   · exact prepared_coefficient_bound b F (by rw [hprof, hF]) hb.2
   · simpa [PreparedBlock.alignedBits, hb.1, hshape] using hcount
 
 /-- Width derived from decoded inputs, with c included in the member count. -/
-theorem evalBlock_coefficient_capacity {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_coefficient_capacity {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) (F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits) :
+    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits) :
     magnitudeSum t.block.alignedBits < 2 ^ ((F + 2 + carryBits + 1) - 1) := by
-  have hshape : x.products.length = p.products := by
+  have hshape : x.products.length = p.nfma := by
     unfold evalBlock at h
     split at h <;> simp_all
   exact prepare_coefficient_capacity (evalBlock_prepared h) hshape F carryBits hF hcount
 
-theorem evalBlock_machineAccumulator {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_machineAccumulator {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) (F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits) :
+    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits) :
     t.block.machineAccumulator (F + 2 + carryBits + 1) = t.block.accumulator :=
   machineAccumulator_eq _ _ (by omega) (evalBlock_coefficient_capacity h F carryBits hF hcount)
 
 /-- Every prefix of a successful encoded invocation is safe at the derived width. -/
-theorem evalBlock_machinePrefix {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_machinePrefix {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) (F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits)
+    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits)
     (xs ys : List ℤ) (hsplit : t.block.alignedBits = xs ++ ys) :
     (machineAccumulate (F + 2 + carryBits + 1) 0 xs).toInt = sumZ xs := by
   apply machineAccumulate_prefix_exact _ xs ys (by omega)
@@ -230,21 +230,21 @@ theorem maxTermExp_upper (ts : List UnnormalizedProduct) (upper : ℤ)
       exact h t ht hz
 
 theorem alignExp_upper (b : PreparedBlock) (upper : ℤ)
-    (hf : ∀ f ∈ b.profile.alignFloor, f ≤ upper)
+    (hf : ∀ f ∈ b.model.eAlignMin, f ≤ upper)
     (ht : ∀ t ∈ b.terms, t.significand ≠ 0 → t.unnormalizedExp ≤ upper) :
     ∀ e ∈ b.alignExp, e ≤ upper := by
   have hu := maxTermExp_upper b.terms upper ht
   intro alignExp he
-  unfold PreparedBlock.alignExp Profile.applyFloor at he
+  unfold PreparedBlock.alignExp Model.applyEAlignMin at he
   cases hs : maxTermExp b.terms with
   | none => simp [hs] at he
   | some e =>
     have hemax := hu e (by simp [hs])
-    cases hfloor : b.profile.alignFloor with
-    | none => simp [hs, hfloor] at he; omega
+    cases heAlignMin : b.model.eAlignMin with
+    | none => simp [hs, heAlignMin] at he; omega
     | some f =>
-      have hf' := hf f (by simp [hfloor])
-      simp [hs, hfloor] at he
+      have hf' := hf f (by simp [heAlignMin])
+      simp [hs, heAlignMin] at he
       omega
 
 end TensorCore

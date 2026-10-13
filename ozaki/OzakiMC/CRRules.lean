@@ -29,14 +29,14 @@ open MatrixCore
 namespace Ozaki.MC
 
 /-- Correctly rounded FP64 by Ozaki-I with both rules. -/
-def mcOzaki1CRDKA (P : Profile) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def mcOzaki1CRDKA (P : Model) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRKA (mcSplitK P b) rne64 b t r smax x y
 
 /-- Both rules as one integer function from binary64 entries. -/
-def mcOzaki1CRIKA (P : Profile) (b W t r smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
+def mcOzaki1CRIKA (P : Model) (b W t r smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   ozaki1CRIKA (mcSplitK P b) 53 (-1022) 1023 b W t r smax xs ys
 
-theorem mcOzaki1CRDKA_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki1CRDKA_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (t r : ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
@@ -44,7 +44,7 @@ theorem mcOzaki1CRDKA_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 
   ozaki1CRKA_eq rne64_nearest rne64_intervals (mcSplitK_exactOn hP hb _) t r hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
-theorem mcOzaki1CRIKA_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki1CRIKA_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (W t r : ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)} (hx : ∀ a ∈ xs, Binary64Value (entryVal a))
     (hy : ∀ a ∈ ys, Binary64Value (entryVal a)) (hlen : xs.length = ys.length) :
@@ -101,7 +101,7 @@ theorem cdna3F16_fp64CR2_margin {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Valu
     mcOzaki2CRD cdna3F16 [(moduliBasis 10 13, 65)] 10 191 x y = rne64 (dot x y) := by
   have hm : moduliForCR 10 53 1024 = 13 := by decide +kernel
   have hc : clog2 1024 = 10 := by decide
-  refine mcOzaki2CRD_eq (cdna3F16_exactEngine (by decide)) (by decide) (by decide) ?_ hx hy hlen
+  refine mcOzaki2CRD_eq (cdna3F16_exactMultiplier (by decide)) (by decide) (by decide) ?_ hx hy hlen
   intro c hc'
   rw [List.mem_singleton.mp hc']
   refine ⟨moduliBasis_valid_all 10 13, moduliBasis_le 10 13, ?_⟩

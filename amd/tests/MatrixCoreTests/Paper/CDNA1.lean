@@ -95,7 +95,7 @@ example : [[1, p2 (-23) + p2 (-24), p2 (-23) + p2 (-24)],
 
 /-- `N_FMA = 4`: with `c, p₁ ∈ {1, s}`, `p_j = s` and other products zero, `d = 1 + 2^-22 + 2^-23`
 for `j ≤ 4` and `1 + 2^-21` for `j > 4` (`k = 16`). -/
-def nfmaTest (P : Profile) (k j : ℕ) (cOne : Bool) : Option Obs :=
+def nfmaTest (P : Model) (k j : ℕ) (cOne : Bool) : Option Obs :=
   let s : ℚ := p2 (-23) + p2 (-24)
   let ps := (List.range k).map fun i =>
     if i = 0 then (if cOne then s else 1) else if i + 1 = j then s else 0

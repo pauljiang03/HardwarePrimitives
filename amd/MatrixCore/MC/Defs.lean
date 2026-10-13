@@ -4,7 +4,7 @@ import MatrixCore.Numerics
 
 An MFMA instruction computes `D = AB + C`; every element is the inner product of Eq. (1),
 `d = Σ_{ℓ=1}^{k} a_ℓ b_ℓ + c = Σ_{ℓ=1}^{k} p_ℓ + c`, evaluated in blocks of `N_FMA` products.
-A `Profile` records the numerical features of one block, following the rows of the paper's
+A `Model` records the numerical features of one block, following the rows of the paper's
 feature comparison table:
 
 * input formats of `a` and `b` (`c` and `d` are binary32);
@@ -51,7 +51,7 @@ structure LateAlignment where
   deriving Repr, DecidableEq
 
 /-- Numerical features of one MFMA block. -/
-structure Profile where
+structure Model where
   /-- Input format of `a`. -/
   a : InputFormat
   /-- Input format of `b`. -/
@@ -73,14 +73,14 @@ structure Profile where
   deriving Repr, DecidableEq
 
 /-- Product alignment `(integer bits, fractional bits)` of the feature table. -/
-def Profile.productAlignment (P : Profile) : ℕ × Option ℕ :=
+def Model.productAlignment (P : Model) : ℕ × Option ℕ :=
   match P.accumulation with
   | .correctRounding => (1, none)
   | .pairWiseSum => (1, some 23)
   | .globalAlignment | .oddEvenGrouping => (2, some (23 + P.neab))
 
 /-- Whether `c` is added after the product accumulation (late) or within it (early). -/
-def Profile.lateC (P : Profile) : Bool :=
+def Model.lateC (P : Model) : Bool :=
   match P.accumulation with
   | .globalAlignment | .oddEvenGrouping => true
   | _ => false

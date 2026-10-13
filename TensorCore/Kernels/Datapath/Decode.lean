@@ -64,10 +64,10 @@ theorem decodeInput_asDecoded (kind : InputKind) (bits : F32) :
     simp_all [Classification.finite, BitVec.toNat_add, BitVec.toNat_ushiftRight,
       Nat.shiftRight_eq_div_pow, bne_iff_ne, BitVec.toNat_eq] <;> omega
 
-theorem decodeInput_profile (path : Path) (word : path.profile.Word) :
-    (decodeInput path.kind (word.zeroExtend 32)).map Input.decoded = path.profile.decode word := by
+theorem decodeInput_model (variant : Variant) (word : variant.model.Word) :
+    (decodeInput variant.kind (word.zeroExtend 32)).map Input.decoded = variant.model.decode word := by
   rw [decodeInput_asDecoded]
-  cases path <;> rw [BitVec.toNat_setWidth_of_le (by decide)] <;> rfl
+  cases variant <;> rw [BitVec.toNat_setWidth_of_le (by decide)] <;> rfl
 
 theorem decodeInput_bounds {kind : InputKind} {bits : F32} {a : Input}
     (h : decodeInput kind bits = some a) :

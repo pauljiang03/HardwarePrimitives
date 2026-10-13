@@ -16,8 +16,8 @@ of `11`-bit products fits: `4 · 2^22 = 2^24` on V100 (`F = 23`), `8 · 2^22 = 2
 (`F = 24`), `16 · 2^22 = 2^26` on H100 (`F = 25`). When the sum reaches `2^(F+1)` exactly, every
 product is `±2^(2b)` and pass 2 aligns on the grid `2`, still exactly.
 
-`tcEngine2` runs every group of a dot product twice and adds the results exactly; it is exact on
-`b`-bit vectors of every length whenever `K · 2^(2b) ≤ 2^(F+1)` (`tcEngine2_exactOn`), so A100 and
+`tcMultiplier2` runs every group of a dot product twice and adds the results exactly; it is exact on
+`b`-bit vectors of every length whenever `K · 2^(2b) ≤ 2^(F+1)` (`tcMultiplier2_exactOn`), so A100 and
 H100 can use their full groups with `11`-bit slices (`a100F16_exactOn2`, `h100F16_exactOn2`). -/
 
 open TensorCore
@@ -29,12 +29,12 @@ namespace Ozaki.TC
 /-- **A block of integer products and an integer `c`, on a grid `2^g`.** If every product and `c`
 are multiples of `2^g`, `|c| < 2^(g+F+1)`, and the result is in range, the accumulator is exact and
 the output is the binary32 truncation of `c + Σ aᵢbᵢ`. -/
-theorem evalBlock_int_grid {p : Profile} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
-    (hlen : x.products.length = p.products)
+theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput p}
+    (hlen : x.products.length = p.nfma)
     (hops : ∀ q ∈ x.products, IntWord p b q.1 ∧ IntWord p b q.2) (g : ℕ)
     (hpg : ∀ q ∈ x.products, ∃ k : ℤ, wordValue p q.1 * wordValue p q.2 = k * pow2 g)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ)) (hcg : ∃ k : ℤ, (zc : ℚ) = k * pow2 g)
-    (hcF : Rat.abs (zc : ℚ) < 2 ^ ((g : ℤ) + p.alignMantissaBits + 1))
+    (hcF : Rat.abs (zc : ℚ) < 2 ^ ((g : ℤ) + p.alignFracBits + 1))
     (hfin : absQ ((zc : ℚ) + wordProducts p x.products) ≤ maxFinite32) :
     ∃ t, evalBlock x = .ok t ∧
       t.output.value = signedRounded .truncate ((zc : ℚ) + wordProducts p x.products) := by
@@ -53,7 +53,7 @@ theorem evalBlock_int_grid {p : Profile} {b : ℕ} (hp : IntExact p b) {x : Bloc
     unfold PreparedBlock.exactDot; rw [hprods, ← hblk]; simp only; rw [hdcv]
   -- every product term: exponent at most `F`, value a multiple of `2^g`
   have hprod : ∀ q ∈ x.products, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
-      (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignMantissaBits ∧
+      (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).unnormalizedExp ≤ p.alignFracBits ∧
       ∃ k : ℤ, (unnormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 g := by
     intro q hq hnz
     obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hops q hq
@@ -84,19 +84,19 @@ theorem evalBlock_int_grid {p : Profile} {b : ℕ} (hp : IntExact p b) {x : Bloc
   have hterms : blk.terms = ⟨dc.significand, dc.unnormalizedExp, dc.mantissaBits⟩ ::
       x.products.map fun q => unnormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
-  have hprof : blk.profile = p := by rw [← hblk]
+  have hprof : blk.model = p := by rw [← hblk]
   have hacc : blk.accumulator = blk.exactDot := by
     apply accumulator_eq_exactDot_of_grid blk g
-    · intro f hf; rw [hprof] at hf ⊢; have := hp.floor f hf; omega
+    · intro f hf; rw [hprof] at hf ⊢; have := hp.eAlignMin f hf; omega
     · intro t ht hnz
       rw [hterms] at ht
       rcases List.mem_cons.mp ht with rfl | ht
       · refine ⟨?_, ?_⟩
         · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc
-            (E := (g : ℤ) + p.alignMantissaBits)
+            (E := (g : ℤ) + p.alignFracBits)
             (by have := hp.wide; show (1 : ℤ) - 127 ≤ _; omega)
             (by rw [hdcv]; exact hcF) hnz
-          show dc.unnormalizedExp ≤ (g : ℤ) + blk.profile.alignMantissaBits
+          show dc.unnormalizedExp ≤ (g : ℤ) + blk.model.alignFracBits
           rw [hprof]; exact this
         · obtain ⟨k, hk⟩ := hcg
           exact ⟨k, by change dc.value = _; rw [hdcv, hk]⟩
@@ -212,7 +212,7 @@ theorem value32_word32 {v : ℚ} (h : FiniteValue32 v) : value32 (word32 v) = so
 
 /-- **Two passes of one group**: from `c = +0`, giving `D1`, then from `c = −D1`, giving `D2`; the
 result is `D1 + D2`. -/
-def twoPass (p : Profile) (ps : List (p.Word × p.Word)) : Option ℚ :=
+def twoPass (p : Model) (ps : List (p.Word × p.Word)) : Option ℚ :=
   match evalBlock (p := p) ⟨ps, 0⟩ with
   | .ok t1 =>
     match evalBlock (p := p) ⟨ps, word32 (-t1.output.value)⟩ with
@@ -221,16 +221,16 @@ def twoPass (p : Profile) (ps : List (p.Word × p.Word)) : Option ℚ :=
   | .error _ => none
 
 /-- A product of two `b`-bit integer words has magnitude at most `2^b · 2^b`. -/
-theorem abs_word_product_le {p : Profile} {b : ℕ} {q : p.Word × p.Word}
+theorem abs_word_product_le {p : Model} {b : ℕ} {q : p.Word × p.Word}
     (h : IntWord p b q.1 ∧ IntWord p b q.2) :
     Rat.abs (wordValue p q.1 * wordValue p q.2) ≤ 2 ^ (b : ℤ) * 2 ^ (b : ℤ) := by
   obtain ⟨⟨_, za, hza, hza'⟩, ⟨_, zb, hzb, hzb'⟩⟩ := h
   rw [hza, hzb, two_pow_natCast]
   exact mul_le_mul_abs (abs_intCast_le hza') (abs_intCast_le hzb')
 
-theorem wordBudget_le_length {p : Profile} {b : ℕ} {ps : List (p.Word × p.Word)}
+theorem wordDotAbs_le_length {p : Model} {b : ℕ} {ps : List (p.Word × p.Word)}
     (hops : ∀ q ∈ ps, IntWord p b q.1 ∧ IntWord p b q.2) :
-    wordBudget p ps ≤ ps.length * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) :=
+    wordDotAbs p ps ≤ ps.length * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) :=
   sum_le_length_mul fun q hq => abs_word_product_le (hops q hq)
 
 /-- If no term exceeds `M` and the terms total at least `n · M`, every term is `M`. -/
@@ -251,18 +251,18 @@ theorem maxFinite32_ge : (2 : ℚ) ^ (27 : ℤ) ≤ maxFinite32 := by decide +ke
 
 /-- **Two passes recover a full group exactly.** For `b`-bit integer operands (`1 ≤ b`), on a path
 with `2b ≤ F ≤ 25` and `K · 2^(2b) ≤ 2^(F+1)`, the two passes succeed and `D1 + D2 = Σ aᵢbᵢ`. -/
-theorem twoPass_exact {p : Profile} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
-    (hF : p.alignMantissaBits ≤ 25)
-    (hK : (p.products : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignMantissaBits + 1))
-    {ps : List (p.Word × p.Word)} (hlen : ps.length = p.products)
+theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
+    (hF : p.alignFracBits ≤ 25)
+    (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignFracBits + 1))
+    {ps : List (p.Word × p.Word)} (hlen : ps.length = p.nfma)
     (hops : ∀ q ∈ ps, IntWord p b q.1 ∧ IntWord p b q.2) :
     twoPass p ps = some (wordProducts p ps) := by
   obtain ⟨S, hS, hSb⟩ := wordProducts_int ps hops
-  have hbud := wordBudget_le_length hops
+  have hbud := wordDotAbs_le_length hops
   rw [hlen] at hbud
-  have hSF : Rat.abs (S : ℚ) ≤ 2 ^ (p.alignMantissaBits + 1) :=
+  have hSF : Rat.abs (S : ℚ) ≤ 2 ^ (p.alignFracBits + 1) :=
     Rat.le_trans hSb (Rat.le_trans hbud hK)
-  have hF26 : (2 : ℚ) ^ (p.alignMantissaBits + 1) ≤ 2 ^ (26 : ℤ) := two_pow_le (by omega)
+  have hF26 : (2 : ℚ) ^ (p.alignFracBits + 1) ≤ 2 ^ (26 : ℤ) := two_pow_le (by omega)
   have hS26 : S.natAbs ≤ 2 ^ 26 := by
     have h1 : ((S.natAbs : ℕ) : ℚ) ≤ ((2 ^ 26 : ℕ) : ℚ) := by
       rw [← abs_intCast, ← two_pow_natCast]; exact Rat.le_trans hSF hF26
@@ -309,21 +309,21 @@ theorem twoPass_exact {p : Profile} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b
       intro t2 h
       rw [h, hS, ← Rat.intCast_add, show -D + S = S - D by omega]
       exact signedRounded_trunc_of_finite _ (int_finiteValue32 _ hSDsmall)
-    by_cases hlt : Rat.abs (D : ℚ) < 2 ^ (p.alignMantissaBits + 1)
+    by_cases hlt : Rat.abs (D : ℚ) < 2 ^ (p.alignFracBits + 1)
     · obtain ⟨t2, ht2, hv2⟩ := evalBlock_int_grid hp (x := ⟨ps, word32 (-t1.output.value)⟩) hlen
         hops 0 hpg0 hc2 ⟨-D, by simp [pow2_zero]⟩
         (by rw [Rat.intCast_neg, abs_neg]; simpa using hlt) hfin2
       exact ⟨t2, ht2, hout t2 hv2⟩
     · -- `|D1| = 2^(F+1)`: then `S = D1` and every product is `±2^(2b)`
-      have heq : Rat.abs (D : ℚ) = 2 ^ (p.alignMantissaBits + 1) := by
+      have heq : Rat.abs (D : ℚ) = 2 ^ (p.alignFracBits + 1) := by
         have := Rat.le_trans hDabs hSF; grind
-      have hFnat : p.alignMantissaBits + 1 = (((p.alignMantissaBits + 1).toNat : ℕ) : ℤ) := by omega
-      have hDnat : D.natAbs = 2 ^ (p.alignMantissaBits + 1).toNat := by
-        have h1 : ((D.natAbs : ℕ) : ℚ) = ((2 ^ (p.alignMantissaBits + 1).toNat : ℕ) : ℚ) := by
+      have hFnat : p.alignFracBits + 1 = (((p.alignFracBits + 1).toNat : ℕ) : ℤ) := by omega
+      have hDnat : D.natAbs = 2 ^ (p.alignFracBits + 1).toNat := by
+        have h1 : ((D.natAbs : ℕ) : ℚ) = ((2 ^ (p.alignFracBits + 1).toNat : ℕ) : ℚ) := by
           rw [← abs_intCast, heq, ← two_pow_natCast, ← hFnat]
         exact_mod_cast h1
       have hSnat : S.natAbs = D.natAbs := by
-        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignMantissaBits + 1) := by grind
+        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignFracBits + 1) := by grind
         have h2 : ((S.natAbs : ℕ) : ℚ) = ((D.natAbs : ℕ) : ℚ) := by
           rw [← abs_intCast, ← abs_intCast, h1, heq]
         exact_mod_cast h2
@@ -334,9 +334,9 @@ theorem twoPass_exact {p : Profile} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b
           2 ^ (b : ℤ) * 2 ^ (b : ℤ) := by
         apply eq_of_sum_ge (fun q hq => abs_word_product_le (hops q hq))
         rw [hlen]
-        have : Rat.abs (S : ℚ) ≤ wordBudget p ps := hSb
-        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignMantissaBits + 1) := by grind
-        unfold wordBudget at this
+        have : Rat.abs (S : ℚ) ≤ wordDotAbs p ps := hSb
+        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignFracBits + 1) := by grind
+        unfold wordDotAbs at this
         grind
       have hpg1 : ∀ q ∈ ps, ∃ k : ℤ, wordValue p q.1 * wordValue p q.2 = k * pow2 1 := by
         intro q hq
@@ -356,7 +356,7 @@ theorem twoPass_exact {p : Profile} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b
       have hcg1 : ∃ k : ℤ, (((-D : ℤ)) : ℚ) = k * pow2 1 := by
         have h3 : D.natAbs % 2 = 0 := by
           rw [hDnat]
-          obtain ⟨c, hc⟩ : ∃ c, (p.alignMantissaBits + 1).toNat = c + 1 :=
+          obtain ⟨c, hc⟩ : ∃ c, (p.alignFracBits + 1).toNat = c + 1 :=
             ⟨_, (Nat.succ_pred_eq_of_pos (by omega)).symm⟩
           rw [hc]; simp [Nat.pow_succ]
         refine ⟨-D / 2, ?_⟩
@@ -381,13 +381,13 @@ theorem twoPass_exact {p : Profile} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b
 
 /-- **The two-pass Tensor Core engine.** Encode the integers exactly, pad with zero words to whole
 groups of `K` products, run every group twice (`twoPass`), and add the group results exactly. -/
-def tcEngine2 (p : Profile) : Engine := fun x y => do
+def tcMultiplier2 (p : Model) : MatrixMultiplier := fun x y => do
   let ax ← x.mapM (encodeInt p.input)
   let ay ← y.mapM (encodeInt p.input)
-  let vs ← (groupsOf p.products (0, 0) (List.zip ax ay)).mapM (twoPass p)
+  let vs ← (groupsOf p.nfma (0, 0) (List.zip ax ay)).mapM (twoPass p)
   pure vs.sum
 
-theorem wordProducts_flatten (p : Profile) :
+theorem wordProducts_flatten (p : Model) :
     ∀ gs : List (List (p.Word × p.Word)),
       (gs.map (wordProducts p)).sum = wordProducts p gs.flatten
   | [] => by simp [wordProducts]
@@ -398,18 +398,18 @@ theorem wordProducts_flatten (p : Profile) :
 /-- **The two-pass engine is exact on vectors of every length.** On a path with `2b ≤ F ≤ 25` and
 `K · 2^(2b) ≤ 2^(F+1)`, whose input format holds `b`-bit integers (`1 ≤ b`), it returns `Σ xᵢyᵢ`
 exactly for `b`-bit vectors of any length, whatever their total. -/
-theorem tcEngine2_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hb1 : 1 ≤ b) (hF : p.alignMantissaBits ≤ 25) (hK0 : 0 < p.products)
-    (hK : (p.products : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignMantissaBits + 1))
-    (B : ℕ) : (tcEngine2 p).ExactOn b B := by
+theorem tcMultiplier2_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hb1 : 1 ≤ b) (hF : p.alignFracBits ≤ 25) (hK0 : 0 < p.nfma)
+    (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignFracBits + 1))
+    (B : ℕ) : (tcMultiplier2 p).ExactOn b B := by
   intro x y hlen hx hy _
   have henc : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → ∃ w, encodeInt p.input z = some w ∧
       (p.decode w).isSome ∧ wordValue p w = z := by
     intro z hz
     obtain ⟨w, hw, d, hd, hv⟩ := encodeInt_spec hh.wellFormed hh.emin hh.emax
       (Nat.le_trans hz (Nat.pow_le_pow_right (by decide) hh.bits))
-    refine ⟨w, hw, by simp [Profile.decode, hd], ?_⟩
-    unfold wordValue decodeD Profile.decode; rw [hd]; exact hv
+    refine ⟨w, hw, by simp [Model.decode, hd], ?_⟩
+    unfold wordValue decodeD Model.decode; rw [hd]; exact hv
   let E : ℤ → p.Word := fun z => (encodeInt p.input z).getD 0
   have hE : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → encodeInt p.input z = some (E z) ∧
       IntWord p b (E z) ∧ wordValue p (E z) = z := by
@@ -423,14 +423,14 @@ theorem tcEngine2_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Hold
     mapM_eq_some_map fun z hz => (hE z (hy z hz)).1
   have hzip : List.zip (x.map E) (y.map E) = (List.zip x y).map (Prod.map E E) := List.zip_map
   have hz0 : IntWord p b (0 : p.Word) := by
-    refine ⟨by rw [Profile.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
-    unfold wordValue decodeD Profile.decode; rw [decode_zero_word p.input hh.wellFormed]
+    refine ⟨by rw [Model.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
+    unfold wordValue decodeD Model.decode; rw [decode_zero_word p.input hh.wellFormed]
     simp [Decoded.value]
   obtain ⟨hglen, hflat⟩ := groupsOf_spec hK0 ((0 : p.Word), (0 : p.Word))
     ((List.zip x y).map (Prod.map E E))
-  generalize hpad : groupCount p.products ((List.zip x y).map (Prod.map E E)).length * p.products -
+  generalize hpad : groupCount p.nfma ((List.zip x y).map (Prod.map E E)).length * p.nfma -
     ((List.zip x y).map (Prod.map E E)).length = n at hflat
-  have hzw := wordBudget_replicate_zero p hh.wellFormed n
+  have hzw := wordDotAbs_replicate_zero p hh.wellFormed n
   have hvals : ∀ q ∈ List.zip x y, wordValue p (E q.1) * wordValue p (E q.2) = (q.1 : ℚ) * q.2 := by
     intro q hq
     have := List.of_mem_zip hq
@@ -438,11 +438,11 @@ theorem tcEngine2_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Hold
   have hprod : wordProducts p ((List.zip x y).map (Prod.map E E)) = (dotZ x y : ℚ) := by
     unfold wordProducts; rw [List.map_map, dotZ_eq_zip_sum]
     exact congrArg List.sum (List.map_congr_left hvals)
-  have hgroups : ∀ g ∈ groupsOf p.products (0, 0) ((List.zip x y).map (Prod.map E E)),
+  have hgroups : ∀ g ∈ groupsOf p.nfma (0, 0) ((List.zip x y).map (Prod.map E E)),
       twoPass p g = some (wordProducts p g) := by
     intro g hg
     refine twoPass_exact hp hb1 hF hK (hglen g hg) fun q hq => ?_
-    have hq' : q ∈ (groupsOf p.products (0, 0) ((List.zip x y).map (Prod.map E E))).flatten :=
+    have hq' : q ∈ (groupsOf p.nfma (0, 0) ((List.zip x y).map (Prod.map E E))).flatten :=
       List.mem_flatten.mpr ⟨g, hg, hq⟩
     rw [hflat] at hq'
     rcases List.mem_append.mp hq' with hq' | hq'
@@ -450,7 +450,7 @@ theorem tcEngine2_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Hold
       have := List.of_mem_zip hr
       exact ⟨(hE r.1 (hx _ this.1)).2.1, (hE r.2 (hy _ this.2)).2.1⟩
     · rw [(List.mem_replicate.mp hq').2]; exact ⟨hz0, hz0⟩
-  unfold tcEngine2
+  unfold tcMultiplier2
   simp only [hmx, hmy, Option.bind_eq_bind, Option.bind_some, hzip]
   rw [mapM_eq_some_map hgroups]
   simp only [Option.bind_some, Option.pure_def]
@@ -461,61 +461,61 @@ theorem tcEngine2_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Hold
 
 /-- **A100 fp16 with full groups**: eight products of `11`-bit slices (`8 · 2^22 = 2^25 = 2^(F+1)`),
 two passes each, exact for every length. -/
-theorem a100F16_exactOn2 (B : ℕ) : (tcEngine2 ampereF16F32).ExactOn 11 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem a100F16_exactOn2 (B : ℕ) : (tcMultiplier2 ampereF16F32).ExactOn 11 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 fp16 with full groups**: sixteen products of `11`-bit slices
 (`16 · 2^22 = 2^26 = 2^(F+1)`), two passes each, exact for every length. -/
-theorem h100F16_exactOn2 (B : ℕ) : (tcEngine2 hopperF16F32).ExactOn 11 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem h100F16_exactOn2 (B : ℕ) : (tcMultiplier2 hopperF16F32).ExactOn 11 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **V100 fp16**: four products of `11`-bit slices (`4 · 2^22 = 2^24 = 2^(F+1)`). -/
-theorem v100F16_exactOn2 (B : ℕ) : (tcEngine2 v100F16F32).ExactOn 11 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, (fun _ hf => by cases hf), by decide⟩
+theorem v100F16_exactOn2 (B : ℕ) : (tcMultiplier2 v100F16F32).ExactOn 11 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, (fun _ hf => by cases hf), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **A100 bf16**: eight products of `8`-bit slices. -/
-theorem a100BF16_exactOn2 (B : ℕ) : (tcEngine2 a100BF16F32).ExactOn 8 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem a100BF16_exactOn2 (B : ℕ) : (tcMultiplier2 a100BF16F32).ExactOn 8 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 bf16**: sixteen products of `8`-bit slices. -/
-theorem h100BF16_exactOn2 (B : ℕ) : (tcEngine2 hopperBF16F32).ExactOn 8 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem h100BF16_exactOn2 (B : ℕ) : (tcMultiplier2 hopperBF16F32).ExactOn 8 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **A100 tf32**: four products of `11`-bit slices. -/
-theorem a100TF32_exactOn2 (B : ℕ) : (tcEngine2 a100TF32F32).ExactOn 11 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem a100TF32_exactOn2 (B : ℕ) : (tcMultiplier2 a100TF32F32).ExactOn 11 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 tf32 (wmma)**: four products of `11`-bit slices. -/
-theorem h100TF32Wmma_exactOn2 (B : ℕ) : (tcEngine2 hopperTF32WmmaF32).ExactOn 11 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem h100TF32Wmma_exactOn2 (B : ℕ) : (tcMultiplier2 hopperTF32WmmaF32).ExactOn 11 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 tf32 (mma)**: eight products of `11`-bit slices (`8 · 2^22 = 2^25 ≤ 2^26`). -/
-theorem h100TF32Mma_exactOn2 (B : ℕ) : (tcEngine2 hopperTF32MmaF32).ExactOn 11 B :=
-  tcEngine2_exactOn ⟨by decide, by decide, floor_ok _ _ (by decide), by decide⟩
+theorem h100TF32Mma_exactOn2 (B : ℕ) : (tcMultiplier2 hopperTF32MmaF32).ExactOn 11 B :=
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- Ozaki-I on the two-pass engine, binary32 recombination. -/
-def tcOzaki1TP (p : Profile) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1 (tcEngine2 p) add32 b s x y
+def tcOzaki1TP (p : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1 (tcMultiplier2 p) add32 b s x y
 
 /-- **Ozaki-I on full A100 or H100 groups, for every inner dimension**: the bound of
 `tcOzaki1_error` with no condition on `k`, on any path where the two-pass engine is exact. -/
-theorem tcOzaki1TP_error {p : Profile} {b : ℕ} (heng : ∀ B, (tcEngine2 p).ExactOn b B) (s : ℕ)
+theorem tcOzaki1TP_error {p : Model} {b : ℕ} (hmult : ∀ B, (tcMultiplier2 p).ExactOn b B) (s : ℕ)
     {x y : List ℚ} (hlen : x.length = y.length) {v : ℚ} (hv : tcOzaki1TP p b s x y = some v) :
     Rat.abs (v - dot x y) ≤
       ((1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length - 1) *
@@ -523,7 +523,7 @@ theorem tcOzaki1TP_error {p : Profile} {b : ℕ} (heng : ∀ B, (tcEngine2 p).Ex
         (trianglePairs s).length * (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length *
           2 ^ (-150 : ℤ) +
         ((s + 1 : ℕ) : ℚ) * x.length * 2 ^ (splitExp b x + splitExp b y - s * (b + 1)) :=
-  ozaki1_error (heng _) (Rat.le_of_lt (two_pow_pos _)) (Rat.le_of_lt (two_pow_pos _))
+  ozaki1_error (hmult _) (Rat.le_of_lt (two_pow_pos _)) (Rat.le_of_lt (two_pow_pos _))
     add32_within hlen (Nat.le_refl _) hv
 
 theorem a100_ozaki1TP_error (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length) {v : ℚ}
@@ -567,7 +567,7 @@ example : twoPass hopperF16F32 (List.replicate 15 (0x67FF, 0x67FF) ++ [(0x67FF, 
 
 /-- The two-pass engine on a dot product of twenty `2047²` terms on H100: two groups of sixteen
 (the second padded), each run twice. -/
-example : tcEngine2 hopperF16F32 (List.replicate 20 2047) (List.replicate 20 2047) =
+example : tcMultiplier2 hopperF16F32 (List.replicate 20 2047) (List.replicate 20 2047) =
     some (20 * 2047 * 2047) := by decide +kernel
 
 end Ozaki.TC

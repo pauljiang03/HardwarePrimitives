@@ -31,7 +31,7 @@ namespace MatrixCore
 /-! ## Every profile -/
 
 /-- Guarantees of one accepted block on any profile. -/
-structure BlockContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) : Prop where
+structure BlockContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop where
   lengths : x.a.length = P.nfma ∧ x.b.length = P.nfma
   prepared : prepare x = some t.prepared
   /-- `c` is the decoding of the input word. -/
@@ -49,7 +49,7 @@ structure BlockContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) : Pr
   outputError : absQ (t.sAcc - wordValue t.d) ≤ flBound (!P.subnormals) t.sAcc
   nearestEven : P.subnormals = true → NearestEven32 t.sAcc t.d
 
-theorem evalBlock_contract {P : Profile} {x : BlockInput P} {t : BlockTrace P}
+theorem evalBlock_contract {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) : BlockContract x t := by
   obtain ⟨ha, hb, hp, hs, hd⟩ := evalBlock_ok h
   obtain ⟨_, hA, hB⟩ := prepare_bounded hp
@@ -59,7 +59,7 @@ theorem evalBlock_contract {P : Profile} {x : BlockInput P} {t : BlockTrace P}
 
 /-! ## SFMA and CDNA 1 -/
 
-structure CorrectRoundingContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) : Prop
+structure CorrectRoundingContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop
     extends BlockContract x t where
   /-- `S_acc` is the exact `Σ p_ℓ + c`. -/
   exact : t.sAcc = t.prepared.exact
@@ -70,7 +70,7 @@ structure CorrectRoundingContract {P : Profile} (x : BlockInput P) (t : BlockTra
   /-- From the inputs alone: `|exact − d| ≤ 2^-24 (Σ|p_ℓ| + |c|) + 2^-150`. -/
   apriori : absQ (t.prepared.exact - wordValue t.d) ≤ pow2 (-24) * t.prepared.absSum + pow2 (-150)
 
-theorem correctRounding_contract {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_contract {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     CorrectRoundingContract x t :=
@@ -82,7 +82,7 @@ theorem correctRounding_contract {P : Profile} (hacc : P.accumulation = .correct
 
 /-! ## CDNA 2 -/
 
-structure PairwiseContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) : Prop
+structure PairwiseContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop
     extends BlockContract x t where
   /-- `S_acc = c + tree`, the pairwise tree of the rounded products (`pairwiseSum_four`,
   `pairwiseSum_two`). -/
@@ -96,7 +96,7 @@ structure PairwiseContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) :
     absQ (t.prepared.exact - (if P.subnormals then t.prepared else t.prepared.flushed).exact) +
       pow2 (-21) * (if P.subnormals then t.prepared else t.prepared.flushed).absSum + pow2 (-120)
 
-theorem pairwise_contract {P : Profile} (hacc : P.accumulation = .pairWiseSum) (hn : P.nfma ≤ 4)
+theorem pairwise_contract {P : Model} (hacc : P.accumulation = .pairWiseSum) (hn : P.nfma ≤ 4)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) : PairwiseContract x t :=
   { evalBlock_contract h with
     tree := accumulate_pairwise hacc (evalBlock_ok h).2.2.2.1
@@ -106,7 +106,7 @@ theorem pairwise_contract {P : Profile} (hacc : P.accumulation = .pairWiseSum) (
 /-! ## CDNA 3 -/
 
 /-- The error bounds of `alignedAccumulation_error` for a prepared block. -/
-def AlignedErrorBounds (P : Profile) (x : Prepared) : Prop :=
+def AlignedErrorBounds (P : Model) (x : Prepared) : Prop :=
   let s := productSum P x.p
   let F : ℕ := 23 + P.neab
   let D := x.exact - alignedAccumulation P x
@@ -122,7 +122,7 @@ def AlignedErrorBounds (P : Profile) (x : Prepared) : Prop :=
     let T := rdGrid s.2 (eC - P.late.sumFracBits) + x.c.value
     0 ≤ D ∧ D < pow2 (eC - P.late.sumFracBits) + pow2 (normExp (absQ T) - P.late.accFracBits))
 
-structure AlignedContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) (w : ℕ) : Prop
+structure AlignedContract {P : Model} (x : BlockInput P) (t : BlockTrace P) (w : ℕ) : Prop
     extends BlockContract x t where
   /-- `S_acc` of Algorithm 1 or 2. -/
   sum : t.sAcc = alignedAccumulation P t.prepared
@@ -138,9 +138,9 @@ structure AlignedContract {P : Profile} (x : BlockInput P) (t : BlockTrace P) (w
   apriori : absQ (t.prepared.exact - wordValue t.d) ≤ pow2 (-23) * t.prepared.absSum +
     (t.prepared.p.length + 4) * gridTerm (productSum P t.prepared.p).1 + pow2 (-149)
 
-theorem aligned_contract {P : Profile}
+theorem aligned_contract {P : Model}
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
-    (hL : LateProfile P) (hsub : P.subnormals = true) (w carryBits : ℕ) (hcount : P.nfma ≤ 2 ^ carryBits)
+    (hL : LateModel P) (hsub : P.subnormals = true) (w carryBits : ℕ) (hcount : P.nfma ≤ 2 ^ carryBits)
     (hw : P.alignFracBits + 2 + carryBits + 1 ≤ w)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) : AlignedContract x t w := by
   have hb := evalBlock_contract h
@@ -180,27 +180,27 @@ theorem cdna2BF16_1k_contract {x : BlockInput cdna2BF16_1k} {t : BlockTrace cdna
 
 theorem cdna3F16_contract {x : BlockInput cdna3F16} {t : BlockTrace cdna3F16}
     (h : evalBlock x = .ok t) : AlignedContract x t 30 :=
-  aligned_contract (.inl rfl) lateProfile_cdna3F16 rfl 30 3 (by decide) (by decide) h
+  aligned_contract (.inl rfl) lateModel_cdna3F16 rfl 30 3 (by decide) (by decide) h
 
 theorem cdna3BF16_contract {x : BlockInput cdna3BF16} {t : BlockTrace cdna3BF16}
     (h : evalBlock x = .ok t) : AlignedContract x t 30 :=
-  aligned_contract (.inl rfl) lateProfile_cdna3BF16 rfl 30 3 (by decide) (by decide) h
+  aligned_contract (.inl rfl) lateModel_cdna3BF16 rfl 30 3 (by decide) (by decide) h
 
 theorem cdna3XF32_contract {x : BlockInput cdna3XF32} {t : BlockTrace cdna3XF32}
     (h : evalBlock x = .ok t) : AlignedContract x t 29 :=
-  aligned_contract (.inl rfl) lateProfile_cdna3XF32 rfl 29 2 (by decide) (by decide) h
+  aligned_contract (.inl rfl) lateModel_cdna3XF32 rfl 29 2 (by decide) (by decide) h
 
 theorem cdna3FP8_contract (fa fb : Format) {x : BlockInput (cdna3FP8 fa fb)}
     {t : BlockTrace (cdna3FP8 fa fb)} (h : evalBlock x = .ok t) : AlignedContract x t 31 :=
-  aligned_contract (.inr rfl) (lateProfile_cdna3FP8 fa fb) rfl 31 4 (by simp [cdna3FP8])
-    (by simp [cdna3FP8, Profile.alignFracBits]) h
+  aligned_contract (.inr rfl) (lateModel_cdna3FP8 fa fb) rfl 31 4 (by simp [cdna3FP8])
+    (by simp [cdna3FP8, Model.alignFracBits]) h
 
 /-! ## Inner products -/
 
 /-- **Chaining.** An accepted inner product is a run of linked blocks, each satisfying any
 property `Q` that accepted blocks have (for example a profile's contract), and its output
 accounts for the exact products and `c` up to the blocks' residuals. -/
-theorem dotBits_blocks (P : Profile) {Q : BlockInput P → BlockTrace P → Prop}
+theorem dotBits_blocks (P : Model) {Q : BlockInput P → BlockTrace P → Prop}
     (hQ : ∀ x t, evalBlock x = .ok t → Q x t)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
@@ -212,7 +212,7 @@ theorem dotBits_blocks (P : Profile) {Q : BlockInput P → BlockTrace P → Prop
   exact ⟨ts, hr, hd, hc, runBlocks_all hQ hr, hl⟩
 
 /-- Every block of an accepted inner product satisfies the contract of every profile. -/
-theorem dotBits_contract (P : Profile) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
+theorem dotBits_contract (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
     ∃ ts, runBlocks P c (blocks P a b) = .ok ts ∧ lastOutput c ts = d ∧ Chain c ts ∧
       ∀ t ∈ ts, ∃ x, BlockContract x t := by
@@ -222,7 +222,7 @@ theorem dotBits_contract (P : Profile) {a : List P.a.Word} {b : List P.b.Word} {
 /-- **Error of an inner product.** If every accepted block's residual `exact − d` is bounded by
 `B`, the accepted inner product's output is within the sum of the blocks' bounds of the initial
 `c` plus all products. -/
-theorem dotBits_error_bound (P : Profile) {B : BlockTrace P → ℚ}
+theorem dotBits_error_bound (P : Model) {B : BlockTrace P → ℚ}
     (hB : ∀ x t, evalBlock x = .ok t → absQ t.residual ≤ B t)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
@@ -242,7 +242,7 @@ theorem dotBits_error_bound (P : Profile) {B : BlockTrace P → ℚ}
   exact hx
 
 /-- SFMA and CDNA 1: an inner product is within the sum of half an ulp of each block's exact sum. -/
-theorem correctRounding_dot_error {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_dot_error {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :

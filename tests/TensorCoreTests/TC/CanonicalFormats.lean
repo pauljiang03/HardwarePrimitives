@@ -57,7 +57,7 @@ theorem tf32_unpadded_rejected :
 /-- The descriptor-to-profile theorem applied to the published TF32 row. -/
 theorem tf32_row_compatible :
     tf32InvocationBits 4 (23 + 1) (some (-132)) tf32Row 0x3efe7b25 =
-      (evalBlock (⟨tf32UnpackPairs tf32Row, 0x3efe7b25⟩ : BlockInput (tf19Fp32Profile 4 1 (some (-132))))).toOption.map
+      (evalBlock (⟨tf32UnpackPairs tf32Row, 0x3efe7b25⟩ : BlockInput (tf19Fp32Model 4 1 (some (-132))))).toOption.map
         (fun t => t.output.bits) :=
   tf32_invocation_bits 4 1 (some (-132)) tf32Row 0x3efe7b25 (by decide +kernel)
 

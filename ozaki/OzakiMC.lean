@@ -1,6 +1,6 @@
 import OzakiMC.Exactness
-import OzakiMC.Engine
-import OzakiMC.Profiles
+import OzakiMC.MatrixMultiplier
+import OzakiMC.Models
 import OzakiMC.Rounding
 import OzakiMC.Schemes
 import OzakiMC.Limits

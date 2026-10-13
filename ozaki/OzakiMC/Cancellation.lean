@@ -1,4 +1,4 @@
-import OzakiMC.Profiles
+import OzakiMC.Models
 
 /-! # Exact matrix-core blocks with cancellation
 
@@ -13,7 +13,7 @@ operands, an integer `c` and every product at most `2^24` in magnitude (true for
   without loss, and the late addition of `c` rounds an integer down to an integer; exact whenever
   `|c| ≤ 2^24` and the exact sum is within `2^24`;
 * **CDNA 2** (`pair_wise_sum`): every node of the pairwise tree is rounded to binary32, so every
-  node's sum must be within `2^24` as well (`TreeOK`), not only the total; cancellation inside a
+  node's sum must be within `2^24` as well (`PairwiseSumsBounded`), not only the total; cancellation inside a
   node is free, cancellation across the tree is not.
 
 `accumulate_cancel` states this for prepared blocks and `evalBlock_cancel` for encoded ones. As on
@@ -27,29 +27,29 @@ namespace Ozaki.MC
 /-! ## The pairwise tree -/
 
 /-- Every node of CDNA 2's pairwise tree on `zs`, with `depth` levels, sums to at most `2^24`. -/
-def TreeOK : ℕ → List ℤ → Prop
+def PairwiseSumsBounded : ℕ → List ℤ → Prop
   | _, [] => True
   | _, [_] => True
   | 0, _ :: _ :: _ => False
   | depth + 1, z1 :: z2 :: rest =>
-    TreeOK depth ((z1 :: z2 :: rest).take ((z1 :: z2 :: rest).length / 2)) ∧
-      TreeOK depth ((z1 :: z2 :: rest).drop ((z1 :: z2 :: rest).length / 2)) ∧
+    PairwiseSumsBounded depth ((z1 :: z2 :: rest).take ((z1 :: z2 :: rest).length / 2)) ∧
+      PairwiseSumsBounded depth ((z1 :: z2 :: rest).drop ((z1 :: z2 :: rest).length / 2)) ∧
       (z1 :: z2 :: rest).sum.natAbs ≤ 2 ^ 24
 
 /-- **The pairwise tree with cancellation.** When every node sums to at most `2^24`, the tree of
 integers is their exact sum. -/
-theorem pairTree_cancel (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), TreeOK depth zs →
-    pairTree ftz depth (zs.map fun z : ℤ => (z : ℚ)) = some ((zs.sum : ℤ) : ℚ)
-  | _, [], _ => by simp [pairTree]
-  | _, [z], _ => by simp [pairTree]
-  | 0, _ :: _ :: _, h => absurd h (by simp [TreeOK])
+theorem pairwiseGroupSum_cancel (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), PairwiseSumsBounded depth zs →
+    pairwiseGroupSum ftz depth (zs.map fun z : ℤ => (z : ℚ)) = some ((zs.sum : ℤ) : ℚ)
+  | _, [], _ => by simp [pairwiseGroupSum]
+  | _, [z], _ => by simp [pairwiseGroupSum]
+  | 0, _ :: _ :: _, h => absurd h (by simp [PairwiseSumsBounded])
   | depth + 1, z1 :: z2 :: rest, ⟨hl, hr, hs⟩ => by
     generalize hzs : z1 :: z2 :: rest = zs at hl hr hs
-    have hunfold : pairTree ftz (depth + 1) (zs.map fun z : ℤ => (z : ℚ)) =
-        (pairTree ftz depth ((zs.take (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun u =>
-          (pairTree ftz depth ((zs.drop (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun v =>
+    have hunfold : pairwiseGroupSum ftz (depth + 1) (zs.map fun z : ℤ => (z : ℚ)) =
+        (pairwiseGroupSum ftz depth ((zs.take (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun u =>
+          (pairwiseGroupSum ftz depth ((zs.drop (zs.length / 2)).map fun z : ℤ => (z : ℚ))).bind fun v =>
             flValue ftz (u + v) := by
-      rw [← hzs, List.map_cons, List.map_cons, pairTree]
+      rw [← hzs, List.map_cons, List.map_cons, pairwiseGroupSum]
       simp only [List.length_cons, List.map_take, List.map_drop, List.map_cons, List.length_map,
         Option.bind_eq_bind]
       all_goals simp
@@ -57,16 +57,16 @@ theorem pairTree_cancel (ftz : Bool) : ∀ (depth : ℕ) (zs : List ℤ), TreeOK
     have hsum : zs.sum = (zs.take (zs.length / 2)).sum + (zs.drop (zs.length / 2)).sum := by
       conv => lhs; rw [← htd]
       rw [List.sum_append]
-    rw [hunfold, pairTree_cancel ftz depth _ hl, pairTree_cancel ftz depth _ hr]
+    rw [hunfold, pairwiseGroupSum_cancel ftz depth _ hl, pairwiseGroupSum_cancel ftz depth _ hr]
     simp only [Option.bind_some]
     rw [← Rat.intCast_add, ← hsum]
     exact flValue_int ftz _ hs
 
 /-- Magnitudes within `2^24` give a tree whose every node is within `2^24`. -/
-theorem treeOK_of_budget : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ depth + 1 →
-    (zs.map Int.natAbs).sum ≤ 2 ^ 24 → TreeOK depth zs
-  | _, [], _, _ => by simp [TreeOK]
-  | _, [_], _, _ => by simp [TreeOK]
+theorem pairwiseSumsBounded_of_bound : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ depth + 1 →
+    (zs.map Int.natAbs).sum ≤ 2 ^ 24 → PairwiseSumsBounded depth zs
+  | _, [], _, _ => by simp [PairwiseSumsBounded]
+  | _, [_], _, _ => by simp [PairwiseSumsBounded]
   | 0, _ :: _ :: _, hl, _ => by simp at hl
   | depth + 1, z1 :: z2 :: rest, hl, hb => by
     generalize hzs : z1 :: z2 :: rest = zs at hl hb
@@ -76,8 +76,8 @@ theorem treeOK_of_budget : ∀ (depth : ℕ) (zs : List ℤ), zs.length ≤ dept
         ((zs.drop (zs.length / 2)).map Int.natAbs).sum := by
       conv => lhs; rw [← htd]
       rw [List.map_append, List.sum_append]
-    have h1 := treeOK_of_budget depth (zs.take (zs.length / 2)) (by simp; omega) (by omega)
-    have h3 := treeOK_of_budget depth (zs.drop (zs.length / 2)) (by simp; omega) (by omega)
+    have h1 := pairwiseSumsBounded_of_bound depth (zs.take (zs.length / 2)) (by simp; omega) (by omega)
+    have h3 := pairwiseSumsBounded_of_bound depth (zs.drop (zs.length / 2)) (by simp; omega) (by omega)
     have h4 := Nat.le_trans (natAbs_sum_le zs) hb
     rw [← hzs] at h1 h3 h4 ⊢
     exact ⟨h1, h3, h4⟩
@@ -136,9 +136,9 @@ end IntPreparedC
 
 /-- **CDNA 2 with cancellation**: the pairwise tree of integer products, every node within `2^24`,
 plus `c`, is the exact sum. -/
-theorem pairwiseSum_cancel (P : Profile) {x : Prepared} (h : IntPreparedC x)
+theorem pairwiseSum_cancel (P : Model) {x : Prepared} (h : IntPreparedC x)
     (htree : ∀ zs : List ℤ, x.p.map Unpacked.value = zs.map (fun z : ℤ => (z : ℚ)) →
-      TreeOK zs.length zs) :
+      PairwiseSumsBounded zs.length zs) :
     pairwiseSum P x = some x.exact := by
   have hx' : (if P.subnormals then x else x.flushed) = x := by
     split
@@ -152,7 +152,7 @@ theorem pairwiseSum_cancel (P : Profile) {x : Prepared} (h : IntPreparedC x)
     obtain ⟨⟨z, hz⟩, _⟩ := h.p q hq
     rw [hz]
     exact flValue_int _ z (natAbs_le_of_absQ (by rw [← hz]; exact h.p_le q hq))
-  have htree' := pairTree_cancel (!P.subnormals) zs.length zs (htree zs hzs)
+  have htree' := pairwiseGroupSum_cancel (!P.subnormals) zs.length zs (htree zs hzs)
   unfold pairwiseSum
   simp only [hx', hps, Option.bind_eq_bind, Option.bind_some, List.length_map, htree']
   unfold Prepared.exact
@@ -162,7 +162,7 @@ theorem pairwiseSum_cancel (P : Profile) {x : Prepared} (h : IntPreparedC x)
 
 /-- **CDNA 3 with cancellation**: global alignment of integer products within `2^24` and an integer
 `c` within `2^24` is exact whenever the exact sum is within `2^24`. -/
-theorem alignedAccumulation_cancel {P : Profile} (hacc : P.accumulation = .globalAlignment)
+theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalAlignment)
     (hneab : 1 ≤ P.neab) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
     (h : IntPreparedC x) : alignedAccumulation P x = x.exact := by
   have hprod := h.p
@@ -240,9 +240,9 @@ theorem alignedAccumulation_cancel {P : Profile} (hacc : P.accumulation = .globa
 /-- **Exact accumulation with cancellation.** On an exact configuration, `S_acc` of a block of
 integer operands whose products and `c` are within `2^24` and whose exact sum is within `2^24` is
 that sum; on CDNA 2 every node of the pairwise tree must be within `2^24` too. -/
-theorem accumulate_cancel {P : Profile} (hP : ExactConfig P) {x : Prepared} (h : IntPreparedC x)
+theorem accumulate_cancel {P : Model} (hP : ExactConfig P) {x : Prepared} (h : IntPreparedC x)
     (htree : P.accumulation = .pairWiseSum → ∀ zs : List ℤ,
-      x.p.map Unpacked.value = zs.map (fun z : ℤ => (z : ℚ)) → TreeOK zs.length zs) :
+      x.p.map Unpacked.value = zs.map (fun z : ℤ => (z : ℚ)) → PairwiseSumsBounded zs.length zs) :
     accumulate P x = .ok x.exact := by
   unfold accumulate
   rw [h.productOverflows, Bool.and_false]
@@ -258,7 +258,7 @@ theorem accumulate_cancel {P : Profile} (hP : ExactConfig P) {x : Prepared} (h :
 whose products are each within `2^24`, an integer `c` within `2^24`, and an exact sum
 `c + Σ aᵢbᵢ` within `2^24` give the binary32 word of that sum, however large `Σ|aᵢbᵢ|` is; on
 CDNA 2 every node of the pairwise tree of the products must be within `2^24` as well. -/
-theorem evalBlock_cancel {P : Profile} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
+theorem evalBlock_cancel {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {x : BlockInput P} (hla : x.a.length = P.nfma)
     (hlb : x.b.length = P.nfma) (ha : ∀ w ∈ x.a, IntWord P.a w) (hb : ∀ w ∈ x.b, IntWord P.b w)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ)) (hc24 : absQ (zc : ℚ) ≤ pow2 24)
@@ -267,7 +267,7 @@ theorem evalBlock_cancel {P : Profile} (hP : ExactConfig P) (hfa : smallSubnorma
     (hsum : absQ ((zc : ℚ) + exactProducts P x.a x.b) ≤ pow2 24)
     (htree : P.accumulation = .pairWiseSum → ∀ zs : List ℤ,
       List.zipWith (fun w w' => P.a.wordValue w * P.b.wordValue w') x.a x.b =
-        zs.map (fun z : ℤ => (z : ℚ)) → TreeOK zs.length zs) :
+        zs.map (fun z : ℤ => (z : ℚ)) → PairwiseSumsBounded zs.length zs) :
     ∃ t, evalBlock x = .ok t ∧ value32 t.d = some ((zc : ℚ) + exactProducts P x.a x.b) := by
   obtain ⟨A, hA⟩ := mapM_exists x.a fun w hw => by
     obtain ⟨u, hu, _⟩ := ha w hw; exact ⟨u, hu⟩
@@ -328,7 +328,7 @@ theorem cdna3_cancel_zero :
     (evalBlock (P := cdna3F16)
       ⟨List.replicate 4 (0x6800 : BitVec 16) ++ List.replicate 4 0xE800, List.replicate 8 0x6800,
         0⟩).map (fun t => t.d) = .ok 0 ∧
-    wordBudget cdna3F16 (List.replicate 4 (0x6800 : BitVec 16) ++ List.replicate 4 0xE800)
+    wordDotAbs cdna3F16 (List.replicate 4 (0x6800 : BitVec 16) ++ List.replicate 4 0xE800)
       (List.replicate 8 0x6800) = pow2 25 := by
   decide +kernel
 
@@ -343,7 +343,7 @@ theorem cdna12_cancel_c :
       ⟨[(0x6800 : BitVec 16), 0xE800, 0x6800, 0xE800], List.replicate 4 0x6800, 0x4B000000⟩).map
       (fun t => t.d) = .ok 0x4B000000 ∧
     value32 0x4B000000 = some (pow2 23) ∧
-    wordBudget cdna1F16 [(0x6800 : BitVec 16), 0xE800, 0x6800, 0xE800] (List.replicate 4 0x6800) =
+    wordDotAbs cdna1F16 [(0x6800 : BitVec 16), 0xE800, 0x6800, 0xE800] (List.replicate 4 0x6800) =
       pow2 24 := by
   decide +kernel
 

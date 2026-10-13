@@ -19,9 +19,9 @@ def binary32 : Layout := ⟨23, 8, 127⟩
 
 structure Parameters where
   input : Layout
-  products : ℕ
-  alignMantissaBits : ℤ
-  floor : Option ℤ
+  nfma : ℕ
+  alignFracBits : ℤ
+  eAlignMin : Option ℤ
   deriving Repr, DecidableEq
 
 structure Input (p : Parameters) where
@@ -68,7 +68,7 @@ def largestExponent (ts : List Term) : Option ℤ :=
 def exponent (p : Parameters) (ts : List Term) : Option ℤ :=
   match largestExponent ts with
   | none => none
-  | some e => some (match p.floor with | none => e | some f => max e f)
+  | some e => some (match p.eAlignMin with | none => e | some f => max e f)
 
 def magnitude (v : ℚ) : ℚ := if v < 0 then -v else v
 
@@ -77,14 +77,14 @@ def keptBits (v q : ℚ) : ℤ :=
   (if v < 0 then -1 else 1) * (magnitude v / q).floor
 
 def accumulated (p : Parameters) (ts : List Term) : ℚ :=
-  let q := (2 : ℚ) ^ ((exponent p ts).getD 0 - p.alignMantissaBits)
+  let q := (2 : ℚ) ^ ((exponent p ts).getD 0 - p.alignFracBits)
   ((ts.foldr (fun t z => keptBits t.value q + z) 0 : ℤ) : ℚ) * q
 
 def maxFinite : ℚ := (16777215 : ℚ) * (2 : ℚ) ^ (104 : ℤ)
 
 /-- Domain from the specification-side computation, without evaluating the implementation. -/
 def Valid (p : Parameters) (x : Input p) : Prop :=
-  x.products.length = p.products ∧
+  x.products.length = p.nfma ∧
     ∃ ts, terms p x = some ts ∧ magnitude (accumulated p ts) ≤ maxFinite
 
 def value32 (bits : BitVec 32) : Option ℚ := (decode binary32 bits.toNat).map Term.value
@@ -100,7 +100,7 @@ def Rounds (x : ℚ) (bits : BitVec 32) : Prop :=
     ∀ other y, value32 other = some y → Between x y → magnitude y ≤ magnitude d
 
 def Result (p : Parameters) (x : Input p) (bits : BitVec 32) : Prop :=
-  x.products.length = p.products ∧ ∃ ts,
+  x.products.length = p.nfma ∧ ∃ ts,
     terms p x = some ts ∧ magnitude (accumulated p ts) ≤ maxFinite ∧
       Rounds (accumulated p ts) bits
 

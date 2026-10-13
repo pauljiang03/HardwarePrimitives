@@ -32,9 +32,9 @@ theorem evalPrepared_total (b : PreparedBlock) (hr : absQ b.accumulator ≤ maxF
   exact ⟨⟨b, ⟨bits, d, hd⟩⟩, by simp [evalPrepared, hb, hf]⟩
 
 /-- Exact accepted domain: correct shape, finite decoded operands, and in-range aligned accumulator. -/
-theorem evalBlock_success_iff (p : Profile) (x : BlockInput p) :
+theorem evalBlock_success_iff (p : Model) (x : BlockInput p) :
     (∃ t, evalBlock x = .ok t) ↔
-      x.products.length = p.products ∧
+      x.products.length = p.nfma ∧
         ∃ b, prepare x = some b ∧ absQ b.accumulator ≤ maxFinite32 := by
   constructor
   · rintro ⟨t, ht⟩

@@ -18,13 +18,13 @@ private def pairs : List ℕ → List (F16 × F16)
   | _ => []
 
 private def runRow (row : List String) : IO Json := do
-  let k :: extra :: words := row | throw (IO.userError "Expected K extra words")
+  let k :: neab :: words := row | throw (IO.userError "Expected K extra words")
   let some k := k.toNat? | throw (IO.userError "Invalid K")
-  let some extra := extra.toNat? | throw (IO.userError "Invalid extra")
+  let some neab := neab.toNat? | throw (IO.userError "Invalid extra")
   let some words := words.mapM parseHex | throw (IO.userError "Invalid hex")
   unless words.length = 2 * k + 1 && (words.take (2 * k)).all (· < 65536) &&
       words.getLast! < 4294967296 do throw (IO.userError "Wrong word count or width")
-  let x : BlockInput (fp16Fp32Profile k extra none) :=
+  let x : BlockInput (fp16Fp32Model k neab none) :=
     ⟨pairs (words.take (2 * k)), BitVec.ofNat 32 words.getLast!⟩
   match evalBlock x with
   | .error e => return Json.mkObj [("error", toJson (reprStr e))]

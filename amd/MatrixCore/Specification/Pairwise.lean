@@ -128,7 +128,7 @@ theorem pairwise_products (as bs : List Unpacked) :
   congr 1; funext p; exact val_numOf p
 
 /-- A profile and its CDNA 2 transcription. -/
-structure SupportedPairwise (P : Profile) (S : PairwiseParams) : Prop where
+structure SupportedPairwise (P : Model) (S : PairwiseParams) : Prop where
   a : S.a = operandOf P.a
   b : S.b = operandOf P.b
   group : S.group = P.nfma
@@ -137,7 +137,7 @@ structure SupportedPairwise (P : Profile) (S : PairwiseParams) : Prop where
   limit : P.productOverflow = false
   size : S.group = 2 ∨ S.group = 4
 
-theorem blockBits_ok_iff {P : Profile} (x : BlockInput P) (w : F32) :
+theorem blockBits_ok_iff {P : Model} (x : BlockInput P) (w : F32) :
     blockBits x = .ok w ↔ x.a.length = P.nfma ∧ x.b.length = P.nfma ∧
       ∃ px s, prepare x = some px ∧ accumulate P px = .ok s ∧ fl32 (!P.subnormals) s = some w := by
   constructor
@@ -158,7 +158,7 @@ theorem blockBits_ok_iff {P : Profile} (x : BlockInput P) (w : F32) :
 
 /-- **Equivalence for CDNA 2.** On the CDNA 2 profiles and for every input, the model returns `w`
 exactly when `w` is the specification's result. -/
-theorem pairwise_eq_spec {P : Profile} {S : PairwiseParams} (hS : SupportedPairwise P S)
+theorem pairwise_eq_spec {P : Model} {S : PairwiseParams} (hS : SupportedPairwise P S)
     (x : BlockInput P) (w : F32) :
     blockBits x = .ok w ↔
       PairwiseResult S (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c w := by

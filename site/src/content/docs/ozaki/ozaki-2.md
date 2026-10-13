@@ -37,8 +37,8 @@ and `P = 22`: four engine calls per entry.
 | Fact | Lean |
 | --- | --- |
 | Symmetric residues lie in `(−m/2, m/2]`, and the product of the residues is congruent to the product modulo `m`. | [`symMod_bounds`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CRT.lean#L32), [`dvd_dotZ_symMod`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Ozaki2.lean#L239) |
-| A residue product has magnitude at most `k ⌊m/2⌋²`, at most `2^24` for the Z3 moduli. | [`natAbs_residueProduct_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Checks.lean#L69), [`z3_residue_budget`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Checks.lean#L83) |
-| The engine computes each residue product exactly: residues of moduli at most `2^(b+1)` are `b`-bit integers, and the Tensor Core and matrix-core engines are exact on those. | [`tcEngine_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Engine.lean#L193), [`mcEngine_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/Engine.lean#L326) |
+| A residue product has magnitude at most `k ⌊m/2⌋²`, at most `2^24` for the Z3 moduli. | [`natAbs_residueProduct_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Checks.lean#L69), [`z3_residue_exactnessBound`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Checks.lean#L83) |
+| The engine computes each residue product exactly: residues of moduli at most `2^(b+1)` are `b`-bit integers, and the Tensor Core and matrix-core engines are exact on those. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L193), [`mcMultiplier_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326) |
 
 ## Step 3: Chinese-remainder reconstruction
 

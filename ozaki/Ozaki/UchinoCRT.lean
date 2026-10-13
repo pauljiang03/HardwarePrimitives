@@ -450,11 +450,11 @@ theorem crt_dvd {B : CRTBasis} (hB : B.Valid) {W : List ℤ} (hlen : W.length = 
 /-- **Ozaki-II with Uchino, Ozaki and Imamura's reconstruction**: the inputs scaled by any shifts
 `sₓ`, `s_y` and truncated, one engine product per modulus, symmetric residues, the floating-point
 reconstruction `uchinoRecon`, and one rounding of the scaled result. -/
-def ozaki2Uchino (eng : Engine) (rnd : ℚ → Option ℚ) (B : CRTBasis) (G1 : ℤ) (P1 P2 Pinv : ℚ)
+def ozaki2Uchino (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (B : CRTBasis) (G1 : ℤ) (P1 P2 Pinv : ℚ)
     (s2 : List ℚ) (sx sy : ℤ) (x y : List ℚ) : Option ℚ := do
   let a := scaleTrunc sx x
   let c := scaleTrunc sy y
-  let rs ← B.moduli.mapM fun m => residueProduct eng m a c
+  let rs ← B.moduli.mapM fun m => residueProduct mult m a c
   let C ← uchinoRecon rnd P1 P2 Pinv (B.weights.map (weightHi G1)) s2
     (List.zipWith (fun r m => symMod r m) rs B.moduli)
   rnd (C * 2 ^ (-(sx + sy)))
@@ -469,17 +469,17 @@ within `R` of the product `c` of the scaled integers for every residue vector th
 produce (symmetric residues congruent to `c`; `uchinoRecon_error` gives such an `R` for given
 numbers), the result is within the truncation bound plus `2^(−sₓ−s_y) R`, through one rounding,
 of `x · y`, for any shifts. -/
-theorem ozaki2Uchino_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2Uchino_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {rnd : ℚ → Option ℚ} {u η : ℚ} (hu : 0 ≤ u) (hround : RoundWithin rnd u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     {G1 : ℤ} {P1 P2 Pinv : ℚ} {s2 : List ℚ} (sx sy : ℤ) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) {R : ℚ}
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {R : ℚ}
     (hrecon : ∀ W : List ℤ, W.length = B.moduli.length →
       (∀ pr ∈ W.zip B.moduli, 2 * pr.1.natAbs ≤ pr.2) →
       (B.modulus : ℤ) ∣ dotZ B.weights W - dotZ (scaleTrunc sx x) (scaleTrunc sy y) →
       ∀ C, uchinoRecon rnd P1 P2 Pinv (B.weights.map (weightHi G1)) s2 W = some C →
         Rat.abs (C - (dotZ (scaleTrunc sx x) (scaleTrunc sy y) : ℚ)) ≤ R)
-    {v : ℚ} (hv : ozaki2Uchino eng rnd B G1 P1 P2 Pinv s2 sx sy x y = some v) :
+    {v : ℚ} (hv : ozaki2Uchino mult rnd B G1 P1 P2 Pinv s2 sx sy x y = some v) :
     Rat.abs (v - dot x y) ≤
       u * (Rat.abs ((dotZ (scaleTrunc sx x) (scaleTrunc sy y) : ℚ) * 2 ^ (-(sx + sy))) +
           R * 2 ^ (-(sx + sy))) + η +
@@ -489,10 +489,10 @@ theorem ozaki2Uchino_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b
   generalize hc : scaleTrunc sy y = c at hrecon hv ⊢
   have hla : a.length = x.length := by rw [← ha, scaleTrunc_length]
   have hlc : c.length = y.length := by rw [← hc, scaleTrunc_length]
-  have hrs : B.moduli.mapM (fun m => residueProduct eng m a c) = some (B.moduli.map fun m =>
+  have hrs : B.moduli.mapM (fun m => residueProduct mult m a c) = some (B.moduli.map fun m =>
       dotZ (a.map fun z => symMod z m) (c.map fun z => symMod z m) % (m : ℤ)) :=
-    mapM_eq_some_map fun m hm => residueProduct_eq heng (hpos m hm) (hmb m hm)
-      (by rw [hla, hlc, hlen]) (by rw [hla]; exact hbudget)
+    mapM_eq_some_map fun m hm => residueProduct_eq hmult (hpos m hm) (hmb m hm)
+      (by rw [hla, hlc, hlen]) (by rw [hla]; exact hbound)
   unfold ozaki2Uchino at hv
   simp only [ha, hc, hrs, Option.bind_eq_bind, Option.bind_some] at hv
   rw [zipWith_map_self] at hv

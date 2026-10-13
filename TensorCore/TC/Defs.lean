@@ -6,27 +6,27 @@ namespace TensorCore
 
 
 /-- Parameters of one Tensor Core normalization group. -/
-structure Profile where
+structure Model where
   /-- Operand format (FP16, BF16, or packed TF32). -/
   input : Format
   /-- K, the number of products per group. -/
-  products : ℕ
+  nfma : ℕ
   /-- F = 23 + p: mantissa bits each term keeps after alignment. -/
-  alignMantissaBits : ℤ
+  alignFracBits : ℤ
   /-- Lower bound on the alignment exponent, if the architecture has one. -/
-  alignFloor : Option ℤ
+  eAlignMin : Option ℤ
   deriving Repr, DecidableEq
 
 /-- V100 FP16 -> FP32: `K = 4`, `(2, 23, 0)` alignment, no relevant floor. -/
-def v100F16F32 : Profile := ⟨fp16, 4, 23, none⟩
+def v100F16F32 : Model := ⟨fp16, 4, 23, none⟩
 
 /-- The floor only raises a nonempty maximum; an all-zero block stays `none`. -/
-def Profile.applyFloor (p : Profile) : Option ℤ → Option ℤ
+def Model.applyEAlignMin (p : Model) : Option ℤ → Option ℤ
   | none => none
-  | some e => some (match p.alignFloor with | none => e | some f => max e f)
+  | some e => some (match p.eAlignMin with | none => e | some f => max e f)
 
-abbrev Profile.Word (p : Profile) := BitVec p.input.width
+abbrev Model.Word (p : Model) := BitVec p.input.width
 
-def Profile.decode (p : Profile) (x : p.Word) : Option Decoded := (classify p.input x).finite
+def Model.decode (p : Model) (x : p.Word) : Option Decoded := (classify p.input x).finite
 
 end TensorCore

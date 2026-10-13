@@ -1,6 +1,6 @@
 import OzakiTC.Exactness
-import OzakiTC.Engine
-import OzakiTC.Profiles
+import OzakiTC.MatrixMultiplier
+import OzakiTC.Models
 import OzakiTC.Rounding
 import OzakiTC.Split32
 import OzakiTC.Schemes

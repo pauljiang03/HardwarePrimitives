@@ -74,14 +74,14 @@ theorem adpCRJSC_binary64_tight {cfgs : List (ℕ × ℕ)} {xs ys : List SEntry}
       (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue) hlen]
 
 /-- The guarded split-K engine on V100 fp16 blocks. -/
-def v100SplitKC (B : Widths) : Engine := chunkedC B (chunkLen 11) (tcEngine v100F16F32)
+def v100SplitKC (B : Widths) : MatrixMultiplier := chunkedC B (chunkLen 11) (tcMultiplier v100F16F32)
 
 theorem v100SplitKC_exactOn {B : Widths} (hR : 25 ≤ B.R) {D : ℕ} (hD : D < 2 ^ B.R) :
     (v100SplitKC B).ExactOn 11 D :=
-  chunkedC_exactOn v100_exactOn (chunkLen_pos 11) (chunkLen_budget (by decide))
+  chunkedC_exactOn v100_exactOn (chunkLen_pos 11) (chunkLen_exactnessBound (by decide))
     (Nat.lt_of_lt_of_le (by decide) (Nat.pow_le_pow_right (by decide) hR)) hD
 
-theorem budget_lt_263 {k : ℕ} (hk : k ≤ 2 ^ 20) :
+theorem dotAbsBound_lt_263 {k : ℕ} (hk : k ≤ 2 ^ 20) :
     k * (2 ^ 11 * 2 ^ 11) < 2 ^ (⟨263, 17⟩ : Widths).R :=
   Nat.lt_of_lt_of_le (show k * (2 ^ 11 * 2 ^ 11) < 2 ^ 43 by omega)
     (Nat.pow_le_pow_right (by decide) (show 43 ≤ (⟨263, 17⟩ : Widths).R by show 43 ≤ 263; decide))
@@ -96,7 +96,7 @@ theorem v100_fp64CRI_checked {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
     ozaki1CRIC ⟨263, 17⟩ (v100SplitKC ⟨263, 17⟩) 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) :=
-  ozaki1CRIC_binary64_tight (v100SplitKC_exactOn r25_263 (budget_lt_263 hk)) hlen hk hx hy hss
+  ozaki1CRIC_binary64_tight (v100SplitKC_exactOn r25_263 (dotAbsBound_lt_263 hk)) hlen hk hx hy hss
 
 /-- **Signed FP64 by Ozaki-I on V100 fp16, every integer guarded, split-K included.** -/
 theorem v100_fp64CRIS_checked {xs ys : List SEntry} (hlen : xs.length = ys.length)
@@ -104,7 +104,7 @@ theorem v100_fp64CRIS_checked {xs ys : List SEntry} (hlen : xs.length = ys.lengt
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a.1) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
     ozaki1CRISC ⟨263, 17⟩ (v100SplitKC ⟨263, 17⟩) 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (crSigned rne64 (xs.map toSigned) (ys.map toSigned)) :=
-  ozaki1CRISC_binary64_tight (v100SplitKC_exactOn r25_263 (budget_lt_263 hk)) hlen hk hx hy hss
+  ozaki1CRISC_binary64_tight (v100SplitKC_exactOn r25_263 (dotAbsBound_lt_263 hk)) hlen hk hx hy hss
 
 /-- **FP64 by Ozaki-II on V100 fp16, every integer guarded, split-K included.** -/
 theorem v100_fp64CRJ_checked {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
@@ -114,7 +114,7 @@ theorem v100_fp64CRJ_checked {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis 
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
     ozaki2CRJC ⟨263, 17⟩ (v100SplitKC ⟨263, 17⟩) 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) :=
-  ozaki2CRJC_binary64_tight (v100SplitKC_exactOn r25_263 (budget_lt_263 hk)) hlen hk hx hy hcfgs
+  ozaki2CRJC_binary64_tight (v100SplitKC_exactOn r25_263 (dotAbsBound_lt_263 hk)) hlen hk hx hy hcfgs
     hrange
 
 end Ozaki.TC

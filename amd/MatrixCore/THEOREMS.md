@@ -60,7 +60,7 @@ are flushed. The bounds use the exact `Σ a_ℓ b_ℓ + c` of the decoded inputs
 | --- | --- | --- |
 | `fl{x}` is within half an ulp of `x`, which is at most `2^-24 |x| + 2^-150`; with flushing, within `flBound true x`. | `rneValue_error`, `halfUlp32_le`, `flValue_error` | [Numerics/RoundingError.lean](Numerics/RoundingError.lean), [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
 | SFMA and CDNA 1: `|exact − d| ≤ halfUlp32 exact`. | `correctRounding_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
-| CDNA 2: `|exact − d|` is at most the effect of flushing subnormal inputs, plus one `flBound` for each product conversion, each node of the pairwise tree, and the final `fl{·}`, at the computed values. | `pairwise_error`, `pairwiseBound`, `pairTree_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
+| CDNA 2: `|exact − d|` is at most the effect of flushing subnormal inputs, plus one `flBound` for each product conversion, each node of the pairwise tree, and the final `fl{·}`, at the computed values. | `pairwise_error`, `pairwiseBound`, `pairwiseGroupSum_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
 | CDNA 3: `|exact − d|` is at most the error of `S_acc` in its branch of Algorithm 1 or 2, plus half an ulp of `S_acc`. | `aligned_error`, `alignedBound`, `alignedAccumulation_abs_error` | [MC/ErrorBounds.lean](MC/ErrorBounds.lean) |
 | An inner product is within the sum of its blocks' bounds of `c` plus all products. | `dotBits_error_bound`, `correctRounding_dot_error` | [MC/Contract.lean](MC/Contract.lean) |
 
@@ -74,7 +74,7 @@ exponent `e_a + e_b`.
 | SFMA and CDNA 1: `|exact − d| ≤ 2^-24 A + 2^-150`. | `correctRounding_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
 | CDNA 3: `|exact − d| ≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149`. Products are denormalised, so `2^(e_max)` can exceed every `|p_ℓ|` and the alignment term is measured against it. | `aligned_apriori`, `alignedAccumulation_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
 | CDNA 2 (`N_FMA ≤ 4`): `|exact − d| ≤ |exact − exact'| + 2^-21 A' + 2^-120`, with `exact'`, `A'` those of the flushed inputs. | `pairwise_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
-| A pairwise tree of height `h` is within `((1 + 2^-24)^h − 1) Σ|x| + κ_h η` of the exact sum of its leaves. | `pairTree_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
+| A pairwise tree of height `h` is within `((1 + 2^-24)^h − 1) Σ|x| + κ_h η` of the exact sum of its leaves. | `pairwiseGroupSum_apriori` | [MC/AprioriBounds.lean](MC/AprioriBounds.lean) |
 
 ## Monotonicity in `c`
 
@@ -82,7 +82,7 @@ On NVIDIA Tensor Cores any term holding the alignment exponent, a product or `c`
 
 | What it says | Lean name | File |
 | --- | --- | --- |
-| For the same `a` and `b`, a larger `c` never gives a smaller `d`, on every configuration of the paper. | `evalBlock_c_monotone`, `paper_profiles_monotone` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
+| For the same `a` and `b`, a larger `c` never gives a smaller `d`, on every configuration of the paper. | `evalBlock_c_monotone`, `paper_models_monotone` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
 | The same for inner products of any length. | `dotBits_c_monotone` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
 | CDNA 3's late addition is monotone in `c` within each branch and across the switch at `e_c = e_max`. | `lateSum_mono` | [MC/Monotonicity.lean](MC/Monotonicity.lean) |
 | RNE, flushing, and normalisation followed by RD are monotone. | `rneValue_mono`, `flushValue_mono`, `normaliseRD_mono` | [Numerics/RoundingError.lean](Numerics/RoundingError.lean), [MC/Monotonicity.lean](MC/Monotonicity.lean) |
@@ -201,9 +201,9 @@ open MatrixCore
 #check @aligned_apriori
 #check @alignedAccumulation_apriori
 #check @pairwise_apriori
-#check @pairTree_apriori
+#check @pairwiseGroupSum_apriori
 #check @evalBlock_c_monotone
-#check @paper_profiles_monotone
+#check @paper_models_monotone
 #check @dotBits_c_monotone
 #check @lateSum_mono
 #check @rneValue_mono

@@ -158,7 +158,7 @@ theorem scanBoundaryTrace_bounds (test : ℕ → Bool) (fuel lo hi : ℕ) :
     · simp
 
 /-- Bit scans use at most ten probes, each below index 576. -/
-theorem bitScan_probe_budget (test : ℕ → Bool) :
+theorem bitScan_probe_bound (test : ℕ → Bool) :
     (scanBoundaryTrace test 10 0 576).2.length ≤ 10 ∧
       ∀ n ∈ (scanBoundaryTrace test 10 0 576).2, n < 576 := by
   have h := scanBoundaryTrace_bounds test 10 0 576

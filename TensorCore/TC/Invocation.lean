@@ -6,13 +6,13 @@ import TensorCore.TC.Block
 namespace TensorCore
 
 inductive CPlacement where
-  | inGroup
+  | early
   /-- Convert the product accumulator through these stages, then add c exactly. -/
-  | afterProducts (stages : List RoundingStage)
+  | late (stages : List RoundingStage)
   deriving Repr, DecidableEq
 
 inductive AccumulationKind where
-  | aligned (alignMantissaBits : ℕ) (floor : Option ℤ) (cPlacement : CPlacement)
+  | aligned (alignMantissaBits : ℕ) (eAlignMin : Option ℤ) (cPlacement : CPlacement)
   /-- An exact single-product FMA, with no lossy alignment stage. -/
   | fused
   deriving Repr, DecidableEq
@@ -20,7 +20,7 @@ inductive AccumulationKind where
 structure InvocationSpec where
   input : OperandEncoding
   cFormat : Format
-  products : ℕ
+  nfma : ℕ
   accumulation : AccumulationKind
   intermediate : List RoundingStage := []
   output : RoundingStage
@@ -32,9 +32,9 @@ def InvocationSpec.Valid (p : InvocationSpec) : Prop :=
   p.input.valueFormat.layout.WellFormed ∧ p.cFormat.WellFormed ∧
   stagesValid p.intermediate = true ∧ p.output.format.WellFormed ∧
   match p.accumulation with
-  | .fused => p.products = 1
-  | .aligned _ _ .inGroup => True
-  | .aligned _ _ (.afterProducts ss) => stagesValid ss = true
+  | .fused => p.nfma = 1
+  | .aligned _ _ .early => True
+  | .aligned _ _ (.late ss) => stagesValid ss = true
 
 instance (p : InvocationSpec) : Decidable p.Valid := by
   unfold InvocationSpec.Valid
@@ -69,8 +69,8 @@ def invocationIdeal {p : InvocationSpec} (x : InvocationInput p) : Option ℚ :=
 
 /-- Reuse the proved unnormalized-product/grid primitive. -/
 def PreparedInvocation.alignedBlock {p : InvocationSpec} (b : PreparedInvocation p)
-    (F : ℕ) (floor : Option ℤ) (includeC : Bool) : PreparedBlock :=
-  ⟨⟨p.input.valueFormat.layout, p.products, F, floor⟩, b.products,
+    (F : ℕ) (eAlignMin : Option ℤ) (includeC : Bool) : PreparedBlock :=
+  ⟨⟨p.input.valueFormat.layout, p.nfma, F, eAlignMin⟩, b.products,
     if includeC then b.c else ⟨0, 0, 0⟩⟩
 
 structure LocalAccumulation where
@@ -85,13 +85,13 @@ def LocalAccumulation.loss (r : LocalAccumulation) : ℚ :=
 def accumulateInvocation {p : InvocationSpec} (b : PreparedInvocation p) : Option LocalAccumulation :=
   match p.accumulation with
   | .fused => some ⟨b.exactDot, 0, []⟩
-  | .aligned F floor cp =>
+  | .aligned F eAlignMin cp =>
     match cp with
-    | .inGroup =>
-      let a := b.alignedBlock F floor true
+    | .early =>
+      let a := b.alignedBlock F eAlignMin true
       some ⟨a.accumulator, sumQ a.alignmentResiduals, []⟩
-    | .afterProducts stages => do
-      let a := b.alignedBlock F floor false
+    | .late stages => do
+      let a := b.alignedBlock F eAlignMin false
       let r ← runRoundings stages a.accumulator
       return ⟨r.value + b.c.value, sumQ a.alignmentResiduals, r.events⟩
 
@@ -127,14 +127,14 @@ def evalInvocationPrepared {p : InvocationSpec} (b : PreparedInvocation p) :
 def evalInvocation {p : InvocationSpec} (x : InvocationInput p) :
     Except InvocationError (InvocationTrace p) :=
   if ¬ p.Valid then .error .invalidSpec
-  else if x.products.length != p.products then .error .wrongProductCount
+  else if x.products.length != p.nfma then .error .wrongProductCount
   else match prepareInvocation x with
     | none => .error .nonfiniteOrInvalidEncoding
     | some b => evalInvocationPrepared b
 
 /-- Embed a block profile as an aligned invocation with FP32 truncated output. -/
-@[implicit_reducible] def Profile.toInvocation (p : Profile) (F : ℕ) : InvocationSpec :=
-  ⟨packedIEEE p.input, fp32, p.products, .aligned F p.alignFloor .inGroup,
+@[implicit_reducible] def Model.toInvocation (p : Model) (F : ℕ) : InvocationSpec :=
+  ⟨packedIEEE p.input, fp32, p.nfma, .aligned F p.eAlignMin .early,
     [], ⟨fp32, .truncate⟩⟩
 
 def v100Invocation : InvocationSpec := v100F16F32.toInvocation 23

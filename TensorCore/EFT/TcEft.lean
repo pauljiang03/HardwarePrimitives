@@ -6,8 +6,8 @@ import TensorCore.TC.ErrorBounds
 namespace TensorCore
 
 /-- Lemma IV.2: the overlap window width `τ = ψ − η + p ≥ 0`, where `qE = 2^(ψ−23)` is the extraction grid and `qA = 2^(η − 23 − p)` the alignment grid. -/
-theorem overlap_window_width (t : BlockTrace) (η : ℤ) (p : ℕ) (hη : t.block.alignExp = some η)
-    (hF : t.block.profile.alignMantissaBits = 23 + p) :
+theorem overlap_width (t : BlockTrace) (η : ℤ) (p : ℕ) (hη : t.block.alignExp = some η)
+    (hF : t.block.model.alignFracBits = 23 + p) :
     0 ≤ t.extractionExponent - t.block.alignGridExponent ∧
       t.extractionExponent - t.block.alignGridExponent =
         max 0 ((outputUlpExponent t.output.bits + 23) - η + p) := by

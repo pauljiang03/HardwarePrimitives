@@ -41,7 +41,7 @@ value keeps the significand as an integer `m` with `t` fractional bits
 ## The feature table
 
 The paper's feature comparison table has one row per numerical feature. Each
-row is a field or a derived property of `Profile`:
+row is a field or a derived property of `Model`:
 
 | Row | Lean | CDNA 3 value |
 | --- | --- | --- |

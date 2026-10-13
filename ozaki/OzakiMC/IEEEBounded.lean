@@ -19,39 +19,39 @@ open MatrixCore
 
 namespace Ozaki.MC
 
-def mcOzaki2CRBI (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
+def mcOzaki2CRBI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki2CRB P cfgs b smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki2CRBLI (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
+def mcOzaki2CRBLI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki2CRBL P cfgs b smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki1CRBDZI (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
+def mcOzaki1CRBDZI (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki1CRBDZ P b W ss smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki1CRBLZI (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
+def mcOzaki1CRBLZI (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki1CRBLZ P b W ss smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki1CRIDI (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
+def mcOzaki1CRIDI (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List IDatum → List IDatum → FVal :=
   crIEEEI (mcOzaki1CRID P b W ss smax) fun x y => (exactSignI (mcSplitK P b) b smax x y).getD 0
 
-def mcOzaki1CRILI (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
+def mcOzaki1CRILI (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List IDatum → List IDatum → FVal :=
   crIEEEI (mcOzaki1CRIL P b W ss smax) fun x y => (exactSignI (mcSplitK P b) b smax x y).getD 0
 
-def mcOzaki2CRJI (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
+def mcOzaki2CRJI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List IDatum → List IDatum → FVal :=
   crIEEEI (mcOzaki2CRJ P cfgs b smax) fun x y => (exactSignI (mcSplitK P b) b smax x y).getD 0
 
-def mcOzaki2CRJLI (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
+def mcOzaki2CRJLI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List IDatum → List IDatum → FVal :=
   crIEEEI (mcOzaki2CRJL P cfgs b smax) fun x y => (exactSignI (mcSplitK P b) b smax x y).getD 0
 
-theorem mcOzaki2CRBI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki2CRBI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List FVal}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
@@ -63,7 +63,7 @@ theorem mcOzaki2CRBI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
     (fun _ _ hx hy hl1 hl2 => mcOzaki2CRB_eq hP hb hsmax (by rw [hl1]; exact hcfg) hx hy
       (by rw [hl1, hl2])) hx hy hlen
 
-theorem mcOzaki2CRBLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki2CRBLI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List FVal}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
@@ -75,7 +75,7 @@ theorem mcOzaki2CRBLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 
     (fun _ _ hx hy hl1 hl2 => mcOzaki2CRBL_eq hP hb hsmax (by rw [hl1]; exact hcfg) hx hy
       (by rw [hl1, hl2])) hx hy hlen
 
-theorem mcOzaki1CRBDZI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRBDZI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 53 (-1022) 1023) (hy : ∀ a ∈ ys, a.InFormat 53 (-1022) 1023)
     (hlen : xs.length = ys.length) :
@@ -85,7 +85,7 @@ theorem mcOzaki1CRBDZI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRBDZ_eq hP hb W ss hsmax hx hy (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki1CRBLZI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRBLZI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 24 (-126) 127) (hy : ∀ a ∈ ys, a.InFormat 24 (-126) 127)
     (hlen : xs.length = ys.length) :
@@ -95,7 +95,7 @@ theorem mcOzaki1CRBLZI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRBLZ_eq hP hb W ss hsmax hx hy (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki1CRIDI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRIDI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List IDatum}
     (hx : ∀ a ∈ xs, a.InFormat 53 (-1022) 1023) (hy : ∀ a ∈ ys, a.InFormat 53 (-1022) 1023)
     (hlen : xs.length = ys.length) :
@@ -106,7 +106,7 @@ theorem mcOzaki1CRIDI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRID_eq hP hb W ss hsmax hx hy (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki1CRILI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRILI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List IDatum}
     (hx : ∀ a ∈ xs, a.InFormat 24 (-126) 127) (hy : ∀ a ∈ ys, a.InFormat 24 (-126) 127)
     (hlen : xs.length = ys.length) :
@@ -117,7 +117,7 @@ theorem mcOzaki1CRILI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRIL_eq hP hb W ss hsmax hx hy (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki2CRJI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki2CRJI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List IDatum}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
@@ -130,7 +130,7 @@ theorem mcOzaki2CRJI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
     (fun _ _ hx hy hl1 hl2 => mcOzaki2CRJ_eq hP hb hsmax (by rw [hl1]; exact hcfg)
       (binary64_entries hx) (binary64_entries hy) (by rw [hl1, hl2])) hx hy hlen
 
-theorem mcOzaki2CRJLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki2CRJLI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List IDatum}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)

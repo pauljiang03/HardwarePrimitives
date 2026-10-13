@@ -23,25 +23,25 @@ namespace OzakiTCTests.Zeros
 def xs : List ℚ := [3, 0, 2 ^ (-30 : ℤ), 0]
 def ys : List ℚ := [0, 5, 0, -7 * 2 ^ (40 : ℤ)]
 
-def eng : Engine := tcSplitK v100F16F32 11
+def mult : MatrixMultiplier := tcSplitK v100F16F32 11
 
 example : supportOverlap xs ys = 0 := by decide +kernel
 
 /-- The normwise check does not settle the entry, so the scheme falls back: with the sentinel
 `12345` as its exact path it returns the sentinel. -/
-example : (ozaki1WindowEnclosure eng 11 5 96 xs ys).bind
+example : (ozaki1TruncatedEnclosure mult 11 5 96 xs ys).bind
     (fun e => roundEnclosure rne64 e.1 e.2) = none := by decide +kernel
-example : certify rne64 ([5, 6].map fun s => ozaki1WindowEnclosure eng 11 s 96 xs ys)
+example : roundingTest rne64 ([5, 6].map fun s => ozaki1TruncatedEnclosure mult 11 s 96 xs ys)
     (some 12345) = some 12345 := by decide +kernel
 
 /-- The check with the overlap count settles it on the first slice count: enclosure `(0, 0)`, and
 the sentinel is never used. -/
-example : ozaki1WindowEnclosureZ eng 11 5 96 (supportOverlap xs ys) xs ys = some (0, 0) := by
+example : ozaki1TruncatedEnclosureZ mult 11 5 96 (supportOverlap xs ys) xs ys = some (0, 0) := by
   decide +kernel
-example : certify rne64
-    (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng 11 s 96 N xs ys) [5, 6] xs ys)
+example : roundingTest rne64
+    (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult 11 s 96 N xs ys) [5, 6] xs ys)
     (some 12345) = some 0 := by decide +kernel
-example : ozaki1CheckBZ eng 53 (-1022) 1023 11 5 96 (supportOverlap xs ys) xs ys = some 0 := by
+example : ozaki1TestBZ mult 53 (-1022) 1023 11 5 96 (supportOverlap xs ys) xs ys = some 0 := by
   decide +kernel
 example : tcOzaki1CRDZ v100F16F32 11 96 [5, 6] 175 xs ys = some 0 ∧
     tcOzaki1CRBDZ v100F16F32 11 96 [5, 6] 175 xs ys = some 0 := by decide +kernel
@@ -54,8 +54,8 @@ def sx : List Signed := [⟨3, false⟩, ⟨0, true⟩]
 def sy : List Signed := [⟨0, true⟩, ⟨5, false⟩]
 def sx' : List Signed := [⟨3, false⟩, ⟨0, false⟩]
 
-example : certifySignedZ rne64
-    (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng 11 s 96 N (vals sx) (vals sy)) [5]
+example : roundingTestSignedZ rne64
+    (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult 11 s 96 N (vals sx) (vals sy)) [5]
       (vals sx) (vals sy)) (some 12345) (allNegZero sx sy) = some ⟨0, true⟩ ∧
     crSigned rne64 sx sy = some ⟨0, true⟩ := by decide +kernel
 example : tcOzaki1CRDSZ v100F16F32 11 96 [5, 6] 175 sx' sy = some ⟨0, false⟩ ∧

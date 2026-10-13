@@ -4,7 +4,7 @@
 A CPU simulation of the correctly rounded schemes of `Ozaki/Correct.lean`, in exact arithmetic.
 For one output entry `x . y` each scheme computes an exact value `H` and a proved bound
 `B >= |x . y - H|`, and accepts when `H - B` and `H + B` round to the same value (`roundEnclosure`,
-`certify`); otherwise it tries the next enclosure and finally takes the exact path. The engine is
+`roundingTest`); otherwise it tries the next enclosure and finally takes the exact path. The engine is
 exact (the Lean proofs show it is on slices and residues), so the slice and residue products are
 computed exactly here; every `H`, `B`, `x . y` is an exact dyadic rational, rounded with round to
 nearest even (`roundRNE`) by integer arithmetic.
@@ -18,9 +18,9 @@ grid `2^(ceil(log2 max|r|) - b)` of what is left (`split`, `sliceGrid`), the `s(
 * `overlap`    `(s+1) N 2^(E+F-s(b+1))`, `N` the support overlap (`exactTerms_error_overlap`,
                `ozaki1BoundZ`; one extra engine product per entry);
 * `normwise_w96`, `overlap_w96`: the same with a `W = 96`-bit window accumulator
-               (`Ozaki/Window.lean` `ozaki1WindowEnclosure`, `ozaki1WindowEnclosureZ`).
+               (`Ozaki/TruncatedSum.lean` `ozaki1TruncatedEnclosure`, `ozaki1TruncatedEnclosureZ`).
 
-Exact path (`ozaki1ExactPath`): all `s_e^2` slice products, `s_e` the smallest `s >= 1` leaving no
+Exact path (`ozaki1ExactFallback`): all `s_e^2` slice products, `s_e` the smallest `s >= 1` leaving no
 residual in `x` or `y` (`residualsVanish`). Slice products of one split are prefixes of the next
 (`split_prefix`), so the model reuses them: checking at `ss = [5, 6]` and falling back costs
 `21 + s_e^2 - (reused pairs)` engine products.
@@ -998,7 +998,7 @@ def main():
                       'entry; Ozaki-I reuses slice products across slice counts (split_prefix) '
                       'and on the exact path; the overlap bound adds one product (support '
                       'indicators); Ozaki-II configurations cost one product per modulus, '
-                      'without reuse; the exact path costs s_e^2 (ozaki1ExactPath). Not GPU time.',
+                      'without reuse; the exact path costs s_e^2 (ozaki1ExactFallback). Not GPU time.',
         'fallback_categories': 'exact_zero: x.y = 0; tie: x.y exactly halfway between two '
                                'neighbours in the output format; wide_bound: 4B >= ulp(x.y) at '
                                'the last check; near_boundary: the rest (x.y within 2B of a '

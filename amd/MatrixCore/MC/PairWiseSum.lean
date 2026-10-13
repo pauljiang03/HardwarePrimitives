@@ -8,20 +8,20 @@ every `fl{·}` flushes subnormal results to zero. -/
 
 namespace MatrixCore
 
-theorem pairTree_two (ftz : Bool) (n : ℕ) (q₁ q₂ : ℚ) :
-    pairTree ftz (n + 1) [q₁, q₂] = flValue ftz (q₁ + q₂) := by
-  simp [pairTree]
+theorem pairwiseGroupSum_two (ftz : Bool) (n : ℕ) (q₁ q₂ : ℚ) :
+    pairwiseGroupSum ftz (n + 1) [q₁, q₂] = flValue ftz (q₁ + q₂) := by
+  simp [pairwiseGroupSum]
 
-theorem pairTree_four (ftz : Bool) (n : ℕ) (q₁ q₂ q₃ q₄ : ℚ) :
-    pairTree ftz (n + 2) [q₁, q₂, q₃, q₄] =
+theorem pairwiseGroupSum_four (ftz : Bool) (n : ℕ) (q₁ q₂ q₃ q₄ : ℚ) :
+    pairwiseGroupSum ftz (n + 2) [q₁, q₂, q₃, q₄] =
       (flValue ftz (q₁ + q₂)).bind fun u =>
         (flValue ftz (q₃ + q₄)).bind fun v => flValue ftz (u + v) := by
-  simp only [pairTree, List.length_cons, List.length_nil]
-  simp [pairTree_two]
+  simp only [pairwiseGroupSum, List.length_cons, List.length_nil]
+  simp [pairwiseGroupSum_two]
 
 /-- A group of four: `S_acc = c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, with each `p_ℓ = fl{a_ℓ b_ℓ}`
 of the flushed inputs; the block output is `fl{S_acc}`. -/
-theorem pairwiseSum_four (P : Profile) (x : Prepared) (p₁ p₂ p₃ p₄ : Unpacked)
+theorem pairwiseSum_four (P : Model) (x : Prepared) (p₁ p₂ p₃ p₄ : Unpacked)
     (hp : (if P.subnormals then x else x.flushed).p = [p₁, p₂, p₃, p₄]) :
     pairwiseSum P x = do
       let q₁ ← flValue (!P.subnormals) p₁.value
@@ -36,10 +36,10 @@ theorem pairwiseSum_four (P : Profile) (x : Prepared) (p₁ p₂ p₃ p₄ : Unp
   simp only [hp, List.mapM_cons, List.mapM_nil]
   cases flValue (!P.subnormals) p₁.value <;> cases flValue (!P.subnormals) p₂.value <;>
     cases flValue (!P.subnormals) p₃.value <;> cases flValue (!P.subnormals) p₄.value <;>
-    simp [pairTree_four, Option.bind_assoc]
+    simp [pairwiseGroupSum_four, Option.bind_assoc]
 
 /-- A group of two: `S_acc = c + fl{p₁ + p₂}`. -/
-theorem pairwiseSum_two (P : Profile) (x : Prepared) (p₁ p₂ : Unpacked)
+theorem pairwiseSum_two (P : Model) (x : Prepared) (p₁ p₂ : Unpacked)
     (hp : (if P.subnormals then x else x.flushed).p = [p₁, p₂]) :
     pairwiseSum P x = do
       let q₁ ← flValue (!P.subnormals) p₁.value
@@ -49,7 +49,7 @@ theorem pairwiseSum_two (P : Profile) (x : Prepared) (p₁ p₂ : Unpacked)
   unfold pairwiseSum
   simp only [hp, List.mapM_cons, List.mapM_nil]
   cases flValue (!P.subnormals) p₁.value <;> cases flValue (!P.subnormals) p₂.value <;>
-    simp [pairTree_two]
+    simp [pairwiseGroupSum_two]
 
 /-! ## Flush to zero -/
 

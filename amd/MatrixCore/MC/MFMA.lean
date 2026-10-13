@@ -10,11 +10,11 @@ exact `c_ij + Σ_ℓ a_iℓ b_ℓj` (`mfma_finite`, `mfma_error`). -/
 
 namespace MatrixCore
 
-theorem mfma_length (P : Profile) (A : List (List P.a.Word)) (B : List (List P.b.Word))
+theorem mfma_length (P : Model) (A : List (List P.a.Word)) (B : List (List P.b.Word))
     (C : List (List F32)) : (mfma P A B C).length = min A.length C.length := by
   simp [mfma]
 
-theorem mfma_row_length (P : Profile) (A : List (List P.a.Word)) (B : List (List P.b.Word))
+theorem mfma_row_length (P : Model) (A : List (List P.a.Word)) (B : List (List P.b.Word))
     (C : List (List F32)) {i : ℕ} {row : List (Option Outcome)} (h : (mfma P A B C)[i]? = some row)
     {cRow : List F32} (hc : C[i]? = some cRow) : row.length = min B.length cRow.length := by
   unfold mfma at h
@@ -25,7 +25,7 @@ theorem mfma_row_length (P : Profile) (A : List (List P.a.Word)) (B : List (List
 
 /-- Each entry of `D = AB + C` is the observed inner product of row `i` of `A` and column `j` of
 `B` with `c_ij`. -/
-theorem mfma_entry (P : Profile) {A : List (List P.a.Word)} {B : List (List P.b.Word)}
+theorem mfma_entry (P : Model) {A : List (List P.a.Word)} {B : List (List P.b.Word)}
     {C : List (List F32)} {i j : ℕ} {row : List P.a.Word} {col : List P.b.Word}
     {cRow : List F32} {c : F32} (hA : A[i]? = some row) (hB : B[j]? = some col)
     (hC : C[i]? = some cRow) (hc : cRow[j]? = some c) :
@@ -36,7 +36,7 @@ theorem mfma_entry (P : Profile) {A : List (List P.a.Word)} {B : List (List P.b.
   rw [List.getElem?_zipWith, hB, hc]
 
 /-- A finite entry is the finite-domain inner product of its row and column. -/
-theorem mfma_finite (P : Profile) {A : List (List P.a.Word)} {B : List (List P.b.Word)}
+theorem mfma_finite (P : Model) {A : List (List P.a.Word)} {B : List (List P.b.Word)}
     {C : List (List F32)} {i j : ℕ} {row : List P.a.Word} {col : List P.b.Word}
     {cRow : List F32} {c d : F32} (hA : A[i]? = some row) (hB : B[j]? = some col)
     (hC : C[i]? = some cRow) (hc : cRow[j]? = some c)
@@ -47,7 +47,7 @@ theorem mfma_finite (P : Profile) {A : List (List P.a.Word)} {B : List (List P.b
 
 /-- **Error of an MFMA entry.** If every accepted block's residual is bounded by `B`, a finite
 entry `d_ij` is within the sum of its blocks' bounds of the exact `c_ij + Σ_ℓ a_iℓ b_ℓj`. -/
-theorem mfma_error (P : Profile) (hn : 0 < P.nfma) {Bnd : BlockTrace P → ℚ}
+theorem mfma_error (P : Model) (hn : 0 < P.nfma) {Bnd : BlockTrace P → ℚ}
     (hB : ∀ x t, evalBlock x = .ok t → absQ t.residual ≤ Bnd t)
     {A : List (List P.a.Word)} {B : List (List P.b.Word)}
     {C : List (List F32)} {i j : ℕ} {row : List P.a.Word} {col : List P.b.Word}

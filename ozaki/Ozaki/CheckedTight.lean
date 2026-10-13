@@ -1,5 +1,5 @@
 import Ozaki.BoundedCheckedSigned
-import Ozaki.CheckedEngines
+import Ozaki.CheckedMultipliers
 
 /-! # Tighter widths
 
@@ -34,59 +34,59 @@ theorem natAbs_127 : (127 : ℤ).natAbs = 127 := by decide
 
 /-- **Correctly rounded FP64 Ozaki-I: every data integer within 263 bits, every exponent and
 counter within 17 bits.** -/
-theorem ozaki1CRIC_binary64_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRIC_binary64_tight {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRIC ⟨263, 17⟩ eng 53 (-1022) 1023 11 96 ss 175 xs ys =
+    ozaki1CRIC ⟨263, 17⟩ mult 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hb2 : bitlen (175 * 175 + 2) = 15 := by decide
   have := natAbs_m1022; have := natAbs_1023
-  rw [ozaki1CRIC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  rw [ozaki1CRIC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) (by unfold exactR; rw [hW, hb2]; simp only; omega) (by decide)
     (by unfold exactX; rw [hW]; simp only; omega) ss
-    (fun s hs => by have := checkD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
+    (fun s hs => by have := testD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
     (fun s hs => by
-      have := checkD_le_8 (p := 53) (hss s hs) hk
+      have := testD_le_8 (p := 53) (hss s hs) hk
       have h8 := hss s hs
-      unfold checkX; simp only; omega),
-    ozaki1CRI64_eq heng 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
+      unfold testX; simp only; omega),
+    ozaki1CRI64_eq hmult 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
       (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue)]
 
 /-- **Correctly rounded binary32 Ozaki-I: 207 bits and 15 bits.** -/
-theorem ozaki1CRIC_binary32_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRIC_binary32_tight {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
     (hy : ∀ a ∈ ys, FormatEntry 24 (-126) 127 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRIC ⟨207, 15⟩ eng 24 (-126) 127 11 96 ss 24 xs ys =
+    ozaki1CRIC ⟨207, 15⟩ mult 24 (-126) 127 11 96 ss 24 xs ys =
       some (rne32Q (dot (entryVals xs) (entryVals ys))) := by
   have hE : ((-126 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 ∧
       ((127 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 24 24 = 38 := by decide
   have hb2 : bitlen (24 * 24 + 2) = 10 := by decide
   have := natAbs_m126; have := natAbs_127
-  rw [ozaki1CRIC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  rw [ozaki1CRIC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) (by unfold exactR; rw [hW, hb2]; simp only; omega) (by decide)
     (by unfold exactX; rw [hW]; simp only; omega) ss
-    (fun s hs => by have := checkD_le_8 (p := 24) (hss s hs) hk; simp only; omega)
+    (fun s hs => by have := testD_le_8 (p := 24) (hss s hs) hk; simp only; omega)
     (fun s hs => by
-      have := checkD_le_8 (p := 24) (hss s hs) hk
+      have := testD_le_8 (p := 24) (hss s hs) hk
       have h8 := hss s hs
-      unfold checkX; simp only; omega),
-    ozaki1CRI32_eq heng 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
+      unfold testX; simp only; omega),
+    ozaki1CRI32_eq hmult 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
       (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue)]
 
 /-- **Signed FP64 Ozaki-I: 263 bits and 17 bits**, the IEEE result with IEEE's sign of zero. -/
-theorem ozaki1CRISC_binary64_tight {eng : Engine} {xs ys : List SEntry}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRISC_binary64_tight {mult : MatrixMultiplier} {xs ys : List SEntry}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a.1)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a.1) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRISC ⟨263, 17⟩ eng 53 (-1022) 1023 11 96 ss 175 xs ys =
+    ozaki1CRISC ⟨263, 17⟩ mult 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (crSigned rne64 (xs.map toSigned) (ys.map toSigned)) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
@@ -94,41 +94,41 @@ theorem ozaki1CRISC_binary64_tight {eng : Engine} {xs ys : List SEntry}
     intro a ha; obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact hx c hc
   have hy' : ∀ a ∈ ys.map (·.1), FormatEntry 53 (-1022) 1023 a := by
     intro a ha; obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact hy c hc
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hb2 : bitlen (175 * 175 + 2) = 15 := by decide
   have := natAbs_m1022; have := natAbs_1023
-  rw [ozaki1CRISC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx')
+  rw [ozaki1CRISC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx')
     (entriesIn_of_format hE hy') (by unfold exactR; rw [hW, hb2]; simp only; omega) (by decide)
     (by decide) (by unfold exactX; rw [hW]; simp only; omega)
-    (fun s hs => by have := checkD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
+    (fun s hs => by have := testD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
     (fun s hs => by
-      have := checkD_le_8 (p := 53) (hss s hs) hk
+      have := testD_le_8 (p := 53) (hss s hs) hk
       have h8 := hss s hs
-      unfold checkX; simp only; omega)]
-  exact congrArg some (ozaki1CRIS64_eq heng 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
+      unfold testX; simp only; omega)]
+  exact congrArg some (ozaki1CRIS64_eq hmult 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
     (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue))
 
 /-- **Correctly rounded FP64 Ozaki-II: 263 bits and 17 bits**, the twelve moduli at most `4096`
 with `P ≤ 69`. -/
-theorem ozaki2CRJC_binary64_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
+theorem ozaki2CRJC_binary64_tight {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
     {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp64Basis ∧ c.2 ≤ 69)
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
-    ozaki2CRJC ⟨263, 17⟩ eng 53 (-1022) 1023 cfgs 11 175 xs ys =
+    ozaki2CRJC ⟨263, 17⟩ mult 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hbk := bitlen_length_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hb2 : bitlen (175 * 175 + 2) = 15 := by decide
   have := natAbs_m1022; have := natAbs_1023
   obtain ⟨hm, hM, hsize, hM2, hbl⟩ := fp64Basis_facts
-  rw [ozaki2CRJC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  rw [ozaki2CRJC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) (fun c hc => by
       obtain ⟨h1, h2⟩ := hcfgs c hc
       rw [h1]
@@ -138,7 +138,7 @@ theorem ozaki2CRJC_binary64_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
       · unfold ozaki2X ozaki2R; rw [hbl]; simp only; omega)
     (by unfold exactR; rw [hW, hb2]; simp only; omega) (by decide)
     (by unfold exactX; rw [hW]; simp only; omega),
-    ozaki2CRJ64_eq heng (by decide) (by decide) (fun c hc => by
+    ozaki2CRJ64_eq hmult (by decide) (by decide) (fun c hc => by
       obtain ⟨h1, _⟩ := hcfgs c hc
       refine ⟨?_, ?_, hrange c hc⟩
       · rw [h1]; decide +kernel
@@ -148,23 +148,23 @@ theorem ozaki2CRJC_binary64_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
 
 /-- **Correctly rounded binary32 Ozaki-II: 161 bits and 15 bits**, six moduli at most `4096` with
 `P ≤ 34`. -/
-theorem ozaki2CRJC_binary32_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
+theorem ozaki2CRJC_binary32_tight {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
     {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
     (hy : ∀ a ∈ ys, FormatEntry 24 (-126) 127 a)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp32Basis6 ∧ c.2 ≤ 34) :
-    ozaki2CRJC ⟨161, 15⟩ eng 24 (-126) 127 cfgs 11 24 xs ys =
-      some (ozaki2CRJ eng 24 (-126) 127 cfgs 11 24 xs ys) := by
+    ozaki2CRJC ⟨161, 15⟩ mult 24 (-126) 127 cfgs 11 24 xs ys =
+      some (ozaki2CRJ mult 24 (-126) 127 cfgs 11 24 xs ys) := by
   have hE : ((-126 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 ∧
       ((127 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hbk := bitlen_length_le hk
   have hW : exactW 24 24 = 38 := by decide
   have hb2 : bitlen (24 * 24 + 2) = 10 := by decide
   have := natAbs_m126; have := natAbs_127
   obtain ⟨hm, hM, hsize, hM2, hbl⟩ := fp32Basis6_facts
-  exact ozaki2CRJC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  exact ozaki2CRJC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) (fun c hc => by
       obtain ⟨h1, h2⟩ := hcfgs c hc
       rw [h1]
@@ -176,14 +176,14 @@ theorem ozaki2CRJC_binary32_tight {eng : Engine} {xs ys : List (ℤ × ℤ)}
     (by unfold exactX; rw [hW]; simp only; omega)
 
 /-- **Signed FP64 Ozaki-II: 263 bits and 17 bits.** -/
-theorem ozaki2CRJSC_binary64_tight {eng : Engine} {xs ys : List SEntry}
+theorem ozaki2CRJSC_binary64_tight {mult : MatrixMultiplier} {xs ys : List SEntry}
     {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a.1)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a.1)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp64Basis ∧ c.2 ≤ 69)
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
-    ozaki2CRJSC ⟨263, 17⟩ eng 53 (-1022) 1023 cfgs 11 175 xs ys =
+    ozaki2CRJSC ⟨263, 17⟩ mult 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (crSigned rne64 (xs.map toSigned) (ys.map toSigned)) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
@@ -193,21 +193,21 @@ theorem ozaki2CRJSC_binary64_tight {eng : Engine} {xs ys : List SEntry}
     intro a ha; obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact hy c hc
   have hlx : (xs.map (·.1)).length = xs.length := by simp
   have hl' : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 53 175 = 72 := by decide
   have := natAbs_m1022; have := natAbs_1023
   unfold ozaki2CRJSC
-  rw [ozaki2CRJC_binary64_tight (by rw [hlx]; exact heng) hl' (by rw [hlx]; exact hk) hx' hy'
+  rw [ozaki2CRJC_binary64_tight (by rw [hlx]; exact hmult) hl' (by rw [hlx]; exact hk) hx' hy'
     hcfgs (by rw [hlx]; exact hrange)]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [signStepC_eq (emin := -1022) (emax := 1023) heng hlen (Nat.le_refl _)
+  rw [signStepC_eq (emin := -1022) (emax := 1023) hmult hlen (Nat.le_refl _)
     (entriesIn_of_format hE hx') (entriesIn_of_format hE hy')
     (by unfold exactR; rw [hW]; have : bitlen (175 * 175 + 2) = 15 := by decide
         simp only; omega)
     (by decide) (by decide)
     (by unfold exactX; rw [hW]; simp only; omega)]
   congr 1
-  exact signStep_eq (by decide) (by decide) heng hlen (Nat.le_refl _)
+  exact signStep_eq (by decide) (by decide) hmult hlen (Nat.le_refl _)
     (vanishInt64 (by decide) (by decide)
       (fun a ha => by obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact (hx c hc).formatValue)
       (fun a ha => by obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact (hy c hc).formatValue))

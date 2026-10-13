@@ -8,7 +8,7 @@ open Lean Elab Command
 namespace TensorCore.IndependentSpec.Audit
 
 def specificationModules : List Name :=
-  [`TensorCore.TC.Specification.Defs, `TensorCore.TC.Specification.Profiles,
+  [`TensorCore.TC.Specification.Defs, `TensorCore.TC.Specification.Variants,
     `TensorCore.TC.Specification.Schedule]
 
 def moduleOf (env : Environment) (n : Name) : Option Name := do

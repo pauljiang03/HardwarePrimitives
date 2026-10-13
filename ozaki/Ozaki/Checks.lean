@@ -9,7 +9,7 @@ Small facts that the Z3 models check at runtime on their test matrices, stated f
 * `scaleShift_spec` (Ozaki-II `[S1.1]`): the scaled row maximum lies in `(2^(P−1), 2^P]`;
 * `natAbs_truncProduct_le` (Ozaki-II `[S1.6]`): `|a · c| ≤ k 2^(2P)`;
 * `natAbs_residueProduct_le` (Ozaki-II `[S3.2]`): a residue product is at most `k ⌊m/2⌋²`;
-* `z3_residue_budget` (Ozaki-II `[S0.5]`): `k ⌊m/2⌋² ≤ 2^24` for the Z3 moduli;
+* `z3_residue_exactnessBound` (Ozaki-II `[S0.5]`): `k ⌊m/2⌋² ≤ 2^24` for the Z3 moduli;
 * `crt_dvd_sub` (Ozaki-II `[S4.2]`): the reconstruction is congruent to every residue. -/
 
 local notation "ℕ" => Nat
@@ -38,7 +38,7 @@ theorem z3_slice_product_bound {x y : List ℚ} (hk : x.length = z3K)
     (dotZ ((split z3SliceBits z3Slices x).1.getD t default).coeffs
       ((split z3SliceBits z3Slices y).1.getD u default).coeffs).natAbs ≤ 2 ^ 24 := by
   have := slice_product_bound z3SliceBits z3Slices x y ht hu
-  rw [hk, z3_slice_budget] at this
+  rw [hk, z3_slice_exactnessBound] at this
   exact this
 
 /-- **The scaled row maximum** (Ozaki-II `[S1.1]`): `2^(P−1) < max|x| · 2^sₓ ≤ 2^P`. -/
@@ -80,7 +80,7 @@ theorem natAbs_residueProduct_le {m : ℕ} (hm : 0 < m) (a c : List ℤ) :
 
 /-- **The Z3 residue products fit binary32** (Ozaki-II `[S0.5]`): `k ⌊m/2⌋² ≤ 2^24` for every
 modulus of `{4096, 4095, 4093, 4091}`. -/
-theorem z3_residue_budget : ∀ m ∈ z3Moduli, z3K * (m / 2 * (m / 2)) ≤ 2 ^ 24 := by decide
+theorem z3_residue_exactnessBound : ∀ m ∈ z3Moduli, z3K * (m / 2 * (m / 2)) ≤ 2 ^ 24 := by decide
 
 theorem dvd_prod_of_mem {m : ℕ} : ∀ {ms : List ℕ}, m ∈ ms → m ∣ ms.prod
   | _ :: ms, h => by

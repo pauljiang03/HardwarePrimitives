@@ -81,6 +81,6 @@ example : observe cdna2BF16 [(1, .inf false), (1, .inf true)] (0 : ℚ) = some .
 
 /-! ## fp32 inputs: SFMA as on CDNA 1 -/
 
-example : Architecture.cdna2.profile .fp32 = some sfmaF32 := rfl
+example : Architecture.cdna2.model .fp32 = some sfmaF32 := rfl
 
 end MatrixCoreTests.CDNA2

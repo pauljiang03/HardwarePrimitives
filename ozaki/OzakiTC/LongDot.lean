@@ -1,7 +1,7 @@
 import OzakiTC.Correct
 import Ozaki.SplitK
 import Ozaki.Exact64
-import Ozaki.Window
+import Ozaki.TruncatedSum
 
 /-! # Long dot products and FP64 emulation on the Tensor Core model
 
@@ -35,13 +35,13 @@ namespace Ozaki.TC
 
 /-- **Split-K on Tensor Core blocks**: chunks of `2^(24−2b)` terms, each a Tensor Core dot product,
 added exactly. -/
-def tcSplitK (p : Profile) (b : ℕ) : Engine := chunked (chunkLen b) (tcEngine p)
+def tcSplitK (p : Model) (b : ℕ) : MatrixMultiplier := chunked (chunkLen b) (tcMultiplier p)
 
 /-- On any path where the Tensor Core engine is exact on `b`-bit slices, split-K is exact on
 `b`-bit vectors of every length. -/
-theorem tcSplitK_exactOn {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcSplitK_exactOn {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (B : ℕ) : (tcSplitK p b).ExactOn b B :=
-  chunked_exactOn heng (chunkLen_pos b) (chunkLen_budget hb) B
+  chunked_exactOn hmult (chunkLen_pos b) (chunkLen_exactnessBound hb) B
 
 /-! ## The chunk results in a fixed-width integer register -/
 
@@ -51,8 +51,8 @@ def regSum (w : ℕ) (vs : List ℚ) : Option ℚ := do
   pure ((machineAccumulate w 0 zs).toInt : ℚ)
 
 /-- Split-K with the chunk results accumulated in a `w`-bit integer register. -/
-def tcSplitKReg (w : ℕ) (p : Profile) (b : ℕ) : Engine := fun x y =>
-  (((chunksOf (chunkLen b) x).zip (chunksOf (chunkLen b) y)).mapM fun q => tcEngine p q.1 q.2).bind
+def tcSplitKReg (w : ℕ) (p : Model) (b : ℕ) : MatrixMultiplier := fun x y =>
+  (((chunksOf (chunkLen b) x).zip (chunksOf (chunkLen b) y)).mapM fun q => tcMultiplier p q.1 q.2).bind
     (regSum w)
 
 theorem sumZ_eq_sum : ∀ zs : List ℤ, sumZ zs = zs.sum
@@ -71,7 +71,7 @@ theorem magnitudeSum_map_le {l : List α} {f : α → ℤ} {g : α → ℕ} (h :
 
 /-- **The register cannot overflow.** With a `w`-bit register, split-K is exact on `b`-bit vectors
 whose products total less than `2^(w−1)`: below `2^63` in a 64-bit register. -/
-theorem tcSplitKReg_exactOn {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcSplitKReg_exactOn {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) {w B : ℕ} (hw : 0 < w) (hB : B < 2 ^ (w - 1)) :
     (tcSplitKReg w p b).ExactOn b B := by
   intro x y hlen hx hy hbud
@@ -98,20 +98,20 @@ theorem tcSplitKReg_exactOn {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn
       rw [toInt?_intCast, Rat.num_intCast]
   · intro q hq
     obtain ⟨h1, h2, h3, h4⟩ := hpairs q hq
-    apply heng _ _ h1 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha))
+    apply hmult _ _ h1 (fun a ha => hx a (h3 a ha)) (fun a ha => hy a (h4 a ha))
     refine Nat.le_trans (dotAbs_le _ _ _ _ (fun a ha => hx a (h3 a ha))
       (fun a ha => hy a (h4 a ha))) ?_
-    exact Nat.le_trans (Nat.mul_le_mul_right _ h2) (chunkLen_budget hb)
+    exact Nat.le_trans (Nat.mul_le_mul_right _ h2) (chunkLen_exactnessBound hb)
 
 /-! ## Binary32 GEMM of any inner dimension -/
 
 /-- Ozaki-I on Tensor Core blocks with split-K, binary32 recombination. -/
-def tcOzaki1L (p : Profile) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1L (p : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (tcSplitK p b) add32 b s x y
 
 /-- **Ozaki-I on the Tensor Core for any inner dimension**: the bound of `tcOzaki1_error` without
 the condition `k · 2^(2b) ≤ 2^24`. -/
-theorem tcOzaki1L_error {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1L_error {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length) {v : ℚ}
     (hv : tcOzaki1L p b s x y = some v) :
     Rat.abs (v - dot x y) ≤
@@ -120,7 +120,7 @@ theorem tcOzaki1L_error {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (
         (trianglePairs s).length * (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length *
           2 ^ (-150 : ℤ) +
         ((s + 1 : ℕ) : ℚ) * x.length * 2 ^ (splitExp b x + splitExp b y - s * (b + 1)) :=
-  ozaki1_error (tcSplitK_exactOn heng hb _) (Rat.le_of_lt (two_pow_pos _))
+  ozaki1_error (tcSplitK_exactOn hmult hb _) (Rat.le_of_lt (two_pow_pos _))
     (Rat.le_of_lt (two_pow_pos _)) add32_within hlen (Nat.le_refl _) hv
 
 /-- TensorCore's binary64 values are the binary64 values of `Ozaki.Binary`. -/
@@ -136,33 +136,33 @@ theorem fp64_binary64 {v : ℚ} (h : fp64.FiniteValue v) : Binary64Value v := by
 
 /-- Correctly rounded binary32 Ozaki-I of any inner dimension; every slice product, including the
 exact path's, on Tensor Core blocks. -/
-def tcOzaki1CRL (p : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRL (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRE (tcSplitK p b) rne32Q b ss smax x y
 
 /-- Correctly rounded binary32 Ozaki-II of any inner dimension; every residue and slice product on
 Tensor Core blocks. -/
-def tcOzaki2CRL (p : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
+def tcOzaki2CRL (p : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRE (tcSplitK p b) rne32Q cfgs b smax x y
 
 /-- **Correctly rounded binary32 Ozaki-I for any inner dimension**, on any exact path: the IEEE
 round to nearest even of `x · y`, the same function as on the AMD model. -/
-theorem tcOzaki1CRL_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a) (hlen : x.length = y.length) :
     tcOzaki1CRL p b ss smax x y = rne32Q (dot x y) :=
-  ozaki1CRE_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn heng hb _) ss hlen
+  ozaki1CRE_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn hmult hb _) ss hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
 /-- **Correctly rounded binary32 Ozaki-II for any inner dimension**, on any exact path. -/
-theorem tcOzaki2CRL_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki2CRL_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * x.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
     (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a) (hlen : x.length = y.length) :
     tcOzaki2CRL p cfgs b smax x y = rne32Q (dot x y) :=
-  ozaki2CRE_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn heng hb _) hcfg hlen
+  ozaki2CRE_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn hmult hb _) hcfg hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
 /-! ## FP64 emulation -/
@@ -175,12 +175,12 @@ theorem fp64Add_within : AddWithin fp64Add (2 ^ (-53 : ℤ)) (2 ^ (-1075 : ℤ))
 
 /-- **FP64 emulation, Ozaki-I**: slices on Tensor Core blocks with split-K, the scaled slice
 products added in binary64. -/
-def tcOzaki1D (p : Profile) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1D (p : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (tcSplitK p b) fp64Add b s x y
 
 /-- **The error of FP64 emulation by Ozaki-I** on Tensor Core blocks, for any inner dimension:
 binary64 additions plus the slicing bound. -/
-theorem tcOzaki1D_error {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1D_error {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length) {v : ℚ}
     (hv : tcOzaki1D p b s x y = some v) :
     Rat.abs (v - dot x y) ≤
@@ -189,33 +189,33 @@ theorem tcOzaki1D_error {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (
         (trianglePairs s).length * (1 + 2 ^ (-53 : ℤ)) ^ (trianglePairs s).length *
           2 ^ (-1075 : ℤ) +
         ((s + 1 : ℕ) : ℚ) * x.length * 2 ^ (splitExp b x + splitExp b y - s * (b + 1)) :=
-  ozaki1_error (tcSplitK_exactOn heng hb _) (Rat.le_of_lt (two_pow_pos _))
+  ozaki1_error (tcSplitK_exactOn hmult hb _) (Rat.le_of_lt (two_pow_pos _))
     (Rat.le_of_lt (two_pow_pos _)) fp64Add_within hlen (Nat.le_refl _) hv
 
 /-- **Correctly rounded FP64 emulation, Ozaki-I**: every slice product on Tensor Core blocks, the
 binary64 round to nearest even of `x · y`. -/
-def tcOzaki1CRD (p : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRD (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRE (tcSplitK p b) rne64 b ss smax x y
 
 /-- **Correctly rounded FP64 emulation, Ozaki-II**: every residue and slice product on Tensor Core
 blocks, the binary64 round to nearest even of `x · y`. -/
-def tcOzaki2CRD (p : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
+def tcOzaki2CRD (p : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRE (tcSplitK p b) rne64 cfgs b smax x y
 
 /-- **FP64 GEMM on fp16, bf16 or tf32 Tensor Cores, correctly rounded.** For binary64 inputs of any
 length, on any path where the engine is exact on `b`-bit slices, the result is the IEEE binary64
 round to nearest even of `x · y`. -/
-theorem tcOzaki1CRD_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRD_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRD p b ss smax x y = rne64 (dot x y) :=
-  ozaki1CRE_eq rne64_nearest rne64_intervals (tcSplitK_exactOn heng hb _) ss hlen
+  ozaki1CRE_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) ss hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
 /-- **FP64 GEMM by Ozaki-II on Tensor Cores, correctly rounded.** -/
-theorem tcOzaki2CRD_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki2CRD_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -223,7 +223,7 @@ theorem tcOzaki2CRD_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki2CRD p cfgs b smax x y = rne64 (dot x y) :=
-  ozaki2CRE_eq rne64_nearest rne64_intervals (tcSplitK_exactOn heng hb _) hcfg hlen
+  ozaki2CRE_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) hcfg hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
 /-- The instances: FP64 emulation on V100 fp16 (`11`-bit slices, up to `175`) and A100 bf16
@@ -242,28 +242,28 @@ theorem a100BF16_fp64CR (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Bina
 
 /-- Correctly rounded binary32 Ozaki-I of any inner dimension with a `W`-bit window accumulator for
 the check. -/
-def tcOzaki1CRLW (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRLW (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRW (tcSplitK p b) rne32Q b W ss smax x y
 
 /-- Correctly rounded FP64 by Ozaki-I with a `W`-bit window accumulator for the check. -/
-def tcOzaki1CRDW (p : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRDW (p : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRW (tcSplitK p b) rne64 b W ss smax x y
 
-theorem tcOzaki1CRLW_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRLW_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {x y : List ℚ} (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRLW p b W ss smax x y = rne32Q (dot x y) :=
-  ozaki1CRW_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn heng hb _) W ss hlen
+  ozaki1CRW_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn hmult hb _) W ss hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
 /-- **Correctly rounded FP64 GEMM on Tensor Cores with a two-word accumulator.** -/
-theorem tcOzaki1CRDW_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRDW_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRDW p b W ss smax x y = rne64 (dot x y) :=
-  ozaki1CRW_eq rne64_nearest rne64_intervals (tcSplitK_exactOn heng hb _) W ss hlen
+  ozaki1CRW_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) W ss hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
 /-- FP64 on V100 fp16 with a `96`-bit window: correctly rounded for every length. With up to seven

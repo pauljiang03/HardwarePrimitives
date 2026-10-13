@@ -17,15 +17,15 @@ Each check is a kernel evaluation of the same definitions the theorems use. -/
 
 open TensorCore Ozaki Ozaki.TC OzakiTCTests.Z3Matrices
 
-namespace OzakiTCTests.AllPaths
+namespace OzakiTCTests.AllVariants
 
 /-- Ozaki-I on a path, from binary32 words to binary32 words. -/
-def runI (p : Profile) (b s : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
+def runI (p : Model) (b s : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   let C ← tcOzaki1Gemm p b s A B; encodeMatrix C
 
 /-- Ozaki-II on a path, from binary32 words to binary32 words. -/
-def runII (p : Profile) (Bs : CRTBasis) (P : ℕ) (A B : List (List F32)) :
+def runII (p : Model) (Bs : CRTBasis) (P : ℕ) (A B : List (List F32)) :
     Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
   let C ← tcOzaki2Gemm p Bs P A B; encodeMatrix C
@@ -33,12 +33,12 @@ def runII (p : Profile) (Bs : CRTBasis) (P : ℕ) (A B : List (List F32)) :
 /-- Ozaki-I with an exact engine, for comparison. -/
 def runIExact (b s : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
-  let C ← ozaki1Gemm exactEngine fp32Add b s A B; encodeMatrix C
+  let C ← ozaki1Gemm exactMultiplier fp32Add b s A B; encodeMatrix C
 
 /-- Ozaki-II with an exact engine, for comparison. -/
 def runIIExact (Bs : CRTBasis) (P : ℕ) (A B : List (List F32)) : Option (List (List F32)) := do
   let A ← decodeMatrix A; let B ← decodeMatrix B
-  let C ← ozaki2Gemm exactEngine round32Value Bs P A B; encodeMatrix C
+  let C ← ozaki2Gemm exactMultiplier round32Value Bs P A B; encodeMatrix C
 
 /-! ## A100 fp16 (`K = 8`, `F = 24`) -/
 
@@ -104,4 +104,4 @@ example : runII hopperBF16F32 bf16Basis 16 A_narrow B_narrow =
     runIIExact bf16Basis 16 A_narrow B_narrow ∧
     (runIIExact bf16Basis 16 A_narrow B_narrow).isSome := by decide +kernel
 
-end OzakiTCTests.AllPaths
+end OzakiTCTests.AllVariants

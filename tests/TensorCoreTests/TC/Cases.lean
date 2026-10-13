@@ -27,7 +27,7 @@ structure Snapshot where
   correctedBits : Option ℕ
   deriving Repr, DecidableEq
 
-def snapshot {p : Profile} (x : BlockInput p) : Except ModelError Snapshot := do
+def snapshot {p : Model} (x : BlockInput p) : Except ModelError Snapshot := do
   let t ← evalBlock x
   return ⟨t.output.bits.toNat, t.block.alignExp, t.block.alignGridExponent,
     t.block.products.map (fun (a, b) => (unnormalizedMul a b).unnormalizedExp),
@@ -35,7 +35,7 @@ def snapshot {p : Profile} (x : BlockInput p) : Except ModelError Snapshot := do
     t.block.alignmentResiduals, t.outputResidual, t.residual,
     t.corrected.map BitVec.toNat⟩
 
-def outputBits {p : Profile} (x : BlockInput p) : Except ModelError ℕ :=
+def outputBits {p : Model} (x : BlockInput p) : Except ModelError ℕ :=
   (evalBlock x).map fun t => t.output.bits.toNat
 
 set_option maxRecDepth 16384

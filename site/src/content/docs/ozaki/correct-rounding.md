@@ -34,7 +34,7 @@ Then for each entry:
    ends: at most `24` slices of `11` bits for binary32 inputs and `175` for
    binary64 ([`split_residual_zero`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L417)).
 
-The result is correctly rounded whichever step settles it ([`certify_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L123),
+The result is correctly rounded whichever step settles it ([`roundingTest_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L123),
 [`ozaki1CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L523), [`ozaki2CRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L540), [`adpCRE_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPFix.lean#L223)). The fallback is part of
 the method, not a failure: it is slower and never wrong.
 
@@ -51,7 +51,7 @@ The check settles an entry whenever `x · y − 2B` and `x · y + 2B` round to
 the same value, in particular whenever `x · y` lies more than `2B` from every
 rounding boundary; at exactly `2B` an endpoint can be a tie that rounds the
 other way ([`roundEnclosure_of_margin`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L321),
-[`ozaki1Enclosure_settles`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L342)). Each extra slice of `11` bits divides `B` by
+[`ozaki1Enclosure_succeeds`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Correct.lean#L342)). Each extra slice of `11` bits divides `B` by
 about `2^12`. The fallback is needed for:
 
 - **exact ties**, results exactly halfway between two floats, which no
@@ -139,15 +139,15 @@ depend on the inputs' exponents.
   round-half-even division and comparisons. It equals the slicing of the
   proofs for every grid ([`splitInt_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceInt.lean#L582), [`splitInt_width`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/SliceInt.lean#L605)).
 - **The check** adds each scaled slice product, rounded down to a window of
-  `W` bits, in a register that never wraps ([`ozaki1Window_register`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Window.lean#L149),
-  [`ozaki1CRW_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Window.lean#L135)). The final round to nearest even is a few integer
+  `W` bits, in a register that never wraps ([`ozaki1Truncated_register`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TruncatedSum.lean#L149),
+  [`ozaki1CRW_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TruncatedSum.lean#L135)). The final round to nearest even is a few integer
   comparisons ([`roundExact_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Bounded.lean#L635)).
 - **The fallback** decides the rounding of a sum of terms `v · 2^e` by a
   top-down descent over windows. It adds the parts of the terms in a window,
   carries the sum down only when cancellation has made it small, and jumps
-  over empty gaps ([`roundSumJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Descent.lean#L508)). It visits at most
+  over empty gaps ([`roundSumJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TopDownSummation.lean#L508)). It visits at most
   `n · bitlen(max |v|) + 1` windows, whatever the exponents
-  ([`windowsJ_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/Descent.lean#L436)).
+  ([`rangesJ_le`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/TopDownSummation.lean#L436)).
 - **The whole pipeline**, from `(significand, exponent)` inputs to the rounded
   result, is one integer function proved correctly rounded: for Ozaki-I
   ([`ozaki1CRI_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedInt.lean#L185)), Ozaki-II ([`ozaki2CRJ_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedOzaki2J.lean#L111)) and ADP-style slicing
@@ -171,7 +171,7 @@ overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/oza
 
 The guards cover the engines' internal arithmetic too: every chunk result and
 partial sum of split-K, and every partial sum of the INT8 engine's 32-bit
-register, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedEngines.lean#L50),
+register, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedMultipliers.lean#L50),
 [`int8DotC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/Int8Checked.lean#L59)). The signed-zero pipelines have checked copies as well
 ([`ozaki2CRJSC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/BoundedCheckedSigned.lean#L138), [`adpCRJSC_eq`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/OzakiTC/ADPCheckedSigned.lean#L27)); the tightened widths are
 [`ozaki1CRIC_binary64_tight`](https://github.com/pauljiang03/TC-EFT/blob/main/ozaki/Ozaki/CheckedTight.lean#L37) and its siblings. Kernel-checked tests show the

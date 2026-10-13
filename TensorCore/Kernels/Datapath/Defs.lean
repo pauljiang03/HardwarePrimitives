@@ -10,25 +10,25 @@ open EFMachine
 abbrev Exp := BitVec 9
 
 /-- F = 23 + p: the mantissa bits each term keeps after alignment. -/
-def alignBits : Path → BitVec 5
+def alignBits : Variant → BitVec 5
   | .v100F16 => 23
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 24
   | _ => 25
 
 /-- The alignment floor, biased by 256; 0 on V100, which has none. -/
-def floor : Path → Exp
+def eAlignMin : Variant → Exp
   | .v100F16 => 0
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 124
   | _ => 123
 
 /-- Carry bits for summing the K products and c: `K + 1 ≤ 2 ^ carryBits`. -/
-def carryBits (path : Path) : ℕ := path.profile.products.log2 + 1
+def carryBits (variant : Variant) : ℕ := variant.model.nfma.log2 + 1
 
 /-- An aligned term: the implicit bit, one implicit padding bit for a product's carry, and F bits after the binary point. -/
-def termWidth (path : Path) : ℕ := (alignBits path).toNat + 2
+def termWidth (variant : Variant) : ℕ := (alignBits variant).toNat + 2
 
 /-- The two's complement accumulator: an aligned term's width, the carry bits and a sign bit. -/
-def accWidth (path : Path) : ℕ := termWidth path + carryBits path + 1
+def accWidth (variant : Variant) : ℕ := termWidth variant + carryBits variant + 1
 
 /-- A decoded input: sign, significand with its hidden bit, mantissa width, and unnormalized exponent biased by 128. -/
 structure Input where
@@ -78,27 +78,27 @@ def decodeC (bits : F32) : Option Term :=
     else some ⟨negative, m, 23, 130⟩
   else some ⟨negative, 8388608 + m, 23, e + 129⟩
 
-def decodeTerm (path : Path) (pair : path.profile.Word × path.profile.Word) : Option Term := do
-  let a ← decodeInput path.kind (pair.1.zeroExtend 32)
-  let b ← decodeInput path.kind (pair.2.zeroExtend 32)
+def decodeTerm (variant : Variant) (pair : variant.model.Word × variant.model.Word) : Option Term := do
+  let a ← decodeInput variant.kind (pair.1.zeroExtend 32)
+  let b ← decodeInput variant.kind (pair.2.zeroExtend 32)
   return product a b
 
 /-- Largest unnormalized exponent of a nonzero term, raised to the profile floor. -/
-def alignExp (path : Path) (ts : List Term) : Exp :=
+def alignExp (variant : Variant) (ts : List Term) : Exp :=
   ts.foldl (fun e t => if t.significand == 0 then e
-    else if e ≤ t.biasedExp then t.biasedExp else e) (floor path)
+    else if e ≤ t.biasedExp then t.biasedExp else e) (eAlignMin variant)
 
 /-- The term's magnitude truncated to the grid `2 ^ (e - 256 - F)`. -/
-def Term.aligned (path : Path) (e : Exp) (t : Term) : BitVec (termWidth path) :=
-  (t.significand.zeroExtend (termWidth path) <<< (alignBits path - t.mantissaBits)) >>>
+def Term.aligned (variant : Variant) (e : Exp) (t : Term) : BitVec (termWidth variant) :=
+  (t.significand.zeroExtend (termWidth variant) <<< (alignBits variant - t.mantissaBits)) >>>
     (e - t.biasedExp)
 
-def Term.signedAligned (path : Path) (e : Exp) (t : Term) : BitVec (accWidth path) :=
-  let a := (t.aligned path e).zeroExtend (accWidth path)
+def Term.signedAligned (variant : Variant) (e : Exp) (t : Term) : BitVec (accWidth variant) :=
+  let a := (t.aligned variant e).zeroExtend (accWidth variant)
   if t.negative then -a else a
 
-def accumulate (path : Path) (e : Exp) (ts : List Term) : BitVec (accWidth path) :=
-  ts.foldl (fun s t => s + t.signedAligned path e) 0
+def accumulate (variant : Variant) (e : Exp) (ts : List Term) : BitVec (accWidth variant) :=
+  ts.foldl (fun s t => s + t.signedAligned variant e) 0
 
 /-- Normalization and final truncation of an accumulator on the grid `2 ^ (e - 256 - F)`;
 `none` when the value exceeds the largest finite FP32 value. -/
@@ -126,13 +126,13 @@ def normalize (s : BitVec w) (e : Exp) (F : BitVec 5) : Option F32 :=
       some ((if negative then 0x80000000 else 0) + payload)
 
 /-- One normalization group, computed with bitvector operations only. -/
-def evalBlock (path : Path) (x : BlockInput path.profile) : Except ModelError F32 := do
-  if x.products.length != path.profile.products then throw .wrongProductCount
+def evalBlock (variant : Variant) (x : BlockInput variant.model) : Except ModelError F32 := do
+  if x.products.length != variant.model.nfma then throw .wrongProductCount
   let some c := decodeC x.c | throw .nonfiniteInput
-  let some ps := x.products.mapM (decodeTerm path) | throw .nonfiniteInput
+  let some ps := x.products.mapM (decodeTerm variant) | throw .nonfiniteInput
   let ts := c :: ps
-  let e := alignExp path ts
-  let some bits := normalize (accumulate path e ts) e (alignBits path) | throw .accumulatorOutOfRange
+  let e := alignExp variant ts
+  let some bits := normalize (accumulate variant e ts) e (alignBits variant) | throw .accumulatorOutOfRange
   return bits
 
 end TensorCore.Datapath

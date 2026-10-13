@@ -30,7 +30,7 @@ returns `none`.
 
 ## All eight GPU paths
 
-[OzakiTCTests/AllPaths.lean](OzakiTCTests/AllPaths.lean) runs the Z3 cases on every Tensor Core
+[OzakiTCTests/AllVariants.lean](OzakiTCTests/AllVariants.lean) runs the Z3 cases on every Tensor Core
 path. The A100 and H100 fp16 paths and the three tf32 paths return the Z3 models' words for both
 schemes and both cases. The two bf16 paths return `none` with `11`-bit slices; with `8`-bit slices
 (and moduli `{512, 511, 509, 503}`, `P = 16` for Ozaki-II) they return the exact-engine result.

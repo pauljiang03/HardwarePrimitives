@@ -1,5 +1,5 @@
 import TensorCore.Numerics.RoundTrip
-import TensorCore.TC.CanonicalFloor
+import TensorCore.TC.CanonicalEAlignMin
 import TensorCore.TC.Monotonicity
 import TensorCore.TC.Composition
 
@@ -108,21 +108,21 @@ theorem Decoded.value_ne_zero (d : Decoded) (h : d.significand ≠ 0) : d.value 
   exact h (Rat.intCast_inj.mp h1)
 
 /-- With only zero products, the alignment exponent is the accumulator input's unnormalized exponent, whenever the floor is at most `−126`. -/
-theorem zero_products_alignExp (K extra : ℕ) (floor : Option ℤ) (hfl : ∀ f ∈ floor, f ≤ -126)
+theorem zero_products_alignExp (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126)
     (c : Decoded) (hc : c.significand ≠ 0) (hlow : -126 ≤ c.unnormalizedExp) :
-    (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+    (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).alignExp = some c.unnormalizedExp := by
-  have hterms : (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+  have hterms : (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms =
       ⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ :: List.replicate K ⟨0, 0, 0⟩ := by
     simp [PreparedBlock.terms, List.map_replicate, unnormalizedMul]
   have hmem : (⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ : UnnormalizedProduct) ∈
-      (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+      (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
         (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms := by
     rw [hterms]; simp
   obtain ⟨e, he, hle⟩ := maxTermExp_term _ _ hmem hc
   have hle' : c.unnormalizedExp ≤ e := hle
-  have hup := maxTermExp_upper (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+  have hup := maxTermExp_upper (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) c).terms c.unnormalizedExp (by
         intro t ht hnz
         rw [hterms] at ht
@@ -134,38 +134,38 @@ theorem zero_products_alignExp (K extra : ℕ) (floor : Option ℤ) (hfl : ∀ f
   subst heq
   unfold PreparedBlock.alignExp
   rw [he]
-  unfold Profile.applyFloor
-  have hfloor : (fp16Fp32Profile K extra floor).alignFloor = floor := rfl
-  simp only [hfloor]
-  cases hf : floor with
+  unfold Model.applyEAlignMin
+  have heAlignMin : (fp16Fp32Model K neab eAlignMin).eAlignMin = eAlignMin := rfl
+  simp only [heAlignMin]
+  cases hf : eAlignMin with
   | none => rfl
   | some f =>
     have := hfl f (by rw [hf]; simp)
     simp [Int.max_eq_left (by omega : f ≤ c.unnormalizedExp)]
 
 /-- A group whose products are all zero pairs returns its accumulator input unchanged, for every finite input other than `−0`. -/
-theorem zero_products_passthrough (K extra : ℕ) (floor : Option ℤ)
-    (hfl : ∀ f ∈ floor, f ≤ -126) (c : F32) (f : Finite32) (hf : finite32 c = some f)
+theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (c : F32) (f : Finite32) (hf : finite32 c = some f)
     (hneg : c ≠ 0x80000000) :
     ∃ t : BlockTrace,
-      evalBlock (⟨List.replicate K (0, 0), c⟩ : BlockInput (fp16Fp32Profile K extra floor)) =
+      evalBlock (⟨List.replicate K (0, 0), c⟩ : BlockInput (fp16Fp32Model K neab eAlignMin)) =
         .ok t ∧ t.output.bits = c := by
   have hbits := finite32_bits hf
   have hc : decode32 c = some f.decoded := by rw [← hbits]; exact f.valid
-  have hz : (fp16Fp32Profile K extra floor).decode 0 = some ⟨0, 0, 0⟩ := by
+  have hz : (fp16Fp32Model K neab eAlignMin).decode 0 = some ⟨0, 0, 0⟩ := by
     show (classify fp16 0).finite = some _
     decide +kernel
-  have hps := prepareProducts_replicate (fp16Fp32Profile K extra floor) 0 0 ⟨0, 0, 0⟩ ⟨0, 0, 0⟩
+  have hps := prepareProducts_replicate (fp16Fp32Model K neab eAlignMin) 0 0 ⟨0, 0, 0⟩ ⟨0, 0, 0⟩
     K hz hz
   have hlen : ¬ ((List.replicate K ((0 : F16), (0 : F16))).length !=
-      (fp16Fp32Profile K extra floor).products) = true := by simp [fp16Fp32Profile]
-  have hcoef := construction_alignedBits (fp16Fp32Profile K extra floor) K ⟨0, 0, 0⟩ ⟨0, 0, 0⟩
+      (fp16Fp32Model K neab eAlignMin).nfma) = true := by simp [fp16Fp32Model]
+  have hcoef := construction_alignedBits (fp16Fp32Model K neab eAlignMin) K ⟨0, 0, 0⟩ ⟨0, 0, 0⟩
     f.decoded
   have hprod : ∀ q : ℤ, truncBits (unnormalizedMul ⟨0, 0, 0⟩ ⟨0, 0, 0⟩).value q = 0 := by
     intro q
     simp [unnormalizedMul, UnnormalizedProduct.value, truncBits, Rat.div_def]
     all_goals decide +kernel
-  have hacc : (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+  have hacc : (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded).accumulator = f.value := by
     by_cases hsig : f.decoded.significand = 0
     · have hv : f.decoded.value = 0 := by simp [Decoded.value, hsig]
@@ -183,32 +183,32 @@ theorem zero_products_passthrough (K extra : ℕ) (floor : Option ℤ)
         · rw [h0] at hsig; exact absurd rfl hsig
         · rw [h0]; exact ⟨rfl, Int.le_refl _⟩
         · rw [h0]; exact ⟨rfl, by simp; omega⟩
-      have heta := zero_products_alignExp K extra floor hfl f.decoded hsig hlow
-      have hq : (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+      have heta := zero_products_alignExp K neab eAlignMin hfl f.decoded hsig hlow
+      have hq : (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
           (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded).alignGridExponent =
-          f.decoded.unnormalizedExp - ((23 + extra : ℕ) : ℤ) := by
+          f.decoded.unnormalizedExp - ((23 + neab : ℕ) : ℤ) := by
         unfold PreparedBlock.alignGridExponent
         rw [heta]
         rfl
       rw [hq] at hcoef
       have hcval : f.decoded.value =
-          ((f.decoded.significand * ((2 ^ extra : ℕ) : ℤ) : ℤ) : ℚ) *
-            pow2 (f.decoded.unnormalizedExp - ((23 + extra : ℕ) : ℤ)) := by
+          ((f.decoded.significand * ((2 ^ neab : ℕ) : ℤ) : ℤ) : ℚ) *
+            pow2 (f.decoded.unnormalizedExp - ((23 + neab : ℕ) : ℤ)) := by
         unfold Decoded.value
         rw [hfrac, Rat.intCast_mul, Rat.intCast_natCast, ← pow2_natCast, Rat.mul_assoc, ← pow2_add]
         congr 2
         omega
-      have hcc : truncBits f.decoded.value (f.decoded.unnormalizedExp - ((23 + extra : ℕ) : ℤ)) =
-          f.decoded.significand * ((2 ^ extra : ℕ) : ℤ) := by
+      have hcc : truncBits f.decoded.value (f.decoded.unnormalizedExp - ((23 + neab : ℕ) : ℤ)) =
+          f.decoded.significand * ((2 ^ neab : ℕ) : ℤ) := by
         rw [hcval, truncBits_of_grid]
       unfold PreparedBlock.accumulator
       rw [hcoef, hq]
       simp only [sumZ, hcc, hprod, sumZ_replicate, Int.mul_zero, Int.add_zero]
       rw [← hcval]
       rfl
-  have hrun : evalPrepared (PreparedBlock.mk (fp16Fp32Profile K extra floor)
+  have hrun : evalPrepared (PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
       (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded) =
-      .ok ⟨PreparedBlock.mk (fp16Fp32Profile K extra floor)
+      .ok ⟨PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
         (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded, f⟩ := by
     by_cases hsig : f.decoded.significand = 0
     · have hc0 : c = 0 := zero_value_bits c f.decoded hc hsig hneg
@@ -221,7 +221,7 @@ theorem zero_products_passthrough (K extra : ℕ) (floor : Option ℤ)
         unfold value32; rw [hc]; rfl
       have hr := value32_round32 .truncate c f.value hval32 hv
       simp only [evalPrepared, hacc, hr, hf]
-  refine ⟨⟨PreparedBlock.mk (fp16Fp32Profile K extra floor)
+  refine ⟨⟨PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
     (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded, f⟩, ?_, hbits⟩
   unfold evalBlock
   rw [if_neg hlen]
@@ -229,17 +229,17 @@ theorem zero_products_passthrough (K extra : ℕ) (floor : Option ℤ)
   exact hrun
 
 /-- Zero groups pass a finite accumulator, other than `−0`, through unchanged. -/
-theorem runBlocks_zero_groups (K extra : ℕ) (floor : Option ℤ)
-    (hfl : ∀ f ∈ floor, f ≤ -126) (m : ℕ) (c : F32) (f : Finite32) (hf : finite32 c = some f)
+theorem runBlocks_zero_groups (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (m : ℕ) (c : F32) (f : Finite32) (hf : finite32 c = some f)
     (hneg : c ≠ 0x80000000) :
     ∃ ts : List BlockTrace,
-      runBlocks (fp16Fp32Profile K extra floor) c
+      runBlocks (fp16Fp32Model K neab eAlignMin) c
         (List.replicate m (List.replicate K (0, 0))) = .ok ts ∧
       ((ts.getLast?.map fun t => t.output.bits).getD c) = c := by
   induction m generalizing c f with
   | zero => exact ⟨[], rfl, rfl⟩
   | succ m ih =>
-    obtain ⟨t, ht, hbits⟩ := zero_products_passthrough K extra floor hfl c f hf hneg
+    obtain ⟨t, ht, hbits⟩ := zero_products_passthrough K neab eAlignMin hfl c f hf hneg
     have hf' : finite32 t.output.bits = some t.output := finite32_self t.output
     obtain ⟨ts, hts, hlast⟩ := ih t.output.bits t.output hf' (by rw [hbits]; exact hneg)
     refine ⟨t :: ts, ?_, ?_⟩
@@ -252,97 +252,97 @@ theorem runBlocks_zero_groups (K extra : ℕ) (floor : Option ℤ)
         exact hlast
 
 /-- A pinned instruction path: inner dimension `k`, products per group, extra alignment bits, floor, and the source of these parameters. -/
-structure InstructionPath where
+structure InstructionVariant where
   name : String
   k : ℕ
-  products : ℕ
-  extraBits : ℕ
-  floor : Option ℤ
+  nfma : ℕ
+  neab : ℕ
+  eAlignMin : Option ℤ
   evidence : String
-  productsPos : 0 < products
-  kDiv : products ∣ k
+  nfmaPos : 0 < nfma
+  kDiv : nfma ∣ k
 
-abbrev InstructionPath.profile (p : InstructionPath) : Profile :=
-  fp16Fp32Profile p.products p.extraBits p.floor
+abbrev InstructionVariant.model (p : InstructionVariant) : Model :=
+  fp16Fp32Model p.nfma p.neab p.eAlignMin
 
-def InstructionPath.groups (p : InstructionPath) : ℕ := p.k / p.products
+def InstructionVariant.groups (p : InstructionVariant) : ℕ := p.k / p.nfma
 
 /-- The schedule of one instruction: `k / N_FMA` contiguous groups in increasing k. -/
-def InstructionPath.schedule (p : InstructionPath) (pairs : List (F16 × F16)) :
-    List (List (p.profile.Word × p.profile.Word)) :=
-  chunks p.products p.groups pairs
+def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F16)) :
+    List (List (p.model.Word × p.model.Word)) :=
+  chunks p.nfma p.groups pairs
 
 /-- Execute the instruction. -/
-def InstructionPath.run (p : InstructionPath) (c : F32) (pairs : List (F16 × F16)) :
+def InstructionVariant.run (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16)) :
     Except ModelError (List BlockTrace) :=
   if pairs.length != p.k then .error .wrongProductCount
-  else runBlocks p.profile c (p.schedule pairs)
+  else runBlocks p.model c (p.schedule pairs)
 
 /-- The instruction's FP32 result: the last group's output, or the accumulator input when there are no groups. -/
-def InstructionPath.output (p : InstructionPath) (c : F32) (pairs : List (F16 × F16)) :
+def InstructionVariant.output (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16)) :
     Option F32 :=
   match p.run c pairs with
   | .ok ts => some ((ts.getLast?.map fun t => t.output.bits).getD c)
   | .error _ => none
 
-def InstructionPath.describe (p : InstructionPath) : String :=
-  s!"{p.name}: k = {p.k}, N_FMA = {p.products}, extra alignment bits = {p.extraBits}, " ++
-  s!"floor = {repr p.floor}, groups per instruction = {p.groups}; evidence: {p.evidence}"
+def InstructionVariant.describe (p : InstructionVariant) : String :=
+  s!"{p.name}: k = {p.k}, N_FMA = {p.nfma}, extra alignment bits = {p.neab}, " ++
+  s!"floor = {repr p.eAlignMin}, groups per instruction = {p.groups}; evidence: {p.evidence}"
 
-theorem InstructionPath.schedule_flatten (p : InstructionPath) (pairs : List (F16 × F16))
+theorem InstructionVariant.schedule_flatten (p : InstructionVariant) (pairs : List (F16 × F16))
     (h : pairs.length = p.k) : (p.schedule pairs).flatten = pairs := by
   apply chunks_flatten
   rw [h]
   exact (Nat.div_mul_cancel p.kDiv).symm
 
 /-- A device conforms if it returns the model's bits wherever the model returns a result. -/
-def Conforms (p : InstructionPath) (device : F32 → List (F16 × F16) → Option F32) : Prop :=
+def Conforms (p : InstructionVariant) (device : F32 → List (F16 × F16) → Option F32) : Prop :=
   ∀ c pairs out, p.output c pairs = some out → device c pairs = some out
 
-theorem InstructionPath.run_length (p : InstructionPath) (c : F32) (pairs : List (F16 × F16))
+theorem InstructionVariant.run_length (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16))
     (ts : List BlockTrace) (h : p.run c pairs = .ok ts) : pairs.length = p.k := by
-  unfold InstructionPath.run at h
+  unfold InstructionVariant.run at h
   split at h
   · contradiction
   · rename_i hne
     simpa using hne
 
-theorem InstructionPath.run_blocks (p : InstructionPath) (c : F32) (pairs : List (F16 × F16))
+theorem InstructionVariant.run_blocks (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16))
     (ts : List BlockTrace) (h : p.run c pairs = .ok ts) :
-    runBlocks p.profile c (p.schedule pairs) = .ok ts := by
-  unfold InstructionPath.run at h
+    runBlocks p.model c (p.schedule pairs) = .ok ts := by
+  unfold InstructionVariant.run at h
   split at h
   · contradiction
   · exact h
 
 /-- If only the first group has nonzero products, the instruction returns that group's output. -/
-theorem single_group_output (p : InstructionPath) (hfl : ∀ f ∈ p.floor, f ≤ -126)
-    (hk : p.products ≤ p.k) (c : F32) (g : List (F16 × F16)) (hg : g.length = p.products)
-    (t : BlockTrace) (h1 : evalBlock (⟨g, c⟩ : BlockInput p.profile) = .ok t)
+theorem single_group_output (p : InstructionVariant) (hfl : ∀ f ∈ p.eAlignMin, f ≤ -126)
+    (hk : p.nfma ≤ p.k) (c : F32) (g : List (F16 × F16)) (hg : g.length = p.nfma)
+    (t : BlockTrace) (h1 : evalBlock (⟨g, c⟩ : BlockInput p.model) = .ok t)
     (hneg : t.output.bits ≠ 0x80000000) :
-    p.output c (g ++ List.replicate (p.k - p.products) (0, 0)) = some t.output.bits := by
+    p.output c (g ++ List.replicate (p.k - p.nfma) (0, 0)) = some t.output.bits := by
   have hgroups : p.groups = (p.groups - 1) + 1 := by
     have : 1 ≤ p.groups := by
-      unfold InstructionPath.groups
-      exact (Nat.le_div_iff_mul_le p.productsPos).mpr (by omega)
+      unfold InstructionVariant.groups
+      exact (Nat.le_div_iff_mul_le p.nfmaPos).mpr (by omega)
     omega
-  have hrest : p.k - p.products = (p.groups - 1) * p.products := by
+  have hrest : p.k - p.nfma = (p.groups - 1) * p.nfma := by
     have hkm := Nat.div_mul_cancel p.kDiv
-    unfold InstructionPath.groups at hgroups ⊢
-    have : p.k = (p.k / p.products - 1 + 1) * p.products := by rw [← hgroups]; exact hkm.symm
+    unfold InstructionVariant.groups at hgroups ⊢
+    have : p.k = (p.k / p.nfma - 1 + 1) * p.nfma := by rw [← hgroups]; exact hkm.symm
     rw [Nat.succ_mul] at this
     omega
-  have hsched : p.schedule (g ++ List.replicate (p.k - p.products) (0, 0)) =
-      g :: List.replicate (p.groups - 1) (List.replicate p.products (0, 0)) := by
-    unfold InstructionPath.schedule
+  have hsched : p.schedule (g ++ List.replicate (p.k - p.nfma) (0, 0)) =
+      g :: List.replicate (p.groups - 1) (List.replicate p.nfma (0, 0)) := by
+    unfold InstructionVariant.schedule
     rw [hgroups, chunks_first_group _ _ _ _ hg, hrest, chunks_replicate]
     simp only [Nat.add_sub_cancel]
-  obtain ⟨ts, hts, hlast⟩ := runBlocks_zero_groups p.products p.extraBits p.floor hfl
+  obtain ⟨ts, hts, hlast⟩ := runBlocks_zero_groups p.nfma p.neab p.eAlignMin hfl
     (p.groups - 1) t.output.bits t.output (finite32_self t.output) hneg
-  have hlenpad : (g ++ List.replicate (p.k - p.products) (0, 0)).length = p.k := by
+  have hlenpad : (g ++ List.replicate (p.k - p.nfma) (0, 0)).length = p.k := by
     simp only [List.length_append, List.length_replicate, hg]
     omega
-  unfold InstructionPath.output InstructionPath.run
+  unfold InstructionVariant.output InstructionVariant.run
   rw [if_neg (by rw [hlenpad]; simp), hsched]
   simp only [runBlocks, h1, hts]
   cases ts with
@@ -352,19 +352,19 @@ theorem single_group_output (p : InstructionPath) (hfl : ∀ f ∈ p.floor, f �
     rw [getD_of_cons _ u us c t.output.bits, hlast]
 
 /-- V100: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.844; four groups of four products. -/
-def v100Wmma16 : InstructionPath :=
+def v100Wmma16 : InstructionVariant :=
   ⟨"V100 WMMA m16n16k16 FP16->FP32 (HMMA.844)", 16, 4, 0, none,
     "Accurate Models v4 §4.1.1 and Tables 3-4; MATLAB v0.5 GEMM.m increasing-k rule; " ++
     "Jia et al. arXiv:1804.06826 (four sets of four HMMA.884 steps)", by decide, by decide⟩
 
 /-- A100/A2/A30/L40S/Ada: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.1688; two groups of eight, validated by Accurate Models on k = 16 inputs. -/
-def ampereWmma16 : InstructionPath :=
+def ampereWmma16 : InstructionVariant :=
   ⟨"Ampere/Ada WMMA m16n16k16 FP16->FP32 (HMMA.1688)", 16, 8, 1, some (-132),
     "Accurate Models v4 §4.1.2, §4.2 (k = 16 with N_FMA = 8, 10^7-vector validation), Tables 3-4",
     by decide, by decide⟩
 
 /-- H100/H200/B200: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.16816; one group of sixteen. -/
-def hopperWmma16 : InstructionPath :=
+def hopperWmma16 : InstructionVariant :=
   ⟨"Hopper/Blackwell WMMA m16n16k16 FP16->FP32 (HMMA.16816)", 16, 16, 2, some (-133),
     "Accurate Models v4 §4.1.6 and Tables 3-4", by decide, by decide⟩
 

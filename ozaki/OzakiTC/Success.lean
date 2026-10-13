@@ -32,24 +32,24 @@ theorem add32_succeeds : AddSucceeds add32 maxFinite32 := by
   rw [add32_eq_addOfRound]; exact addOfRound_succeeds round32Value_succeeds
 
 /-- **Ozaki-I returns a value on the Tensor Core** (`[H.1]`). -/
-theorem tcOzaki1_isSome {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24)) (s : ℕ)
+theorem tcOzaki1_isSome {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24)) (s : ℕ)
     {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hL : (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length *
         ((trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y))) +
       (trianglePairs s).length * (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length * 2 ^ (-150 : ℤ) ≤
         maxFinite32) :
     ∃ v, tcOzaki1 p b s x y = some v :=
-  ozaki1_isSome heng (Rat.le_of_lt (two_pow_pos _)) (Rat.le_of_lt (two_pow_pos _)) add32_within
+  ozaki1_isSome hmult (Rat.le_of_lt (two_pow_pos _)) (Rat.le_of_lt (two_pow_pos _)) add32_within
     add32_succeeds hlen hk hL
 
 /-- **Ozaki-II returns a value on the Tensor Core** (`[H.1]`). -/
-theorem tcOzaki2_isSome {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki2_isSome {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (P : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus)
     (hL : x.length * (2 : ℚ) ^ ((P - scaleShift P x) + (P - scaleShift P y)) ≤ maxFinite32) :
     ∃ v, tcOzaki2 p B P x y = some v :=
-  ozaki2_isSome heng round32Value_succeeds hB hmb P hlen hk hrange hL
+  ozaki2_isSome hmult round32Value_succeeds hB hmb P hlen hk hrange hL
 
 /-! ## The Z3 configuration -/
 
@@ -62,11 +62,11 @@ theorem z3_ozaki2_range : 4 * (2 : ℚ) ^ (120 : ℤ) ≤ maxFinite32 := by deci
 
 /-- **The Z3 Ozaki-I model returns a value** on any path exact on `11`-bit slices, whenever every
 entry of `x` and `y` is at most `2^60` in magnitude. -/
-theorem ozaki1_z3_isSome {p : Profile} (heng : (tcEngine p).ExactOn z3SliceBits (2 ^ 24))
+theorem ozaki1_z3_isSome {p : Model} (hmult : (tcMultiplier p).ExactOn z3SliceBits (2 ^ 24))
     {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :
     ∃ v, tcOzaki1 p z3SliceBits z3Slices x y = some v := by
-  refine tcOzaki1_isSome heng z3Slices hlen (by rw [hk]; decide) ?_
+  refine tcOzaki1_isSome hmult z3Slices hlen (by rw [hk]; decide) ?_
   have hE := splitExp_le z3SliceBits hx (by decide)
   have hF := splitExp_le z3SliceBits hy (by decide)
   have hX := two_pow_le (show splitExp z3SliceBits x + splitExp z3SliceBits y ≤ 120 by omega)
@@ -85,11 +85,11 @@ theorem ozaki1_z3_isSome {p : Profile} (heng : (tcEngine p).ExactOn z3SliceBits 
 
 /-- **The Z3 Ozaki-II model returns a value** on any path exact on `11`-bit slices, whenever every
 entry of `x` and `y` is at most `2^60` in magnitude. -/
-theorem ozaki2_z3_isSome {p : Profile} (heng : (tcEngine p).ExactOn z3SliceBits (2 ^ 24))
+theorem ozaki2_z3_isSome {p : Model} (hmult : (tcMultiplier p).ExactOn z3SliceBits (2 ^ 24))
     {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :
     ∃ v, tcOzaki2 p z3Basis z3Bits x y = some v := by
-  refine tcOzaki2_isSome heng z3Basis_valid z3Moduli_le z3Bits hlen (by rw [hk]; decide)
+  refine tcOzaki2_isSome hmult z3Basis_valid z3Moduli_le z3Bits hlen (by rw [hk]; decide)
     (by rw [hk]; exact z3_bits.1) ?_
   have hE := scaleExp_le z3Bits hx (by decide)
   have hF := scaleExp_le z3Bits hy (by decide)

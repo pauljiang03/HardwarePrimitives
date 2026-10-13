@@ -16,7 +16,7 @@ import Ozaki.SplitK
 import Ozaki.Width
 import Ozaki.Binary
 import Ozaki.Exact64
-import Ozaki.Window
+import Ozaki.TruncatedSum
 import Ozaki.SignedZero
 import Ozaki.SliceInt
 import Ozaki.Bounded
@@ -33,12 +33,12 @@ import Ozaki.BoundedOzaki2
 import Ozaki.BoundedOzaki2Int
 import Ozaki.BoundedOzaki2J
 import Ozaki.BoundedOzaki2Widths
-import Ozaki.Descent
+import Ozaki.TopDownSummation
 import Ozaki.IEEEInt
 import Ozaki.SharpBounds
 import Ozaki.ZeroCheck
 import Ozaki.BoundedCheckedSigned
-import Ozaki.CheckedEngines
+import Ozaki.CheckedMultipliers
 import Ozaki.CheckedTight
 import Ozaki.IEEEWords
 import Ozaki.ModuliRule

@@ -69,52 +69,52 @@ example : (do
 
 /-- The subnormal counterexample: the integer check of `8` slices of width `56` does not settle
 it, the bounded exact path on the INT8 engine returns the correctly rounded `2^-1074`. -/
-example : checkB 53 (-1022) 1023 (adpEnclosureB 8 56 subX subY) = none ∧
+example : enclosureTestB 53 (-1022) 1023 (adpEnclosureB 8 56 subX subY) = none ∧
     adpCRB [(8, 56)] 300 subX subY = some ((2 : ℚ) ^ (-1074 : ℤ)) := by
   decide +kernel
 
 /-! ## How often the integer checks settle an entry -/
 
 /-- Whether Ozaki-II's integer enclosure of one configuration settles the entry (binary64). -/
-def settles2B (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
-  ((ozaki2EnclosureB (tcSplitK v100F16F32 11) B P x y).bind (checkB 53 (-1022) 1023)).isSome
+def succeeds2B (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
+  ((ozaki2EnclosureB (tcSplitK v100F16F32 11) B P x y).bind (enclosureTestB 53 (-1022) 1023)).isSome
 
 /-- The same with the rational enclosure. -/
-def settles2R (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
+def succeeds2R (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
   ((ozaki2Enclosure (tcSplitK v100F16F32 11) B P x y).bind fun p =>
     roundEnclosure rne64 p.1 p.2).isSome
 
 /-- Whether ADP's integer enclosure settles the entry. -/
-def settlesAB (s W : ℕ) (x y : List ℚ) : Bool := (checkB 53 (-1022) 1023 (adpEnclosureB s W x y)).isSome
+def succeedsAB (s W : ℕ) (x y : List ℚ) : Bool := (enclosureTestB 53 (-1022) 1023 (adpEnclosureB s W x y)).isSome
 
 def count64 (f : List ℚ → List ℚ → Bool) (A Bm : List (List (BitVec 64))) : Option ℕ := do
   let A ← decode64 A; let Bm ← decode64 Bm
   pure ((A.flatMap fun x => (transpose Bm).map fun y => f x y).count true)
 
-example : count64 (settles2B basis12 69) A_narrow64 B_narrow64 = some 16 ∧
-    count64 (settles2R basis12 69) A_narrow64 B_narrow64 = some 16 := by decide +kernel
-example : count64 (settles2B basis12 69) A_wide64 B_wide64 = some 9 ∧
-    count64 (settles2R basis12 69) A_wide64 B_wide64 = some 10 := by decide +kernel
+example : count64 (succeeds2B basis12 69) A_narrow64 B_narrow64 = some 16 ∧
+    count64 (succeeds2R basis12 69) A_narrow64 B_narrow64 = some 16 := by decide +kernel
+example : count64 (succeeds2B basis12 69) A_wide64 B_wide64 = some 9 ∧
+    count64 (succeeds2R basis12 69) A_wide64 B_wide64 = some 10 := by decide +kernel
 
 /-- Ozaki-II's integer enclosure in binary32 on V100 blocks. -/
-def settles2B32 (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
-  ((ozaki2EnclosureB (tcEngine v100F16F32) B P x y).bind (checkB 24 (-126) 127)).isSome
+def succeeds2B32 (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Bool :=
+  ((ozaki2EnclosureB (tcMultiplier v100F16F32) B P x y).bind (enclosureTestB 24 (-126) 127)).isSome
 
 def count32 (f : List ℚ → List ℚ → Bool) (A Bm : List (List F32)) : Option ℕ := do
   let A ← decodeMatrix A; let Bm ← decodeMatrix Bm
   pure ((A.flatMap fun x => (transpose Bm).map fun y => f x y).count true)
 
-example : count32 (settles2B32 z3Basis 22) A_narrow B_narrow = some 0 ∧
-    count32 (settles2B32 z3Basis 22) A_wide B_wide = some 0 := by decide +kernel
-example : count32 (settles2B32 basis5 28) A_narrow B_narrow = some 10 ∧
-    count32 (settles2B32 basis5 28) A_wide B_wide = some 6 := by decide +kernel
-example : count32 (settles2B32 basis6 34) A_narrow B_narrow = some 16 ∧
-    count32 (settles2B32 basis6 34) A_wide B_wide = some 16 := by decide +kernel
+example : count32 (succeeds2B32 z3Basis 22) A_narrow B_narrow = some 0 ∧
+    count32 (succeeds2B32 z3Basis 22) A_wide B_wide = some 0 := by decide +kernel
+example : count32 (succeeds2B32 basis5 28) A_narrow B_narrow = some 10 ∧
+    count32 (succeeds2B32 basis5 28) A_wide B_wide = some 6 := by decide +kernel
+example : count32 (succeeds2B32 basis6 34) A_narrow B_narrow = some 16 ∧
+    count32 (succeeds2B32 basis6 34) A_wide B_wide = some 16 := by decide +kernel
 
-example : count64 (settlesAB 8 56) A_narrow64 B_narrow64 = some 16 := by decide +kernel
-example : count64 (settlesAB 11 81) A_wide64 B_wide64 = some 16 := by decide +kernel
-example : count64 (settlesAB 8 62) A_wide64 B_wide64 = some 5 ∧
-    count64 (settlesAB 9 70) A_wide64 B_wide64 = some 11 := by decide +kernel
+example : count64 (succeedsAB 8 56) A_narrow64 B_narrow64 = some 16 := by decide +kernel
+example : count64 (succeedsAB 11 81) A_wide64 B_wide64 = some 16 := by decide +kernel
+example : count64 (succeedsAB 8 62) A_wide64 B_wide64 = some 5 ∧
+    count64 (succeedsAB 9 70) A_wide64 B_wide64 = some 11 := by decide +kernel
 
 /-! ## Signed zeros -/
 

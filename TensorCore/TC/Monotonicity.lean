@@ -1,7 +1,7 @@
 import TensorCore.Numerics.CorrectRounding
 import TensorCore.TC.StageResiduals
 import TensorCore.TC.AlignmentExponent
-import TensorCore.TC.Padding
+import TensorCore.TC.ExtraAlignmentBits
 
 /-! Non-monotonicity of the model under a smaller C. -/
 
@@ -15,9 +15,9 @@ theorem belowOneDecoded_value : belowOneDecoded.value = 16777215 * pow2 (-24) :=
   decide +kernel
 
 /-- In the construction, the alignment exponent is C's exponent when no product's exponent exceeds it. -/
-theorem construction_alignExp (prof : Profile) (K : ℕ) (da db c : Decoded)
+theorem construction_alignExp (prof : Model) (K : ℕ) (da db c : Decoded)
     (hc : c.significand ≠ 0) (_hu : (unnormalizedMul da db).significand ≠ 0)
-    (hs : (unnormalizedMul da db).unnormalizedExp ≤ c.unnormalizedExp) (hfl : ∀ f ∈ prof.alignFloor, f ≤ c.unnormalizedExp) :
+    (hs : (unnormalizedMul da db).unnormalizedExp ≤ c.unnormalizedExp) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ c.unnormalizedExp) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) c).alignExp = some c.unnormalizedExp := by
   have hterms : (PreparedBlock.mk prof (List.replicate K (da, db)) c).terms =
       ⟨c.significand, c.unnormalizedExp, c.mantissaBits⟩ :: List.replicate K (unnormalizedMul da db) := by
@@ -39,9 +39,9 @@ theorem construction_alignExp (prof : Profile) (K : ℕ) (da db c : Decoded)
   subst heq
   unfold PreparedBlock.alignExp
   rw [he]
-  show prof.applyFloor (some c.unnormalizedExp) = some c.unnormalizedExp
-  unfold Profile.applyFloor
-  cases hf : prof.alignFloor with
+  show prof.applyEAlignMin (some c.unnormalizedExp) = some c.unnormalizedExp
+  unfold Model.applyEAlignMin
+  cases hf : prof.eAlignMin with
   | none => rfl
   | some f =>
     have := hfl f (by rw [hf]; simp)
@@ -57,8 +57,8 @@ theorem unnormalizedMul_significand_ne_zero (da db : Decoded) (p : ℕ)
   grind
 
 /-- Accumulator with `c = 1`: every product truncates to zero. -/
-theorem construction_accumulator_one (prof : Profile) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.alignFloor, f ≤ -1)
+theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded)
+    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) oneDecoded).accumulator = 1 := by
   have hu := unnormalizedMul_significand_ne_zero da db p hval
@@ -69,7 +69,7 @@ theorem construction_accumulator_one (prof : Profile) (p K : ℕ) (da db : Decod
       -(23 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change oneDecoded.unnormalizedExp - prof.alignMantissaBits = _
+    change oneDecoded.unnormalizedExp - prof.alignFracBits = _
     rw [hF]
     simp only [oneDecoded]
     omega
@@ -98,8 +98,8 @@ theorem construction_accumulator_one (prof : Profile) (p K : ℕ) (da db : Decod
   rw [this, pow2_zero]
 
 /-- Accumulator with `c' = 1 − 2^-24`: every product is retained. -/
-theorem construction_accumulator_below (prof : Profile) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.alignFloor, f ≤ -1)
+theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decoded)
+    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) belowOneDecoded).accumulator =
       ((16777215 * 2 ^ p + K : ℕ) : ℚ) * pow2 (-(24 + p)) := by
@@ -109,7 +109,7 @@ theorem construction_accumulator_below (prof : Profile) (p K : ℕ) (da db : Dec
       -(24 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change belowOneDecoded.unnormalizedExp - prof.alignMantissaBits = _
+    change belowOneDecoded.unnormalizedExp - prof.alignFracBits = _
     rw [hF]
     simp only [belowOneDecoded]
     omega
@@ -135,8 +135,8 @@ theorem construction_accumulator_below (prof : Profile) (p K : ℕ) (da db : Dec
   all_goals rw [Rat.intCast_add, Rat.intCast_natCast, Rat.intCast_natCast, Rat.natCast_add]
 
 /-- TC-EFT Theorem III.4. -/
-theorem nonmonotone_perturbation (prof : Profile) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.alignFloor, f ≤ -1)
+theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
+    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
@@ -270,28 +270,28 @@ theorem nonmonotone_perturbation (prof : Profile) (p K : ℕ) (da db : Decoded)
 
 
 /-- Lowering C from 1 to its FP32 predecessor raises the output exactly when K ≥ 3·2^p. -/
-theorem nonmonotone_encoded (K p : ℕ) (floor : Option ℤ) (hfl : ∀ f ∈ floor, f ≤ -1)
-    (a b : (fp16Fp32Profile K p floor).Word) (da db : Decoded)
-    (ha : (fp16Fp32Profile K p floor).decode a = some da)
-    (hb : (fp16Fp32Profile K p floor).decode b = some db)
+theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -1)
+    (a b : (fp16Fp32Model K p eAlignMin).Word) (da db : Decoded)
+    (ha : (fp16Fp32Model K p eAlignMin).decode a = some da)
+    (hb : (fp16Fp32Model K p eAlignMin).decode b = some db)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
-      evalBlock (⟨List.replicate K (a, b), 0x3f800000⟩ : BlockInput (fp16Fp32Profile K p floor)) =
+      evalBlock (⟨List.replicate K (a, b), 0x3f800000⟩ : BlockInput (fp16Fp32Model K p eAlignMin)) =
         .ok t ∧
-      evalBlock (⟨List.replicate K (a, b), 0x3f7fffff⟩ : BlockInput (fp16Fp32Profile K p floor)) =
+      evalBlock (⟨List.replicate K (a, b), 0x3f7fffff⟩ : BlockInput (fp16Fp32Model K p eAlignMin)) =
         .ok t' ∧
       t.output.value = 1 ∧ (1 < t'.output.value ↔ 3 * 2 ^ p ≤ K) := by
-  have hF : (fp16Fp32Profile K p floor).alignMantissaBits = 23 + p := by
+  have hF : (fp16Fp32Model K p eAlignMin).alignFracBits = 23 + p := by
     show ((23 + p : ℕ) : ℤ) = 23 + (p : ℤ)
     omega
   obtain ⟨t, t', h1, h2, hv, hiff⟩ :=
-    nonmonotone_perturbation (fp16Fp32Profile K p floor) p K da db hF hfl hval hscale hK
+    nonmonotone_perturbation (fp16Fp32Model K p eAlignMin) p K da db hF hfl hval hscale hK
   have hc1 : decode32 (0x3f800000 : F32) = some oneDecoded := by decide +kernel
   have hc2 : decode32 (0x3f7fffff : F32) = some belowOneDecoded := by decide +kernel
   have hps := prepareProducts_replicate _ a b da db K ha hb
-  have hlen : ¬ ((List.replicate K (a, b)).length != (fp16Fp32Profile K p floor).products) = true := by
-    simp [fp16Fp32Profile]
+  have hlen : ¬ ((List.replicate K (a, b)).length != (fp16Fp32Model K p eAlignMin).nfma) = true := by
+    simp [fp16Fp32Model]
   refine ⟨t, t', ?_, ?_, hv, hiff⟩
   · unfold evalBlock
     rw [if_neg hlen]

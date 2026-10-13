@@ -10,16 +10,16 @@ def InfinitySpec (f : BinaryFormat) (s : Bool) (r : Result f) : Prop :=
 def InvalidSpec (f : BinaryFormat) (r : Result f) : Prop :=
   (∃ s p, decode f r.bits = .nan s false p) ∧ r.flags = { invalid := true }
 
-def NaNSpec (f : BinaryFormat) (xs : List Datum) (extra : Bool) (r : Result f) : Prop :=
+def NaNSpec (f : BinaryFormat) (xs : List Datum) (neab : Bool) (r : Result f) : Prop :=
   let n := (chooseNaN xs).getD ⟨false, false, 0⟩
   decode f r.bits = .nan n.negative false (n.payload % quietBit f) ∧
-  r.flags = { invalid := extra || xs.any Datum.isSignaling }
+  r.flags = { invalid := neab || xs.any Datum.isSignaling }
 
 theorem infinityResult_correct (f : BinaryFormat) (s : Bool) :
     InfinitySpec f s (infinityResult f s) := ⟨decode_infinity f s, rfl⟩
 
-theorem nanResult_correct (f : BinaryFormat) (xs : List Datum) (extra : Bool) :
-    NaNSpec f xs extra (nanResult f xs extra) := ⟨decode_nan _ _ _, rfl⟩
+theorem nanResult_correct (f : BinaryFormat) (xs : List Datum) (neab : Bool) :
+    NaNSpec f xs neab (nanResult f xs neab) := ⟨decode_nan _ _ _, rfl⟩
 
 theorem invalidResult_correct (f : BinaryFormat) : InvalidSpec f (invalidResult f) :=
   ⟨⟨false, 0, by simpa [invalidResult, nanResult, chooseNaN] using decode_nan f false 0⟩, rfl⟩

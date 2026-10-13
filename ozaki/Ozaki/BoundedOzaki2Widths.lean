@@ -26,8 +26,8 @@ Every integer of `ozaki2CRZ` (and of `Ozaki.TC.adpCRZ`) has a width set by the f
 | recombination term `256^(t+u) dᵗᵘ` | `≤ 256^(2(s−1)) k 2^14` | `Ozaki.TC.int8RecombineK_term_le` |
 | recombined `R`, bound `K`, ends `R ± K` (ADP) | `≤ k 2^(2W)`, `≤ k (2^(W+1) + 1)` | `Ozaki.TC.adpEnclosureB_width` |
 | exact path: coefficients, significands | `≤ 2^b`, `< 2^p` | `splitInt_width` |
-| exact path: slice products | within the engine's budget | `ozaki1ExactPathZ_terms` |
-| exact path: windows, sums, queries | `roundSum`'s bounds | `descend_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt` |
+| exact path: slice products | within the engine's budget | `ozaki1ExactFallbackZ_terms` |
+| exact path: windows, sums, queries | `roundSum`'s bounds | `topDownSum_parts_lt`, `fixedSum_natAbs_le`, `query_natAbs_lt` |
 
 What depends on the exponents is exponent arithmetic only: the scaling and fixed-point exponents,
 the shift amounts `e + s`, the slice grids, and the number of windows the exact path's descent
@@ -54,17 +54,17 @@ theorem floorShift_left_le {W : ℕ} {m j : ℤ} (hm : m ≠ 0) (hj : 0 ≤ j)
   exact (Nat.pow_le_pow_iff_right (by decide)).mp h2
 
 /-- **The exact path's integer terms are within the engine's budget**, with integer slicing. -/
-theorem ozaki1ExactPathZ_terms {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1ExactFallbackZ_terms {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {s : ℕ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) :
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) :
     (slicePairs (splitInt b s xs).1 (splitInt b s ys).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) =
+        (fun pr => sliceProductInt mult pr.1 pr.2) =
       some ((slicePairs (splitInt b s xs).1 (splitInt b s ys).1).map
         fun pr => exactSliceInt pr.1 pr.2) ∧
     ∀ pr ∈ slicePairs (splitInt b s xs).1 (splitInt b s ys).1,
-      (exactSliceInt pr.1 pr.2).1.natAbs ≤ budget := by
+      (exactSliceInt pr.1 pr.2).1.natAbs ≤ bound := by
   rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
-  exact ozaki1ExactPathB_terms heng (by rw [entryVals_length, entryVals_length, hlen])
-    (by rw [entryVals_length]; exact hbudget)
+  exact ozaki1ExactFallbackB_terms hmult (by rw [entryVals_length, entryVals_length, hlen])
+    (by rw [entryVals_length]; exact hbound)
 
 end Ozaki

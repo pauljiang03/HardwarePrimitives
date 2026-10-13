@@ -1,4 +1,4 @@
-import OzakiMC.Engine
+import OzakiMC.MatrixMultiplier
 
 /-! # The matrix-core paths
 
@@ -27,7 +27,7 @@ namespace Ozaki.MC
 
 /-- A profile whose matrix-core engine is exact on `b`-bit slices: an exact configuration, operand
 formats with small subnormals that hold every `b`-bit integer, and a nonempty block. -/
-structure ExactEngine (P : Profile) (b : ℕ) : Prop where
+structure ExactMultiplier (P : Model) (b : ℕ) : Prop where
   config : ExactConfig P
   subA : smallSubnormals P.a
   subB : smallSubnormals P.b
@@ -35,9 +35,9 @@ structure ExactEngine (P : Profile) (b : ℕ) : Prop where
   encA : EncodesInts P.a b
   encB : EncodesInts P.b b
 
-theorem ExactEngine.exactOn {P : Profile} {b : ℕ} (h : ExactEngine P b) :
-    (mcEngine P).ExactOn b (2 ^ 24) :=
-  mcEngine_exactOn h.config h.subA h.subB h.nfma h.encA h.encB
+theorem ExactMultiplier.exactOn {P : Model} {b : ℕ} (h : ExactMultiplier P b) :
+    (mcMultiplier P).ExactOn b (2 ^ 24) :=
+  mcMultiplier_exactOn h.config h.subA h.subB h.nfma h.encA h.encB
 
 theorem EncodesInts.mono {i : InputFormat} {b b' : ℕ} (h : EncodesInts i b) (hb : b' ≤ b) :
     EncodesInts i b' := fun z hz => h z (Nat.le_trans hz (Nat.pow_le_pow_right (by decide) hb))
@@ -61,43 +61,43 @@ theorem bfloat16_small : smallSubnormals (.packed bfloat16) := by
 theorem binary32_small : smallSubnormals (.packed binary32) := by
   show binary32.emin ≤ 0; decide
 
-theorem cdna3_config (P : Profile) (hacc : P.accumulation = .globalAlignment) (hn : P.neab = 1)
+theorem cdna3_config (P : Model) (hacc : P.accumulation = .globalAlignment) (hn : P.neab = 1)
     (hl : P.late = {}) (hc : P.cZeroExp = some (-126)) : ExactConfig P :=
   Or.inr (Or.inr ⟨hacc, by omega, hl, hc⟩)
 
-theorem sfmaF32_exactEngine {b : ℕ} (hb : b ≤ 24) : ExactEngine sfmaF32 b :=
+theorem sfmaF32_exactMultiplier {b : ℕ} (hb : b ≤ 24) : ExactMultiplier sfmaF32 b :=
   ⟨Or.inl rfl, binary32_small, binary32_small, by decide, binary32_encodesInts hb,
     binary32_encodesInts hb⟩
 
-theorem cdna1F16_exactEngine {b : ℕ} (hb : b ≤ 11) : ExactEngine cdna1F16 b :=
+theorem cdna1F16_exactMultiplier {b : ℕ} (hb : b ≤ 11) : ExactMultiplier cdna1F16 b :=
   ⟨Or.inl rfl, binary16_small, binary16_small, by decide, binary16_encodesInts hb,
     binary16_encodesInts hb⟩
 
-theorem cdna1BF16_exactEngine {b : ℕ} (hb : b ≤ 8) : ExactEngine cdna1BF16 b :=
+theorem cdna1BF16_exactMultiplier {b : ℕ} (hb : b ≤ 8) : ExactMultiplier cdna1BF16 b :=
   ⟨Or.inl rfl, bfloat16_small, bfloat16_small, by decide, bfloat16_encodesInts hb,
     bfloat16_encodesInts hb⟩
 
-theorem cdna2F16_exactEngine {b : ℕ} (hb : b ≤ 11) : ExactEngine cdna2F16 b :=
+theorem cdna2F16_exactMultiplier {b : ℕ} (hb : b ≤ 11) : ExactMultiplier cdna2F16 b :=
   ⟨Or.inr (Or.inl rfl), binary16_small, binary16_small, by decide, binary16_encodesInts hb,
     binary16_encodesInts hb⟩
 
-theorem cdna2BF16_exactEngine {b : ℕ} (hb : b ≤ 8) : ExactEngine cdna2BF16 b :=
+theorem cdna2BF16_exactMultiplier {b : ℕ} (hb : b ≤ 8) : ExactMultiplier cdna2BF16 b :=
   ⟨Or.inr (Or.inl rfl), bfloat16_small, bfloat16_small, by decide, bfloat16_encodesInts hb,
     bfloat16_encodesInts hb⟩
 
-theorem cdna2BF16_1k_exactEngine {b : ℕ} (hb : b ≤ 8) : ExactEngine cdna2BF16_1k b :=
+theorem cdna2BF16_1k_exactMultiplier {b : ℕ} (hb : b ≤ 8) : ExactMultiplier cdna2BF16_1k b :=
   ⟨Or.inr (Or.inl rfl), bfloat16_small, bfloat16_small, by decide, bfloat16_encodesInts hb,
     bfloat16_encodesInts hb⟩
 
-theorem cdna3F16_exactEngine {b : ℕ} (hb : b ≤ 11) : ExactEngine cdna3F16 b :=
+theorem cdna3F16_exactMultiplier {b : ℕ} (hb : b ≤ 11) : ExactMultiplier cdna3F16 b :=
   ⟨cdna3_config _ rfl rfl rfl rfl, binary16_small, binary16_small, by decide,
     binary16_encodesInts hb, binary16_encodesInts hb⟩
 
-theorem cdna3BF16_exactEngine {b : ℕ} (hb : b ≤ 8) : ExactEngine cdna3BF16 b :=
+theorem cdna3BF16_exactMultiplier {b : ℕ} (hb : b ≤ 8) : ExactMultiplier cdna3BF16 b :=
   ⟨cdna3_config _ rfl rfl rfl rfl, bfloat16_small, bfloat16_small, by decide,
     bfloat16_encodesInts hb, bfloat16_encodesInts hb⟩
 
-theorem cdna3XF32_exactEngine {b : ℕ} (hb : b ≤ 11) : ExactEngine cdna3XF32 b :=
+theorem cdna3XF32_exactMultiplier {b : ℕ} (hb : b ≤ 11) : ExactMultiplier cdna3XF32 b :=
   ⟨cdna3_config _ rfl rfl rfl rfl, trivial, trivial, by decide, xf32_encodesInts_le hb,
     xf32_encodesInts_le hb⟩
 

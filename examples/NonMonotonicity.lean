@@ -7,7 +7,7 @@ open TensorCore
 namespace TensorCoreExamples.NonMonotonicity
 
 /-- Observe output words through the production evaluator. -/
-def modelBits {p : Profile} (x : BlockInput p) : Except ModelError F32 :=
+def modelBits {p : Model} (x : BlockInput p) : Except ModelError F32 :=
   (evalBlock x).map fun t => t.output.bits
 
 def before : BlockInput v100F16F32 :=

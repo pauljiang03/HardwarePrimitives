@@ -670,7 +670,7 @@ round to nearest even. The other hypotheses are their setting: nonnegative CRT w
 `M ≤ P` with `M ρ < 2^(p + G1)` (their choice of `G1`), high parts within `K u P` of the weights,
 `ρ ≥ 2`, `K ≥ 2ρ`, `|P − P1| ≤ u P`, `P1` on a grid `2^g0` (`g0 ≤ G1`) with room for the first
 `fma`, `P2 = fl(P − P1)`, `P_inv = fl(1/P)`, the rounded low parts `s2`, and `N u ≤ 1/8`. -/
-theorem ozaki2Uchino_R64 {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2Uchino_R64 {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {u η : ℚ}
     (hu : u = 2 ^ (-(p : ℤ))) (hη : η = 2 ^ (emin - p))
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
@@ -690,10 +690,10 @@ theorem ozaki2Uchino_R64 {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b b
     {s2 : List ℚ}
     (hs2 : B.weights.mapM (fun a : ℤ => roundRNE p emin emax ((a : ℚ) - weightHi G1 a)) = some s2)
     (sx sy : ℤ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {Λ : ℚ} (hΛ : (dotAbs (scaleTrunc sx x) (scaleTrunc sy y) : ℚ) ≤ Λ)
     (hmargin : 2 * (Λ + uchinoDeltaBar u η B.modulus K (uchinoRho B)) < B.modulus)
-    {v : ℚ} (hv : ozaki2Uchino eng (roundRNE p emin emax) B G1 P1 P2 Pinv s2 sx sy x y = some v) :
+    {v : ℚ} (hv : ozaki2Uchino mult (roundRNE p emin emax) B G1 P1 P2 Pinv s2 sx sy x y = some v) :
     Rat.abs (v - dot x y) ≤
       u * (Rat.abs ((dotZ (scaleTrunc sx x) (scaleTrunc sy y) : ℚ) * 2 ^ (-(sx + sy))) +
           uchinoR64 u η K (uchinoRho B) B.weights.length B.modulus
@@ -728,7 +728,7 @@ theorem ozaki2Uchino_R64 {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b b
     have := Rat.mul_le_mul_of_nonneg_left hr hP0
     have e2 : (B.modulus : ℚ) * (u * (1 / B.modulus) + η) = u + B.modulus * η := by grind
     grind
-  apply ozaki2Uchino_error heng hu0 hround hB hmb sx sy hlen hbudget _ hv
+  apply ozaki2Uchino_error hmult hu0 hround hB hmb sx sy hlen hbound _ hv
   intro W hWlen hWb hdvd C hC
   generalize hcd : dotZ (scaleTrunc sx x) (scaleTrunc sy y) = c at hdvd hΛ ⊢
   obtain ⟨q, hq⟩ := hdvd
@@ -776,7 +776,7 @@ theorem ozaki2Uchino_R64 {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b b
 give `|A'||B'| ≤ ((P − 1)/2)/(1 + t)`, and if that leaves room for `δ̄` (`hmargin`; their Lemma 4)
 the result is within the closed-form `R64` scaled by `2^(−μ−ν)`, through one rounding, plus the
 truncation error, of `x · y`. -/
-theorem ozaki2Uchino_scaled_error {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2Uchino_scaled_error {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {u η : ℚ}
     (hu : u = 2 ^ (-(p : ℤ))) (hη : η = 2 ^ (emin - p))
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
@@ -795,7 +795,7 @@ theorem ozaki2Uchino_scaled_error {eng : Engine} {b budget : ℕ} (heng : eng.Ex
     (hPinv : roundRNE p emin emax (1 / (B.modulus : ℚ)) = some Pinv)
     {s2 : List ℚ}
     (hs2 : B.weights.mapM (fun a : ℤ => roundRNE p emin emax ((a : ℚ) - weightHi G1 a)) = some s2)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     {P' : ℚ} (hP' : Ge2 (((B.modulus : ℚ) - 1) / 2) (2 * P'))
     {k : ℕ} (hk : 0 < k) {t : ℚ} (ht : 0 ≤ t) (hkt : (k : ℚ) * t ≤ 1 / 2)
     {μ' ν' g h : ℤ} {mr mc : ℚ}
@@ -805,7 +805,7 @@ theorem ozaki2Uchino_scaled_error {eng : Engine} {b budget : ℕ} (heng : eng.Ex
     (hcol : Le2 (2 ^ (2 * h) * mc) (2 * P' - 1 / k))
     (hmargin : 2 * (((B.modulus : ℚ) - 1) / 2 / (1 + t) +
       uchinoDeltaBar u η B.modulus K (uchinoRho B)) < B.modulus)
-    {v : ℚ} (hv : ozaki2Uchino eng (roundRNE p emin emax) B G1 P1 P2 Pinv s2 (μ' + g) (ν' + h) x y =
+    {v : ℚ} (hv : ozaki2Uchino mult (roundRNE p emin emax) B G1 P1 P2 Pinv s2 (μ' + g) (ν' + h) x y =
       some v) :
     Rat.abs (v - dot x y) ≤
       u * (Rat.abs ((dotZ (scaleTrunc (μ' + g) x) (scaleTrunc (ν' + h) y) : ℚ) *
@@ -826,7 +826,7 @@ theorem ozaki2Uchino_scaled_error {eng : Engine} {b budget : ℕ} (heng : eng.Ex
     apply Rat.le_of_mul_le_mul_right _ ht1
     rw [Rat.div_mul_cancel (by grind)]
     exact hsl
-  exact ozaki2Uchino_R64 heng hp hle hu hη hB hmb hN1 hNu hw hMP hMρ h1 h2 hρ hK hs1 hP1 hg0 hP1g
-    hfma hg01 hg02 hP2 hPinv hs2 (μ' + g) (ν' + h) hlen hbudget hΛ hmargin hv
+  exact ozaki2Uchino_R64 hmult hp hle hu hη hB hmb hN1 hNu hw hMP hMρ h1 h2 hρ hK hs1 hP1 hg0 hP1g
+    hfma hg01 hg02 hP2 hPinv hs2 (μ' + g) (ν' + h) hlen hbound hΛ hmargin hv
 
 end Ozaki

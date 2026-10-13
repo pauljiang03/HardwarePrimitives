@@ -11,33 +11,33 @@ namespace MatrixCore
 /-- binary32 inputs on CDNA 1, 2 and 3 form a sequential FMA (SFMA),
 `(…((c + p₁) + p₂) + …)`, keeping each product exact and rounding each step with RNE: blocks of
 one product with correct rounding. Subnormals are supported in input and output. -/
-def sfmaF32 : Profile :=
+def sfmaF32 : Model :=
   { a := .packed binary32, b := .packed binary32, nfma := 1, accumulation := .correctRounding }
 
 /-! ## CDNA 1 (MI100): full-precision products, exact accumulation, final RNE -/
 
 /-- CDNA 1 fp16: `N_FMA = 4`, `c` accumulated with the products, exact sum, RNE (Fig. 1a). -/
-def cdna1F16 : Profile :=
+def cdna1F16 : Model :=
   { a := .packed binary16, b := .packed binary16, nfma := 4, accumulation := .correctRounding }
 
 /-- CDNA 1 bf16: `N_FMA = 2`; products may exceed `2^128` inside a block (Fig. 1b). -/
-def cdna1BF16 : Profile :=
+def cdna1BF16 : Model :=
   { a := .packed bfloat16, b := .packed bfloat16, nfma := 2, accumulation := .correctRounding }
 
 /-! ## CDNA 2 (MI210, MI250): pairwise sums of binary32 values, subnormals flushed -/
 
 /-- CDNA 2 fp16: `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}`, no subnormals (Fig. 2a). -/
-def cdna2F16 : Profile :=
+def cdna2F16 : Model :=
   { a := .packed binary16, b := .packed binary16, nfma := 4, accumulation := .pairWiseSum,
     subnormals := false }
 
 /-- CDNA 2 bf16 without the `_1k` suffix: group size `2`, `fl{c + fl{p₁ + p₂}}` (Fig. 2b). -/
-def cdna2BF16 : Profile :=
+def cdna2BF16 : Model :=
   { a := .packed bfloat16, b := .packed bfloat16, nfma := 2, accumulation := .pairWiseSum,
     subnormals := false }
 
 /-- CDNA 2 bf16 `_1k` instructions: group size `4`, as fp16 (Fig. 2a). -/
-def cdna2BF16_1k : Profile :=
+def cdna2BF16_1k : Model :=
   { a := .packed bfloat16, b := .packed bfloat16, nfma := 4, accumulation := .pairWiseSum,
     subnormals := false }
 
@@ -45,22 +45,22 @@ def cdna2BF16_1k : Profile :=
 
 /-- CDNA 3 fp16 (Algorithm 1): `N_FMA = 8`, products denormalised and aligned with `(2, 24)`,
 `c` added late with `(24, 32, RD)` alignment, `e_{c=0} = −126`, `|p_ℓ| ≥ 2^128` overflows. -/
-def cdna3F16 : Profile :=
+def cdna3F16 : Model :=
   { a := .packed binary16, b := .packed binary16, nfma := 8, accumulation := .globalAlignment,
     productOverflow := true }
 
 /-- CDNA 3 bf16: every feature as fp16. -/
-def cdna3BF16 : Profile :=
+def cdna3BF16 : Model :=
   { a := .packed bfloat16, b := .packed bfloat16, nfma := 8, accumulation := .globalAlignment,
     productOverflow := true }
 
 /-- CDNA 3 XF32: binary32 words truncated to tf19, `N_FMA = 4`, otherwise as fp16. -/
-def cdna3XF32 : Profile :=
+def cdna3XF32 : Model :=
   { a := .xf32, b := .xf32, nfma := 4, accumulation := .globalAlignment, productOverflow := true }
 
 /-- CDNA 3 binary8 (Algorithm 2) for any combination of fp8-E4M3 and fp8-E5M2 (FNUZ) operands:
 `N_FMA = 16` in odd/even groups of eight, `s'_c = 0` once `e_max − e_c > 25`. -/
-def cdna3FP8 (fa fb : Format) : Profile :=
+def cdna3FP8 (fa fb : Format) : Model :=
   { a := .packed fa, b := .packed fb, nfma := 16, accumulation := .oddEvenGrouping,
     late := { cCutoff := some 25 }, productOverflow := true }
 
@@ -91,7 +91,7 @@ def Architecture.ofDevice : String → Option Architecture
   | _ => none
 
 /-- The profile of an architecture and input format, where the architecture supports it. -/
-def Architecture.profile : Architecture → InputKind → Option Profile
+def Architecture.model : Architecture → InputKind → Option Model
   | _, .fp32 => some sfmaF32
   | .cdna1, .fp16 => some cdna1F16
   | .cdna1, .bf16 => some cdna1BF16

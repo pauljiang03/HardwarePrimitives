@@ -48,8 +48,8 @@ theorem floor_natCast_mul_pow2_neg (N d : ℕ) :
     simpa using this
 
 /-- Accumulator with `c_j`: every product is retained and `A_j = 1 + (K − j·2^p)·2^-(24+p)`, written as a natural coefficient on the grid `2^-(24+p)`. -/
-theorem construction_accumulator_range (prof : Profile) (p K j : ℕ) (da db : Decoded)
-    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.alignFloor, f ≤ -1)
+theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Decoded)
+    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hj : j ≤ 2 ^ 23) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) (belowDecoded j)).accumulator =
@@ -63,7 +63,7 @@ theorem construction_accumulator_range (prof : Profile) (p K j : ℕ) (da db : D
       -(24 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change (belowDecoded j).unnormalizedExp - prof.alignMantissaBits = _
+    change (belowDecoded j).unnormalizedExp - prof.alignFracBits = _
     rw [hF]
     simp only [belowDecoded]
     omega
@@ -90,8 +90,8 @@ theorem construction_accumulator_range (prof : Profile) (p K j : ℕ) (da db : D
   all_goals rw [Rat.intCast_add, Rat.intCast_natCast, Rat.intCast_natCast, Rat.natCast_add]
 
 /-- TC-EFT Theorem III.5 on prepared blocks. -/
-theorem nonmonotone_range (prof : Profile) (p K j : ℕ) (da db : Decoded)
-    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.alignFloor, f ≤ -1)
+theorem nonmonotone_range (prof : Model) (p K j : ℕ) (da db : Decoded)
+    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
     ∃ t : BlockTrace,
@@ -262,29 +262,29 @@ theorem decode32_below (j : ℕ) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
 
 
 /-- For C = 1 − j·2^-24: which j raise the output, the resulting output, and its maximum. -/
-theorem nonmonotone_range_encoded (K p j : ℕ) (floor : Option ℤ)
-    (hfl : ∀ f ∈ floor, f ≤ -1)
-    (a b : (fp16Fp32Profile K p floor).Word) (da db : Decoded)
-    (ha : (fp16Fp32Profile K p floor).decode a = some da)
-    (hb : (fp16Fp32Profile K p floor).decode b = some db)
+theorem nonmonotone_range_encoded (K p j : ℕ) (eAlignMin : Option ℤ)
+    (hfl : ∀ f ∈ eAlignMin, f ≤ -1)
+    (a b : (fp16Fp32Model K p eAlignMin).Word) (da db : Decoded)
+    (ha : (fp16Fp32Model K p eAlignMin).decode a = some da)
+    (hb : (fp16Fp32Model K p eAlignMin).decode b = some db)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
     ∃ t : BlockTrace,
       evalBlock (⟨List.replicate K (a, b), BitVec.ofNat 32 (0x3f800000 - j)⟩ :
-        BlockInput (fp16Fp32Profile K p floor)) = .ok t ∧
+        BlockInput (fp16Fp32Model K p eAlignMin)) = .ok t ∧
       (1 < t.output.value ↔ j ≤ min (2 ^ 23) (K / 2 ^ p - 2)) ∧
       (j * 2 ^ p ≤ K →
         t.output.value = 1 + (((K - j * 2 ^ p) / 2 ^ (p + 1) : ℕ) : ℚ) * pow2 (-23)) ∧
       t.output.value ≤ 1 + (((K - 2 ^ p) / 2 ^ (p + 1) : ℕ) : ℚ) * pow2 (-23) := by
-  have hF : (fp16Fp32Profile K p floor).alignMantissaBits = 23 + p := by
+  have hF : (fp16Fp32Model K p eAlignMin).alignFracBits = 23 + p := by
     show ((23 + p : ℕ) : ℤ) = 23 + (p : ℤ)
     omega
   obtain ⟨t, h1, hiff, hform, hbound⟩ :=
-    nonmonotone_range (fp16Fp32Profile K p floor) p K j da db hF hfl hval hscale hK hj1 hj2
+    nonmonotone_range (fp16Fp32Model K p eAlignMin) p K j da db hF hfl hval hscale hK hj1 hj2
   have hc := decode32_below j hj1 hj2
   have hps := prepareProducts_replicate _ a b da db K ha hb
-  have hlen : ¬ ((List.replicate K (a, b)).length != (fp16Fp32Profile K p floor).products) = true := by
-    simp [fp16Fp32Profile]
+  have hlen : ¬ ((List.replicate K (a, b)).length != (fp16Fp32Model K p eAlignMin).nfma) = true := by
+    simp [fp16Fp32Model]
   refine ⟨t, ?_, ?_, hform, hbound⟩
   · unfold evalBlock
     rw [if_neg hlen]

@@ -48,7 +48,7 @@ def toObs : Outcome → Obs
   | .nan => .nan
 
 /-- `d = Σ a_ℓ b_ℓ + c` through the chained blocks of a profile, for operand pairs `(a_ℓ, b_ℓ)`. -/
-def observe (P : Profile) (ps : List (In × In)) (c : In) : Option Obs := do
+def observe (P : Model) (ps : List (In × In)) (c : In) : Option Obs := do
   let a ← ps.mapM fun q => encodeIn P.a q.1
   let b ← ps.mapM fun q => encodeIn P.b q.2
   let cw ← encodeC c
@@ -64,7 +64,7 @@ def splitProduct (p : ℚ) : In × In :=
     (.v (p * pow2 h), .v (pow2 (-h)))
 
 /-- Products given by value, each from normal operands as by `splitProduct`. -/
-def observeP (P : Profile) (ps : List ℚ) (c : In) : Option Obs :=
+def observeP (P : Model) (ps : List ℚ) (c : In) : Option Obs :=
   observe P (ps.map splitProduct) c
 
 /-- `2^e`. -/

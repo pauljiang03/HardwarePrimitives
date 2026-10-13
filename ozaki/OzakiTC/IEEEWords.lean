@@ -199,7 +199,7 @@ theorem decodeWord_inFormat32 (w : ℕ) : (decodeWord .binary32 w).InFormat 24 (
 words decoded by integer operations, the special cases decided on the stored data, the finite
 entries through the integer scheme with the integer sign oracle; the result meets the IEEE
 specification on the words as the ADP routine decodes them. -/
-theorem tcOzaki1CRIDW_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRIDW_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W : ℕ) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {ws vs : List (BitVec 64)} (hlen : ws.length = vs.length) :
     crIEEEWord .binary64 (tcOzaki1CRID p b W ss smax)
@@ -208,7 +208,7 @@ theorem tcOzaki1CRIDW_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b 
       dotIEEE 53 (-1022) 1023 (ws.map decodeF64) (vs.map decodeF64) := by
   unfold crIEEEWord
   rw [crIEEEIW_eq]
-  have h := tcOzaki1CRIDI_eq heng hb W ss hsmax
+  have h := tcOzaki1CRIDI_eq hmult hb W ss hsmax
     (xs := (ws.map BitVec.toNat).map (decodeWord .binary64))
     (ys := (vs.map BitVec.toNat).map (decodeWord .binary64))
     (fun a ha => by obtain ⟨w, _, rfl⟩ := List.mem_map.mp ha; exact decodeWord_inFormat64 w)

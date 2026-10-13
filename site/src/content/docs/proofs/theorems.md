@@ -176,7 +176,7 @@ of them.
 
 - **Classification:** Partial reduction. The four remaining conditions depend
   on the particular sum, not only the input bound.
-- **Lean:** [`ExtractionGrid.inputBudget_scalarPredicate`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/EFT/ExtractionGrid.lean#L174), [`ExtractionGrid.inputBudget_scalarPredicate_fp32`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/EFT/ExtractionGrid.lean#L191)
+- **Lean:** [`ExtractionGrid.inputGrid_scalarPredicate`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/EFT/ExtractionGrid.lean#L174), [`ExtractionGrid.inputGrid_scalarPredicate_fp32`](https://github.com/pauljiang03/TC-EFT/blob/main/TensorCore/EFT/ExtractionGrid.lean#L191)
 
 ### Does the fixed-size implementation agree?
 

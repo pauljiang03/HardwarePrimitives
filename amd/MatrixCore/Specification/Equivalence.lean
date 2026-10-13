@@ -11,7 +11,7 @@ namespace MatrixCore.Spec
 open MatrixCore
 
 /-- A profile and its transcription in the specification. -/
-structure Supported (P : Profile) (S : Params) : Prop where
+structure Supported (P : Model) (S : Params) : Prop where
   a : S.a = operandOf P.a
   b : S.b = operandOf P.b
   nfma : S.nfma = P.nfma
@@ -37,7 +37,7 @@ theorem sum_val (ps : List Unpacked) : ((ps.map numOf).map Num.val).sum = sumQ (
     rw [List.map_cons, List.map_cons, List.sum_cons, val_numOf, ih]; rfl
 
 /-- The specification's accumulated value is the implementation's `S_acc`. -/
-theorem accumulated_eq {P : Profile} {S : Params} (hS : Supported P S) (x : Prepared)
+theorem accumulated_eq {P : Model} {S : Params} (hS : Supported P S) (x : Prepared)
     (hc : x.c.t = 23) :
     accumulated S (x.a.map numOf) (x.b.map numOf) (numOf x.c) =
       match P.accumulation with
@@ -85,7 +85,7 @@ theorem triple_some {oa : Option α} {ob : Option β} {oc : Option γ} {a : α} 
   cases oa <;> cases ob <;> cases oc <;> simp
 
 /-- Decoding the words through the specification gives the implementation's decoded inputs. -/
-theorem prepare_spec {P : Profile} {S : Params} (hS : Supported P S) (x : BlockInput P) :
+theorem prepare_spec {P : Model} {S : Params} (hS : Supported P S) (x : BlockInput P) :
     (((x.a.map BitVec.toNat).mapM S.a.decode).bind fun as =>
       ((x.b.map BitVec.toNat).mapM S.b.decode).bind fun bs =>
         (decode binary32 x.c.toNat).bind fun cn => some (as, bs, cn)) =
@@ -113,7 +113,7 @@ theorem productOverflows_of {x : Prepared} (h : ∀ p ∈ x.p, absQ p.value < po
   simp; grind
 
 /-- The value accumulated by the implementation when no product overflows. -/
-theorem accumulate_supported {P : Profile} {S : Params} (hS : Supported P S) (x : Prepared)
+theorem accumulate_supported {P : Model} {S : Params} (hS : Supported P S) (x : Prepared)
     (hov : P.productOverflow = false ∨ x.productOverflows = false) :
     accumulate P x = .ok (match P.accumulation with
       | .correctRounding => x.exact
@@ -126,7 +126,7 @@ theorem accumulate_supported {P : Profile} {S : Params} (hS : Supported P S) (x 
 
 /-- **Equivalence.** On every supported profile and for every input, the implementation returns
 `w` exactly when `w` is the specification's result. -/
-theorem blockBits_eq_spec {P : Profile} {S : Params} (hS : Supported P S) (x : BlockInput P)
+theorem blockBits_eq_spec {P : Model} {S : Params} (hS : Supported P S) (x : BlockInput P)
     (w : F32) :
     blockBits x = .ok w ↔ Result S (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c w := by
   have hdec := prepare_spec hS x

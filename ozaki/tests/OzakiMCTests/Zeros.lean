@@ -16,13 +16,13 @@ namespace OzakiMCTests.Zeros
 def xs : List ℚ := [3, 0, 2 ^ (-30 : ℤ), 0]
 def ys : List ℚ := [0, 5, 0, -7 * 2 ^ (40 : ℤ)]
 
-def eng : Engine := mcSplitK cdna3F16 11
+def mult : MatrixMultiplier := mcSplitK cdna3F16 11
 
-example : certify rne64 ([5, 6].map fun s => ozaki1WindowEnclosure eng 11 s 96 xs ys)
+example : roundingTest rne64 ([5, 6].map fun s => ozaki1TruncatedEnclosure mult 11 s 96 xs ys)
     (some 12345) = some 12345 := by decide +kernel
 
-example : certify rne64
-    (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng 11 s 96 N xs ys) [5, 6] xs ys)
+example : roundingTest rne64
+    (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult 11 s 96 N xs ys) [5, 6] xs ys)
     (some 12345) = some 0 := by decide +kernel
 
 example : mcOzaki1CRDZ cdna3F16 11 96 [5, 6] 175 xs ys = some 0 ∧
@@ -37,7 +37,7 @@ example : mcOzaki1CRDSZ cdna3F16 11 96 [5, 6] 175 sx sy = some ⟨0, true⟩ ∧
 
 /-- Correctly rounded FP64 with the overlap bound equals the oracle on both cases, with the window
 check and in bounded registers. -/
-def agreesZ (P : Profile) : Bool :=
+def agreesZ (P : Model) : Bool :=
   [(A_narrow64, B_narrow64, C_narrow64), (A_wide64, B_wide64, C_wide64)].all fun (A, B, C) =>
     let Aq := A.map (·.map val64)
     let Bq := transpose (B.map (·.map val64))

@@ -51,8 +51,8 @@ These are its definitions, unchanged apart from omitted comments:
 structure Profile where
   input : Format          -- operand format: fp16, bf16, or tf19 (packed TF32)
   products : ℕ            -- K, the number of products per group
-  alignMantissaBits : ℤ       -- F = 23 + p, mantissa bits kept after alignment
-  alignFloor : Option ℤ   -- lower bound on the alignment exponent, if any
+  alignFracBits : ℤ       -- F = 23 + p, mantissa bits kept after alignment
+  eAlignMin : Option ℤ   -- lower bound on the alignment exponent, if any
 
 structure BlockInput (p : Profile) where
   products : List (p.Word × p.Word)   -- encoded (aᵢ, bᵢ) pairs
@@ -63,10 +63,10 @@ def PreparedBlock.terms (b : PreparedBlock) : List UnnormalizedProduct :=
     b.products.map fun (a, b) => unnormalizedMul a b
 
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
-  b.profile.applyFloor (maxTermExp b.terms)
+  b.profile.applyEAlignMin (maxTermExp b.terms)
 
 def PreparedBlock.alignGridExponent (b : PreparedBlock) : ℤ :=
-  b.alignExp.getD 0 - b.profile.alignMantissaBits
+  b.alignExp.getD 0 - b.profile.alignFracBits
 
 def PreparedBlock.alignedBits (b : PreparedBlock) : List ℤ :=
   b.terms.map fun t => truncBits t.value b.alignGridExponent
@@ -97,7 +97,7 @@ def evalBlock {p : Profile} (x : BlockInput p) : Except ModelError BlockTrace :=
 | `mantissaBits` | Mantissa width: how many low bits of the significand lie after the binary point. For a format or an input value, the stored mantissa width (10 for FP16). For a product, the sum of both inputs' widths (20 for FP16 × FP16). value = `significand · 2^(unnormalizedExp − mantissaBits)` | mantissa bits (`manBits`) |
 | `UnnormalizedProduct`, `unnormalizedMul` | An exact product kept in that unnormalized form | `prod_sig`, `prod_exp` with `denorm_prd` |
 | `alignExp` (η) | Alignment exponent: largest `unnormalizedExp` of a nonzero term, raised to the floor | maximum exponent, "capped from below" |
-| `alignMantissaBits` (F) | Mantissa bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `neab` |
+| `alignFracBits` (F) | Mantissa bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `neab` |
 | `alignGridExponent` | Exponent of the alignment grid step, `η − F` | |
 | `outputUlpExponent` | Exponent of one unit in the last place of the FP32 output | |
 

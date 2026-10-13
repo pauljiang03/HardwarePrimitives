@@ -32,15 +32,15 @@ theorem mul_fin {a b : XVal} {q : ℚ} (h : mul a b = .fin q) :
 end XVal
 
 /-- The extended pairwise tree is finite exactly when every leaf is, and then agrees with
-`pairTree`. -/
-theorem pairTreeX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
-    (pairTreeX ftz n xs).toFin = (xs.mapM XVal.toFin).bind (pairTree ftz n)
-  | _, [] => by simp [pairTreeX, pairTree, XVal.toFin]
+`pairwiseGroupSum`. -/
+theorem pairwiseGroupSumX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
+    (pairwiseGroupSumX ftz n xs).toFin = (xs.mapM XVal.toFin).bind (pairwiseGroupSum ftz n)
+  | _, [] => by simp [pairwiseGroupSumX, pairwiseGroupSum, XVal.toFin]
   | _, [x] => by
-    simp only [pairTreeX, List.mapM_cons, List.mapM_nil]
-    cases hx : x.toFin <;> simp [pairTree]
+    simp only [pairwiseGroupSumX, List.mapM_cons, List.mapM_nil]
+    cases hx : x.toFin <;> simp [pairwiseGroupSum]
   | 0, a :: b :: rest => by
-    simp only [pairTreeX, XVal.toFin]
+    simp only [pairwiseGroupSumX, XVal.toFin]
     cases h : (a :: b :: rest).mapM XVal.toFin with
     | none => rfl
     | some ys =>
@@ -48,8 +48,8 @@ theorem pairTreeX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
       match ys, hl with
       | _ :: _ :: _, _ => rfl
   | n + 1, a :: b :: rest => by
-    have ih := pairTreeX_toFin ftz n
-    simp only [pairTreeX]
+    have ih := pairwiseGroupSumX_toFin ftz n
+    simp only [pairwiseGroupSumX]
     rw [XVal.toFin_fl, XVal.toFin_add, ih, ih]
     generalize hxs : a :: b :: rest = xs
     have hsplit : xs = xs.take (xs.length / 2) ++ xs.drop (xs.length / 2) := (List.take_append_drop _ _).symm
@@ -70,9 +70,9 @@ theorem pairTreeX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
           rw [List.length_append, l1, l2, List.length_take, List.length_drop]; omega
         match hy : ys₁ ++ ys₂, hge with
         | y₁ :: y₂ :: ys, _ =>
-          simp only [pairTree]
+          simp only [pairwiseGroupSum]
           rw [← hy, hys, List.take_left' rfl, List.drop_left' rfl]
-          cases pairTree ftz n ys₁ <;> cases pairTree ftz n ys₂ <;> simp
+          cases pairwiseGroupSum ftz n ys₁ <;> cases pairwiseGroupSum ftz n ys₂ <;> simp
 
 /-- Observation of an extended value through the final `fl{·}`. -/
 theorem finishOutcome_finite (ftz : Bool) (X : XVal) (d : F32) :
@@ -82,19 +82,19 @@ theorem finishOutcome_finite (ftz : Bool) (X : XVal) (d : F32) :
   | inf s => simp [finishOutcome, XVal.toFin]
   | nan => simp [finishOutcome, XVal.toFin]
 
-theorem pairwiseOutcome_finite (P : Profile) (x : Prepared) (d : F32) :
+theorem pairwiseOutcome_finite (P : Model) (x : Prepared) (d : F32) :
     pairwiseOutcome P x = .finite d ↔
       ∃ s, pairwiseSum P x = some s ∧ fl32 (!P.subnormals) s = some d := by
   have key : ∀ x' : Prepared,
-      (XVal.add (.fin x'.c.value) (pairTreeX (!P.subnormals)
+      (XVal.add (.fin x'.c.value) (pairwiseGroupSumX (!P.subnormals)
         (x'.p.map fun p => XVal.fl (!P.subnormals) (.fin p.value)).length
         (x'.p.map fun p => XVal.fl (!P.subnormals) (.fin p.value)))).toFin =
       (do
         let ps ← x'.p.mapM fun p => flValue (!P.subnormals) p.value
-        let t ← pairTree (!P.subnormals) ps.length ps
+        let t ← pairwiseGroupSum (!P.subnormals) ps.length ps
         return x'.c.value + t) := by
     intro x'
-    rw [XVal.toFin_add, pairTreeX_toFin, mapM_map_option]
+    rw [XVal.toFin_add, pairwiseGroupSumX_toFin, mapM_map_option]
     have hf : (XVal.toFin ∘ fun p : Unpacked => XVal.fl (!P.subnormals) (.fin p.value)) =
         fun p => flValue (!P.subnormals) p.value := by
       funext p
@@ -104,10 +104,10 @@ theorem pairwiseOutcome_finite (P : Profile) (x : Prepared) (d : F32) :
     cases hq : x'.p.mapM fun p => flValue (!P.subnormals) p.value with
     | none => rfl
     | some qs =>
-      show Option.map _ ((pairTree (!P.subnormals) x'.p.length) qs) =
-        (pairTree (!P.subnormals) qs.length qs).bind fun t => some (x'.c.value + t)
+      show Option.map _ ((pairwiseGroupSum (!P.subnormals) x'.p.length) qs) =
+        (pairwiseGroupSum (!P.subnormals) qs.length qs).bind fun t => some (x'.c.value + t)
       rw [mapM_length_option hq]
-      cases pairTree (!P.subnormals) x'.p.length qs <;> rfl
+      cases pairwiseGroupSum (!P.subnormals) x'.p.length qs <;> rfl
   unfold pairwiseOutcome
   dsimp only
   rw [finishOutcome_finite, key]
@@ -123,7 +123,7 @@ theorem roundOutcome_finite (ftz : Bool) (s : ℚ) (d : F32) :
     roundOutcome ftz s = .finite d ↔ fl32 ftz s = some d := by
   unfold roundOutcome; split <;> simp_all
 
-theorem finiteOutcome_finite (P : Profile) (x : Prepared) (d : F32) :
+theorem finiteOutcome_finite (P : Model) (x : Prepared) (d : F32) :
     finiteOutcome P x = .finite d ↔ ∃ s, accumulate P x = .ok s ∧ fl32 (!P.subnormals) s = some d := by
   unfold finiteOutcome accumulate
   by_cases hov : P.productOverflow && x.productOverflows
@@ -166,7 +166,7 @@ theorem combineSpecial_allFin {xs : List XVal} (h : ∀ v ∈ xs, ∃ q, v = .fi
 
 /-- The special-value semantics reports a finite output exactly when the finite model accepts,
 with the same binary32 word. -/
-theorem blockOutcome_finite_iff {P : Profile} (x : BlockInput P) (d : F32) :
+theorem blockOutcome_finite_iff {P : Model} (x : BlockInput P) (d : F32) :
     blockOutcome x = some (.finite d) ↔ blockBits x = .ok d := by
   constructor
   · intro h

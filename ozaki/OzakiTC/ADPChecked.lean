@@ -121,8 +121,8 @@ def adpEnclosureZC (B : Widths) (s W : ℕ) (xs ys : List (ℤ × ℤ)) :
 def adpCRJC (B : Widths) (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (Option ℚ) := do
   let es ← cfgs.mapM fun c => (adpEnclosureZC B c.1 c.2 xs ys).map some
-  let ex ← ozaki1ExactPathIC B (int8SplitKC B) 53 (-1022) 1023 6 smax xs ys
-  certifyBC B 53 (-1022) 1023 es ex
+  let ex ← ozaki1ExactFallbackIC B (int8SplitKC B) 53 (-1022) 1023 6 smax xs ys
+  roundingTestBC B 53 (-1022) 1023 es ex
 
 /-! ## No guard fails -/
 
@@ -447,11 +447,11 @@ theorem adpCRJC_eq {B : Widths} {EM smax : ℕ} {cfgs : List (ℕ × ℕ)} {xs y
   have hD : xs.length * (2 ^ 6 * 2 ^ 6) < 2 ^ B.R := by
     unfold exactR at hRe
     exact Nat.lt_of_lt_of_le (lt_two_pow_bitlen _) (Nat.pow_le_pow_right (by decide) (by omega))
-  rw [ozaki1ExactPathIC_eq (int8SplitKC_exactOn (by omega) hD) hlen (Nat.le_refl _) hx hy hRe hRb
-    hXe, ozaki1ExactPathI_congr (int8SplitKC_exactOn (by omega) hD) (int8SplitK_exactOn _) _ _ _ _
+  rw [ozaki1ExactFallbackIC_eq (int8SplitKC_exactOn (by omega) hD) hlen (Nat.le_refl _) hx hy hRe hRb
+    hXe, ozaki1ExactFallbackI_congr (int8SplitKC_exactOn (by omega) hD) (int8SplitK_exactOn _) _ _ _ _
     hlen (Nat.le_refl _)]
   simp only [Option.bind_some]
-  apply certifyBC_eq
+  apply roundingTestBC_eq
   intro e he t het
   obtain ⟨c, hc, rfl⟩ := List.mem_map.mp he
   cases het
@@ -488,7 +488,7 @@ theorem adpCRJC_eq {B : Widths} {EM smax : ℕ} {cfgs : List (ℕ × ℕ)} {xs y
     omega
   have hm1 : (-1022 : ℤ).natAbs = 1022 := by decide
   have hm2 : (1023 : ℤ).natAbs = 1023 := by decide
-  exact checkBC_eq (E := 2 * c.2 + bitlen xs.length + 2)
+  exact enclosureTestBC_eq (E := 2 * c.2 + bitlen xs.length + 2)
     (D := 2 * c.2 + bitlen xs.length + 2 + 53 + 2) hN (by omega) (by omega) (by omega)
     (by omega) (by omega)
 

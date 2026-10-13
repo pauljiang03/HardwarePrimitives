@@ -30,7 +30,7 @@ theorem native32_error_jr {x y : List ℚ}
 
 /-- **Ozaki-I on the matrix core, sharper**: `(n − 1) 2^-24 Σ|tⱼ| + (s + 1) Σᵢ min(2|xᵢyᵢ|,
 2^(E+F−s(b+1)))` when the scaled slice products are binary32 values. -/
-theorem mcOzaki1_error_jr {P : Profile} {b : ℕ} (hP : ExactEngine P b) (s : ℕ) {x y : List ℚ}
+theorem mcOzaki1_error_jr {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (s : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hterms : ∀ t ∈ exactTerms b s x y, Binary32Value t) {v : ℚ}
     (hv : mcOzaki1 P b s x y = some v) :

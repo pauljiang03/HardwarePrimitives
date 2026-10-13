@@ -25,66 +25,66 @@ theorem slicesForCR_table :
   decide +kernel
 
 /-- Correctly rounded FP64 by Ozaki-I with slice counts from the inner dimension. -/
-def tcOzaki1CRDK (p : Profile) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRDK (p : Model) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRK (tcSplitK p b) rne64 b t r smax x y
 
 /-- With the shortcut, for a given list of slice counts. -/
-def tcOzaki1CRDA (p : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRDA (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRA (tcSplitK p b) rne64 b ss smax x y
 
 /-- With both rules. -/
-def tcOzaki1CRDKA (p : Profile) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRDKA (p : Model) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRKA (tcSplitK p b) rne64 b t r smax x y
 
 /-- Both rules for binary32. -/
-def tcOzaki1CRLKA (p : Profile) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
+def tcOzaki1CRLKA (p : Model) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRKA (tcSplitK p b) rne32Q b t r smax x y
 
 /-- Both rules as one integer function from binary64 entries. -/
-def tcOzaki1CRIKA (p : Profile) (b W t r smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
+def tcOzaki1CRIKA (p : Model) (b W t r smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   ozaki1CRIKA (tcSplitK p b) 53 (-1022) 1023 b W t r smax xs ys
 
-theorem tcOzaki1CRDK_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRDK_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (t r : ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRDK p b t r smax x y = rne64 (dot x y) :=
-  ozaki1CRK_eq rne64_nearest rne64_intervals (tcSplitK_exactOn heng hb _) t r hlen
+  ozaki1CRK_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) t r hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
-theorem tcOzaki1CRDA_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRDA_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRDA p b ss smax x y = rne64 (dot x y) :=
-  ozaki1CRA_eq rne64_nearest rne64_intervals (tcSplitK_exactOn heng hb _) ss hlen
+  ozaki1CRA_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) ss hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
 /-- **Correctly rounded FP64 GEMM on Tensor Cores with both rules**, for binary64 inputs of any
 length. -/
-theorem tcOzaki1CRDKA_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRDKA_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (t r : ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRDKA p b t r smax x y = rne64 (dot x y) :=
-  ozaki1CRKA_eq rne64_nearest rne64_intervals (tcSplitK_exactOn heng hb _) t r hlen
+  ozaki1CRKA_eq rne64_nearest rne64_intervals (tcSplitK_exactOn hmult hb _) t r hlen
     (Nat.le_refl _) (vanish64 (by omega) hsmax hx hy)
 
-theorem tcOzaki1CRLKA_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRLKA_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (t r : ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a)
     (hlen : x.length = y.length) :
     tcOzaki1CRLKA p b t r smax x y = rne32Q (dot x y) :=
-  ozaki1CRKA_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn heng hb _) t r hlen
+  ozaki1CRKA_eq rne32Q_nearest rne32Q_intervals (tcSplitK_exactOn hmult hb _) t r hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
 /-- **Both rules as one integer function**, correctly rounded for binary64 entries of any length. -/
-theorem tcOzaki1CRIKA_eq {p : Profile} {b : ℕ} (heng : (tcEngine p).ExactOn b (2 ^ 24))
+theorem tcOzaki1CRIKA_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b (2 ^ 24))
     (hb : 2 * b ≤ 24) (W t r : ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)} (hx : ∀ a ∈ xs, Binary64Value (entryVal a))
     (hy : ∀ a ∈ ys, Binary64Value (entryVal a)) (hlen : xs.length = ys.length) :
     tcOzaki1CRIKA p b W t r smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) :=
-  ozaki1CRI64_eq (tcSplitK_exactOn heng hb _) W _ (by omega) hsmax hlen (Nat.le_refl _) hx hy
+  ozaki1CRI64_eq (tcSplitK_exactOn hmult hb _) W _ (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
 /-- On V100 fp16 with `11`-bit slices: FP64 with both rules, for every length. -/
 theorem v100_fp64CRKA (r : ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)

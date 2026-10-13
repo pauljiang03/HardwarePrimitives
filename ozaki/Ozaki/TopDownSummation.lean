@@ -2,17 +2,17 @@ import Ozaki.SignOracle
 
 /-! # A descent whose number of windows does not depend on the exponents
 
-`descend` (in `Ozaki.SignOracle`) moves its window down from the accumulator's top. When a
+`topDownSum` (in `Ozaki.SignOracle`) moves its window down from the accumulator's top. When a
 cancellation leaves the accumulator exactly zero, the next window starts at the old grid, however
 far below it the remaining terms lie, so the number of windows grows with the exponent span
-(`descendAll_fuel_le`). `descendJ` jumps instead: with a zero accumulator the next window starts at
-the top of the largest remaining term (`winTop`). Everything else is unchanged.
+(`topDownSumAll_fuel_le`). `topDownSumJ` jumps instead: with a zero accumulator the next window starts at
+the top of the largest remaining term (`rangeTop`). Everything else is unchanged.
 
-* `descendJ_sound`: what it returns is exact, as for `descend`.
-* `descendJ_spec`: it ends with fuel `potential rs`, the total bit length of the terms'
+* `topDownSumJ_sound`: what it returns is exact, as for `topDownSum`.
+* `topDownSumJ_spec`: it ends with fuel `potential rs`, the total bit length of the terms'
   coefficients: every window that does not stop removes at least one bit from some remaining term
-  (`potential_winRest_lt`). So it evaluates at most `potential + 1` windows (`descendJWindows_le`),
-  at most `n · bitlen M + 1` for `n` terms of magnitude at most `M` (`windowsJ_le`), whatever the
+  (`potential_rangeRest_lt`). So it evaluates at most `potential + 1` windows (`topDownSumJRanges_le`),
+  at most `n · bitlen M + 1` for `n` terms of magnitude at most `M` (`rangesJ_le`), whatever the
   exponents.
 * `signSumJ`, `roundSumJ`: the sign and the round to nearest even of a sum of terms, as
   `signSum` and `roundSum`, with this descent (`signSumJ_eq`, `roundSumJ_eq`). -/
@@ -99,9 +99,9 @@ theorem potential_map_loPart_le (q : ℤ) (ts : List (ℤ × ℤ)) :
   exact sum_map_le fun t _ => bitlen_mono (natAbs_loPart_le q t)
 
 /-- **Cutting at a grid below the top of some term lowers the potential.** -/
-theorem potential_winRest_lt {q : ℤ} {ts : List (ℤ × ℤ)} (hne : ∀ t ∈ ts, t.1 ≠ 0)
-    (h : ∃ t ∈ ts, q < topOf t) : potential (winRest q ts) < potential ts := by
-  unfold winRest
+theorem potential_rangeRest_lt {q : ℤ} {ts : List (ℤ × ℤ)} (hne : ∀ t ∈ ts, t.1 ≠ 0)
+    (h : ∃ t ∈ ts, q < topOf t) : potential (rangeRest q ts) < potential ts := by
+  unfold rangeRest
   rw [potential_nonzero]
   unfold potential
   rw [List.map_map]
@@ -194,116 +194,116 @@ theorem exists_maxTop {ts : List (ℤ × ℤ)} (h : ts ≠ []) : ∃ t ∈ ts, t
 
 /-- The top of the next window: the accumulator's, or the largest remaining term's when the
 accumulator is zero. -/
-def winTop (A qa : ℤ) (rs : List (ℤ × ℤ)) : ℤ := if A = 0 then maxTop rs else topOf (A, qa)
+def rangeTop (A qa : ℤ) (rs : List (ℤ × ℤ)) : ℤ := if A = 0 then maxTop rs else topOf (A, qa)
 
-/-- **Windows from the top down, jumping over empty gaps.** As `descend`, except that a zero
+/-- **Windows from the top down, jumping over empty gaps.** As `topDownSum`, except that a zero
 accumulator does not hold the window up: the next window starts at the top of the largest
 remaining term. -/
-def descendJ (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (ℤ × ℤ × List (ℤ × ℤ))
+def topDownSumJ (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (ℤ × ℤ × List (ℤ × ℤ))
   | fuel, A, qa, rs =>
     let ts := (A, qa) :: rs
-    let q := winTop A qa rs - W
+    let q := rangeTop A qa rs - W
     let parts := ts.map (hiPart q)
     let N := fixedSum (W + bitlen parts.length + 1) parts
-    let rs' := winRest q ts
+    let rs' := rangeRest q ts
     if parts.all (fun z => decide (z.natAbs < 2 ^ W)) then
       if rs' = [] ∨ T < bitlen N.natAbs then some (N, q, rs')
       else match fuel with
         | 0 => none
-        | k + 1 => descendJ W T k N q rs'
+        | k + 1 => topDownSumJ W T k N q rs'
     else none
 
-/-- The number of windows `descendJ` evaluates. -/
-def descendJWindows (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → ℕ
+/-- The number of windows `topDownSumJ` evaluates. -/
+def topDownSumJRanges (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → ℕ
   | fuel, A, qa, rs =>
     let ts := (A, qa) :: rs
-    let q := winTop A qa rs - W
+    let q := rangeTop A qa rs - W
     let parts := ts.map (hiPart q)
     let N := fixedSum (W + bitlen parts.length + 1) parts
-    let rs' := winRest q ts
+    let rs' := rangeRest q ts
     if parts.all (fun z => decide (z.natAbs < 2 ^ W)) then
       if rs' = [] ∨ T < bitlen N.natAbs then 1
       else match fuel with
         | 0 => 1
-        | k + 1 => descendJWindows W T k N q rs' + 1
+        | k + 1 => topDownSumJRanges W T k N q rs' + 1
     else 1
 
 /-- A run with fuel `f` evaluates at most `f + 1` windows. -/
-theorem descendJWindows_le (W T : ℕ) : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)),
-    descendJWindows W T fuel A qa rs ≤ fuel + 1
+theorem topDownSumJRanges_le (W T : ℕ) : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)),
+    topDownSumJRanges W T fuel A qa rs ≤ fuel + 1
   | 0, A, qa, rs => by
-    unfold descendJWindows; simp only; split <;> (try split) <;> omega
+    unfold topDownSumJRanges; simp only; split <;> (try split) <;> omega
   | k + 1, A, qa, rs => by
-    unfold descendJWindows; simp only
+    unfold topDownSumJRanges; simp only
     split
     · split
       · omega
-      · exact Nat.add_le_add_right (descendJWindows_le W T k _ _ _) 1
+      · exact Nat.add_le_add_right (topDownSumJRanges_le W T k _ _ _) 1
     · omega
 
 /-- The accumulator leaves nothing when it is zero or lies on or above the grid. -/
-theorem winRest_acc {q A qa : ℤ} {rs : List (ℤ × ℤ)} (h : A = 0 ∨ q ≤ qa) :
-    winRest q ((A, qa) :: rs) = winRest q rs := by
+theorem rangeRest_acc {q A qa : ℤ} {rs : List (ℤ × ℤ)} (h : A = 0 ∨ q ≤ qa) :
+    rangeRest q ((A, qa) :: rs) = rangeRest q rs := by
   rcases h with h | h
   · subst h
-    unfold winRest nonzero
+    unfold rangeRest nonzero
     rw [List.map_cons, List.filter_cons]
     rw [if_neg (by simp [loPart_zero])]
-  · exact winRest_cons_of_le h
+  · exact rangeRest_cons_of_le h
 
-theorem winRest_nil (q : ℤ) : winRest q [] = [] := rfl
+theorem rangeRest_nil (q : ℤ) : rangeRest q [] = [] := rfl
 
-/-- **What `descendJ` returns is exact**, as for `descend`. -/
-theorem descendJ_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)) {N q : ℤ}
-    {rs' : List (ℤ × ℤ)}, descendJ W T fuel A qa rs = some (N, q, rs') →
+/-- **What `topDownSumJ` returns is exact**, as for `topDownSum`. -/
+theorem topDownSumJ_sound {W T : ℕ} : ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)) {N q : ℤ}
+    {rs' : List (ℤ × ℤ)}, topDownSumJ W T fuel A qa rs = some (N, q, rs') →
     tval (A, qa) + tsum rs = (N : ℚ) * 2 ^ q + tsum rs' ∧
       (∀ t ∈ rs', t.1 ≠ 0 ∧ topOf t ≤ q) ∧ (rs' = [] ∨ T < bitlen N.natAbs) := by
   intro fuel
   induction fuel with
   | zero =>
     intro A qa rs N q rs' h
-    unfold descendJ at h
+    unfold topDownSumJ at h
     simp only at h
     split at h
     · rename_i hall
-      have hsum := window_fixedSum (W := W)
-        (ps := ((A, qa) :: rs).map (hiPart (winTop A qa rs - W)))
+      have hsum := register_fixedSum (W := W)
+        (ps := ((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W)))
         (fun z hz => by simpa using List.all_eq_true.mp hall z hz)
       split at h
       · rename_i hstop
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         rw [hsum, ← tsum_cons]
-        exact ⟨tsum_window _ _, fun t ht => (mem_winRest ht).imp_right fun h => h.1,
+        exact ⟨tsum_range _ _, fun t ht => (mem_rangeRest ht).imp_right fun h => h.1,
           by rw [← hsum]; exact hstop⟩
       · simp at h
     · simp at h
   | succ k ih =>
     intro A qa rs N q rs' h
-    unfold descendJ at h
+    unfold topDownSumJ at h
     simp only at h
     split at h
     · rename_i hall
-      have hsum := window_fixedSum (W := W)
-        (ps := ((A, qa) :: rs).map (hiPart (winTop A qa rs - W)))
+      have hsum := register_fixedSum (W := W)
+        (ps := ((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W)))
         (fun z hz => by simpa using List.all_eq_true.mp hall z hz)
       split at h
       · rename_i hstop
         simp only [Option.some.injEq, Prod.mk.injEq] at h
         obtain ⟨rfl, rfl, rfl⟩ := h
         rw [hsum, ← tsum_cons]
-        exact ⟨tsum_window _ _, fun t ht => (mem_winRest ht).imp_right fun h => h.1,
+        exact ⟨tsum_range _ _, fun t ht => (mem_rangeRest ht).imp_right fun h => h.1,
           by rw [← hsum]; exact hstop⟩
       · obtain ⟨h1, h2, h3⟩ := ih _ _ _ h
         refine ⟨?_, h2, h3⟩
-        rw [← h1, ← tsum_cons, tsum_window (winTop A qa rs - W), hsum]
+        rw [← h1, ← tsum_cons, tsum_range (rangeTop A qa rs - W), hsum]
         unfold tval; rfl
     · simp at h
 
 /-- The window parts are `W`-bit integers on every state the descent reaches. -/
-theorem descendJ_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)} (hA : bitlen A.natAbs ≤ W)
+theorem topDownSumJ_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)} (hA : bitlen A.natAbs ≤ W)
     (hrs : ∀ t ∈ rs, topOf t ≤ qa) :
-    ∀ z ∈ ((A, qa) :: rs).map (hiPart (winTop A qa rs - W)), z.natAbs < 2 ^ W := by
+    ∀ z ∈ ((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W)), z.natAbs < 2 ^ W := by
   intro z hz
   obtain ⟨t, ht, rfl⟩ := List.mem_map.mp hz
   by_cases hA0 : A = 0
@@ -311,20 +311,20 @@ theorem descendJ_parts_lt {W : ℕ} {A qa : ℤ} {rs : List (ℤ × ℤ)} (hA : 
     rcases List.mem_cons.mp ht with rfl | ht
     · rw [hiPart_zero]; exact Nat.two_pow_pos W
     · apply natAbs_hiPart_lt
-      unfold winTop; rw [if_pos rfl]
+      unfold rangeTop; rw [if_pos rfl]
       have := le_maxTop ht; omega
-  · have hq : winTop A qa rs = topOf (A, qa) := by unfold winTop; rw [if_neg hA0]
+  · have hq : rangeTop A qa rs = topOf (A, qa) := by unfold rangeTop; rw [if_neg hA0]
     rw [hq]
     apply natAbs_hiPart_lt
     rcases List.mem_cons.mp ht with rfl | ht
     · omega
     · have := hrs t ht; unfold topOf at this ⊢; simp only at this ⊢; omega
 
-/-- **`descendJ` ends with fuel the potential of the remaining terms**, with no more residuals
+/-- **`topDownSumJ` ends with fuel the potential of the remaining terms**, with no more residuals
 than it started with, each on the grid of an original term and no larger. -/
-theorem descendJ_spec {W T : ℕ} (hTW : T < W) : ∀ (fuel : ℕ) (A qa : ℤ)
+theorem topDownSumJ_spec {W T : ℕ} (hTW : T < W) : ∀ (fuel : ℕ) (A qa : ℤ)
     (rs : List (ℤ × ℤ)), bitlen A.natAbs ≤ T → (∀ t ∈ rs, t.1 ≠ 0 ∧ topOf t ≤ qa) →
-    potential rs ≤ fuel → ∃ N q rs', descendJ W T fuel A qa rs = some (N, q, rs') ∧
+    potential rs ≤ fuel → ∃ N q rs', topDownSumJ W T fuel A qa rs = some (N, q, rs') ∧
       rs'.length ≤ rs.length ∧
       (∀ t' ∈ rs', ∃ t ∈ rs, t'.2 = t.2 ∧ t'.1.natAbs ≤ t.1.natAbs) ∧
       N.natAbs ≤ 2 ^ (W + bitlen (rs.length + 1)) := by
@@ -336,122 +336,122 @@ theorem descendJ_spec {W T : ℕ} (hTW : T < W) : ∀ (fuel : ℕ) (A qa : ℤ)
       apply Classical.byContradiction; intro hne
       have := potential_pos (fun t ht => (hrs t ht).1) hne; omega
     subst hrs0
-    have hall : (((A, qa) :: []).map (hiPart (winTop A qa [] - W))).all
+    have hall : (((A, qa) :: []).map (hiPart (rangeTop A qa [] - W))).all
         (fun z => decide (z.natAbs < 2 ^ W)) = true :=
       List.all_eq_true.mpr fun z hz => decide_eq_true
-        (descendJ_parts_lt (by omega) (by simp) z hz)
-    have hacc : A = 0 ∨ winTop A qa [] - W ≤ qa := by
+        (topDownSumJ_parts_lt (by omega) (by simp) z hz)
+    have hacc : A = 0 ∨ rangeTop A qa [] - W ≤ qa := by
       by_cases hA0 : A = 0
       · exact Or.inl hA0
-      · right; unfold winTop topOf; rw [if_neg hA0]; simp only; omega
-    unfold descendJ
+      · right; unfold rangeTop topOf; rw [if_neg hA0]; simp only; omega
+    unfold topDownSumJ
     simp only
-    rw [if_pos hall, winRest_acc hacc, winRest_nil, if_pos (Or.inl rfl)]
+    rw [if_pos hall, rangeRest_acc hacc, rangeRest_nil, if_pos (Or.inl rfl)]
     refine ⟨_, _, _, rfl, by simp, by simp, ?_⟩
     refine Nat.le_trans (fixedSum_natAbs_le (by omega) _) (Nat.le_of_eq ?_)
     simp
   | succ k ih =>
     intro A qa rs hA hrs hpot
-    have hall : (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))).all
+    have hall : (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))).all
         (fun z => decide (z.natAbs < 2 ^ W)) = true :=
       List.all_eq_true.mpr fun z hz => decide_eq_true
-        (descendJ_parts_lt (by omega) (fun t ht => (hrs t ht).2) z hz)
-    have hacc : A = 0 ∨ winTop A qa rs - W ≤ qa := by
+        (topDownSumJ_parts_lt (by omega) (fun t ht => (hrs t ht).2) z hz)
+    have hacc : A = 0 ∨ rangeTop A qa rs - W ≤ qa := by
       by_cases hA0 : A = 0
       · exact Or.inl hA0
-      · right; unfold winTop topOf; rw [if_neg hA0]; simp only; omega
-    have hsum := window_fixedSum (W := W)
-      (ps := ((A, qa) :: rs).map (hiPart (winTop A qa rs - W)))
+      · right; unfold rangeTop topOf; rw [if_neg hA0]; simp only; omega
+    have hsum := register_fixedSum (W := W)
+      (ps := ((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W)))
       (fun z hz => by simpa using List.all_eq_true.mp hall z hz)
-    unfold descendJ
+    unfold topDownSumJ
     simp only
-    rw [if_pos hall, winRest_acc hacc]
+    rw [if_pos hall, rangeRest_acc hacc]
     split
-    · refine ⟨_, _, _, rfl, length_winRest _ _, fun t' ht' => ?_, ?_⟩
-      · obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_winRest ht'
+    · refine ⟨_, _, _, rfl, length_rangeRest _ _, fun t' ht' => ?_, ?_⟩
+      · obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_rangeRest ht'
         exact ⟨t, ht, h1, h2⟩
       · refine Nat.le_trans (fixedSum_natAbs_le (by omega) _) (Nat.le_of_eq ?_)
         simp only [List.length_map, List.length_cons]
         congr 1
     · rename_i hstop
       have hN := Nat.le_of_not_lt (fun h => hstop (Or.inr h))
-      have hrsne : winRest (winTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
+      have hrsne : rangeRest (rangeTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
       -- some remaining term reaches above the window's grid
-      have hwit : ∃ t ∈ rs, winTop A qa rs - W < topOf t := by
+      have hwit : ∃ t ∈ rs, rangeTop A qa rs - W < topOf t := by
         by_cases hA0 : A = 0
         · have hne : rs ≠ [] := by
-            intro h; subst h; exact hrsne (winRest_nil _)
+            intro h; subst h; exact hrsne (rangeRest_nil _)
           obtain ⟨t, ht, htop⟩ := exists_maxTop hne
           refine ⟨t, ht, ?_⟩
-          unfold winTop; rw [if_pos hA0, ← htop]; omega
+          unfold rangeTop; rw [if_pos hA0, ← htop]; omega
         · apply Classical.byContradiction; intro hno
-          have hall0 : ∀ t ∈ rs, hiPart (winTop A qa rs - W) t = 0 := fun t ht =>
+          have hall0 : ∀ t ∈ rs, hiPart (rangeTop A qa rs - W) t = 0 := fun t ht =>
             hiPart_eq_zero (Int.not_lt.mp fun h => hno ⟨t, ht, h⟩)
-          have hq : winTop A qa rs - W = qa + bitlen A.natAbs - W := by
-            unfold winTop topOf; rw [if_neg hA0]
-          have hsum0 : (rs.map (hiPart (winTop A qa rs - W))).sum = 0 :=
+          have hq : rangeTop A qa rs - W = qa + bitlen A.natAbs - W := by
+            unfold rangeTop topOf; rw [if_neg hA0]
+          have hsum0 : (rs.map (hiPart (rangeTop A qa rs - W))).sum = 0 :=
             sum_map_eq_zero hall0
           have hNe : fixedSum (W + bitlen (((A, qa) :: rs).map
-              (hiPart (winTop A qa rs - W))).length + 1)
-              (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))) =
-              A * 2 ^ (qa - (winTop A qa rs - W)).toNat := by
+              (hiPart (rangeTop A qa rs - W))).length + 1)
+              (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))) =
+              A * 2 ^ (qa - (rangeTop A qa rs - W)).toNat := by
             rw [hsum, List.map_cons, List.sum_cons, hsum0, Int.add_zero]
             unfold hiPart; rw [if_pos (by omega)]
           apply hstop; right
           rw [hNe, Int.natAbs_mul, Int.natAbs_pow]
-          show T < bitlen (A.natAbs * 2 ^ (qa - (winTop A qa rs - W)).toNat)
+          show T < bitlen (A.natAbs * 2 ^ (qa - (rangeTop A qa rs - W)).toNat)
           rw [bitlen_mul_two_pow (by omega)]
           omega
-      have hpot' : potential (winRest (winTop A qa rs - W) rs) ≤ k := by
-        have := potential_winRest_lt (fun t ht => (hrs t ht).1) hwit
+      have hpot' : potential (rangeRest (rangeTop A qa rs - W) rs) ≤ k := by
+        have := potential_rangeRest_lt (fun t ht => (hrs t ht).1) hwit
         omega
-      have hrs' : ∀ t' ∈ winRest (winTop A qa rs - W) rs,
-          t'.1 ≠ 0 ∧ topOf t' ≤ winTop A qa rs - W := fun t' ht' => by
-        obtain ⟨hne, htop, _⟩ := mem_winRest ht'
+      have hrs' : ∀ t' ∈ rangeRest (rangeTop A qa rs - W) rs,
+          t'.1 ≠ 0 ∧ topOf t' ≤ rangeTop A qa rs - W := fun t' ht' => by
+        obtain ⟨hne, htop, _⟩ := mem_rangeRest ht'
         exact ⟨hne, htop⟩
       obtain ⟨N', q', rs'', h, hlen, hsub, hN'⟩ := ih _ _ _ hN hrs' hpot'
-      refine ⟨N', q', rs'', h, Nat.le_trans hlen (length_winRest _ _), fun t'' ht'' => ?_, ?_⟩
+      refine ⟨N', q', rs'', h, Nat.le_trans hlen (length_rangeRest _ _), fun t'' ht'' => ?_, ?_⟩
       · obtain ⟨t', ht', h1, h2⟩ := hsub t'' ht''
-        obtain ⟨_, _, t, ht, h3, h4, _⟩ := mem_winRest ht'
+        obtain ⟨_, _, t, ht, h3, h4, _⟩ := mem_rangeRest ht'
         exact ⟨t, ht, h1.trans h3, Nat.le_trans h2 h4⟩
       · refine Nat.le_trans hN' (Nat.pow_le_pow_right (by decide) ?_)
         have := bitlen_mono
-          (Nat.add_le_add_right (length_winRest (winTop A qa rs - W) rs) 1)
+          (Nat.add_le_add_right (length_rangeRest (rangeTop A qa rs - W) rs) 1)
         omega
 
 /-! ## From the top of the nonzero terms -/
 
-/-- `descendJ` from the top of the nonzero terms, with fuel their potential. -/
-def descendAllJ (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (ℤ × ℤ × List (ℤ × ℤ)) :=
+/-- `topDownSumJ` from the top of the nonzero terms, with fuel their potential. -/
+def topDownSumAllJ (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (ℤ × ℤ × List (ℤ × ℤ)) :=
   let rs := nonzero ts
-  descendJ W T (potential rs) 0 (maxTop rs) rs
+  topDownSumJ W T (potential rs) 0 (maxTop rs) rs
 
-/-- The number of windows of `descendAllJ`. -/
-def windowsJ (W T : ℕ) (ts : List (ℤ × ℤ)) : ℕ :=
+/-- The number of windows of `topDownSumAllJ`. -/
+def rangesJ (W T : ℕ) (ts : List (ℤ × ℤ)) : ℕ :=
   let rs := nonzero ts
-  descendJWindows W T (potential rs) 0 (maxTop rs) rs
+  topDownSumJRanges W T (potential rs) 0 (maxTop rs) rs
 
 /-- **The number of windows does not depend on the exponents**: at most `n · bitlen M + 1` for
 `n` terms of magnitude at most `M`. -/
-theorem windowsJ_le (W T : ℕ) {ts : List (ℤ × ℤ)} {M : ℕ} (h : ∀ t ∈ ts, t.1.natAbs ≤ M) :
-    windowsJ W T ts ≤ ts.length * bitlen M + 1 := by
-  unfold windowsJ
+theorem rangesJ_le (W T : ℕ) {ts : List (ℤ × ℤ)} {M : ℕ} (h : ∀ t ∈ ts, t.1.natAbs ≤ M) :
+    rangesJ W T ts ≤ ts.length * bitlen M + 1 := by
+  unfold rangesJ
   simp only
-  have h1 := descendJWindows_le W T (potential (nonzero ts)) 0 (maxTop (nonzero ts)) (nonzero ts)
+  have h1 := topDownSumJRanges_le W T (potential (nonzero ts)) 0 (maxTop (nonzero ts)) (nonzero ts)
   have h2 := potential_le (M := M) (ts := nonzero ts) fun t ht => h t (mem_nonzero.mp ht).1
   have h3 := Nat.mul_le_mul_right (bitlen M) (length_nonzero ts)
   omega
 
-theorem descendAllJ_spec {W T : ℕ} (hTW : T < W) (ts : List (ℤ × ℤ)) :
-    ∃ N q rs', descendAllJ W T ts = some (N, q, rs') ∧
+theorem topDownSumAllJ_spec {W T : ℕ} (hTW : T < W) (ts : List (ℤ × ℤ)) :
+    ∃ N q rs', topDownSumAllJ W T ts = some (N, q, rs') ∧
       tsum ts = (N : ℚ) * 2 ^ q + tsum rs' ∧ (∀ t ∈ rs', t.1 ≠ 0 ∧ topOf t ≤ q) ∧
       (rs' = [] ∨ T < bitlen N.natAbs) ∧ rs'.length ≤ (nonzero ts).length ∧
       (∀ t' ∈ rs', ∃ t ∈ ts, t'.2 = t.2 ∧ t'.1.natAbs ≤ t.1.natAbs) ∧
       N.natAbs ≤ 2 ^ (W + bitlen ((nonzero ts).length + 1)) := by
-  obtain ⟨N, q, rs', h, hlen, hsub, hN⟩ := descendJ_spec hTW
+  obtain ⟨N, q, rs', h, hlen, hsub, hN⟩ := topDownSumJ_spec hTW
     (potential (nonzero ts)) 0 (maxTop (nonzero ts)) (nonzero ts)
     (by simp [bitlen]) (fun t ht => ⟨(mem_nonzero.mp ht).2, le_maxTop ht⟩) (Nat.le_refl _)
-  obtain ⟨h1, h2, h3⟩ := descendJ_sound _ _ _ _ h
+  obtain ⟨h1, h2, h3⟩ := topDownSumJ_sound _ _ _ _ h
   refine ⟨N, q, rs', h, ?_, h2, h3, hlen, fun t' ht' => ?_, hN⟩
   · rw [← tsum_nonzero ts, ← h1, tval_zero, Rat.zero_add]
   · obtain ⟨t, ht, h4, h5⟩ := hsub t' ht'
@@ -461,7 +461,7 @@ theorem descendAllJ_spec {W T : ℕ} (hTW : T < W) (ts : List (ℤ × ℤ)) :
 
 /-- **The sign of a sum of terms**, from windows of `W` bits, with the jumping descent. -/
 def signSumJ (W : ℕ) (ts : List (ℤ × ℤ)) : ℤ :=
-  match descendAllJ W (bitlen (nonzero ts).length) ts with
+  match topDownSumAllJ W (bitlen (nonzero ts).length) ts with
   | some (N, _, _) => N.sign
   | none => 0
 
@@ -471,7 +471,7 @@ theorem signSumJ_eq {W : ℕ} {ts : List (ℤ × ℤ)} (hW : bitlen ts.length < 
   have hbl : bitlen (nonzero ts).length ≤ bitlen ts.length :=
     bitlen_le_iff.mpr (Nat.lt_of_le_of_lt (length_nonzero ts) (lt_two_pow_bitlen _))
   obtain ⟨N, q, rs', h, hval, htop, hstop, hlen, _⟩ :=
-    descendAllJ_spec (W := W) (T := bitlen (nonzero ts).length) (by omega) ts
+    topDownSumAllJ_spec (W := W) (T := bitlen (nonzero ts).length) (by omega) ts
   unfold signSumJ
   rw [h]
   simp only
@@ -488,7 +488,7 @@ half the smallest subnormal, return `0`; otherwise answer the comparisons of `ro
 sign oracle on the residuals and one query term, refusing any query outside the ranges proved to
 suffice (so every query term is below `2^(bitlen |N| + p + 6)`). -/
 def roundSumJ (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : Option ℚ :=
-  match descendAllJ W (bitlen (nonzero ts).length + p + 3) ts with
+  match topDownSumAllJ W (bitlen (nonzero ts).length + p + 3) ts with
   | none => none
   | some (N, q, rs') =>
     if rs' = [] then roundExact p emin emax N q
@@ -512,7 +512,7 @@ theorem roundSumJ_eq {p : ℕ} (emin emax : ℤ) {W : ℕ} {ts : List (ℤ × �
   have hbl : bitlen (nonzero ts).length ≤ bitlen (ts.length + 1) :=
     hmono (Nat.le_trans (length_nonzero ts) (Nat.le_succ _))
   obtain ⟨N, q, rs', h, hval, htop, hstop, hlen, _⟩ :=
-    descendAllJ_spec (W := W) (T := bitlen (nonzero ts).length + p + 3) (by omega) ts
+    topDownSumAllJ_spec (W := W) (T := bitlen (nonzero ts).length + p + 3) (by omega) ts
   unfold roundSumJ
   rw [h]
   simp only
@@ -634,11 +634,11 @@ example : roundSumJ 24 (-126) 127 34 cancelTerms = roundRNE 24 (-126) 127 (tsum 
 example : roundSumJ 24 (-126) 127 34 tieTerms = some 1 := by decide +kernel
 
 /-- An exact cancellation `2^1000 − 2^1000` far above `3 · 2^-1000`: the window after the cancellation
-jumps straight to the last term: `descendJ` needs two windows, where `descend` walks down the 2000 bits
+jumps straight to the last term: `topDownSumJ` needs two windows, where `topDownSum` walks down the 2000 bits
 in between `W` bits at a time. -/
 def gapTerms : List (ℤ × ℤ) := [(1, 1000), (-1, 1000), (3, -1000)]
 
-example : windowsJ 34 31 gapTerms = 2 := by decide +kernel
+example : rangesJ 34 31 gapTerms = 2 := by decide +kernel
 
 example : roundSumJ 24 (-126) 127 34 gapTerms = roundRNE 24 (-126) 127 (tsum gapTerms) ∧
     signSumJ 8 gapTerms = 1 := by decide +kernel

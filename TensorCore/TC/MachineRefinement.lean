@@ -12,14 +12,14 @@ theorem evalPreparedMachine_eq (b : PreparedBlock) (w : ℕ) (hw : 0 < w)
   rfl
 
 /-- All encoded inputs have identical reference and machine results at any adequate width. -/
-theorem evalBlockMachine_eq {p : Profile} (x : BlockInput p) (w F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hcount : p.products + 1 ≤ 2 ^ carryBits)
+theorem evalBlockMachine_eq {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
+    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits)
     (hw : F + 2 + carryBits + 1 ≤ w) : evalBlockMachine w x = evalBlock x := by
   unfold evalBlockMachine evalBlock
   split
   · rfl
   · rename_i hshape
-    have hs : x.products.length = p.products := by simpa using hshape
+    have hs : x.products.length = p.nfma := by simpa using hshape
     cases hp : prepare x with
     | none => rfl
     | some b =>
@@ -29,11 +29,11 @@ theorem evalBlockMachine_eq {p : Profile} (x : BlockInput p) (w F carryBits : �
         Nat.pow_le_pow_right (by decide) (by omega)
       omega
 
-theorem fp16Fp32_machine_eq (K extra carryBits w : ℕ) (floor : Option ℤ)
-    (x : BlockInput (fp16Fp32Profile K extra floor))
-    (hc : K + 1 ≤ 2 ^ carryBits) (hw : 26 + extra + carryBits ≤ w) :
+theorem fp16Fp32_machine_eq (K neab carryBits w : ℕ) (eAlignMin : Option ℤ)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin))
+    (hc : K + 1 ≤ 2 ^ carryBits) (hw : 26 + neab + carryBits ≤ w) :
     evalBlockMachine w x = evalBlock x :=
-  evalBlockMachine_eq x w (23 + extra) carryBits rfl hc (by omega)
+  evalBlockMachine_eq x w (23 + neab) carryBits rfl hc (by omega)
 
 theorem v100_machine_eq (x : BlockInput v100F16F32) :
     evalBlockMachine 29 x = evalBlock x :=

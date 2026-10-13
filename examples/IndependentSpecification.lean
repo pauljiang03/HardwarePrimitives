@@ -3,10 +3,10 @@ import TensorCore.TC.Specification.Composition
 open TensorCore
 
 /-- Every encoded input of every named supported path, with rejection preserved. -/
-example (path : IndependentSpec.Path) (x : BlockInput (IndependentSpec.implementationProfile path)) :
+example (variant : IndependentSpec.Variant) (x : BlockInput (IndependentSpec.implementationModel variant)) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
-      IndependentSpec.bits (IndependentSpec.parameters path) (IndependentSpec.supportedInput path x) :=
-  IndependentSpec.supported_eq_spec path x
+      IndependentSpec.bits (IndependentSpec.parameters variant) (IndependentSpec.supportedInput variant x) :=
+  IndependentSpec.supported_eq_spec variant x
 
 /-- The specification-side validity condition entails success, rather than assuming it. -/
 example (x : BlockInput a100BF16F32)
@@ -16,7 +16,7 @@ example (x : BlockInput a100BF16F32)
   IndependentSpec.valid_success x h
 
 /-- Every intermediate encoding in an explicitly ordered schedule. -/
-example (p : Profile) (c : F32) (groups : List (List (p.Word × p.Word))) :
+example (p : Model) (c : F32) (groups : List (List (p.Word × p.Word))) :
     (runBlocks p c groups).toOption.map (fun ts => ts.map fun t => t.output.bits) =
       IndependentSpec.runGroups (IndependentSpec.parametersOf p) c groups :=
   IndependentSpec.runBlocks_eq_spec p c groups

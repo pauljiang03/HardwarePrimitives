@@ -109,15 +109,15 @@ theorem sumWith_isSome {add : ℚ → ℚ → Option ℚ} {u η L : ℚ} (hu : 0
 /-- **Ozaki-I returns a value** (`[H.1]`). With an engine exact on `b`-bit slices and additions that
 fail only beyond `L`, the result exists when `(1 + u)^n · n k 2^(E+F) + n (1 + u)^n η ≤ L`, where
 `n = s(s+1)/2` is the number of slice products. -/
-theorem ozaki1_isSome {eng : Engine} {add : ℚ → ℚ → Option ℚ} {b budget s : ℕ} {u η L : ℚ}
-    (heng : eng.ExactOn b budget) (hu : 0 ≤ u) (hη : 0 ≤ η) (hadd : AddWithin add u η)
+theorem ozaki1_isSome {mult : MatrixMultiplier} {add : ℚ → ℚ → Option ℚ} {b bound s : ℕ} {u η L : ℚ}
+    (hmult : mult.ExactOn b bound) (hu : 0 ≤ u) (hη : 0 ≤ η) (hadd : AddWithin add u η)
     (hs : AddSucceeds add L) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hL : (1 + u) ^ (trianglePairs s).length *
         ((trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y))) +
       (trianglePairs s).length * (1 + u) ^ (trianglePairs s).length * η ≤ L) :
-    ∃ v, ozaki1 eng add b s x y = some v := by
-  rw [ozaki1_eq_sumWith heng add s hlen hbudget]
+    ∃ v, ozaki1 mult add b s x y = some v := by
+  rw [ozaki1_eq_sumWith hmult add s hlen hbound]
   have hlenT : (exactTerms b s x y).length = (trianglePairs s).length := by simp [exactTerms]
   have hT : ((exactTerms b s x y).map Rat.abs).sum ≤
       (trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y)) := by
@@ -157,14 +157,14 @@ theorem abs_truncProduct_le (P : ℕ) (x y : List ℚ) :
 /-- **Ozaki-II returns a value** (`[H.1]`). With an engine exact on `b`-bit residues,
 `2 k 2^(2P) < M`, and a rounding that fails only beyond `L`, the result exists when
 `k 2^((P − sₓ) + (P − s_y)) ≤ L`. -/
-theorem ozaki2_isSome {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2_isSome {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {round : ℚ → Option ℚ} {L : ℚ} (hr : RoundSucceeds round L) {B : CRTBasis} (hB : B.Valid)
     (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus)
     (hL : x.length * (2 : ℚ) ^ ((P - scaleShift P x) + (P - scaleShift P y)) ≤ L) :
-    ∃ v, ozaki2 eng round B P x y = some v := by
-  rw [ozaki2_eq heng round hB hmb P hlen hbudget hrange]
+    ∃ v, ozaki2 mult round B P x y = some v := by
+  rw [ozaki2_eq hmult round hB hmb P hlen hbound hrange]
   exact hr _ (Rat.le_trans (abs_truncProduct_le P x y) hL)
 
 /-! ## Exponents from magnitudes -/

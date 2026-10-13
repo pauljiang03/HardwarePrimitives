@@ -7,13 +7,13 @@ namespace TensorCore.IndependentSpec
 
 set_option maxRecDepth 4096
 
-theorem result_of_eval {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem result_of_eval {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : Result (parametersOf p) (inputOf x) t.output.bits := by
   have hp := evalBlock_prepared h
   have hv := (evalBlock_success_iff p x).mp ⟨t, h⟩
   have hr := evalPrepared_output (evalBlock_evalPrepared h)
   have ha := accumulated_eq t.block
-  rw [prepare_profile hp] at ha
+  rw [prepare_model hp] at ha
   refine ⟨hv.1, t.block.terms.map unnormalizedTermOf, ?_, ?_, ?_⟩
   · rw [terms_eq, hp]; rfl
   · rw [ha]; exact round32_range hr
@@ -27,7 +27,7 @@ theorem result_unique {p : Parameters} {x : Input p} {a b : F32}
   cases Option.some.inj htb
   exact rounds_unique _ _ _ hra hrb
 
-theorem result_iff_eval {p : Profile} (x : BlockInput p) (b : F32) :
+theorem result_iff_eval {p : Model} (x : BlockInput p) (b : F32) :
     Result (parametersOf p) (inputOf x) b ↔
       ∃ t, evalBlock x = .ok t ∧ t.output.bits = b := by
   constructor
@@ -48,7 +48,7 @@ theorem bits_eq_of_result {p : Parameters} {x : Input p} {b : F32}
   exact congrArg some (result_unique (Classical.choose_spec (show ∃ b, Result p x b from ⟨b, h⟩)) h)
 
 /-- Every encoded input: successful output bits and all rejection cases agree. -/
-theorem evalBlock_eq_spec {p : Profile} (x : BlockInput p) :
+theorem evalBlock_eq_spec {p : Model} (x : BlockInput p) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parametersOf p) (inputOf x) := by
   classical
@@ -63,15 +63,15 @@ theorem evalBlock_eq_spec {p : Profile} (x : BlockInput p) :
     simp [bits, hn, Except.toOption]
 
 /-- The theorem is nonvacuous on the independently specified valid domain. -/
-theorem valid_success {p : Profile} (x : BlockInput p)
+theorem valid_success {p : Model} (x : BlockInput p)
     (hv : Valid (parametersOf p) (inputOf x)) :
     ∃ t, evalBlock x = .ok t ∧ bits (parametersOf p) (inputOf x) = some t.output.bits := by
   obtain ⟨t, ht⟩ := (valid_iff x).mp hv
   exact ⟨t, ht, bits_eq_of_result (result_of_eval ht)⟩
 
 /-- Adequate modular accumulator widths inherit the independent-specification theorem. -/
-theorem machine_eq_spec {p : Profile} (x : BlockInput p) (w F carryBits : ℕ)
-    (hF : p.alignMantissaBits = F) (hc : p.products + 1 ≤ 2 ^ carryBits)
+theorem machine_eq_spec {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
+    (hF : p.alignFracBits = F) (hc : p.nfma + 1 ≤ 2 ^ carryBits)
     (hw : F + 3 + carryBits ≤ w) :
     (evalBlockMachine w x).toOption.map (fun t => t.output.bits) =
       bits (parametersOf p) (inputOf x) := by

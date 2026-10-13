@@ -92,9 +92,9 @@ imported beside either, and `OzakiTC` and `OzakiMC` are separate libraries.
 ## The scheme for one output entry
 
 Every entry of `C = AB` is a dot product `x · y` of a row of `A` and a column of `B`, and the
-schemes treat each entry separately. An `Engine` is a function from two integer vectors to the
+schemes treat each entry separately. An `MatrixMultiplier` is a function from two integer vectors to the
 value the hardware returns; `Engine.ExactOn b budget` says it returns `Σ xᵢyᵢ` exactly for entries
-of magnitude at most `2^b` whose products total at most `budget`.
+of magnitude at most `2^b` whose products total at most `bound`.
 
 * Ozaki-I splits `x` into `s` slices `2^gₜ qₜ` of integers with `|qₜ,ᵢ| ≤ 2^b`, multiplies the
   `s(s+1)/2` pairs with `t + u < s`, and adds the scaled products. With an exact engine the error
@@ -152,7 +152,7 @@ the reconstructed product, the recombined fixed-point product) and a proved boun
 `B ≥ |x · y − H|`. If `H − B` and `H + B` round to the same value, so does `x · y`, which lies
 between them: rounding to nearest is monotone, which Lean proves from the nearest-value property
 alone (`Ozaki.round_monotone`). Otherwise the next configuration is tried, more slices or moduli,
-and then an exact path (`Ozaki.certify_eq`). The structure is TC-EFT's guarded fast path with an
+and then an exact path (`Ozaki.roundingTest_eq`). The structure is TC-EFT's guarded fast path with an
 exact fallback; the check itself is Ziv's rounding test.
 
 There are two kinds of variants, and the difference matters:
@@ -172,7 +172,7 @@ the nearest rounding boundary `x · y` lies, so the sum of the slice products ne
 round each scaled product down to a window of `W` bits below the largest possible product, add
 them exactly, and add the window's loss to `B` (`Ozaki.ozaki1CRW_eq`). The window sum needs
 `W + log₂ (s(s+1)/2 · (k + 1)) + 1` bits whatever the inputs' exponents
-(`Ozaki.ozaki1Window_register`): with `W = 96`, up to seven `11`-bit slices and `k ≤ 2^14`, under
+(`Ozaki.ozaki1Truncated_register`): with `W = 96`, up to seven `11`-bit slices and `k ≤ 2^14`, under
 two 64-bit words, for binary32 and FP64 alike (`Ozaki.TC.tcOzaki1CRDW_eq`,
 `Ozaki.MC.mcOzaki1CRDW_eq`, `Ozaki.TC.v100_fp64CRW`).
 
@@ -182,16 +182,16 @@ inputs spanning the whole exponent range take about `580` bits for binary32
 rounding boundaries. A top-down descent over windows decides it. It adds the parts of the terms
 that fall in a window, carries the sum into the next window only when cancellation has made it
 small, jumps over empty gaps, and visits at most `n · bitlen(max |v|) + 1` windows whatever the
-exponents (`Ozaki.roundSumJ_eq`, `Ozaki.windowsJ_le`). The final round to nearest even is a few
+exponents (`Ozaki.roundSumJ_eq`, `Ozaki.rangesJ_le`). The final round to nearest even is a few
 integer comparisons (`Ozaki.roundExact_eq`), and the check's window sum is held in a
-two's-complement register that never wraps (`Ozaki.fixedSum_eq`, `Ozaki.ozaki1CheckB_register`).
+two's-complement register that never wraps (`Ozaki.fixedSum_eq`, `Ozaki.ozaki1TestB_register`).
 
 **Each scheme is one integer function.** From `(significand, exponent)` inputs through integer
 slicing or conversion, the engine, the integer check, the exact path and the final rounding,
 correctly rounded Ozaki-I, Ozaki-II and ADP-style slicing are integer functions proved correctly
 rounded, with signed-zero versions (`Ozaki.ozaki1CRI_eq`, `Ozaki.ozaki2CRJ_eq`,
 `Ozaki.TC.adpCRJ_eq`, `Ozaki.ozaki1CRIS_eq`). For Ozaki-II and ADP the check's bound is itself an
-integer built from the scaled integers the engine already multiplies (`Ozaki.checkB_eq`).
+integer built from the scaled integers the engine already multiplies (`Ozaki.enclosureTestB_eq`).
 
 **One theorem bounds every register.** A checked copy of each pipeline guards every integer it
 computes, data against `2^R` and exponents and counters against `2^X`, and under explicit formulas
@@ -234,7 +234,7 @@ The count costs one extra engine dot product per entry.
 What the check itself achieves is a separate theorem: the engine's enclosure settles an entry
 whenever `x · y − 2B` and `x · y + 2B` round to the same value, in particular whenever `x · y` lies
 more than `2B` from every rounding boundary (`Ozaki.roundEnclosure_of_margin`,
-`Ozaki.ozaki1Enclosure_settles`). On the test matrices:
+`Ozaki.ozaki1Enclosure_succeeds`). On the test matrices:
 
 * Ozaki-I settles every Z3 entry with four slices and all but two with three;
 * Ozaki-II with the Z3 models' four moduli (`P = 22`) settles none, five moduli settle 21 of 32,
@@ -369,8 +369,8 @@ two rounding-down steps. For integer operands and an integer `c` with `|c| + Σ|
 three return `c + Σ aᵢbᵢ` exactly (`Ozaki.MC.evalBlock_int`), across chained blocks and inner
 products of any length (`Ozaki.MC.runBlocks_int`, `Ozaki.MC.dotBits_int`). The engine is exact on
 the binary32 SFMA (`b ≤ 24`), CDNA 1, 2 and 3 fp16 and CDNA 3 XF32 (`b ≤ 11`), and the bf16 paths
-(`b ≤ 8`) (`Ozaki.MC.cdna3F16_exactEngine` and the others in
-[`OzakiMC/Profiles.lean`](OzakiMC/Profiles.lean)); CDNA 3's fp8 paths are not covered.
+(`b ≤ 8`) (`Ozaki.MC.cdna3F16_exactMultiplier` and the others in
+[`OzakiMC/Models.lean`](OzakiMC/Models.lean)); CDNA 3's fp8 paths are not covered.
 
 On the Z3 models' test matrices, every path with `11`-bit slices returns the Z3 models' binary32
 words for both schemes ([tests](tests/README.md)). The binary32 SFMA, which rounds after every
@@ -389,13 +389,13 @@ What the model shows:
   exact `12570628` on CDNA 1, 2 and 3 fp16, and `12570626` on the SFMA
   (`Ozaki.MC.fp16_exact_where_sfma_is_not`).
 * **CDNA 2 does not round inside an Ozaki block.** Four products of `11`-bit integers total at
-  most `2^24`, so every node of the pairwise tree is exact (`Ozaki.MC.pairTree_int`).
+  most `2^24`, so every node of the pairwise tree is exact (`Ozaki.MC.pairwiseGroupSum_int`).
 * **Cancellation differs by architecture.** CDNA 1 and CDNA 3 return the exact sum whenever every
   product, `c` and the sum are within `2^24`; CDNA 2 also needs every node of its pairwise tree
-  within `2^24` (`Ozaki.MC.evalBlock_cancel`, `Ozaki.MC.pairTree_cancel`). On CDNA 3 fp16,
+  within `2^24` (`Ozaki.MC.evalBlock_cancel`, `Ozaki.MC.pairwiseGroupSum_cancel`). On CDNA 3 fp16,
   `10`-bit slices are the cheapest exact configuration (`Ozaki.MC.cdna3F16_best`).
 * **Two passes on AMD.** The second pass from `c = −D1` recovers the exact sum on the SFMA (where
-  it is TwoProdFMA), CDNA 1 and CDNA 3 (`Ozaki.MC.mcEngine2_exactOn`,
+  it is TwoProdFMA), CDNA 1 and CDNA 3 (`Ozaki.MC.mcMultiplier2_exactOn`,
   `Ozaki.MC.cdna3F16_twoPass_full_group`), but not in general on CDNA 2, whose tree rounds before
   `c` is added (`Ozaki.MC.cdna2_twoPass_fails`).
 

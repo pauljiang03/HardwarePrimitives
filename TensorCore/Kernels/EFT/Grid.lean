@@ -51,42 +51,42 @@ theorem outputGrid_spec (D : F32) :
     exact ⟨trivial, by omega, by omega⟩
 
 /-- Exact qE=max(qA,qD), with qA obtained from unnormalized exponents, not product magnitude. -/
-theorem selectedGrid_spec (path : Path) (ts : List Term) (D : F32) :
-    ((selectedGrid path ts D).toNat : ℤ) - 272 =
-      max ((maxBiasedExp ts path.floor.toNat : ℤ) - 512 - path.profile.alignMantissaBits)
+theorem selectedGrid_spec (variant : Variant) (ts : List Term) (D : F32) :
+    ((selectedGrid variant ts D).toNat : ℤ) - 272 =
+      max ((maxBiasedExp ts variant.eAlignMin.toNat : ℤ) - 512 - variant.model.alignFracBits)
         (outputUlpExponent D) := by
-  have ho : (path.alignmentBits + 240).toNat = path.profile.alignMantissaBits.toNat + 240 := by
-    cases path <;> decide
-  have hal : (path.profile.alignMantissaBits.toNat : ℤ) = path.profile.alignMantissaBits := by
-    cases path <;> decide
+  have ho : (variant.alignmentBits + 240).toNat = variant.model.alignFracBits.toNat + 240 := by
+    cases variant <;> decide
+  have hal : (variant.model.alignFracBits.toNat : ℤ) = variant.model.alignFracBits := by
+    cases variant <;> decide
   have hd := outputGrid_spec D
   unfold selectedGrid
-  generalize he : ts.foldl _ path.floor = e
-  have hem := maxBiasedExp_eq ts path.floor
+  generalize he : ts.foldl _ variant.eAlignMin = e
+  have hem := maxBiasedExp_eq ts variant.eAlignMin
   rw [he] at hem
   dsimp only
-  by_cases hsmall : e < path.alignmentBits + 240
+  by_cases hsmall : e < variant.alignmentBits + 240
   · rw [if_pos hsmall, if_pos (show (0 : Grid) ≤ outputGrid D from by exact Nat.zero_le _)]
     rw [hd.2.1, Int.max_eq_right]
-    change e.toNat < (path.alignmentBits + 240).toNat at hsmall
+    change e.toNat < (variant.alignmentBits + 240).toNat at hsmall
     rw [ho, hem] at hsmall
     omega
-  · have hle : path.alignmentBits + 240 ≤ e := by
+  · have hle : variant.alignmentBits + 240 ≤ e := by
       change ¬ e.toNat < _ at hsmall; change _ ≤ e.toNat; omega
-    have hsub : (e - (path.alignmentBits + 240)).toNat =
-        maxBiasedExp ts path.floor.toNat - (path.profile.alignMantissaBits.toNat + 240) := by
+    have hsub : (e - (variant.alignmentBits + 240)).toNat =
+        maxBiasedExp ts variant.eAlignMin.toNat - (variant.model.alignFracBits.toNat + 240) := by
       rw [BitVec.toNat_sub_of_le hle, hem, ho]
     rw [if_neg hsmall]
     split
     · rename_i h
-      change (e - (path.alignmentBits + 240)).toNat ≤ (outputGrid D).toNat at h
+      change (e - (variant.alignmentBits + 240)).toNat ≤ (outputGrid D).toNat at h
       rw [hsub] at h
       rw [hd.2.1, Int.max_eq_right]
-      change (path.alignmentBits + 240).toNat ≤ e.toNat at hle
+      change (variant.alignmentBits + 240).toNat ≤ e.toNat at hle
       rw [ho, hem] at hle
       omega
     · rename_i h
-      change ¬ (e - (path.alignmentBits + 240)).toNat ≤ (outputGrid D).toNat at h
+      change ¬ (e - (variant.alignmentBits + 240)).toNat ≤ (outputGrid D).toNat at h
       rw [hsub] at h
       rw [hsub, Int.max_eq_left]
       · omega

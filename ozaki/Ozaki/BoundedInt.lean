@@ -1,4 +1,4 @@
-import Ozaki.Descent
+import Ozaki.TopDownSummation
 import Ozaki.BoundedOzaki
 import Ozaki.SliceInt
 import Ozaki.SignedZero
@@ -13,10 +13,10 @@ operation:
 * the slicing is `splitInt` (integer shifts and a round-half-even division), with the exponent
   `⌈log₂ max|xᵢ|⌉` from bit lengths (`splitExpInt`);
 * the engine's slice products are read back as integer terms;
-* the check is `ozaki1CheckB`'s: window parts by shifts, a two's-complement register, the
-  enclosure test by `roundExact` (`ozaki1CheckI`);
+* the check is `ozaki1TestB`'s: window parts by shifts, a two's-complement register, the
+  enclosure test by `roundExact` (`ozaki1TestI`);
 * the exact path asks whether the rests vanish by testing integers, and rounds the `s²` slice
-  products with the jumping descent `roundSumJ` (`ozaki1ExactPathI`).
+  products with the jumping descent `roundSumJ` (`ozaki1ExactFallbackI`).
 
 `ozaki1CRI_eq_CRB` proves it is `ozaki1CRB` on the values `m · 2^e`, so it is correctly rounded
 (`ozaki1CRI_eq`), for binary64 and binary32 inputs in particular (`ozaki1CRI64_eq`,
@@ -80,34 +80,34 @@ theorem splitExpInt_eq (b : ℕ) (xs : List (ℤ × ℤ)) :
   unfold splitExpInt splitExp; rw [gridInt_eq]
 
 /-- The window grid with integer operations. -/
-def windowGridInt (b W : ℕ) (xs ys : List (ℤ × ℤ)) : ℤ := splitExpInt b xs + splitExpInt b ys - W
+def truncationGridInt (b W : ℕ) (xs ys : List (ℤ × ℤ)) : ℤ := splitExpInt b xs + splitExpInt b ys - W
 
-theorem windowGridInt_eq (b W : ℕ) (xs ys : List (ℤ × ℤ)) :
-    windowGridInt b W xs ys = windowGrid b W (entryVals xs) (entryVals ys) := by
-  unfold windowGridInt windowGrid; rw [splitExpInt_eq, splitExpInt_eq]
+theorem truncationGridInt_eq (b W : ℕ) (xs ys : List (ℤ × ℤ)) :
+    truncationGridInt b W xs ys = truncationGrid b W (entryVals xs) (entryVals ys) := by
+  unfold truncationGridInt truncationGrid; rw [splitExpInt_eq, splitExpInt_eq]
 
 /-! ## The check -/
 
-/-- **The check for `s` slices, in integers**: `ozaki1CheckB` with the integer slicing. -/
-def ozaki1CheckI (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (xs ys : List (ℤ × ℤ)) :
+/-- **The check for `s` slices, in integers**: `ozaki1TestB` with the integer slicing. -/
+def ozaki1TestI (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
-  match (trianglePairs s).mapM (pairInt eng (splitInt b s xs).1 (splitInt b s ys).1) with
+  match (trianglePairs s).mapM (pairInt mult (splitInt b s xs).1 (splitInt b s ys).1) with
   | none => none
   | some ts =>
     roundEnclosureB p emin emax
       (fixedSum (W + bitlen (ts.length * (xs.length + 2)) + 1)
-        (ts.map (floorPart (windowGridInt b W xs ys))))
-      (windowGridInt b W xs ys) (((s + 1) * xs.length : ℕ) : ℤ)
+        (ts.map (floorPart (truncationGridInt b W xs ys))))
+      (truncationGridInt b W xs ys) (((s + 1) * xs.length : ℕ) : ℤ)
       (splitExpInt b xs + splitExpInt b ys - s * (b + 1)) ts.length
 
-theorem ozaki1CheckI_eq (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s W : ℕ)
+theorem ozaki1TestI_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ)
     (xs ys : List (ℤ × ℤ)) :
-    ozaki1CheckI eng p emin emax b s W xs ys =
-      ozaki1CheckB eng p emin emax b s W (entryVals xs) (entryVals ys) := by
-  unfold ozaki1CheckI ozaki1CheckB
-  rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1, windowGridInt_eq, splitExpInt_eq,
+    ozaki1TestI mult p emin emax b s W xs ys =
+      ozaki1TestB mult p emin emax b s W (entryVals xs) (entryVals ys) := by
+  unfold ozaki1TestI ozaki1TestB
+  rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1, truncationGridInt_eq, splitExpInt_eq,
     splitExpInt_eq, length_entryVals]
-  cases (trianglePairs s).mapM (pairInt eng (split b s (entryVals xs)).1
+  cases (trianglePairs s).mapM (pairInt mult (split b s (entryVals xs)).1
     (split b s (entryVals ys)).1) <;> rfl
 
 /-! ## The exact path -/
@@ -123,21 +123,21 @@ theorem vanishInt_eq (b s : ℕ) (xs ys : List (ℤ × ℤ)) :
 
 /-- **The exact path in integers**: the first slice count up to `smax` that leaves nothing over,
 all `s²` slice products from the engine as integer terms, rounded by the jumping descent. -/
-def ozaki1ExactPathI (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
+def ozaki1ExactFallbackI (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   match (List.range' 1 smax).find? fun s => vanishInt b s xs ys with
   | some s =>
     match (slicePairs (splitInt b s xs).1 (splitInt b s ys).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) with
+        (fun pr => sliceProductInt mult pr.1 pr.2) with
     | some ts => roundSumJ p emin emax (bitlen (ts.length + 1) + p + 4) ts
     | none => none
   | none => none
 
-theorem ozaki1ExactPathI_eq (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
+theorem ozaki1ExactFallbackI_eq (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) :
-    ozaki1ExactPathI eng p emin emax b smax xs ys =
-      ozaki1ExactPathB eng p emin emax b smax (entryVals xs) (entryVals ys) := by
-  unfold ozaki1ExactPathI ozaki1ExactPathB
+    ozaki1ExactFallbackI mult p emin emax b smax xs ys =
+      ozaki1ExactFallbackB mult p emin emax b smax (entryVals xs) (entryVals ys) := by
+  unfold ozaki1ExactFallbackI ozaki1ExactFallbackB
   have hf : (fun s => vanishInt b s xs ys) =
       fun s => residualsVanish b s (entryVals xs) (entryVals ys) :=
     funext fun s => vanishInt_eq b s xs ys
@@ -148,7 +148,7 @@ theorem ozaki1ExactPathI_eq (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax :
     simp only
     rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
     cases (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2) with
+        (fun pr => sliceProductInt mult pr.1 pr.2) with
     | none => rfl
     | some ts =>
       simp only
@@ -158,41 +158,41 @@ theorem ozaki1ExactPathI_eq (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax :
 
 /-- **Correctly rounded Ozaki-I in integers**: the integer checks for the slice counts `ss` in
 turn, then the integer exact path. -/
-def ozaki1CRI (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRI (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
   match ss with
-  | [] => ozaki1ExactPathI eng p emin emax b smax xs ys
+  | [] => ozaki1ExactFallbackI mult p emin emax b smax xs ys
   | s :: ss =>
-    match ozaki1CheckI eng p emin emax b s W xs ys with
+    match ozaki1TestI mult p emin emax b s W xs ys with
     | some w => some w
-    | none => ozaki1CRI eng p emin emax b W ss smax xs ys
+    | none => ozaki1CRI mult p emin emax b W ss smax xs ys
 
 /-- **The integer scheme is the bounded one** on the values of the entries. -/
-theorem ozaki1CRI_eq_CRB (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (smax : ℕ)
+theorem ozaki1CRI_eq_CRB (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : ∀ ss : List ℕ,
-    ozaki1CRI eng p emin emax b W ss smax xs ys =
-      ozaki1CRB eng p emin emax b W ss smax (entryVals xs) (entryVals ys)
+    ozaki1CRI mult p emin emax b W ss smax xs ys =
+      ozaki1CRB mult p emin emax b W ss smax (entryVals xs) (entryVals ys)
   | [] => by
     unfold ozaki1CRI ozaki1CRB
-    exact ozaki1ExactPathI_eq eng p emin emax b smax xs ys
+    exact ozaki1ExactFallbackI_eq mult p emin emax b smax xs ys
   | s :: ss => by
     unfold ozaki1CRI ozaki1CRB
-    rw [ozaki1CheckI_eq, ozaki1CRI_eq_CRB eng p emin emax b W smax xs ys ss]
-    cases ozaki1CheckB eng p emin emax b s W (entryVals xs) (entryVals ys) <;> rfl
+    rw [ozaki1TestI_eq, ozaki1CRI_eq_CRB mult p emin emax b W smax xs ys ss]
+    cases ozaki1TestB mult p emin emax b s W (entryVals xs) (entryVals ys) <;> rfl
 
 /-- **Correctly rounded Ozaki-I in integers is correctly rounded**: on an exact engine, for every
 input whose exact path ends within `smax` slices. -/
-theorem ozaki1CRI_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ}
+theorem ozaki1CRI_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s xs ys = true) :
-    ozaki1CRI eng p emin emax b W ss smax xs ys =
+    ozaki1CRI mult p emin emax b W ss smax xs ys =
       roundRNE p emin emax (dot (entryVals xs) (entryVals ys)) := by
   rw [ozaki1CRI_eq_CRB]
   obtain ⟨s, hs, hv⟩ := hvanish
-  exact ozaki1CRB_eq hp hle heng W ss (by rw [length_entryVals, length_entryVals, hlen])
-    (by rw [length_entryVals]; exact hbudget) ⟨s, hs, by rw [← vanishInt_eq]; exact hv⟩
+  exact ozaki1CRB_eq hp hle hmult W ss (by rw [length_entryVals, length_entryVals, hlen])
+    (by rw [length_entryVals]; exact hbound) ⟨s, hs, by rw [← vanishInt_eq]; exact hv⟩
 
 theorem binary64_entries {xs : List (ℤ × ℤ)} (h : ∀ a ∈ xs, Binary64Value (entryVal a)) :
     ∀ v ∈ entryVals xs, Binary64Value v := by
@@ -207,26 +207,26 @@ theorem binary32_entries {xs : List (ℤ × ℤ)} (h : ∀ a ∈ xs, Binary32Val
   exact h a ha
 
 /-- **Binary64 entries**: correctly rounded to binary64 in integers, when `smax (b + 1) > 2098`. -/
-theorem ozaki1CRI64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRI64_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 1025) (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ xs, Binary64Value (entryVal a)) (hy : ∀ a ∈ ys, Binary64Value (entryVal a)) :
-    ozaki1CRI eng 53 (-1022) 1023 b W ss smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) := by
+    ozaki1CRI mult 53 (-1022) 1023 b W ss smax xs ys = rne64 (dot (entryVals xs) (entryVals ys)) := by
   rw [ozaki1CRI_eq_CRB]
-  exact ozaki1CRB64_eq heng W ss hb hsmax (by rw [length_entryVals, length_entryVals, hlen])
-    (by rw [length_entryVals]; exact hbudget) (binary64_entries hx) (binary64_entries hy)
+  exact ozaki1CRB64_eq hmult W ss hb hsmax (by rw [length_entryVals, length_entryVals, hlen])
+    (by rw [length_entryVals]; exact hbound) (binary64_entries hx) (binary64_entries hy)
 
 /-- **Binary32 entries**: correctly rounded to binary32 in integers, when `smax (b + 1) > 277`. -/
-theorem ozaki1CRI32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRI32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 129) (hsmax : 277 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ xs, Binary32Value (entryVal a)) (hy : ∀ a ∈ ys, Binary32Value (entryVal a)) :
-    ozaki1CRI eng 24 (-126) 127 b W ss smax xs ys = rne32Q (dot (entryVals xs) (entryVals ys)) := by
+    ozaki1CRI mult 24 (-126) 127 b W ss smax xs ys = rne32Q (dot (entryVals xs) (entryVals ys)) := by
   rw [ozaki1CRI_eq_CRB]
-  exact ozaki1CRB32_eq heng W ss hb hsmax (by rw [length_entryVals, length_entryVals, hlen])
-    (by rw [length_entryVals]; exact hbudget) (binary32_entries hx) (binary32_entries hy)
+  exact ozaki1CRB32_eq hmult W ss hb hsmax (by rw [length_entryVals, length_entryVals, hlen])
+    (by rw [length_entryVals]; exact hbound) (binary32_entries hx) (binary32_entries hy)
 
 /-! ## Signed zeros -/
 
@@ -262,7 +262,7 @@ theorem vals_toSigned (xs : List SEntry) : vals (xs.map toSigned) = entryVals (x
   simp [vals, toSigned, entryVals]
 
 /-- With nothing left over, the exact integer slice products add up to `x · y`. -/
-theorem tsum_exactPath {b s : ℕ} {x y : List ℚ} (hv : residualsVanish b s x y = true) :
+theorem tsum_exactFallback {b s : ℕ} {x y : List ℚ} (hv : residualsVanish b s x y = true) :
     tsum ((slicePairs (split b s x).1 (split b s y).1).map fun pr => exactSliceInt pr.1 pr.2) =
       dot x y := by
   simp only [residualsVanish, Bool.and_eq_true, List.all_eq_true, beq_iff_eq] at hv
@@ -279,19 +279,19 @@ theorem tsum_exactPath {b s : ℕ} {x y : List ℚ} (hv : residualsVanish b s x 
   rw [Rat.mul_comm]
 
 /-- **The sign of the exact sum**, by the integer sign oracle on the exact path's slice products. -/
-def exactSignI (eng : Engine) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ :=
+def exactSignI (mult : MatrixMultiplier) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ :=
   match (List.range' 1 smax).find? fun s => vanishInt b s xs ys with
   | some s =>
     ((slicePairs (splitInt b s xs).1 (splitInt b s ys).1).mapM
-        (fun pr => sliceProductInt eng pr.1 pr.2)).map
+        (fun pr => sliceProductInt mult pr.1 pr.2)).map
       fun ts => signSumJ (bitlen ts.length + 1) ts
   | none => none
 
-theorem exactSignI_eq {eng : Engine} {b budget smax : ℕ} (heng : eng.ExactOn b budget)
+theorem exactSignI_eq {mult : MatrixMultiplier} {b bound smax : ℕ} (hmult : mult.ExactOn b bound)
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s xs ys = true) :
-    exactSignI eng b smax xs ys = some (sgnQ (dot (entryVals xs) (entryVals ys))) := by
+    exactSignI mult b smax xs ys = some (sgnQ (dot (entryVals xs) (entryVals ys))) := by
   unfold exactSignI
   obtain ⟨s, hs⟩ := Option.isSome_iff_exists.mp (List.find?_isSome.mpr hvanish)
   rw [hs]
@@ -300,21 +300,21 @@ theorem exactSignI_eq {eng : Engine} {b budget smax : ℕ} (heng : eng.ExactOn b
   simp only
   have hl : (entryVals xs).length = (entryVals ys).length := by
     rw [length_entryVals, length_entryVals, hlen]
-  have hb : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by
-    rw [length_entryVals]; exact hbudget
+  have hb : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by
+    rw [length_entryVals]; exact hbound
   rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1,
     mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
-      sliceProductInt_exact heng hl hb (mem_slicePairs hpr).1 (mem_slicePairs hpr).2,
-    Option.map_some, signSumJ_eq (by omega), tsum_exactPath hv]
+      sliceProductInt_exact hmult hl hb (mem_slicePairs hpr).1 (mem_slicePairs hpr).2,
+    Option.map_some, signSumJ_eq (by omega), tsum_exactFallback hv]
 
 /-- **Correctly rounded Ozaki-I in integers, with signed zeros.** -/
-def ozaki1CRIS (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRIS (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List SEntry) : Option Signed :=
-  match ozaki1CRI eng p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1)) with
+  match ozaki1CRI mult p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1)) with
   | none => none
   | some r =>
     if r ≠ 0 then some ⟨r, decide (r < 0)⟩
-    else (exactSignI eng b smax (xs.map (·.1)) (ys.map (·.1))).map fun sg =>
+    else (exactSignI mult b smax (xs.map (·.1)) (ys.map (·.1))).map fun sg =>
       ⟨0, if sg = 0 then allNegZeroI xs ys else decide (sg < 0)⟩
 
 theorem sgnQ_neg_iff (x : ℚ) : sgnQ x < 0 ↔ x < 0 := by
@@ -327,17 +327,17 @@ theorem sgnQ_neg_iff (x : ℚ) : sgnQ x < 0 ↔ x < 0 := by
 
 /-- **Signed correct rounding in integers**: the round to nearest even of `x · y` with IEEE's sign
 for zero results. -/
-theorem ozaki1CRIS_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ}
+theorem ozaki1CRIS_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
     {xs ys : List SEntry} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s (xs.map (·.1)) (ys.map (·.1)) = true) :
-    ozaki1CRIS eng p emin emax b W ss smax xs ys =
+    ozaki1CRIS mult p emin emax b W ss smax xs ys =
       crSigned (roundRNE p emin emax) (xs.map toSigned) (ys.map toSigned) := by
   have hl : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
-  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa using hbudget
+  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa using hbound
   unfold ozaki1CRIS crSigned
-  rw [ozaki1CRI_eq hp hle heng W ss hl hb hvanish, vals_toSigned, vals_toSigned,
+  rw [ozaki1CRI_eq hp hle hmult W ss hl hb hvanish, vals_toSigned, vals_toSigned,
     ← allNegZeroI_eq]
   generalize hv : dot (entryVals (xs.map (·.1))) (entryVals (ys.map (·.1))) = v
   cases hr : roundRNE p emin emax v with
@@ -346,7 +346,7 @@ theorem ozaki1CRIS_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ e
     simp only [Option.map_some]
     by_cases hr0 : r = 0
     · subst hr0
-      rw [if_neg (by simp), exactSignI_eq heng hl hb hvanish, hv, Option.map_some]
+      rw [if_neg (by simp), exactSignI_eq hmult hl hb hvanish, hv, Option.map_some]
       unfold sumNeg
       by_cases hz : v = 0
       · rw [if_pos ((sgnQ_eq_zero_iff v).mpr hz), if_pos hz]
@@ -360,12 +360,12 @@ theorem ozaki1CRIS_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ e
       rw [if_neg hv0, hsign]
 
 /-- **Binary64 entries with signed zeros**: the IEEE binary64 result, sign of zero included. -/
-theorem ozaki1CRIS64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRIS64_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 1025) (hsmax : 2098 < smax * (b + 1))
     {xs ys : List SEntry} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ xs, Binary64Value (entryVal a.1)) (hy : ∀ a ∈ ys, Binary64Value (entryVal a.1)) :
-    ozaki1CRIS eng 53 (-1022) 1023 b W ss smax xs ys =
+    ozaki1CRIS mult 53 (-1022) 1023 b W ss smax xs ys =
       crSigned rne64 (xs.map toSigned) (ys.map toSigned) := by
   have hx' : ∀ v ∈ entryVals (xs.map (·.1)), Binary64Value v := by
     intro v hv; simp only [entryVals, List.map_map, List.mem_map] at hv
@@ -373,16 +373,16 @@ theorem ozaki1CRIS64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b bu
   have hy' : ∀ v ∈ entryVals (ys.map (·.1)), Binary64Value v := by
     intro v hv; simp only [entryVals, List.map_map, List.mem_map] at hv
     obtain ⟨a, ha, rfl⟩ := hv; exact hy a ha
-  exact ozaki1CRIS_eq (by decide) (by decide) heng W ss hlen hbudget
+  exact ozaki1CRIS_eq (by decide) (by decide) hmult W ss hlen hbound
     (vanish64 hb hsmax hx' hy' |>.imp fun s h => ⟨h.1, by rw [vanishInt_eq]; exact h.2⟩)
 
 /-- **Binary32 entries with signed zeros.** -/
-theorem ozaki1CRIS32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRIS32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 129) (hsmax : 277 < smax * (b + 1))
     {xs ys : List SEntry} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ xs, Binary32Value (entryVal a.1)) (hy : ∀ a ∈ ys, Binary32Value (entryVal a.1)) :
-    ozaki1CRIS eng 24 (-126) 127 b W ss smax xs ys =
+    ozaki1CRIS mult 24 (-126) 127 b W ss smax xs ys =
       crSigned rne32Q (xs.map toSigned) (ys.map toSigned) := by
   have hx' : ∀ v ∈ entryVals (xs.map (·.1)), Binary32Value v := by
     intro v hv; simp only [entryVals, List.map_map, List.mem_map] at hv
@@ -390,7 +390,7 @@ theorem ozaki1CRIS32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b bu
   have hy' : ∀ v ∈ entryVals (ys.map (·.1)), Binary32Value v := by
     intro v hv; simp only [entryVals, List.map_map, List.mem_map] at hv
     obtain ⟨a, ha, rfl⟩ := hv; exact hy a ha
-  exact ozaki1CRIS_eq (by decide) (by decide) heng W ss hlen hbudget
+  exact ozaki1CRIS_eq (by decide) (by decide) hmult W ss hlen hbound
     (vanish32Q hb hsmax hx' hy' |>.imp fun s h => ⟨h.1, by rw [vanishInt_eq]; exact h.2⟩)
 
 end Ozaki

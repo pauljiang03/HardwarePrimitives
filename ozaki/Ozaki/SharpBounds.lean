@@ -446,16 +446,16 @@ theorem exactTerms_error_kappa (b s : ℕ) {x y : List ℚ} {κx κy : ℚ} (hκ
 
 /-- **Ozaki-I error, entry by entry.** `ozaki1_error` with the slicing term
 `(s + 1) Σᵢ min(2|xᵢyᵢ|, 2^(E+F−s(b+1)))`. -/
-theorem ozaki1_error_sharp {eng : Engine} {add : ℚ → ℚ → Option ℚ} {b budget s : ℕ} {u η : ℚ}
-    (heng : eng.ExactOn b budget) (hu : 0 ≤ u) (hη : 0 ≤ η) (hadd : AddWithin add u η)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
-    {v : ℚ} (hv : ozaki1 eng add b s x y = some v) :
+theorem ozaki1_error_sharp {mult : MatrixMultiplier} {add : ℚ → ℚ → Option ℚ} {b bound s : ℕ} {u η : ℚ}
+    (hmult : mult.ExactOn b bound) (hu : 0 ≤ u) (hη : 0 ≤ η) (hadd : AddWithin add u η)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
+    {v : ℚ} (hv : ozaki1 mult add b s x y = some v) :
     Rat.abs (v - dot x y) ≤
       ((1 + u) ^ (trianglePairs s).length - 1) *
           ((trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y))) +
         (trianglePairs s).length * (1 + u) ^ (trianglePairs s).length * η +
         ((s + 1 : ℕ) : ℚ) * capSum (2 ^ (splitExp b x + splitExp b y - s * (b + 1))) x y := by
-  rw [ozaki1_eq_sumWith heng add s hlen hbudget] at hv
+  rw [ozaki1_eq_sumWith hmult add s hlen hbound] at hv
   have hr := sumWith_error hu hη hadd hv
   have hlenT : (exactTerms b s x y).length = (trianglePairs s).length := by simp [exactTerms]
   rw [hlenT] at hr
@@ -591,18 +591,18 @@ theorem truncProduct_error_normwise4 (P : ℕ) {x y : List ℚ} (hlen : x.length
 
 /-- **Ozaki-II error, mixed.** `ozaki2_error` with the truncation term
 `2^(−sₓ) Σ|yᵢ| + 2^(−s_y) Σ|xᵢ|`. -/
-theorem ozaki2_error_mixed {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki2_error_mixed {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {round : ℚ → Option ℚ} {u η : ℚ} (hround : RoundWithin round u η)
     {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus) {v : ℚ}
-    (hv : ozaki2 eng round B P x y = some v) :
+    (hv : ozaki2 mult round B P x y = some v) :
     Rat.abs (v - dot x y) ≤
       u * Rat.abs ((dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
         2 ^ (-(scaleShift P x + scaleShift P y))) + η +
       (2 ^ (-scaleShift P x) * absSum y + 2 ^ (-scaleShift P y) * absSum x) := by
-  have h := ozaki2_error heng hround hB hmb P hlen hbudget hrange hv
+  have h := ozaki2_error hmult hround hB hmb P hlen hbound hrange hv
   have := truncSum_le_mixed (scaleShift P x) (scaleShift P y) hlen
   grind
 
@@ -1189,15 +1189,15 @@ theorem nativeDot_error_jr_rne32 {x y : List ℚ}
 binary32 for grids in range, `OzakiTC.exactTerm_finiteValue32`) and are added left to right with a
 rounding that meets `JRAdd`, the result is within `(n − 1) u Σ|tⱼ|` of their exact sum, with no
 underflow term and no condition on `n`; the slicing adds the entrywise bound. -/
-theorem ozaki1_error_jr {eng : Engine} {R : ℚ → Prop} {rnd : ℚ → Option ℚ} {u : ℚ}
-    {b budget s : ℕ} (heng : eng.ExactOn b budget) (hu : 0 ≤ u) (hJ : JRAdd R rnd u)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1_error_jr {mult : MatrixMultiplier} {R : ℚ → Prop} {rnd : ℚ → Option ℚ} {u : ℚ}
+    {b bound s : ℕ} (hmult : mult.ExactOn b bound) (hu : 0 ≤ u) (hJ : JRAdd R rnd u)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hterms : ∀ t ∈ exactTerms b s x y, R t) {v : ℚ}
-    (hv : ozaki1 eng (addOfRound rnd) b s x y = some v) :
+    (hv : ozaki1 mult (addOfRound rnd) b s x y = some v) :
     Rat.abs (v - dot x y) ≤
       (((trianglePairs s).length - 1 : ℕ) : ℚ) * u * ((exactTerms b s x y).map Rat.abs).sum +
         ((s + 1 : ℕ) : ℚ) * capSum (2 ^ (splitExp b x + splitExp b y - s * (b + 1))) x y := by
-  rw [ozaki1_eq_sumWith heng _ s hlen hbudget] at hv
+  rw [ozaki1_eq_sumWith hmult _ s hlen hbound] at hv
   have h1 := sumWith_error_jr hu hJ hterms hv
   have hlenT : (exactTerms b s x y).length = (trianglePairs s).length := by simp [exactTerms]
   rw [hlenT] at h1
@@ -1213,16 +1213,16 @@ theorem ozaki1_error_jr {eng : Engine} {R : ℚ → Prop} {rnd : ℚ → Option 
 
 /-- `ozaki1_error_jr` with the terms bounded as in `ozaki1_error`:
 `(n − 1) u n k 2^(E+F) + (s + 1) Σᵢ min(2|xᵢyᵢ|, 2^(E+F−s(b+1)))`. -/
-theorem ozaki1_error_jr_normwise {eng : Engine} {R : ℚ → Prop} {rnd : ℚ → Option ℚ} {u : ℚ}
-    {b budget s : ℕ} (heng : eng.ExactOn b budget) (hu : 0 ≤ u) (hJ : JRAdd R rnd u)
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1_error_jr_normwise {mult : MatrixMultiplier} {R : ℚ → Prop} {rnd : ℚ → Option ℚ} {u : ℚ}
+    {b bound s : ℕ} (hmult : mult.ExactOn b bound) (hu : 0 ≤ u) (hJ : JRAdd R rnd u)
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hterms : ∀ t ∈ exactTerms b s x y, R t) {v : ℚ}
-    (hv : ozaki1 eng (addOfRound rnd) b s x y = some v) :
+    (hv : ozaki1 mult (addOfRound rnd) b s x y = some v) :
     Rat.abs (v - dot x y) ≤
       (((trianglePairs s).length - 1 : ℕ) : ℚ) * u *
           ((trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y))) +
         ((s + 1 : ℕ) : ℚ) * capSum (2 ^ (splitExp b x + splitExp b y - s * (b + 1))) x y := by
-  have h := ozaki1_error_jr heng hu hJ hlen hbudget hterms hv
+  have h := ozaki1_error_jr hmult hu hJ hlen hbound hterms hv
   have hT : ((exactTerms b s x y).map Rat.abs).sum ≤
       (trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y)) := by
     unfold exactTerms

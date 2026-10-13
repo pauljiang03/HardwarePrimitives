@@ -34,7 +34,7 @@ theorem alignedSum_perm (neab : ℕ) {ps qs : List Unpacked} (h : ps.Perm qs) :
 
 /-- `correct_rounding` and `global_alignment` depend only on the multiset of products and on
 `c`. -/
-theorem accumulate_perm {P : Profile}
+theorem accumulate_perm {P : Model}
     (hP : P.accumulation = .correctRounding ∨ P.accumulation = .globalAlignment)
     {x y : Prepared} (hp : x.p.Perm y.p) (hc : x.c = y.c) : accumulate P x = accumulate P y := by
   unfold accumulate Prepared.productOverflows

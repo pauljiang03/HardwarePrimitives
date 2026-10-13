@@ -1,4 +1,4 @@
-import MatrixCore.MC.Profiles
+import MatrixCore.MC.Models
 
 /-! # One block: inputs and products
 
@@ -8,7 +8,7 @@ accumulator input `c`. -/
 namespace MatrixCore
 
 /-- Encoded operands of one block: the vectors `a`, `b` and the binary32 scalar `c`. -/
-structure BlockInput (P : Profile) where
+structure BlockInput (P : Model) where
   a : List P.a.Word
   b : List P.b.Word
   c : F32
@@ -22,7 +22,7 @@ structure Prepared where
   deriving Repr, DecidableEq
 
 /-- Decode finite operands; `none` if any word is an infinity or NaN. -/
-def prepare {P : Profile} (x : BlockInput P) : Option Prepared := do
+def prepare {P : Model} (x : BlockInput P) : Option Prepared := do
   let a ← x.a.mapM fun w => (P.a.read w).toFinite
   let b ← x.b.mapM fun w => (P.b.read w).toFinite
   let c ← (binary32.decode x.c).toFinite
@@ -61,7 +61,7 @@ def joinExp : Option ℤ → Option ℤ → Option ℤ
   | some a, some b => some (max a b)
 
 /-- `e_c`: the exponent of `c` (`−126` for subnormal `c`), or `e_{c=0}` when `c = 0`. -/
-def cExp (P : Profile) (c : Unpacked) : Option ℤ := if c.m = 0 then P.cZeroExp else some c.e
+def cExp (P : Model) (c : Unpacked) : Option ℤ := if c.m = 0 then P.cZeroExp else some c.e
 
 /-- Products at odd positions `p₁, p₃, …` (1-based). -/
 def oddIndexed : List α → List α

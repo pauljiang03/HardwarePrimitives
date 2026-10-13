@@ -18,7 +18,7 @@ theorem cdna3F16_fp64CRJ_widths {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBas
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
     Checked.ozaki2CRJC ⟨264, 24⟩ (mcSplitK cdna3F16 11) 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) :=
-  ozaki2CRJC_binary64_eq (mcSplitK_exactOn (cdna3F16_exactEngine (by decide)) (by decide) _)
+  ozaki2CRJC_binary64_eq (mcSplitK_exactOn (cdna3F16_exactMultiplier (by decide)) (by decide) _)
     hlen hk hx hy hcfgs hrange
 
 theorem cdna3F16_binary32CRJ_widths {xs ys : List (ℤ × ℤ)} {cfgs : List (CRTBasis × ℕ)}
@@ -28,7 +28,7 @@ theorem cdna3F16_binary32CRJ_widths {xs ys : List (ℤ × ℤ)} {cfgs : List (CR
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
     Checked.ozaki2CRJC ⟨161, 17⟩ (mcSplitK cdna3F16 11) 24 (-126) 127 cfgs 11 24 xs ys =
       some (rne32Q (dot (entryVals xs) (entryVals ys))) :=
-  ozaki2CRJC_binary32_eq (mcSplitK_exactOn (cdna3F16_exactEngine (by decide)) (by decide) _)
+  ozaki2CRJC_binary32_eq (mcSplitK_exactOn (cdna3F16_exactMultiplier (by decide)) (by decide) _)
     hlen hk hx hy hcfgs hrange
 
 end Ozaki.MC

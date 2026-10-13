@@ -16,17 +16,17 @@ bound can be replaced by the **overlap count** `N = #{i : xᵢ ≠ 0 ∧ yᵢ �
   `|x · y − H| ≤ (s + 1) N 2^(E + F − s(b+1))`.
 
 `N` is the integer dot product of the `0`/`1` support indicators of `x` and `y`, which every exact
-engine computes exactly (`overlapEng_eq`): one extra dot product per output entry (for a GEMM, one
+engine computes exactly (`overlapMultiplier_eq`): one extra dot product per output entry (for a GEMM, one
 extra product of `0`/`1` matrices), whatever the slice count. The bound is never larger than the
 normwise one (`N ≤ k`, `supportOverlap_le_length`), equals it on dense data, and is `0` exactly when every
 product is zero (`supportOverlap_eq_zero_iff`). With a window accumulator the window's loss is charged only
-to the nonzero slice products (`windowSum_error_nonzero`).
+to the nonzero slice products (`truncatedSum_error_nonzero`).
 
 * `ozaki1CREZ`, `ozaki1CRWZ`: correctly rounded Ozaki-I with the overlap bound, with the exact sum
   or a `W`-bit window, exact path on the engine (`ozaki1CREZ_eq`, `ozaki1CRWZ_eq`);
 * **exact zeros settle**: when every product is zero the first check returns `0`, whatever the
   exact path would return (`ozaki1CREZ_zero`, `ozaki1CRWZ_zero`);
-* `ozaki1CRBZ`: the same in bounded integer registers (`ozaki1CheckBZ_eq`, `ozaki1CRBZ_eq`);
+* `ozaki1CRBZ`: the same in bounded integer registers (`ozaki1TestBZ_eq`, `ozaki1CRBZ_eq`);
 * `ozaki1CRWSZ`: with IEEE signed zeros (`ozaki1CRWSZ_eq`); an entry whose products are all zero
   gets the sign `crSigned` specifies without the exact path (`ozaki1CRWSZ_zero`). -/
 
@@ -294,8 +294,8 @@ theorem exactTerms_zero_of_overlap {b s : ℕ} {x y : List ℚ} (hz : supportOve
 
 /-- The overlap count from the engine: the product of the `0`/`1` support indicators, read back as
 an integer. -/
-def overlapEng (eng : Engine) (x y : List ℚ) : Option ℤ :=
-  (eng (nzVec x) (nzVec y)).bind fun v => if v.den = 1 then some v.num else none
+def overlapMultiplier (mult : MatrixMultiplier) (x y : List ℚ) : Option ℤ :=
+  (mult (nzVec x) (nzVec y)).bind fun v => if v.den = 1 then some v.num else none
 
 theorem nzVec_length (x : List ℚ) : (nzVec x).length = x.length := by simp [nzVec]
 
@@ -306,21 +306,21 @@ theorem nzVec_natAbs_le (x : List ℚ) : ∀ z ∈ nzVec x, z.natAbs ≤ 1 := by
 
 /-- **Every exact engine computes the overlap count exactly**: the indicators are `0` or `1`, so
 their products total at most `k`. -/
-theorem overlapEng_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    overlapEng eng x y = some (supportOverlap x y) := by
+theorem overlapMultiplier_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) {x y : List ℚ}
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    overlapMultiplier mult x y = some (supportOverlap x y) := by
   have h1 : ∀ z ∈ nzVec x, z.natAbs ≤ 2 ^ b := fun z hz =>
     Nat.le_trans (nzVec_natAbs_le x z hz) Nat.one_le_two_pow
   have h2 : ∀ z ∈ nzVec y, z.natAbs ≤ 2 ^ b := fun z hz =>
     Nat.le_trans (nzVec_natAbs_le y z hz) Nat.one_le_two_pow
-  have hd : dotAbs (nzVec x) (nzVec y) ≤ budget := by
+  have hd : dotAbs (nzVec x) (nzVec y) ≤ bound := by
     refine Nat.le_trans (dotAbs_le _ _ 1 1 (nzVec_natAbs_le x) (nzVec_natAbs_le y)) ?_
     rw [nzVec_length]
-    refine Nat.le_trans ?_ hbudget
+    refine Nat.le_trans ?_ hbound
     exact Nat.mul_le_mul_left _ (Nat.mul_le_mul Nat.one_le_two_pow Nat.one_le_two_pow)
-  have he : eng (nzVec x) (nzVec y) = some ((supportOverlap x y : ℤ) : ℚ) :=
-    heng _ _ (by rw [nzVec_length, nzVec_length, hlen]) h1 h2 hd
-  unfold overlapEng
+  have he : mult (nzVec x) (nzVec y) = some ((supportOverlap x y : ℤ) : ℚ) :=
+    hmult _ _ (by rw [nzVec_length, nzVec_length, hlen]) h1 h2 hd
+  unfold overlapMultiplier
   rw [he, Option.bind_some, if_pos (Rat.den_intCast _), Rat.num_intCast]
 
 /-! ## The check with the overlap count -/
@@ -343,19 +343,19 @@ theorem ozaki1BoundZ_le (b s : ℕ) (x y : List ℚ) :
   exact Rat.mul_le_mul_of_nonneg_right this (Rat.le_of_lt hp)
 
 /-- The enclosure from `s` slices with the overlap count `N`: the slice products added exactly. -/
-def ozaki1EnclosureZ (eng : Engine) (b s : ℕ) (N : ℤ) (x y : List ℚ) : Option (ℚ × ℚ) :=
-  (ozaki1 eng exactAdd b s x y).map fun H => (H, ozaki1BoundZ b s N x y)
+def ozaki1EnclosureZ (mult : MatrixMultiplier) (b s : ℕ) (N : ℤ) (x y : List ℚ) : Option (ℚ × ℚ) :=
+  (ozaki1 mult exactAdd b s x y).map fun H => (H, ozaki1BoundZ b s N x y)
 
 /-- The number of nonzero terms. -/
 def nonzeroCount (ts : List ℚ) : ℕ := ts.countP fun t => t ≠ 0
 
 /-- The enclosure from `s` slices with a `W`-bit window and the overlap count: the window's loss is
 charged to the nonzero slice products only. -/
-def ozaki1WindowEnclosureZ (eng : Engine) (b s W : ℕ) (N : ℤ) (x y : List ℚ) :
+def ozaki1TruncatedEnclosureZ (mult : MatrixMultiplier) (b s W : ℕ) (N : ℤ) (x y : List ℚ) :
     Option (ℚ × ℚ) :=
-  (ozaki1Terms eng b s x y).map fun ts =>
-    (windowSum (windowGrid b W x y) ts,
-      ozaki1BoundZ b s N x y + (nonzeroCount ts : ℚ) * 2 ^ windowGrid b W x y)
+  (ozaki1Terms mult b s x y).map fun ts =>
+    (truncatedSum (truncationGrid b W x y) ts,
+      ozaki1BoundZ b s N x y + (nonzeroCount ts : ℚ) * 2 ^ truncationGrid b W x y)
 
 theorem floorGrid_zero (q : ℤ) : floorGrid q 0 = 0 := by
   unfold floorGrid
@@ -364,16 +364,16 @@ theorem floorGrid_zero (q : ℤ) : floorGrid q 0 = 0 := by
   rw [this, Rat.intCast_zero, Rat.zero_mul]
 
 /-- **The window loses nothing on zero terms**: `|Σ tᵢ − window sum| ≤ (number of nonzero tᵢ) 2^q`. -/
-theorem windowSum_error_nonzero (q : ℤ) : ∀ ts : List ℚ,
-    Rat.abs (ts.sum - windowSum q ts) ≤ (nonzeroCount ts : ℚ) * 2 ^ q
+theorem truncatedSum_error_nonzero (q : ℤ) : ∀ ts : List ℚ,
+    Rat.abs (ts.sum - truncatedSum q ts) ≤ (nonzeroCount ts : ℚ) * 2 ^ q
   | [] => by
-    simp only [windowSum, List.map_nil, List.sum_nil, nonzeroCount, List.countP_nil]
+    simp only [truncatedSum, List.map_nil, List.sum_nil, nonzeroCount, List.countP_nil]
     rw [show (0 : ℚ) - 0 = 0 by grind, abs_zero]; simp
   | t :: ts => by
-    have ih := windowSum_error_nonzero q ts
-    have hsplit : (t :: ts).sum - windowSum q (t :: ts) =
-        (t - floorGrid q t) + (ts.sum - windowSum q ts) := by
-      simp only [windowSum, List.sum_cons, List.map_cons]; grind
+    have ih := truncatedSum_error_nonzero q ts
+    have hsplit : (t :: ts).sum - truncatedSum q (t :: ts) =
+        (t - floorGrid q t) + (ts.sum - truncatedSum q ts) := by
+      simp only [truncatedSum, List.sum_cons, List.map_cons]; grind
     rw [hsplit]
     refine Rat.le_trans (abs_add_le _ _) ?_
     by_cases ht : t = 0
@@ -386,32 +386,32 @@ theorem windowSum_error_nonzero (q : ℤ) : ∀ ts : List ℚ,
       rw [this, natCast_succ, abs_of_nonneg h1]; grind
 
 /-- On an exact engine, the enclosure with the overlap count contains `x · y`. -/
-theorem ozaki1EnclosureZ_sound {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1EnclosureZ_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) {H B : ℚ}
-    (he : ozaki1EnclosureZ eng b s (supportOverlap x y) x y = some (H, B)) : Rat.abs (dot x y - H) ≤ B := by
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {H B : ℚ}
+    (he : ozaki1EnclosureZ mult b s (supportOverlap x y) x y = some (H, B)) : Rat.abs (dot x y - H) ≤ B := by
   unfold ozaki1EnclosureZ at he
-  rw [ozaki1_eq_sumWith heng exactAdd s hlen hbudget, sumWith_exactAdd] at he
+  rw [ozaki1_eq_sumWith hmult exactAdd s hlen hbound, sumWith_exactAdd] at he
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at he
   obtain ⟨rfl, rfl⟩ := he
   rw [show (0 : ℚ) + (exactTerms b s x y).sum = (exactTerms b s x y).sum by grind]
   exact exactTerms_error_overlap b s x y
 
 /-- On an exact engine, the window enclosure with the overlap count contains `x · y`. -/
-theorem ozaki1WindowEnclosureZ_sound {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1TruncatedEnclosureZ_sound {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) {H B : ℚ}
-    (he : ozaki1WindowEnclosureZ eng b s W (supportOverlap x y) x y = some (H, B)) :
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {H B : ℚ}
+    (he : ozaki1TruncatedEnclosureZ mult b s W (supportOverlap x y) x y = some (H, B)) :
     Rat.abs (dot x y - H) ≤ B := by
-  unfold ozaki1WindowEnclosureZ at he
-  rw [ozaki1Terms_eq heng s hlen hbudget] at he
+  unfold ozaki1TruncatedEnclosureZ at he
+  rw [ozaki1Terms_eq hmult s hlen hbound] at he
   simp only [Option.map_some, Option.some.injEq, Prod.mk.injEq] at he
   obtain ⟨rfl, rfl⟩ := he
   have h1 := exactTerms_error_overlap b s x y
-  have h2 := windowSum_error_nonzero (windowGrid b W x y) (exactTerms b s x y)
-  have hsplit : dot x y - windowSum (windowGrid b W x y) (exactTerms b s x y) =
+  have h2 := truncatedSum_error_nonzero (truncationGrid b W x y) (exactTerms b s x y)
+  have hsplit : dot x y - truncatedSum (truncationGrid b W x y) (exactTerms b s x y) =
       (dot x y - (exactTerms b s x y).sum) +
-        ((exactTerms b s x y).sum - windowSum (windowGrid b W x y) (exactTerms b s x y)) := by
+        ((exactTerms b s x y).sum - truncatedSum (truncationGrid b W x y) (exactTerms b s x y)) := by
     grind
   rw [hsplit]
   refine Rat.le_trans (abs_add_le _ _) ?_
@@ -422,57 +422,57 @@ theorem ozaki1WindowEnclosureZ_sound {eng : Engine} {b budget : ℕ} (heng : eng
 
 /-- The enclosures for the slice counts `ss`, all with the overlap count, which the engine computes
 once. -/
-def overlapChecks (eng : Engine) (enc : ℕ → ℤ → Option (ℚ × ℚ)) (ss : List ℕ) (x y : List ℚ) :
+def overlapTests (mult : MatrixMultiplier) (enc : ℕ → ℤ → Option (ℚ × ℚ)) (ss : List ℕ) (x y : List ℚ) :
     List (Option (ℚ × ℚ)) :=
-  match overlapEng eng x y with
+  match overlapMultiplier mult x y with
   | some N => ss.map fun s => enc s N
   | none => []
 
-theorem overlapChecks_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem overlapTests_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (enc : ℕ → ℤ → Option (ℚ × ℚ)) (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    overlapChecks eng enc ss x y = ss.map fun s => enc s (supportOverlap x y) := by
-  unfold overlapChecks
-  rw [overlapEng_eq heng hlen hbudget]
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    overlapTests mult enc ss x y = ss.map fun s => enc s (supportOverlap x y) := by
+  unfold overlapTests
+  rw [overlapMultiplier_eq hmult hlen hbound]
 
 /-- **Correctly rounded Ozaki-I with the overlap bound**, the slice products added exactly: slice
 counts `ss` in turn, then the exact path on the engine. -/
-def ozaki1CREZ (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CREZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
-  certify rnd (overlapChecks eng (fun s N => ozaki1EnclosureZ eng b s N x y) ss x y)
-    (ozaki1ExactPath eng b smax x y)
+  roundingTest rnd (overlapTests mult (fun s N => ozaki1EnclosureZ mult b s N x y) ss x y)
+    (ozaki1ExactFallback mult b smax x y)
 
 /-- **Correctly rounded Ozaki-I with the overlap bound and a `W`-bit window.** -/
-def ozaki1CRWZ (eng : Engine) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRWZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
-  certify rnd (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng b s W N x y) ss x y)
-    (ozaki1ExactPath eng b smax x y)
+  roundingTest rnd (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult b s W N x y) ss x y)
+    (ozaki1ExactFallback mult b smax x y)
 
 theorem ozaki1CREZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (ss : List ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CREZ eng rnd b ss smax x y = rnd (dot x y) := by
+    ozaki1CREZ mult rnd b ss smax x y = rnd (dot x y) := by
   unfold ozaki1CREZ
-  rw [overlapChecks_eq heng _ ss hlen hbudget]
-  apply certify_eq h hI _ _ _ (ozaki1ExactPath_eq heng hlen hbudget hvanish)
+  rw [overlapTests_eq hmult _ ss hlen hbound]
+  apply roundingTest_eq h hI _ _ _ (ozaki1ExactFallback_eq hmult hlen hbound hvanish)
   intro c hc H B hcB
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
-  exact ozaki1EnclosureZ_sound heng s hlen hbudget hcB
+  exact ozaki1EnclosureZ_sound hmult s hlen hbound hcB
 
 theorem ozaki1CRWZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (W : ℕ) (ss : List ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRWZ eng rnd b W ss smax x y = rnd (dot x y) := by
+    ozaki1CRWZ mult rnd b W ss smax x y = rnd (dot x y) := by
   unfold ozaki1CRWZ
-  rw [overlapChecks_eq heng _ ss hlen hbudget]
-  apply certify_eq h hI _ _ _ (ozaki1ExactPath_eq heng hlen hbudget hvanish)
+  rw [overlapTests_eq hmult _ ss hlen hbound]
+  apply roundingTest_eq h hI _ _ _ (ozaki1ExactFallback_eq hmult hlen hbound hvanish)
   intro c hc H B hcB
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
-  exact ozaki1WindowEnclosureZ_sound heng s W hlen hbudget hcB
+  exact ozaki1TruncatedEnclosureZ_sound hmult s W hlen hbound hcB
 
 /-! ## Exact zeros settle -/
 
@@ -483,24 +483,24 @@ theorem sum_eq_zero_of_all {ts : List ℚ} (h : ∀ t ∈ ts, t = 0) : ts.sum = 
     rw [List.sum_cons, h t (by simp), ih (fun u hu => h u (by simp [hu]))]; grind
 
 /-- With disjoint supports the enclosure is `(0, 0)`. -/
-theorem ozaki1EnclosureZ_zero {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1EnclosureZ_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) (hz : supportOverlap x y = 0) :
-    ozaki1EnclosureZ eng b s (supportOverlap x y) x y = some (0, 0) := by
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) (hz : supportOverlap x y = 0) :
+    ozaki1EnclosureZ mult b s (supportOverlap x y) x y = some (0, 0) := by
   unfold ozaki1EnclosureZ ozaki1BoundZ
-  rw [ozaki1_eq_sumWith heng exactAdd s hlen hbudget, sumWith_exactAdd,
+  rw [ozaki1_eq_sumWith hmult exactAdd s hlen hbound, sumWith_exactAdd,
     sum_eq_zero_of_all (exactTerms_zero_of_overlap hz), hz]
   simp <;> grind
 
 /-- With disjoint supports the window enclosure is `(0, 0)`: every slice product is zero, so the
 window loses nothing. -/
-theorem ozaki1WindowEnclosureZ_zero {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1TruncatedEnclosureZ_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (s W : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) (hz : supportOverlap x y = 0) :
-    ozaki1WindowEnclosureZ eng b s W (supportOverlap x y) x y = some (0, 0) := by
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) (hz : supportOverlap x y = 0) :
+    ozaki1TruncatedEnclosureZ mult b s W (supportOverlap x y) x y = some (0, 0) := by
   have hall := exactTerms_zero_of_overlap (b := b) (s := s) hz
-  have hw : windowSum (windowGrid b W x y) (exactTerms b s x y) = 0 := by
-    unfold windowSum
+  have hw : truncatedSum (truncationGrid b W x y) (exactTerms b s x y) = 0 := by
+    unfold truncatedSum
     apply sum_eq_zero_of_all
     intro t ht
     obtain ⟨u, hu, rfl⟩ := List.mem_map.mp ht
@@ -509,8 +509,8 @@ theorem ozaki1WindowEnclosureZ_zero {eng : Engine} {b budget : ℕ} (heng : eng.
     unfold nonzeroCount
     rw [List.countP_eq_zero]
     intro t ht; simp [hall t ht]
-  unfold ozaki1WindowEnclosureZ ozaki1BoundZ
-  rw [ozaki1Terms_eq heng s hlen hbudget, Option.map_some, hw, hn, hz]
+  unfold ozaki1TruncatedEnclosureZ ozaki1BoundZ
+  rw [ozaki1Terms_eq hmult s hlen hbound, Option.map_some, hw, hn, hz]
   simp <;> grind
 
 theorem roundEnclosure_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) :
@@ -522,27 +522,27 @@ theorem roundEnclosure_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) :
 /-- **Exact zeros settle on the first check**: when every product `xᵢ yᵢ` is zero, `ozaki1CREZ`
 returns `0` from its first slice count, whatever the remaining checks and the exact path would
 return. -/
-theorem ozaki1CREZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (s : ℕ) (ss : List ℕ) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1CREZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (s : ℕ) (ss : List ℕ) {x y : List ℚ}
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hz : ProductsZero x y) (exact : Option ℚ) :
-    certify rnd (overlapChecks eng (fun s N => ozaki1EnclosureZ eng b s N x y) (s :: ss) x y)
+    roundingTest rnd (overlapTests mult (fun s N => ozaki1EnclosureZ mult b s N x y) (s :: ss) x y)
       exact = some 0 := by
   have hz' := (supportOverlap_eq_zero_iff x y).mpr hz
-  rw [overlapChecks_eq heng _ _ hlen hbudget, List.map_cons]
-  unfold certify
-  rw [ozaki1EnclosureZ_zero heng s hlen hbudget hz', Option.bind_some, roundEnclosure_zero h0]
+  rw [overlapTests_eq hmult _ _ hlen hbound, List.map_cons]
+  unfold roundingTest
+  rw [ozaki1EnclosureZ_zero hmult s hlen hbound hz', Option.bind_some, roundEnclosure_zero h0]
 
-theorem ozaki1CRWZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (s W : ℕ) (ss : List ℕ) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1CRWZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (s W : ℕ) (ss : List ℕ) {x y : List ℚ}
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hz : ProductsZero x y) (exact : Option ℚ) :
-    certify rnd (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng b s W N x y) (s :: ss)
+    roundingTest rnd (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult b s W N x y) (s :: ss)
       x y) exact = some 0 := by
   have hz' := (supportOverlap_eq_zero_iff x y).mpr hz
-  rw [overlapChecks_eq heng _ _ hlen hbudget, List.map_cons]
-  unfold certify
-  rw [ozaki1WindowEnclosureZ_zero heng s W hlen hbudget hz', Option.bind_some,
+  rw [overlapTests_eq hmult _ _ hlen hbound, List.map_cons]
+  unfold roundingTest
+  rw [ozaki1TruncatedEnclosureZ_zero hmult s W hlen hbound hz', Option.bind_some,
     roundEnclosure_zero h0]
 
 /-! ## The check in bounded integers -/
@@ -570,35 +570,35 @@ theorem nonzeroCount_map_tval : ∀ ts : List (ℤ × ℤ),
     · have : tval t ≠ 0 := (tval_ne_zero_iff t).mpr h
       simp [h, this]
 
-/-- **The bounded check with the overlap count**: the window sum in the register of `ozaki1CheckB`,
+/-- **The bounded check with the overlap count**: the window sum in the register of `ozaki1TestB`,
 the bound `(s + 1) N 2^c + n' 2^q` with `n'` the number of nonzero slice products, both as integers,
 and the integer enclosure test. -/
-def ozaki1CheckBZ (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (N : ℤ) (x y : List ℚ) :
+def ozaki1TestBZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (N : ℤ) (x y : List ℚ) :
     Option ℚ :=
-  match (trianglePairs s).mapM (pairInt eng (split b s x).1 (split b s y).1) with
+  match (trianglePairs s).mapM (pairInt mult (split b s x).1 (split b s y).1) with
   | none => none
   | some ts =>
     roundEnclosureB p emin emax
       (fixedSum (W + bitlen (ts.length * (x.length + 2)) + 1)
-        (ts.map (floorPart (windowGrid b W x y))))
-      (windowGrid b W x y) (((s + 1 : ℕ) : ℤ) * N)
+        (ts.map (floorPart (truncationGrid b W x y))))
+      (truncationGrid b W x y) (((s + 1 : ℕ) : ℤ) * N)
       (splitExp b x + splitExp b y - s * (b + 1)) (ts.countP fun t => t.1 ≠ 0)
 
 /-- **The bounded check is the enclosure test** on the window enclosure with the overlap count. -/
-theorem ozaki1CheckBZ_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1TestBZ_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (s W : ℕ) (N : ℤ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ozaki1CheckBZ eng p emin emax b s W N x y =
-      (ozaki1WindowEnclosureZ eng b s W N x y).bind
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ozaki1TestBZ mult p emin emax b s W N x y =
+      (ozaki1TruncatedEnclosureZ mult b s W N x y).bind
         fun e => roundEnclosure (roundRNE p emin emax) e.1 e.2 := by
-  unfold ozaki1CheckBZ ozaki1WindowEnclosureZ
-  rw [mapM_eq_some_map fun _ hp => pairInt_exact heng hlen hbudget hp,
-    ozaki1Terms_eq heng s hlen hbudget, Option.map_some, Option.bind_some]
+  unfold ozaki1TestBZ ozaki1TruncatedEnclosureZ
+  rw [mapM_eq_some_map fun _ hp => pairInt_exact hmult hlen hbound hp,
+    ozaki1Terms_eq hmult s hlen hbound, Option.map_some, Option.bind_some]
   simp only
   rw [fixedSum_eq (by omega) (by
       rw [List.length_map, show ∀ a c : ℕ, a + c + 1 - 1 = a + c from fun _ _ => rfl]
-      exact ozaki1CheckB_register b s W x y),
-    roundEnclosureB_eq, exactTerms_eq_map, windowSum_int, nonzeroCount_map_tval]
+      exact ozaki1TestB_register b s W x y),
+    roundEnclosureB_eq, exactTerms_eq_map, truncatedSum_int, nonzeroCount_map_tval]
   congr 2
   unfold ozaki1BoundZ
   rw [Rat.intCast_mul, Rat.intCast_natCast]
@@ -606,92 +606,92 @@ theorem ozaki1CheckBZ_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b b
 
 /-- The bounded checks for the slice counts in turn, with the overlap count `N`, then the bounded
 exact path. -/
-def ozaki1CRBZFrom (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (N : ℤ) (smax : ℕ)
+def ozaki1CRBZFrom (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (N : ℤ) (smax : ℕ)
     (x y : List ℚ) : List ℕ → Option ℚ
-  | [] => ozaki1ExactPathB eng p emin emax b smax x y
+  | [] => ozaki1ExactFallbackB mult p emin emax b smax x y
   | s :: ss =>
-    match ozaki1CheckBZ eng p emin emax b s W N x y with
+    match ozaki1TestBZ mult p emin emax b s W N x y with
     | some w => some w
-    | none => ozaki1CRBZFrom eng p emin emax b W N smax x y ss
+    | none => ozaki1CRBZFrom mult p emin emax b W N smax x y ss
 
 /-- **Correctly rounded Ozaki-I with the overlap bound in bounded registers**: the overlap count
 from the engine once, the bounded checks for the slice counts `ss` in turn, then the bounded exact
 path. -/
-def ozaki1CRBZ (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRBZ (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
-  match overlapEng eng x y with
-  | some N => ozaki1CRBZFrom eng p emin emax b W N smax x y ss
-  | none => ozaki1ExactPathB eng p emin emax b smax x y
+  match overlapMultiplier mult x y with
+  | some N => ozaki1CRBZFrom mult p emin emax b W N smax x y ss
+  | none => ozaki1ExactFallbackB mult p emin emax b smax x y
 
-theorem ozaki1CRBZFrom_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1CRBZFrom_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (W : ℕ) (smax : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ∀ ss : List ℕ, ozaki1CRBZFrom eng p emin emax b W (supportOverlap x y) smax x y ss =
-      certify (roundRNE p emin emax)
-        (ss.map fun s => ozaki1WindowEnclosureZ eng b s W (supportOverlap x y) x y)
-        (ozaki1ExactPath eng b smax x y)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ∀ ss : List ℕ, ozaki1CRBZFrom mult p emin emax b W (supportOverlap x y) smax x y ss =
+      roundingTest (roundRNE p emin emax)
+        (ss.map fun s => ozaki1TruncatedEnclosureZ mult b s W (supportOverlap x y) x y)
+        (ozaki1ExactFallback mult b smax x y)
   | [] => by
     unfold ozaki1CRBZFrom
-    rw [ozaki1ExactPathB_eq heng p emin emax smax hlen hbudget]
+    rw [ozaki1ExactFallbackB_eq hmult p emin emax smax hlen hbound]
     rfl
   | s :: ss => by
-    have ih := ozaki1CRBZFrom_eq heng p emin emax W smax hlen hbudget ss
+    have ih := ozaki1CRBZFrom_eq hmult p emin emax W smax hlen hbound ss
     unfold ozaki1CRBZFrom
-    rw [ozaki1CheckBZ_eq heng p emin emax s W _ hlen hbudget, List.map_cons]
-    unfold certify
+    rw [ozaki1TestBZ_eq hmult p emin emax s W _ hlen hbound, List.map_cons]
+    unfold roundingTest
     rw [← ih]
-    cases (ozaki1WindowEnclosureZ eng b s W (supportOverlap x y) x y).bind
+    cases (ozaki1TruncatedEnclosureZ mult b s W (supportOverlap x y) x y).bind
       (fun e => roundEnclosure (roundRNE p emin emax) e.1 e.2) <;> rfl
 
 /-- **The bounded scheme is the rational one** with `rnd = roundRNE p emin emax`. -/
-theorem ozaki1CRBZ_eq_CRWZ {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1CRBZ_eq_CRWZ {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (W : ℕ) (ss : List ℕ) (smax : ℕ) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ozaki1CRBZ eng p emin emax b W ss smax x y =
-      ozaki1CRWZ eng (roundRNE p emin emax) b W ss smax x y := by
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ozaki1CRBZ mult p emin emax b W ss smax x y =
+      ozaki1CRWZ mult (roundRNE p emin emax) b W ss smax x y := by
   unfold ozaki1CRBZ ozaki1CRWZ
-  rw [overlapEng_eq heng hlen hbudget, overlapChecks_eq heng _ ss hlen hbudget]
-  exact ozaki1CRBZFrom_eq heng p emin emax W smax hlen hbudget ss
+  rw [overlapMultiplier_eq hmult hlen hbound, overlapTests_eq hmult _ ss hlen hbound]
+  exact ozaki1CRBZFrom_eq hmult p emin emax W smax hlen hbound ss
 
 /-- **Correctly rounded in bounded registers**: on an exact engine, for every input whose exact path
 ends within `smax` slices. -/
-theorem ozaki1CRBZ_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ}
-    {x y : List ℚ} (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1CRBZ_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
+    {x y : List ℚ} (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRBZ eng p emin emax b W ss smax x y = roundRNE p emin emax (dot x y) := by
-  rw [ozaki1CRBZ_eq_CRWZ heng p emin emax W ss smax hlen hbudget]
-  exact ozaki1CRWZ_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp) heng W ss hlen hbudget
+    ozaki1CRBZ mult p emin emax b W ss smax x y = roundRNE p emin emax (dot x y) := by
+  rw [ozaki1CRBZ_eq_CRWZ hmult p emin emax W ss smax hlen hbound]
+  exact ozaki1CRWZ_eq (roundRNE_nearest hp hle) (roundRNE_intervals hp) hmult W ss hlen hbound
     hvanish
 
 /-- Binary64 inputs, correctly rounded to binary64. -/
-theorem ozaki1CRBZ64_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRBZ64_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 1025) (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a) :
-    ozaki1CRBZ eng 53 (-1022) 1023 b W ss smax x y = rne64 (dot x y) :=
-  ozaki1CRBZ_eq (by decide) (by decide) heng W ss hlen hbudget (vanish64 hb hsmax hx hy)
+    ozaki1CRBZ mult 53 (-1022) 1023 b W ss smax x y = rne64 (dot x y) :=
+  ozaki1CRBZ_eq (by decide) (by decide) hmult W ss hlen hbound (vanish64 hb hsmax hx hy)
 
 /-- Binary32 inputs, correctly rounded to binary32. -/
-theorem ozaki1CRBZ32_eq {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ)
+theorem ozaki1CRBZ32_eq {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hb : b ≤ 129) (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hx : ∀ a ∈ x, Binary32Value a) (hy : ∀ a ∈ y, Binary32Value a) :
-    ozaki1CRBZ eng 24 (-126) 127 b W ss smax x y = rne32Q (dot x y) :=
-  ozaki1CRBZ_eq (by decide) (by decide) heng W ss hlen hbudget (vanish32Q hb hsmax hx hy)
+    ozaki1CRBZ mult 24 (-126) 127 b W ss smax x y = rne32Q (dot x y) :=
+  ozaki1CRBZ_eq (by decide) (by decide) hmult W ss hlen hbound (vanish32Q hb hsmax hx hy)
 
 /-- **Exact zeros settle in bounded registers too**: when every product is zero, the first bounded
 check returns `0`, whatever the remaining checks and the exact path would return. -/
-theorem ozaki1CRBZFrom_zero {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1CRBZFrom_zero {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (p : ℕ) (emin emax : ℤ) (W smax s : ℕ) (ss : List ℕ) {x y : List ℚ}
-    (hlen : x.length = y.length) (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hlen : x.length = y.length) (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hz : ProductsZero x y) :
-    ozaki1CheckBZ eng p emin emax b s W (supportOverlap x y) x y = some 0 ∧
-      ozaki1CRBZFrom eng p emin emax b W (supportOverlap x y) smax x y (s :: ss) = some 0 := by
+    ozaki1TestBZ mult p emin emax b s W (supportOverlap x y) x y = some 0 ∧
+      ozaki1CRBZFrom mult p emin emax b W (supportOverlap x y) smax x y (s :: ss) = some 0 := by
   have hz' := (supportOverlap_eq_zero_iff x y).mpr hz
-  have hc : ozaki1CheckBZ eng p emin emax b s W (supportOverlap x y) x y = some 0 := by
-    rw [ozaki1CheckBZ_eq heng p emin emax s W _ hlen hbudget,
-      ozaki1WindowEnclosureZ_zero heng s W hlen hbudget hz', Option.bind_some]
+  have hc : ozaki1TestBZ mult p emin emax b s W (supportOverlap x y) x y = some 0 := by
+    rw [ozaki1TestBZ_eq hmult p emin emax s W _ hlen hbound,
+      ozaki1TruncatedEnclosureZ_zero hmult s W hlen hbound hz', Option.bind_some]
     exact roundEnclosure_zero (roundRNE_zero' p emin emax)
   refine ⟨hc, ?_⟩
   unfold ozaki1CRBZFrom
@@ -745,23 +745,23 @@ theorem signFromEnclosureZ_sound {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (
 
 /-- The signed check with `signFromEnclosureZ`: try the enclosures in order, accepting one whose
 ends round alike and whose sign is settled; after the last, the exact value. -/
-def certifySignedZ (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Bool → Option Signed
+def roundingTestSignedZ (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Bool → Option Signed
   | [], exact, z => exact.bind fun v => (rnd v).map fun r => ⟨r, sumNeg v z⟩
   | c :: cs, exact, z =>
     match c.bind (fun p => (roundEnclosure rnd p.1 p.2).bind fun r =>
         (signFromEnclosureZ p.1 p.2 r z).map fun n => (⟨r, n⟩ : Signed)) with
     | some w => some w
-    | none => certifySignedZ rnd cs exact z
+    | none => roundingTestSignedZ rnd cs exact z
 
 /-- **The signed check returns the correctly rounded value with the IEEE sign.** -/
-theorem certifySignedZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
+theorem roundingTestSignedZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {v : ℚ} (z : Bool) :
     ∀ (cs : List (Option (ℚ × ℚ))) (exact : Option ℚ),
       (∀ c ∈ cs, ∀ H B, c = some (H, B) → Rat.abs (v - H) ≤ B) → exact = some v →
-      certifySignedZ rnd cs exact z = (rnd v).map fun r => ⟨r, sumNeg v z⟩
+      roundingTestSignedZ rnd cs exact z = (rnd v).map fun r => ⟨r, sumNeg v z⟩
   | [], exact, _, hex => by subst hex; rfl
   | c :: cs, exact, hcs, hex => by
-    unfold certifySignedZ
+    unfold roundingTestSignedZ
     split
     · rename_i w hw
       cases c with
@@ -782,52 +782,52 @@ theorem certifySignedZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : Rou
             simp only [hs, Option.map_some, Option.some.injEq] at hw
             subst hw
             rw [signFromEnclosureZ_sound h h0 z hv hrv hs]
-    · exact certifySignedZ_eq h hI h0 z cs exact
+    · exact roundingTestSignedZ_eq h hI h0 z cs exact
         (fun c' hc' => hcs c' (List.mem_cons_of_mem _ hc')) hex
 
 /-- **Correctly rounded Ozaki-I with the overlap bound, a `W`-bit window and signed zeros.** -/
-def ozaki1CRWSZ (eng : Engine) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRWSZ (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
-  certifySignedZ rnd
-    (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng b s W N (vals xs) (vals ys)) ss
+  roundingTestSignedZ rnd
+    (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult b s W N (vals xs) (vals ys)) ss
       (vals xs) (vals ys))
-    (ozaki1ExactPath eng b smax (vals xs) (vals ys)) (allNegZero xs ys)
+    (ozaki1ExactFallback mult b smax (vals xs) (vals ys)) (allNegZero xs ys)
 
 /-- **Signed correct rounding.** On an exact engine, `ozaki1CRWSZ` returns the correctly rounded
 dot product with IEEE's sign for zero results. -/
 theorem ozaki1CRWSZ_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ} {xs ys : List Signed}
+    (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ} {xs ys : List Signed}
     (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s (vals xs) (vals ys) = true) :
-    ozaki1CRWSZ eng rnd b W ss smax xs ys = crSigned rnd xs ys := by
+    ozaki1CRWSZ mult rnd b W ss smax xs ys = crSigned rnd xs ys := by
   have hl : (vals xs).length = (vals ys).length := by simp [vals, hlen]
-  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa [vals] using hbudget
+  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa [vals] using hbound
   unfold ozaki1CRWSZ crSigned
-  rw [overlapChecks_eq heng _ ss hl hb]
-  apply certifySignedZ_eq h hI h0 _ _ _ _ (ozaki1ExactPath_eq heng hl hb hvanish)
+  rw [overlapTests_eq hmult _ ss hl hb]
+  apply roundingTestSignedZ_eq h hI h0 _ _ _ _ (ozaki1ExactFallback_eq hmult hl hb hvanish)
   intro c hc H B hcB
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
-  exact ozaki1WindowEnclosureZ_sound heng s W hl hb hcB
+  exact ozaki1TruncatedEnclosureZ_sound hmult s W hl hb hcB
 
 /-- **Signed exact zeros settle on the first check**: when every product is zero, `ozaki1CRWSZ`
 returns `0` with the sign `crSigned` specifies (`−0` exactly when every product is `−0`), whatever
 the exact path would return. -/
-theorem ozaki1CRWSZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (s W : ℕ) (ss : List ℕ) {xs ys : List Signed}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem ozaki1CRWSZ_zero {rnd : ℚ → Option ℚ} (h0 : rnd 0 = some 0) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (s W : ℕ) (ss : List ℕ) {xs ys : List Signed}
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hz : ProductsZero (vals xs) (vals ys)) (exact : Option ℚ) :
-    certifySignedZ rnd
-      (overlapChecks eng (fun s N => ozaki1WindowEnclosureZ eng b s W N (vals xs) (vals ys))
+    roundingTestSignedZ rnd
+      (overlapTests mult (fun s N => ozaki1TruncatedEnclosureZ mult b s W N (vals xs) (vals ys))
         (s :: ss) (vals xs) (vals ys)) exact (allNegZero xs ys) =
       some ⟨0, allNegZero xs ys⟩ := by
   have hl : (vals xs).length = (vals ys).length := by simp [vals, hlen]
-  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa [vals] using hbudget
+  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa [vals] using hbound
   have hz' := (supportOverlap_eq_zero_iff _ _).mpr hz
-  rw [overlapChecks_eq heng _ _ hl hb, List.map_cons]
-  unfold certifySignedZ
-  rw [ozaki1WindowEnclosureZ_zero heng s W hl hb hz', Option.bind_some, roundEnclosure_zero h0]
+  rw [overlapTests_eq hmult _ _ hl hb, List.map_cons]
+  unfold roundingTestSignedZ
+  rw [ozaki1TruncatedEnclosureZ_zero hmult s W hl hb hz', Option.bind_some, roundEnclosure_zero h0]
   simp [signFromEnclosureZ, sumNeg]
 
 end Ozaki

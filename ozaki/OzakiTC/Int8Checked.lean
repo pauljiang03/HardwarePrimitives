@@ -1,5 +1,5 @@
 import OzakiTC.ADPFix
-import Ozaki.CheckedEngines
+import Ozaki.CheckedMultipliers
 
 /-! # The INT8 engine with its arithmetic guarded
 
@@ -12,11 +12,11 @@ of that arithmetic is guarded:
   each guarded against `2^R`, in it. It returns the exact dot product, the value of `int8Dot`
   (`int8DotC_eq`).
 * `int8DotKC`: split-K over `int8DotC` with the chunk sums guarded (`int8DotKC_eq`), used by the
-  checked ADP recombination; `int8SplitKC`: the guarded split-K engine of `Ozaki.CheckedEngines`
+  checked ADP recombination; `int8SplitKC`: the guarded split-K engine of `Ozaki.CheckedMultipliers`
   over `int8DotC`, used by the checked ADP exact path. Both are exact where the unguarded ones are
   (`int8SplitKC_exactOn`).
 
-`ozaki1ExactPathI_congr`: the integer exact path depends only on the engine's values on exact
+`ozaki1ExactFallbackI_congr`: the integer exact path depends only on the engine's values on exact
 slices, so it is the same on any two engines exact on them. -/
 
 open TensorCore
@@ -102,33 +102,33 @@ theorem int8DotKC_eq {B : Widths} {x y : List ℤ} (hR : 31 ≤ B.R) (hlen : x.l
   exact Nat.lt_of_le_of_lt hle hD
 
 /-- The INT8 engine with its arithmetic guarded. -/
-def int8EngineC (B : Widths) : Engine := fun x y => (int8DotC B x y).map fun z : ℤ => ((z : ℤ) : ℚ)
+def int8MultiplierC (B : Widths) : MatrixMultiplier := fun x y => (int8DotC B x y).map fun z : ℤ => ((z : ℤ) : ℚ)
 
-theorem int8EngineC_exactOn {B : Widths} (hR : 31 ≤ B.R) : (int8EngineC B).ExactOn 6 (2 ^ 31 - 1) := by
+theorem int8MultiplierC_exactOn {B : Widths} (hR : 31 ≤ B.R) : (int8MultiplierC B).ExactOn 6 (2 ^ 31 - 1) := by
   intro x y _ _ _ hb
-  unfold int8EngineC
+  unfold int8MultiplierC
   rw [int8DotC_eq hR (Nat.lt_of_le_of_lt hb (by decide)),
     int8Dot_exact (by decide) (Nat.lt_of_le_of_lt hb (by decide))]
   rfl
 
 /-- **Split-K on the INT8 engine, every integer guarded.** -/
-def int8SplitKC (B : Widths) : Engine := chunkedC B (2 ^ 18) (int8EngineC B)
+def int8SplitKC (B : Widths) : MatrixMultiplier := chunkedC B (2 ^ 18) (int8MultiplierC B)
 
 theorem int8SplitKC_exactOn {B : Widths} (hR : 31 ≤ B.R) {D : ℕ} (hD : D < 2 ^ B.R) :
     (int8SplitKC B).ExactOn 6 D :=
-  chunkedC_exactOn (int8EngineC_exactOn hR) (by decide) (by decide)
+  chunkedC_exactOn (int8MultiplierC_exactOn hR) (by decide) (by decide)
     (Nat.lt_of_lt_of_le (by decide) (Nat.pow_le_pow_right (by decide) hR)) hD
 
 /-- **The integer exact path is the same on any two engines exact on its slices.** -/
-theorem ozaki1ExactPathI_congr {e1 e2 : Engine} {b budget : ℕ} (h1 : e1.ExactOn b budget)
-    (h2 : e2.ExactOn b budget) (p : ℕ) (emin emax : ℤ) (smax : ℕ) {xs ys : List (ℤ × ℤ)}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) :
-    ozaki1ExactPathI e1 p emin emax b smax xs ys = ozaki1ExactPathI e2 p emin emax b smax xs ys := by
+theorem ozaki1ExactFallbackI_congr {e1 e2 : MatrixMultiplier} {b bound : ℕ} (h1 : e1.ExactOn b bound)
+    (h2 : e2.ExactOn b bound) (p : ℕ) (emin emax : ℤ) (smax : ℕ) {xs ys : List (ℤ × ℤ)}
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) :
+    ozaki1ExactFallbackI e1 p emin emax b smax xs ys = ozaki1ExactFallbackI e2 p emin emax b smax xs ys := by
   have hl : (entryVals xs).length = (entryVals ys).length := by
     rw [length_entryVals, length_entryVals, hlen]
-  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by
-    rw [length_entryVals]; exact hbudget
-  unfold ozaki1ExactPathI
+  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by
+    rw [length_entryVals]; exact hbound
+  unfold ozaki1ExactFallbackI
   split
   · rename_i s _
     rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1,

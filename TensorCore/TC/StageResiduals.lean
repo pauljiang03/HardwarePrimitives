@@ -68,7 +68,7 @@ theorem evalPrepared_block {b : PreparedBlock} {t : BlockTrace}
       cases h
       rfl
 
-theorem evalBlock_prepared {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_prepared {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : prepare x = some t.block := by
   unfold evalBlock at h
   split at h
@@ -79,7 +79,7 @@ theorem evalBlock_prepared {p : Profile} {x : BlockInput p} {t : BlockTrace}
       simp [hp] at h
       rw [evalPrepared_block h]
 
-theorem evalBlock_evalPrepared {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_evalPrepared {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : evalPrepared t.block = .ok t := by
   have hp := evalBlock_prepared h
   unfold evalBlock at h
@@ -89,13 +89,13 @@ theorem evalBlock_evalPrepared {p : Profile} {x : BlockInput p} {t : BlockTrace}
     exact h
 
 /-- End-to-end local recovery, connected to the executable encoded-input evaluator. -/
-theorem evalBlock_residual_identity {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_residual_identity {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) :
     exactDot x = some (t.output.value + t.residual) := by
   simp only [exactDot, evalBlock_prepared h, Option.map_some]
   rw [returned_residual_identity]
 
-theorem prepare_c {p : Profile} {x : BlockInput p} {b : PreparedBlock}
+theorem prepare_c {p : Model} {x : BlockInput p} {b : PreparedBlock}
     (h : prepare x = some b) : decode32 x.c = some b.c := by
   unfold prepare at h
   cases hc : decode32 x.c with
@@ -108,13 +108,13 @@ theorem prepare_c {p : Profile} {x : BlockInput p} {b : PreparedBlock}
       cases h
       rfl
 
-theorem evalBlock_c {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_c {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : decode32 x.c = some t.block.c :=
   prepare_c (evalBlock_prepared h)
 
 /-- Preparation retains the encoded input's profile, even if later evaluation rejects it. -/
-theorem prepare_profile {p : Profile} {x : BlockInput p} {b : PreparedBlock}
-    (hp : prepare x = some b) : b.profile = p := by
+theorem prepare_model {p : Model} {x : BlockInput p} {b : PreparedBlock}
+    (hp : prepare x = some b) : b.model = p := by
   unfold prepare at hp
   cases hc : decode32 x.c with
   | none => simp [hc] at hp
@@ -126,8 +126,8 @@ theorem prepare_profile {p : Profile} {x : BlockInput p} {b : PreparedBlock}
       rw [← hp]
 
 /-- The profile of a successful trace is the profile of its input. -/
-theorem evalBlock_profile {p : Profile} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) : t.block.profile = p :=
-  prepare_profile (evalBlock_prepared h)
+theorem evalBlock_model {p : Model} {x : BlockInput p} {t : BlockTrace}
+    (h : evalBlock x = .ok t) : t.block.model = p :=
+  prepare_model (evalBlock_prepared h)
 
 end TensorCore

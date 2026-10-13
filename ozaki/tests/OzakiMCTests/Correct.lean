@@ -92,7 +92,7 @@ def basis6 : CRTBasis := crtBasis [4096, 4095, 4093, 4091, 4087, 4079]
 def cfgs2 : List (CRTBasis × ℕ) := [(basis5, 28), (basis6, 34)]
 
 /-- Ozaki-I and Ozaki-II, correctly rounded, on one path: both cases equal the oracle. -/
-def agrees (P : Profile) : Bool :=
+def agrees (P : Model) : Bool :=
   [(A_narrow, B_narrow, C_narrow), (A_wide, B_wide, C_wide), (A_cancel, B_cancel, C_cancel),
     (A_halfway, B_halfway, C_halfway)].all fun (A, B, C) =>
     (do let A ← decodeMatrix A; let B ← decodeMatrix B

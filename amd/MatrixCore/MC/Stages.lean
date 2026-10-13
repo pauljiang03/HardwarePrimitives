@@ -16,23 +16,23 @@ def flValue (ftz : Bool) (x : ℚ) : Option ℚ := (fl32 ftz x).bind value32
 
 /-- Balanced pairwise tree: split into halves, sum each half, and round their sum with `fl{·}`.
 `depth` bounds the recursion; any `depth` at least the list length gives the full tree. -/
-def pairTree (ftz : Bool) : ℕ → List ℚ → Option ℚ
+def pairwiseGroupSum (ftz : Bool) : ℕ → List ℚ → Option ℚ
   | _, [] => some 0
   | _, [x] => some x
   | 0, _ => none
   | depth + 1, xs => do
     let h := xs.length / 2
-    let u ← pairTree ftz depth (xs.take h)
-    let v ← pairTree ftz depth (xs.drop h)
+    let u ← pairwiseGroupSum ftz depth (xs.take h)
+    let v ← pairwiseGroupSum ftz depth (xs.drop h)
     flValue ftz (u + v)
 
 /-- CDNA 2: inputs flushed when subnormals are unsupported, every product converted to binary32
 with `fl{·}`, the pairwise tree `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added. Returns the
 exact `c + tree`, which the final `fl{·}` rounds; `none` on an intermediate overflow. -/
-def pairwiseSum (P : Profile) (x : Prepared) : Option ℚ := do
+def pairwiseSum (P : Model) (x : Prepared) : Option ℚ := do
   let x' := if P.subnormals then x else x.flushed
   let ps ← x'.p.mapM fun p => flValue (!P.subnormals) p.value
-  let t ← pairTree (!P.subnormals) ps.length ps
+  let t ← pairwiseGroupSum (!P.subnormals) ps.length ps
   return x'.c.value + t
 
 /-! ## `global_alignment` and `odd_even_grouping` (CDNA 3) -/
@@ -47,7 +47,7 @@ def alignedSum (neab : ℕ) (ps : List Unpacked) : Option ℤ × ℚ :=
 /-- `(e_max, S_{p_i,sum})` of the configuration. With odd/even grouping, the odd and even sums
 are each aligned to their own maximum exponent, then the one with the smaller exponent is shifted
 to the common `e_max` and RD to `23 + n_eab` fractional bits (Algorithm 2 lines 1–6). -/
-def productSum (P : Profile) (ps : List Unpacked) : Option ℤ × ℚ :=
+def productSum (P : Model) (ps : List Unpacked) : Option ℤ × ℚ :=
   match P.accumulation with
   | .oddEvenGrouping =>
     let odd := alignedSum P.neab (oddIndexed ps)
@@ -59,7 +59,7 @@ def productSum (P : Profile) (ps : List Unpacked) : Option ℤ × ℚ :=
 
 /-- `s'_c`: `s_c` shifted right by `e_max − e_c` and RD to `24` fractional bits; zero once the
 shift exceeds the cutoff (binary8). -/
-def shiftedC (P : Profile) (eMax eC : ℤ) (c : Unpacked) : ℚ :=
+def shiftedC (P : Model) (eMax eC : ℤ) (c : Unpacked) : ℚ :=
   match P.late.cCutoff with
   | some n => if eMax - eC > n then 0 else rdFrac c.value eMax P.late.cFracBits
   | none => rdFrac c.value eMax P.late.cFracBits
@@ -71,11 +71,11 @@ def normaliseRD (k : ℕ) (x : ℚ) : ℚ := if x = 0 then 0 else rdFrac x (norm
 /-- `S_acc` when `e_c > e_max`: `S'_{p_i,sum}` is `S_{p_i,sum}` shifted right by `e_c − e_max` and
 RD to `32` fractional bits; `S_acc = S'_{p_i,sum} + s_c` is normalised and RD to `31`
 fractional bits (Algorithm 1 lines 8–11). -/
-def shiftedSum (P : Profile) (eC : ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=
+def shiftedSum (P : Model) (eC : ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=
   normaliseRD P.late.accFracBits (rdFrac pSum eC P.late.sumFracBits + c.value)
 
 /-- `S_acc` after the late addition of `c` (Algorithm 1 lines 3–11). -/
-def lateSum (P : Profile) (eMax : Option ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=
+def lateSum (P : Model) (eMax : Option ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=
   match cExp P c with
   | none => pSum
   | some eC =>
@@ -84,7 +84,7 @@ def lateSum (P : Profile) (eMax : Option ℤ) (pSum : ℚ) (c : Unpacked) : ℚ 
     | none => shiftedSum P eC pSum c
 
 /-- `S_acc` of Algorithms 1 and 2. -/
-def alignedAccumulation (P : Profile) (x : Prepared) : ℚ :=
+def alignedAccumulation (P : Model) (x : Prepared) : ℚ :=
   let s := productSum P x.p
   lateSum P s.1 s.2 x.c
 

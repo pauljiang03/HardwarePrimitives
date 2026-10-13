@@ -1,5 +1,5 @@
 import TensorCore.EFT.Scalar
-import TensorCore.Numerics.Binary.ResidualBudget
+import TensorCore.Numerics.Binary.ResidualBound
 
 /-! An explicit extraction-grid interface for TC-EFT IV.1–IV.11. -/
 
@@ -97,9 +97,9 @@ theorem lowParts_on_grid (g : ExtractionGrid t) (ℓ : ℤ) (hℓ : ℓ ≤ g.ex
   rw [hr, Rat.mul_div_cancel (Rat.ne_of_gt (pow2_pos ℓ)), Rat.floor_intCast]
 
 /-- The input-grid budget bounds residual coefficients using component count (including C) and extraction exponent. -/
-theorem inputBudget_coefficient_bound (g : ExtractionGrid t) (ℓ : ℤ) (P : ℕ) (hℓ : ℓ ≤ g.exponent)
+theorem inputGrid_coefficient_bound (g : ExtractionGrid t) (ℓ : ℤ) (P : ℕ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)
-    (hbudget : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ P) :
+    (hbound : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ P) :
     magnitudeSum (g.lowBitsAt ℓ) < 2 ^ P := by
   have hg := g.lowParts_on_grid ℓ hℓ hinput
   apply extraction_coefficient_bound _ g.exponent ℓ P hℓ
@@ -107,16 +107,16 @@ theorem inputBudget_coefficient_bound (g : ExtractionGrid t) (ℓ : ℤ) (P : �
     apply g.lowPart_bound
     rw [hg]
     exact List.mem_map.mpr ⟨z, hz, rfl⟩
-  · simpa [lowBitsAt, lowParts] using hbudget
+  · simpa [lowBitsAt, lowParts] using hbound
 
-theorem inputBudget_lowParts_sum_exact (g : ExtractionGrid t) (f : Format) (hf : f.WellFormed)
+theorem inputGrid_lowParts_sum_exact (g : ExtractionGrid t) (f : Format) (hf : f.WellFormed)
     (ℓ : ℤ) (hmin : f.emin - f.mantissaBits ≤ ℓ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)
-    (hbudget : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ (f.mantissaBits + 1))
+    (hbound : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ (f.mantissaBits + 1))
     (hrange : (magnitudeSum (g.lowBitsAt ℓ) : ℚ) * pow2 ℓ ≤ f.maxFinite) :
     naiveSumBinary f g.lowParts = some (sumQ g.lowParts) := by
   rw [g.lowParts_on_grid ℓ hℓ hinput,
-    naiveSumBinary_exact f hf ℓ hmin _ (g.inputBudget_coefficient_bound ℓ _ hℓ hinput hbudget) hrange,
+    naiveSumBinary_exact f hf ℓ hmin _ (g.inputGrid_coefficient_bound ℓ _ hℓ hinput hbound) hrange,
     sum_coefficients]
 
 def scalarPredicate (g : ExtractionGrid t) (f : Format) (ℓ : ℤ) : Bool :=
@@ -141,9 +141,9 @@ theorem scalarCorrected_eq (g : ExtractionGrid t) (f : Format) (ℓ : ℤ)
     g.scalarCorrected f ℓ = round32 .nearestEven t.block.exactDot := by
   have hp := h
   simp only [scalarPredicate, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at h
-  obtain ⟨⟨⟨⟨⟨⟨⟨⟨hf, hmin⟩, hgrid⟩, hbudget⟩, hrange⟩, _⟩, _⟩, hH⟩, _⟩ := h
+  obtain ⟨⟨⟨⟨⟨⟨⟨⟨hf, hmin⟩, hgrid⟩, hbound⟩, hrange⟩, _⟩, _⟩, hH⟩, _⟩ := h
   have hs : naiveSumBinary f g.lowParts = some (sumQ g.lowParts) := by
-    rw [hgrid, naiveSumBinary_exact f hf ℓ hmin _ hbudget hrange, sum_coefficients]
+    rw [hgrid, naiveSumBinary_exact f hf ℓ hmin _ hbound hrange, sum_coefficients]
   have he : t.output.value + -g.overlap = g.retainedSum := by unfold overlap; grind
   have hh := binaryAdd_exact f hf t.output.value (-g.overlap)
     (by rw [he]; exact representableBinary_finite f hf hH)
@@ -171,10 +171,10 @@ theorem scalarCorrected_isSome_iff (g : ExtractionGrid t) (f : Format) (ℓ : �
     simp [hb]
 
 /-- The input-grid budget and range/representability conditions imply the scalar predicate. -/
-theorem inputBudget_scalarPredicate (g : ExtractionGrid t) (f : Format) (hf : f.WellFormed)
+theorem inputGrid_scalarPredicate (g : ExtractionGrid t) (f : Format) (hf : f.WellFormed)
     (ℓ : ℤ) (hmin : f.emin - f.mantissaBits ≤ ℓ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)
-    (hbudget : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ (f.mantissaBits + 1))
+    (hbound : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ (f.mantissaBits + 1))
     (hrange : (magnitudeSum (g.lowBitsAt ℓ) : ℚ) * pow2 ℓ ≤ f.maxFinite)
     (hD : representableBinary f t.output.value = true)
     (hO : representableBinary f g.overlap = true)
@@ -182,21 +182,21 @@ theorem inputBudget_scalarPredicate (g : ExtractionGrid t) (f : Format) (hf : f.
     (hfinal : absQ t.block.exactDot ≤ maxFinite32) :
     g.scalarPredicate f ℓ = true := by
   have hgrid := g.lowParts_on_grid ℓ hℓ hinput
-  have hcoeff := g.inputBudget_coefficient_bound ℓ _ hℓ hinput hbudget
+  have hcoeff := g.inputGrid_coefficient_bound ℓ _ hℓ hinput hbound
   simp only [scalarPredicate, Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq]
   exact ⟨⟨⟨⟨⟨⟨⟨⟨hf, hmin⟩, hgrid⟩, hcoeff⟩, hrange⟩, hD⟩, hO⟩, hH⟩,
     by simpa [g.retained_add_low] using hfinal⟩
 
 /-- For FP32 correction, the format, `D` and the magnitude range are derived rather than assumed. -/
-theorem inputBudget_scalarPredicate_fp32 (g : ExtractionGrid t) (ℓ : ℤ)
+theorem inputGrid_scalarPredicate_fp32 (g : ExtractionGrid t) (ℓ : ℤ)
     (hmin : -149 ≤ ℓ) (hmax : ℓ ≤ 104) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)
-    (hbudget : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ 24)
+    (hbound : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ 24)
     (hO : representableBinary fp32 g.overlap = true)
     (hH : representableBinary fp32 g.retainedSum = true)
     (hfinal : absQ t.block.exactDot ≤ maxFinite32) :
     g.scalarPredicate fp32 ℓ = true := by
-  have hcoeff := g.inputBudget_coefficient_bound ℓ 24 hℓ hinput hbudget
+  have hcoeff := g.inputGrid_coefficient_bound ℓ 24 hℓ hinput hbound
   have hrange : (magnitudeSum (g.lowBitsAt ℓ) : ℚ) * pow2 ℓ ≤ fp32.maxFinite := by
     have hm : (magnitudeSum (g.lowBitsAt ℓ) : ℚ) ≤ 16777215 := by
       have : magnitudeSum (g.lowBitsAt ℓ) ≤ 16777215 := by omega
@@ -219,8 +219,8 @@ theorem inputBudget_scalarPredicate_fp32 (g : ExtractionGrid t) (ℓ : ℤ)
       round32 .nearestEven t.output.value from roundBinary_fp32 .nearestEven _, hb]
     have hbv : binaryValue fp32 b = value32 b := rfl
     simpa [Option.bind_some, hbv] using hvb
-  exact g.inputBudget_scalarPredicate fp32 (by decide) ℓ (by simp [Format.emin, fp32]; omega) hℓ
-    hinput (by simpa [fp32] using hbudget) hrange hD hO hH hfinal
+  exact g.inputGrid_scalarPredicate fp32 (by decide) ℓ (by simp [Format.emin, fp32]; omega) hℓ
+    hinput (by simpa [fp32] using hbound) hrange hD hO hH hfinal
 
 end ExtractionGrid
 

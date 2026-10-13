@@ -14,18 +14,18 @@ open MatrixCore
 namespace Ozaki.MC
 
 /-- Correctly rounded FP64 by Ozaki-II with bounded registers on matrix-core blocks. -/
-def mcOzaki2CRB (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
+def mcOzaki2CRB (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRB (mcSplitK P b) 53 (-1022) 1023 cfgs b smax x y
 
 /-- Correctly rounded binary32 Ozaki-II with bounded registers on matrix-core blocks. -/
-def mcOzaki2CRBL (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
+def mcOzaki2CRBL (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRB (mcSplitK P b) 24 (-126) 127 cfgs b smax x y
 
 /-- **FP64 GEMM by Ozaki-II on AMD matrix cores with bounded registers, correctly rounded**, any
 length. -/
-theorem mcOzaki2CRB_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRB_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -35,7 +35,7 @@ theorem mcOzaki2CRB_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
     mcOzaki2CRB P cfgs b smax x y = rne64 (dot x y) :=
   ozaki2CRB64_eq (mcSplitK_exactOn hP hb _) (by omega) hsmax hcfg hlen (Nat.le_refl _) hx hy
 
-theorem mcOzaki2CRBL_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRBL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -46,18 +46,18 @@ theorem mcOzaki2CRBL_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
   ozaki2CRB32_eq (mcSplitK_exactOn hP hb _) (by omega) hsmax hcfg hlen (Nat.le_refl _) hx hy
 
 /-- Correctly rounded FP64 Ozaki-II with signed zeros on matrix-core blocks. -/
-def mcOzaki2CRDS (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List Signed) :
+def mcOzaki2CRDS (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List Signed) :
     Option Signed :=
   ozaki2CRS (mcSplitK P b) rne64 cfgs b smax xs ys
 
 /-- Correctly rounded FP64 Ozaki-II with signed zeros and bounded registers on Tensor Core
 blocks. -/
-def mcOzaki2CRBS (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List Signed) :
+def mcOzaki2CRBS (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List Signed) :
     Option Signed :=
   ozaki2CRBS (mcSplitK P b) 53 (-1022) 1023 cfgs b smax xs ys
 
 /-- **Signed correct rounding of FP64 GEMM by Ozaki-II**, any length. -/
-theorem mcOzaki2CRDS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRDS_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List Signed}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -70,7 +70,7 @@ theorem mcOzaki2CRDS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
     (vanish64 (by omega) hsmax (vals_all hx) (vals_all hy))
 
 /-- **Signed correct rounding of FP64 GEMM by Ozaki-II with bounded registers**, any length. -/
-theorem mcOzaki2CRBS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRBS_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List Signed}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -83,16 +83,16 @@ theorem mcOzaki2CRBS_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
 
 /-- **Correctly rounded FP64 by Ozaki-II as an integer pipeline on matrix-core blocks**: binary64
 inputs as integer pairs `(m, e)`. -/
-def mcOzaki2CRZ (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
+def mcOzaki2CRZ (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki2CRZ (mcSplitK P b) 53 (-1022) 1023 cfgs b smax xs ys
 
 /-- The same for binary32. -/
-def mcOzaki2CRZL (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
+def mcOzaki2CRZL (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki2CRZ (mcSplitK P b) 24 (-126) 127 cfgs b smax xs ys
 
-theorem mcOzaki2CRZ_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRZ_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -103,7 +103,7 @@ theorem mcOzaki2CRZ_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
   ozaki2CRZ64_eq (mcSplitK_exactOn hP hb _) (by omega) hsmax hcfg hlen
     (Nat.le_refl _) hx hy
 
-theorem mcOzaki2CRZL_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b)
+theorem mcOzaki2CRZL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1))
     {xs ys : List (ℤ × ℤ)}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧

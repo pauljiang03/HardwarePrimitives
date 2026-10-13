@@ -49,18 +49,18 @@ narrow residues have too few coprime moduli below `2^(b+1)`. -/
 def SliceRun.feasible2 (t k : ℕ) (r : SliceRun) : Bool := 0 < moduliFor r.width t k
 
 /-- The cheapest feasible candidate for Ozaki-II; the first in `candidates` order on a tie. -/
-def best2 (p : Profile) (bmax t k : ℕ) : Option SliceRun :=
+def best2 (p : Model) (bmax t k : ℕ) : Option SliceRun :=
   ((candidates p bmax).filter (SliceRun.feasible2 t k)).foldl (fun acc r => match acc with
     | none => some r
-    | some a => if r.cost2 p.products t k < a.cost2 p.products t k then some r else some a) none
+    | some a => if r.cost2 p.nfma t k < a.cost2 p.nfma t k then some r else some a) none
 
 /-- **Every candidate is exact for Ozaki-II**: its engine is exact on vectors of every length, its
 moduli are at most `2^(b+1)`, and they meet the reconstruction condition for every length up to
 `k`. -/
-theorem ozaki2Candidates_ok {p : Profile} {bmax : ℕ}
-    (hfloor : ∀ f ∈ p.alignFloor, f ≤ p.alignMantissaBits) (hwide : 23 ≤ p.alignMantissaBits)
-    (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.products) {t k : ℕ} :
-    ∀ r ∈ candidates p bmax, (∀ B, (r.engine p).ExactOn r.width B) ∧
+theorem ozaki2Candidates_ok {p : Model} {bmax : ℕ}
+    (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits) (hwide : 23 ≤ p.alignFracBits)
+    (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma) {t k : ℕ} :
+    ∀ r ∈ candidates p bmax, (∀ B, (r.multiplier p).ExactOn r.width B) ∧
       (∀ m ∈ (moduliBasis r.width (moduliFor r.width t k)).moduli, m ≤ 2 ^ (r.width + 1)) ∧
       (0 < moduliFor r.width t k → ∀ L ≤ k,
         2 * L * (2 ^ (t + 2) * 2 ^ (t + 2)) < (moduliBasis r.width (moduliFor r.width t k)).modulus) :=

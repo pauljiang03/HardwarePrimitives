@@ -16,9 +16,9 @@ def normalizedBits (p : Parameters) (x : Input p) : Option F32 := do
   let ts ← terms p x
   round32 .truncate (accumulated p (ts.map normalized))
 
-def noFloorBits (p : Parameters) (x : Input p) : Option F32 := do
+def noEAlignMinBits (p : Parameters) (x : Input p) : Option F32 := do
   let ts ← terms p x
-  round32 .truncate (accumulated { p with floor := none } ts)
+  round32 .truncate (accumulated { p with eAlignMin := none } ts)
 
 /-- Incorrectly replace common-grid alignment by IEEE-style RTZ of each term. -/
 def ieeeAlignmentBits (p : Parameters) (x : Input p) : Option F32 := do
@@ -45,26 +45,26 @@ theorem ieee_alignment_detected :
     decide +kernel
 
 /-- A100: p1 = sum_{j=150..155} 2^-j, p2 = 2^-156, p3 = p4 = 2^-157. -/
-def ampereFloorInput : BlockInput a100BF16F32 :=
+def ampereEAlignMinInput : BlockInput a100BF16F32 :=
   ⟨[(0x1a7c, 0x1a00), (0x1880, 0x1880), (0x1880, 0x1800), (0x1880, 0x1800)] ++
     List.replicate 4 (0, 0), 0⟩
 
 /-- Hopper's finer grid needs a separate witness at its own floor. -/
-def hopperFloorInput : BlockInput hopperBF16F32 :=
+def hopperEAlignMinInput : BlockInput hopperBF16F32 :=
   ⟨[(0x1a7f, 0x1a00), (0x1800, 0x1800), (0x1800, 0x1780), (0x1800, 0x1780)] ++
     List.replicate 12 (0, 0), 0⟩
 
-theorem ampere_floor_removal_detected :
-    noFloorBits (parametersOf a100BF16F32) (inputOf ampereFloorInput) = some 1 ∧
-    bits (parametersOf a100BF16F32) (inputOf ampereFloorInput) = some 0 := by
+theorem ampere_eAlignMin_removal_detected :
+    noEAlignMinBits (parametersOf a100BF16F32) (inputOf ampereEAlignMinInput) = some 1 ∧
+    bits (parametersOf a100BF16F32) (inputOf ampereEAlignMinInput) = some 0 := by
   constructor
   · decide +kernel
   · rw [← evalBlock_eq_spec]
     decide +kernel
 
-theorem hopper_floor_removal_detected :
-    noFloorBits (parametersOf hopperBF16F32) (inputOf hopperFloorInput) = some 1 ∧
-    bits (parametersOf hopperBF16F32) (inputOf hopperFloorInput) = some 0 := by
+theorem hopper_eAlignMin_removal_detected :
+    noEAlignMinBits (parametersOf hopperBF16F32) (inputOf hopperEAlignMinInput) = some 1 ∧
+    bits (parametersOf hopperBF16F32) (inputOf hopperEAlignMinInput) = some 0 := by
   constructor
   · decide +kernel
   · rw [← evalBlock_eq_spec]

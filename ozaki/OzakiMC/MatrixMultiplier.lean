@@ -2,7 +2,7 @@ import OzakiMC.Exactness
 
 /-! # The matrix core as an Ozaki engine
 
-`mcEngine P` evaluates an integer dot product on the matrix-core model of profile `P`: it writes
+`mcMultiplier P` evaluates an integer dot product on the matrix-core model of profile `P`: it writes
 each integer with `MatrixCore`'s exact encoder `encodeExact`, and runs `dotBits` (zero padding to
 whole blocks of `N_FMA`, each block's `d` the next block's `c`) from `c = +0`.
 
@@ -10,7 +10,7 @@ whole blocks of `N_FMA`, each block's `d` the next block's `c`) from `c = +0`.
   encodes every integer of magnitude at most `2^(p+1)`; XF32 operands, read by truncating a
   binary32 word to ten fraction bits, keep every integer of magnitude at most `2^11`
   (`xf32_encodesInts`).
-* `mcEngine_exactOn`: on an exact configuration (`ExactConfig`), the engine is exact on `b`-bit
+* `mcMultiplier_exactOn`: on an exact configuration (`ExactConfig`), the engine is exact on `b`-bit
   vectors whose products total at most `2^24` in magnitude. -/
 
 open MatrixCore
@@ -290,7 +290,7 @@ theorem xf32_encodesInts : EncodesInts .xf32 11 := by
 
 /-- **The matrix core as an Ozaki engine.** Encode the integers exactly, and evaluate the inner
 product with `dotBits` from `c = +0`. -/
-def mcEngine (P : Profile) : Engine := fun x y => do
+def mcMultiplier (P : Model) : MatrixMultiplier := fun x y => do
   let a ← x.mapM fun z : ℤ => P.a.encodeExact (z : ℚ)
   let b ← y.mapM fun z : ℤ => P.b.encodeExact (z : ℚ)
   match dotBits P a b 0 with
@@ -306,16 +306,16 @@ theorem intWord_zero {i : InputFormat} {b : ℕ} (h : EncodesInts i b) : IntWord
   cases hw; exact hint
 
 /-- Products and budget of encoded integer vectors. -/
-theorem encoded_products {P : Profile} (Ea : ℤ → P.a.Word) (Eb : ℤ → P.b.Word) :
+theorem encoded_products {P : Model} (Ea : ℤ → P.a.Word) (Eb : ℤ → P.b.Word) :
     ∀ (x y : List ℤ), (∀ z ∈ x, P.a.wordValue (Ea z) = z) → (∀ z ∈ y, P.b.wordValue (Eb z) = z) →
       exactProducts P (x.map Ea) (y.map Eb) = (dotZ x y : ℚ) ∧
-        wordBudget P (x.map Ea) (y.map Eb) = (dotAbs x y : ℚ)
-  | [], _, _, _ => ⟨by simp [exactProducts, sumQ], by simp [wordBudget, sumQ]⟩
-  | _ :: _, [], _, _ => ⟨by simp [exactProducts, sumQ], by simp [wordBudget, sumQ]⟩
+        wordDotAbs P (x.map Ea) (y.map Eb) = (dotAbs x y : ℚ)
+  | [], _, _, _ => ⟨by simp [exactProducts, sumQ], by simp [wordDotAbs, sumQ]⟩
+  | _ :: _, [], _, _ => ⟨by simp [exactProducts, sumQ], by simp [wordDotAbs, sumQ]⟩
   | a :: x, c :: y, hx, hy => by
     obtain ⟨h1, h2⟩ := encoded_products Ea Eb x y (fun z hz => hx z (by simp [hz]))
       (fun z hz => hy z (by simp [hz]))
-    unfold exactProducts at h1 ⊢; unfold wordBudget at h2 ⊢
+    unfold exactProducts at h1 ⊢; unfold wordDotAbs at h2 ⊢
     simp only [List.map_cons, List.zipWith_cons_cons, sumQ, h1, h2, hx a (by simp),
       hy c (by simp), dotZ_cons, dotAbs_cons, Rat.intCast_add, Rat.intCast_mul, Rat.natCast_add]
     simp [← Rat.intCast_mul, absQ_intCast]
@@ -323,10 +323,10 @@ theorem encoded_products {P : Profile} (Ea : ℤ → P.a.Word) (Eb : ℤ → P.b
 /-- **Exact engine.** On an exact configuration whose operand formats hold every `b`-bit integer,
 the matrix-core engine is exact on `b`-bit integer vectors whose products total at most `2^24`
 in magnitude. -/
-theorem mcEngine_exactOn {P : Profile} {b : ℕ} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
+theorem mcMultiplier_exactOn {P : Model} {b : ℕ} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) (hn : 0 < P.nfma) (hea : EncodesInts P.a b)
-    (heb : EncodesInts P.b b) : (mcEngine P).ExactOn b (2 ^ 24) := by
-  intro x y hlen hx hy hbudget
+    (heb : EncodesInts P.b b) : (mcMultiplier P).ExactOn b (2 ^ 24) := by
+  intro x y hlen hx hy hbound
   let Ea : ℤ → P.a.Word := fun z => (P.a.encodeExact (z : ℚ)).getD 0
   let Eb : ℤ → P.b.Word := fun z => (P.b.encodeExact (z : ℚ)).getD 0
   have hEa : ∀ z ∈ x, P.a.encodeExact (z : ℚ) = some (Ea z) ∧ IntWord P.a (Ea z) ∧
@@ -353,10 +353,10 @@ theorem mcEngine_exactOn {P : Profile} {b : ℕ} (hP : ExactConfig P) (hfa : sma
     (fun w hw => by obtain ⟨z, hz, rfl⟩ := List.mem_map.mp hw; exact (hEa z hz).2.1)
     (fun w hw => by obtain ⟨z, hz, rfl⟩ := List.mem_map.mp hw; exact (hEb z hz).2.1) hc (by
       rw [hbud, Rat.intCast_zero, show absQ (0 : ℚ) = 0 from rfl]
-      have : ((dotAbs x y : ℕ) : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_le_natCast.mpr hbudget
+      have : ((dotAbs x y : ℕ) : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_le_natCast.mpr hbound
       rw [show (24 : ℤ) = ((24 : ℕ) : ℤ) from rfl, pow2_natCast]
       grind)
-  unfold mcEngine
+  unfold mcMultiplier
   simp only [hmx, hmy, Option.bind_eq_bind, Option.bind_some, hd]
   rw [hv, hprod, Rat.intCast_zero]
   congr 1; grind

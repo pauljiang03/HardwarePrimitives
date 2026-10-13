@@ -211,8 +211,8 @@ precision with exponents from `1 − bias` to `2^eb − 2 − bias`, and the sch
 on its values. -/
 theorem crIEEEWord_eq (F : WordFormat) (hb : 1 < F.eb) {emin emax : ℤ}
     (hemin : emin = 1 - F.bias) (hemax : emax = ((2 ^ F.eb - 2 : ℕ) : ℤ) - F.bias)
-    (hle : emin ≤ emax) {scheme : List (ℤ × ℤ) → List (ℤ × ℤ) → Option ℚ} {eng : Engine}
-    {b smax : ℕ} (heng : ∀ B, eng.ExactOn b B) {ws vs : List ℕ}
+    (hle : emin ≤ emax) {scheme : List (ℤ × ℤ) → List (ℤ × ℤ) → Option ℚ} {mult : MatrixMultiplier}
+    {b smax : ℕ} (hmult : ∀ B, mult.ExactOn b B) {ws vs : List ℕ}
     (hvanish : ∀ x y : List (ℤ × ℤ), (∀ a ∈ x, FormatValue (F.mb + 1) emin emax (entryVal a)) →
       (∀ a ∈ y, FormatValue (F.mb + 1) emin emax (entryVal a)) →
       ∃ s ∈ List.range' 1 smax, vanishInt b s x y = true)
@@ -222,13 +222,13 @@ theorem crIEEEWord_eq (F : WordFormat) (hb : 1 < F.eb) {emin emax : ℤ}
       y.length = ws.length →
       scheme x y = roundRNE (F.mb + 1) emin emax (dot (entryVals x) (entryVals y)))
     (hlen : ws.length = vs.length) :
-    crIEEEWord F scheme (fun x y => (exactSignI eng b smax x y).getD 0) ws vs =
+    crIEEEWord F scheme (fun x y => (exactSignI mult b smax x y).getD 0) ws vs =
       dotIEEE (F.mb + 1) emin emax ((ws.map (decodeWord F)).map IDatum.toFVal)
         ((vs.map (decodeWord F)).map IDatum.toFVal) := by
   unfold crIEEEWord
   rw [crIEEEIW_eq]
   subst hemin hemax
-  exact crIEEEI_exactSign (by omega) hle heng hvanish
+  exact crIEEEI_exactSign (by omega) hle hmult hvanish
     (fun x y hx hy h1 h2 => hscheme x y hx hy (by simpa using h1) (by simpa using h2))
     (fun a ha => by
       obtain ⟨w, _, rfl⟩ := List.mem_map.mp ha

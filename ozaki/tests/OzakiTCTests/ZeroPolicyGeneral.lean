@@ -79,8 +79,8 @@ example : (D.evalWith rne32Q rne32Q).any (fun v =>
       4 * 2 ^ (-24 : ℤ) * ((List.zipWith (· * ·) xs ys).map Rat.abs).sum)) = true := by
   decide +kernel
 
-example : ozaki2Approx exactEngine rne32Q crtAccFP64 z3Basis 22 x4 y4 =
-    ozaki2 exactEngine rne32Q z3Basis 22 x4 y4 := by decide +kernel
+example : ozaki2Approx exactMultiplier rne32Q crtAccFP64 z3Basis 22 x4 y4 =
+    ozaki2 exactMultiplier rne32Q z3Basis 22 x4 y4 := by decide +kernel
 
 example : 2 * ((4 * (2 ^ 22 * 2 ^ 22) : ℕ) : ℚ) +
     2 * (z3Basis.weights.length * 2 ^ (-53 : ℤ) *

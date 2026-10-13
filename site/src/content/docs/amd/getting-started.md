@@ -90,7 +90,7 @@ of being rounded silently.
 | Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Numerics/Format.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Numerics/Format.lean) |
 | Truncation and round-down | `truncGrid`, `truncFrac`, `rdGrid`, `rdFrac` | [Numerics/Grid.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Numerics/Grid.lean) |
 | `fl{·}` | `rne32`, `fl32`, `normExp` | [Numerics/Round32.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/Numerics/Round32.lean) |
-| Profiles | `Profile`, `Accumulation`, `cdna1F16`, … | [MC/Defs.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Defs.lean), [MC/Profiles.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Profiles.lean) |
+| Profiles | `Model`, `Accumulation`, `cdna1F16`, … | [MC/Defs.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Defs.lean), [MC/Profiles.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Models.lean) |
 | Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [MC/Stages.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Stages.lean) |
 | Evaluation | `evalBlock`, `blockBits`, `accumulate` | [MC/Eval.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Eval.lean) |
 | Special values | `blockOutcome`, `Outcome` | [MC/Special.lean](https://github.com/pauljiang03/TC-EFT/blob/main/amd/MatrixCore/MC/Special.lean) |

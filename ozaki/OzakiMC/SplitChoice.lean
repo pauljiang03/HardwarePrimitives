@@ -45,7 +45,7 @@ def mcCandidates (bmax : ℕ) : List ℕ :=
 
 /-- **Every candidate is exact** on vectors of every length, on a path exact on `bmax`-bit slices
 and below. -/
-theorem mcCandidates_exact {P : Profile} {bmax : ℕ} (hP : ∀ b ≤ bmax, ExactEngine P b) :
+theorem mcCandidates_exact {P : Model} {bmax : ℕ} (hP : ∀ b ≤ bmax, ExactMultiplier P b) :
     ∀ b ∈ mcCandidates bmax, ∀ B, (mcSplitK P b).ExactOn b B := by
   intro b hb B
   obtain ⟨hbr, hok⟩ := List.mem_filter.mp hb
@@ -54,7 +54,7 @@ theorem mcCandidates_exact {P : Profile} {bmax : ℕ} (hP : ∀ b ≤ bmax, Exac
   exact mcSplitK_exactOn (hP b (by omega)) hok.2 B
 
 /-- The cheapest candidate for `t` bits at inner dimension `k`; the widest on a tie. -/
-def mcBest (P : Profile) (bmax t k : ℕ) : Option ℕ :=
+def mcBest (P : Model) (bmax t k : ℕ) : Option ℕ :=
   (mcCandidates bmax).foldl (fun acc b => match acc with
     | none => some b
     | some a => if mcCost P.nfma t k b < mcCost P.nfma t k a then some b else some a) none
@@ -113,18 +113,18 @@ exact path at up to `191` slices. -/
 theorem cdna3F16_fp64CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     mcOzaki1CRD cdna3F16 10 ss 191 x y = rne64 (dot x y) :=
-  mcOzaki1CRD_eq (cdna3F16_exactEngine (by decide)) (by decide) ss (by decide) hx hy hlen
+  mcOzaki1CRD_eq (cdna3F16_exactMultiplier (by decide)) (by decide) ss (by decide) hx hy hlen
 
 theorem cdna3F16_fp32CR10 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary32Value a)
     (hy : ∀ a ∈ y, Binary32Value a) (hlen : x.length = y.length) :
     mcOzaki1CRL cdna3F16 10 ss 26 x y = rne32Q (dot x y) :=
-  mcOzaki1CRL_eq (cdna3F16_exactEngine (by decide)) (by decide) ss (by decide) hx hy hlen
+  mcOzaki1CRL_eq (cdna3F16_exactMultiplier (by decide)) (by decide) ss (by decide) hx hy hlen
 
 /-- **Correctly rounded FP64 on the SFMA with `12`-bit slices**, the exact path at up to `162`
 slices (`162 · 13 > 2098`). -/
 theorem sfma_fp64CR12 (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     mcOzaki1CRD sfmaF32 12 ss 162 x y = rne64 (dot x y) :=
-  mcOzaki1CRD_eq (sfmaF32_exactEngine (by decide)) (by decide) ss (by decide) hx hy hlen
+  mcOzaki1CRD_eq (sfmaF32_exactMultiplier (by decide)) (by decide) ss (by decide) hx hy hlen
 
 end Ozaki.MC

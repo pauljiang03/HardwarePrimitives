@@ -1,6 +1,6 @@
 import OzakiTCTests.Z3Matrices
 import OzakiTCTests.Audit
-import OzakiTCTests.AllPaths
+import OzakiTCTests.AllVariants
 import OzakiTCTests.Accuracy
 import OzakiTCTests.ADPMatrices
 import OzakiTCTests.Correct

@@ -53,7 +53,7 @@ open TensorCore
 
 #check overlap_recovery
 #check scalarCorrected_correct
-#check ExtractionGrid.inputBudget_scalarPredicate
+#check ExtractionGrid.inputGrid_scalarPredicate
 #check tcEftEncoded_correct
 #check EFMachine.tcEft_success
 #check EFMachine.tcEft_range_iff

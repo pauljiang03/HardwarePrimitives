@@ -25,7 +25,7 @@ private theorem mapM_origin (f : α → Option β) (xs : List α) (ys : List β)
           exact ⟨a, by simp [ha], hd⟩
 
 /-- Every prepared factor pair comes from an original encoded pair. -/
-theorem prepareProducts_origin (p : Profile) (xs : List (p.Word × p.Word))
+theorem prepareProducts_origin (p : Model) (xs : List (p.Word × p.Word))
     (ys : List (Decoded × Decoded)) (h : prepareProducts p xs = some ys) :
     ∀ y ∈ ys, ∃ x ∈ xs, p.decode x.1 = some y.1 ∧ p.decode x.2 = some y.2 := by
   intro y hy
@@ -41,15 +41,15 @@ theorem prepareProducts_origin (p : Profile) (xs : List (p.Word × p.Word))
       subst y
       exact ⟨rfl, rfl⟩
 
-theorem prepare_fp16_terms_lower (K extra : ℕ) (floor : Option ℤ)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem prepare_fp16_terms_lower (K neab : ℕ) (eAlignMin : Option ℤ)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
     ∀ t ∈ b.terms, t.significand ≠ 0 → -126 ≤ t.unnormalizedExp := by
   unfold prepare at h
   cases hc : decode32 x.c with
   | none => simp [hc] at h
   | some c =>
-    cases hp : prepareProducts (fp16Fp32Profile K extra floor) x.products with
+    cases hp : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
     | none => simp [hc, hp] at h
     | some ps =>
       simp [hc, hp] at h
@@ -89,26 +89,26 @@ theorem maxTermExp_lower (ts : List UnnormalizedProduct) (lower e : ℤ)
   omega
 
 /-- Any floor at most -126 is inactive on a prepared canonical invocation. -/
-theorem canonical_alignExp_floor_inactive (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ -126)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem canonical_alignExp_eAlignMin_inactive (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ -126)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) : b.alignExp = maxTermExp b.terms := by
-  have hprof : b.profile = fp16Fp32Profile K extra floor := by
+  have hprof : b.model = fp16Fp32Model K neab eAlignMin := by
     unfold prepare at h
     cases hc : decode32 x.c with
     | none => simp [hc] at h
     | some c =>
-      cases hp : prepareProducts (fp16Fp32Profile K extra floor) x.products with
+      cases hp : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
       | none => simp [hc, hp] at h
       | some ps => simp [hc, hp] at h; subst b; rfl
-  have hl := prepare_fp16_terms_lower K extra floor x b h
+  have hl := prepare_fp16_terms_lower K neab eAlignMin x b h
   unfold PreparedBlock.alignExp
   rw [hprof]
   cases he : maxTermExp b.terms with
   | none => rfl
   | some e =>
     have hemin := maxTermExp_lower b.terms (-126) e hl he
-    cases floor with
+    cases eAlignMin with
     | none => rfl
     | some f =>
       have hf' := hf f (by simp)

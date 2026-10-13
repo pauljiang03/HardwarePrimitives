@@ -10,7 +10,7 @@ treatment as on the Tensor Core (`OzakiTC.Ozaki2Choice`):
 
 * **split-K** with `b`-bit slices (`2b ≤ 24`), chunks of `chunkLen b` on chained blocks
   (`mcSplitK_exactOn`): `mcBlocks` blocks per product;
-* **two passes** with `b`-bit slices wherever `TwoPassOK P b` (`mcEngine2_exactOn`): every block of
+* **two passes** with `b`-bit slices wherever `TwoPassOK P b` (`mcMultiplier2_exactOn`): every block of
   `N_FMA` products twice, `2 ⌈k / N_FMA⌉` blocks per product.
 
 Every candidate is exact on vectors of every length (`mcRunCandidates_exact`). Ozaki-I costs
@@ -50,9 +50,9 @@ def MCRun.width : MCRun → ℕ
   | .splitK b => b
   | .twoPass b => b
 
-def MCRun.engine (P : Profile) : MCRun → Engine
+def MCRun.multiplier (P : Model) : MCRun → MatrixMultiplier
   | .splitK b => mcSplitK P b
-  | .twoPass _ => mcEngine2 P
+  | .twoPass _ => mcMultiplier2 P
 
 /-- Blocks per product of inner dimension `k` on blocks of `n` products. -/
 def MCRun.blocks (n k : ℕ) : MCRun → ℕ
@@ -67,16 +67,16 @@ def MCRun.cost2 (n t k : ℕ) (r : MCRun) : ℕ := moduliFor r.width t k * r.blo
 
 /-- Every configuration: split-K widths up to `bmax` (`2b ≤ 24`), then two-pass widths up to
 `bmax2` with `TwoPassOK`. -/
-def mcRunCandidates (P : Profile) (bmax bmax2 : ℕ) : List MCRun :=
+def mcRunCandidates (P : Model) (bmax bmax2 : ℕ) : List MCRun :=
   (mcCandidates bmax).map .splitK ++
     ((List.range (bmax2 + 1)).reverse.filter fun b => decide (1 ≤ b) && decide (TwoPassOK P b)).map
       .twoPass
 
 /-- **Every candidate is exact** on vectors of every length. -/
-theorem mcRunCandidates_exact {P : Profile} {bmax bmax2 : ℕ} (hP : ∀ b ≤ bmax, ExactEngine P b)
+theorem mcRunCandidates_exact {P : Model} {bmax bmax2 : ℕ} (hP : ∀ b ≤ bmax, ExactMultiplier P b)
     (hfa : smallSubnormals P.a) (hfb : smallSubnormals P.b) (hn : 0 < P.nfma)
     (henc : ∀ b ≤ bmax2, EncodesInts P.a b ∧ EncodesInts P.b b) :
-    ∀ r ∈ mcRunCandidates P bmax bmax2, ∀ B, (r.engine P).ExactOn r.width B := by
+    ∀ r ∈ mcRunCandidates P bmax bmax2, ∀ B, (r.multiplier P).ExactOn r.width B := by
   intro r hr B
   rcases List.mem_append.mp hr with hr | hr
   · obtain ⟨b, hb, rfl⟩ := List.mem_map.mp hr
@@ -85,14 +85,14 @@ theorem mcRunCandidates_exact {P : Profile} {bmax bmax2 : ℕ} (hP : ∀ b ≤ b
     obtain ⟨hbr, hok⟩ := List.mem_filter.mp hb
     simp only [List.mem_reverse, List.mem_range] at hbr
     simp only [Bool.and_eq_true, decide_eq_true_eq] at hok
-    exact mcEngine2_exactOn hok.2 hfa hfb hn (henc b (by omega)).1 (henc b (by omega)).2 B
+    exact mcMultiplier2_exactOn hok.2 hfa hfb hn (henc b (by omega)).1 (henc b (by omega)).2 B
 
-def mcBest1 (P : Profile) (bmax bmax2 t k : ℕ) : Option MCRun :=
+def mcBest1 (P : Model) (bmax bmax2 t k : ℕ) : Option MCRun :=
   (mcRunCandidates P bmax bmax2).foldl (fun acc r => match acc with
     | none => some r
     | some a => if r.cost1 P.nfma t k < a.cost1 P.nfma t k then some r else some a) none
 
-def mcBest2 (P : Profile) (bmax bmax2 t k : ℕ) : Option MCRun :=
+def mcBest2 (P : Model) (bmax bmax2 t k : ℕ) : Option MCRun :=
   ((mcRunCandidates P bmax bmax2).filter fun r => decide (0 < moduliFor r.width t k)).foldl
     (fun acc r => match acc with
       | none => some r
@@ -159,7 +159,7 @@ theorem cdna3F16_fp64CR2 {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     mcOzaki2CRD cdna3F16 [(moduliBasis 10 12, 55)] 10 191 x y = rne64 (dot x y) := by
   have hv : (moduliBasis 10 12).Valid := by decide +kernel
   have hm : moduliFor 10 53 1024 = 12 := by decide +kernel
-  refine mcOzaki2CRD_eq (cdna3F16_exactEngine (by decide)) (by decide) (by decide) ?_ hx hy hlen
+  refine mcOzaki2CRD_eq (cdna3F16_exactMultiplier (by decide)) (by decide) (by decide) ?_ hx hy hlen
   intro c hc
   rw [List.mem_singleton.mp hc]
   refine ⟨hv, moduliBasis_le 10 12, ?_⟩
@@ -170,7 +170,7 @@ theorem cdna3F16_fp64CR2 {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
 path at up to `84` slices (`84 · 25 > 2098`), every length. -/
 theorem sfma_fp64CR2pass (ss : List ℕ) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
-    ozaki1CRE (mcEngine2 sfmaF32) rne64 24 ss 84 x y = rne64 (dot x y) :=
+    ozaki1CRE (mcMultiplier2 sfmaF32) rne64 24 ss 84 x y = rne64 (dot x y) :=
   ozaki1CRE_eq rne64_nearest rne64_intervals (sfma_exactOn2 _) ss hlen (Nat.le_refl _)
     (vanish64 (by omega) (by decide) hx hy)
 

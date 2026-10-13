@@ -57,10 +57,10 @@ example : fl32 true (-p2 (-130)) = some 0x80000000 ∧ fl32 false (-p2 (-130)) =
   decide +kernel
 
 /-- Profiles by architecture and input format. -/
-example : Architecture.profile .cdna1 .fp16 = some cdna1F16 ∧
-    Architecture.profile .cdna2 .bf16_1k = some cdna2BF16_1k ∧
-    Architecture.profile .cdna3 (.fp8 e4m3fnuz e5m2fnuz) = some (cdna3FP8 e4m3fnuz e5m2fnuz) ∧
-    Architecture.profile .cdna1 .xf32 = none ∧ Architecture.ofDevice "MI300X" = some .cdna3 := by
+example : Architecture.model .cdna1 .fp16 = some cdna1F16 ∧
+    Architecture.model .cdna2 .bf16_1k = some cdna2BF16_1k ∧
+    Architecture.model .cdna3 (.fp8 e4m3fnuz e5m2fnuz) = some (cdna3FP8 e4m3fnuz e5m2fnuz) ∧
+    Architecture.model .cdna1 .xf32 = none ∧ Architecture.ofDevice "MI300X" = some .cdna3 := by
   decide
 
 end MatrixCoreTests.Formats

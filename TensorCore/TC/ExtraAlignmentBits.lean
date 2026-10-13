@@ -1,4 +1,4 @@
-import TensorCore.TC.CanonicalFloor
+import TensorCore.TC.CanonicalEAlignMin
 import TensorCore.TC.ExactAlignment
 import TensorCore.TC.AcceptedDomain
 
@@ -7,8 +7,8 @@ import TensorCore.TC.AcceptedDomain
 namespace TensorCore
 
 /-- Uniform finite FP16-product/FP32-c metadata bounds. -/
-theorem prepare_fp16_term_metadata (K extra : ℕ) (floor : Option ℤ)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem prepare_fp16_term_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
     ∀ t ∈ b.terms, t.significand ≠ 0 →
       -149 ≤ t.unnormalizedExp - t.mantissaBits ∧ t.unnormalizedExp ≤ 127 := by
@@ -16,7 +16,7 @@ theorem prepare_fp16_term_metadata (K extra : ℕ) (floor : Option ℤ)
   cases hc : decode32 x.c with
   | none => simp [hc] at h
   | some c =>
-    cases hp : prepareProducts (fp16Fp32Profile K extra floor) x.products with
+    cases hp : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
     | none => simp [hc, hp] at h
     | some ps =>
       simp [hc, hp] at h
@@ -45,8 +45,8 @@ theorem prepare_fp16_term_metadata (K extra : ℕ) (floor : Option ℤ)
         omega
 
 /-- FP16 products have much narrower scale/grid support than FP32 c. -/
-theorem prepare_fp16_products_metadata (K extra : ℕ) (floor : Option ℤ)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem prepare_fp16_products_metadata (K neab : ℕ) (eAlignMin : Option ℤ)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
     ∀ t ∈ b.products.map (fun (a, b) => unnormalizedMul a b), t.significand ≠ 0 →
       -48 ≤ t.unnormalizedExp - t.mantissaBits ∧ t.unnormalizedExp ≤ 30 := by
@@ -54,7 +54,7 @@ theorem prepare_fp16_products_metadata (K extra : ℕ) (floor : Option ℤ)
   cases hc : decode32 x.c with
   | none => simp [hc] at h
   | some c =>
-    cases hp : prepareProducts (fp16Fp32Profile K extra floor) x.products with
+    cases hp : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
     | none => simp [hc, hp] at h
     | some ps =>
       simp [hc, hp] at h
@@ -76,20 +76,20 @@ theorem prepare_fp16_products_metadata (K extra : ℕ) (floor : Option ℤ)
       omega
 
 /-- A sharper sufficient threshold for floors at most 30, including all source canonical profiles. -/
-theorem canonical_source_padding_exact (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 30) (hextra : 156 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem canonical_source_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hneab : 156 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (hp : prepare x = some b) : b.AlignmentExact := by
-  have hprof := prepare_profile hp
-  have hm := prepare_fp16_term_metadata K extra floor x b hp
-  have hpm := prepare_fp16_products_metadata K extra floor x b hp
+  have hprof := prepare_model hp
+  have hm := prepare_fp16_term_metadata K neab eAlignMin x b hp
+  have hpm := prepare_fp16_products_metadata K neab eAlignMin x b hp
   have hu := alignExp_upper b 127 (by
     intro f hmem
-    have hf' := hf f (by simpa [hprof, fp16Fp32Profile] using hmem)
+    have hf' := hf f (by simpa [hprof, fp16Fp32Model] using hmem)
     omega) (by intro t ht hnz; exact (hm t ht hnz).2)
   have huc := alignExp_upper b (max b.c.unnormalizedExp 30) (by
     intro f hmem
-    have hf' := hf f (by simpa [hprof, fp16Fp32Profile] using hmem)
+    have hf' := hf f (by simpa [hprof, fp16Fp32Model] using hmem)
     omega) (by
       intro t ht hnz
       simp only [PreparedBlock.terms, List.mem_cons] at ht
@@ -103,102 +103,102 @@ theorem canonical_source_padding_exact (K extra : ℕ) (floor : Option ℤ)
   obtain ⟨alignExp, he, _⟩ := alignExp_term b t ht hnz
   have hemax := hu alignExp (by simp [he])
   have hec := huc alignExp (by simp [he])
-  have hq : b.alignGridExponent = alignExp - (23 + extra : ℕ) := by
-    simp [PreparedBlock.alignGridExponent, he, hprof, fp16Fp32Profile]
+  have hq : b.alignGridExponent = alignExp - (23 + neab : ℕ) := by
+    simp [PreparedBlock.alignGridExponent, he, hprof, fp16Fp32Model]
   rw [hq]
   simp only [PreparedBlock.terms, List.mem_cons] at ht
   rcases ht with ht | ht
   · subst t
     have hc := classifyNat_metadata fp32 (by decide) x.c.toNat b.c (prepare_c hp) hnz
     change b.c.mantissaBits = 23 ∧ -126 ≤ b.c.unnormalizedExp ∧ b.c.unnormalizedExp ≤ 127 at hc
-    change alignExp - (23 + extra : ℕ) ≤ b.c.unnormalizedExp - b.c.mantissaBits
+    change alignExp - (23 + neab : ℕ) ≤ b.c.unnormalizedExp - b.c.mantissaBits
     omega
   · have hpt := (hpm t ht hnz).1
     omega
 
-theorem canonical_source_padding_accumulator (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 30) (hextra : 156 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem canonical_source_neab_accumulator (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hneab : 156 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (hp : prepare x = some b) : b.accumulator = b.exactDot :=
-  exact_alignment_accumulator b (canonical_source_padding_exact K extra floor hf hextra x b hp)
+  exact_alignment_accumulator b (canonical_source_neab_exact K neab eAlignMin hf hneab x b hp)
 
-theorem canonical_source_padding_output (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 30) (hextra : 156 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (t : BlockTrace)
+theorem canonical_source_neab_output (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hneab : 156 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (t : BlockTrace)
     (he : evalBlock x = .ok t) :
     round32 .truncate t.block.exactDot = some t.output.bits :=
-  (evalBlock_exact_alignment he (canonical_source_padding_exact K extra floor hf hextra x
+  (evalBlock_exact_alignment he (canonical_source_neab_exact K neab eAlignMin hf hneab x
     t.block (evalBlock_prepared he))).2
 
-theorem canonical_source_padding_success_iff (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 30) (hextra : 156 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) :
+theorem canonical_source_neab_success_iff (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hneab : 156 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) :
     (∃ t, evalBlock x = .ok t) ↔ x.products.length = K ∧
       ∃ b, prepare x = some b ∧ absQ b.exactDot ≤ maxFinite32 := by
   rw [evalBlock_success_iff]
   constructor
   · rintro ⟨hs, b, hp, hr⟩
-    rw [canonical_source_padding_accumulator K extra floor hf hextra x b hp] at hr
+    rw [canonical_source_neab_accumulator K neab eAlignMin hf hneab x b hp] at hr
     exact ⟨hs, b, hp, hr⟩
   · rintro ⟨hs, b, hp, hr⟩
     refine ⟨hs, b, hp, ?_⟩
-    rwa [canonical_source_padding_accumulator K extra floor hf hextra x b hp]
+    rwa [canonical_source_neab_accumulator K neab eAlignMin hf hneab x b hp]
 
 /-- A conservative uniform padding threshold. -/
-theorem canonical_padding_exact (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 127) (hextra : 253 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem canonical_neab_exact (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 127) (hneab : 253 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (hp : prepare x = some b) : b.AlignmentExact := by
-  have hm := prepare_fp16_term_metadata K extra floor x b hp
+  have hm := prepare_fp16_term_metadata K neab eAlignMin x b hp
   have hu := maxTermExp_upper b.terms 127 (by intro t ht hnz; exact (hm t ht hnz).2)
-  have hprof := prepare_profile hp
+  have hprof := prepare_model hp
   intro t ht hnz
   obtain ⟨alignExp, he, _⟩ := alignExp_term b t ht hnz
   have heta : alignExp ≤ 127 := by
     have he' := he
-    simp only [PreparedBlock.alignExp, hprof, fp16Fp32Profile] at he'
+    simp only [PreparedBlock.alignExp, hprof, fp16Fp32Model] at he'
     cases hs : maxTermExp b.terms with
-    | none => simp [Profile.applyFloor, hs] at he'
+    | none => simp [Model.applyEAlignMin, hs] at he'
     | some e =>
       have hemax := hu e (by simp [hs])
-      cases floor with
-      | none => simp [Profile.applyFloor, hs] at he'; omega
+      cases eAlignMin with
+      | none => simp [Model.applyEAlignMin, hs] at he'; omega
       | some f =>
         have hf' := hf f (by simp)
-        simp [Profile.applyFloor, hs] at he'
+        simp [Model.applyEAlignMin, hs] at he'
         omega
   have htmin := (hm t ht hnz).1
   simp only [PreparedBlock.alignGridExponent, he, Option.getD_some,
-    hprof, fp16Fp32Profile]
+    hprof, fp16Fp32Model]
   omega
 
-theorem canonical_padding_accumulator (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 127) (hextra : 253 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (b : PreparedBlock)
+theorem canonical_neab_accumulator (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 127) (hneab : 253 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
     (hp : prepare x = some b) : b.accumulator = b.exactDot :=
-  exact_alignment_accumulator b (canonical_padding_exact K extra floor hf hextra x b hp)
+  exact_alignment_accumulator b (canonical_neab_exact K neab eAlignMin hf hneab x b hp)
 
-theorem canonical_padding_output (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 127) (hextra : 253 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) (t : BlockTrace)
+theorem canonical_neab_output (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 127) (hneab : 253 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (t : BlockTrace)
     (he : evalBlock x = .ok t) :
     round32 .truncate t.block.exactDot = some t.output.bits :=
-  (evalBlock_exact_alignment he (canonical_padding_exact K extra floor hf hextra x
+  (evalBlock_exact_alignment he (canonical_neab_exact K neab eAlignMin hf hneab x
     t.block (evalBlock_prepared he))).2
 
 /-- At sufficient padding, acceptance depends on the ideal sum's range directly. -/
-theorem canonical_padding_success_iff (K extra : ℕ) (floor : Option ℤ)
-    (hf : ∀ f ∈ floor, f ≤ 127) (hextra : 253 ≤ extra)
-    (x : BlockInput (fp16Fp32Profile K extra floor)) :
+theorem canonical_neab_success_iff (K neab : ℕ) (eAlignMin : Option ℤ)
+    (hf : ∀ f ∈ eAlignMin, f ≤ 127) (hneab : 253 ≤ neab)
+    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) :
     (∃ t, evalBlock x = .ok t) ↔ x.products.length = K ∧
       ∃ b, prepare x = some b ∧ absQ b.exactDot ≤ maxFinite32 := by
   rw [evalBlock_success_iff]
   constructor
   · rintro ⟨hs, b, hp, hr⟩
-    rw [canonical_padding_accumulator K extra floor hf hextra x b hp] at hr
+    rw [canonical_neab_accumulator K neab eAlignMin hf hneab x b hp] at hr
     exact ⟨hs, b, hp, hr⟩
   · rintro ⟨hs, b, hp, hr⟩
     refine ⟨hs, b, hp, ?_⟩
-    rwa [canonical_padding_accumulator K extra floor hf hextra x b hp]
+    rwa [canonical_neab_accumulator K neab eAlignMin hf hneab x b hp]
 
 end TensorCore

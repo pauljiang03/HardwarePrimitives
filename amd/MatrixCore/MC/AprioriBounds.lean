@@ -73,7 +73,7 @@ theorem normaliseRD_error (x : ℚ) : absQ (x - normaliseRD 31 x) ≤ pow2 (-31)
 
 /-! ## SFMA and CDNA 1 -/
 
-theorem correctRounding_apriori {P : Profile} (hacc : P.accumulation = .correctRounding)
+theorem correctRounding_apriori {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     absQ (t.prepared.exact - wordValue t.d) ≤ pow2 (-24) * t.prepared.absSum + pow2 (-150) := by
@@ -94,7 +94,7 @@ theorem gridTerm_nonneg (o : Option ℤ) : 0 ≤ gridTerm o := by
   · exact Rat.le_refl
   · exact Rat.le_of_lt (pow2_pos _)
 
-theorem productSum_none_exact (P : Profile) {ps : List Unpacked}
+theorem productSum_none_exact (P : Model) {ps : List Unpacked}
     (h : (productSum P ps).1 = none) : (productSum P ps).2 = 0 ∧ sumQ (ps.map Unpacked.value) = 0 := by
   unfold productSum at h ⊢
   cases hacc : P.accumulation <;> simp only [hacc] at h ⊢
@@ -134,7 +134,7 @@ theorem lin_output {D eS eD S A B G k : ℚ} (h1 : D ≤ eS + eD)
     D ≤ (1 / 8388608) * A + B + G + 128 * k := by grind
 
 /-- The error of `S_acc` from the inputs alone. -/
-theorem alignedAccumulation_apriori {P : Profile} (hL : LateProfile P) (x : Prepared)
+theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared)
     {eC : ℤ} (hce : cExp P x.c = some eC) (h32 : C32 x.c.value eC) (hn : x.p.length ≤ 16) :
     absQ (x.exact - alignedAccumulation P x) ≤
       (x.p.length + 3) * gridTerm (productSum P x.p).1 + pow2 (-30) * x.absSum + pow2 (-156) := by
@@ -235,7 +235,7 @@ theorem alignedAccumulation_apriori {P : Profile} (hL : LateProfile P) (x : Prep
 
 /-- **CDNA 3 from the inputs.** `|exact − d| ≤ 2^-23 (Σ|p_ℓ| + |c|) + (n + 4)·2^(e_max − 24) +
 2^-149`. -/
-theorem aligned_apriori {P : Profile} (hL : LateProfile P)
+theorem aligned_apriori {P : Model} (hL : LateModel P)
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     (hsub : P.subnormals = true) {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     absQ (t.prepared.exact - wordValue t.d) ≤ pow2 (-23) * t.prepared.absSum +
@@ -339,48 +339,48 @@ theorem sumQ_absQ_nonneg (xs : List ℚ) : 0 ≤ sumQ (xs.map absQ) := by
   | nil => exact Rat.le_refl
   | cons x xs ih => simp only [List.map_cons, sumQ]; have := absQ_nonneg x; grind
 
-theorem pairTree_short (ftz : Bool) (d : ℕ) {xs : List ℚ} {t : ℚ} (hl : xs.length ≤ 1)
-    (h : pairTree ftz d xs = some t) : absQ (sumQ xs - t) = 0 := by
+theorem pairwiseGroupSum_short (ftz : Bool) (d : ℕ) {xs : List ℚ} {t : ℚ} (hl : xs.length ≤ 1)
+    (h : pairwiseGroupSum ftz d xs = some t) : absQ (sumQ xs - t) = 0 := by
   match xs, hl with
-  | [], _ => simp [pairTree] at h; subst h; decide +kernel
+  | [], _ => simp [pairwiseGroupSum] at h; subst h; decide +kernel
   | [x], _ =>
-    simp only [pairTree, Option.some.injEq] at h; subst h
+    simp only [pairwiseGroupSum, Option.some.injEq] at h; subst h
     simp only [sumQ]
     rw [show ∀ y : ℚ, y + 0 - y = 0 from fun y => by grind]; decide +kernel
 
 /-- **Pairwise tree from its leaves.** A tree of height `h` is within
 `γ_h Σ|x| + κ_h η` of the exact sum of its leaves. -/
-theorem pairTree_apriori (ftz : Bool) : ∀ (h d : ℕ) (xs : List ℚ) (t : ℚ), xs.length ≤ 2 ^ h →
-    pairTree ftz d xs = some t →
+theorem pairwiseGroupSum_apriori (ftz : Bool) : ∀ (h d : ℕ) (xs : List ℚ) (t : ℚ), xs.length ≤ 2 ^ h →
+    pairwiseGroupSum ftz d xs = some t →
       absQ (sumQ xs - t) ≤ gam h * sumQ (xs.map absQ) + kap h * eta ftz := by
   intro h
   induction h with
   | zero =>
     intro d xs t hl ht
-    rw [pairTree_short ftz d (by simpa using hl) ht]
+    rw [pairwiseGroupSum_short ftz d (by simpa using hl) ht]
     exact Rat.add_nonneg (Rat.mul_nonneg (gam_nonneg 0) (sumQ_absQ_nonneg xs))
       (Rat.mul_nonneg (kap_nonneg 0) (eta_nonneg ftz))
   | succ h ih =>
     intro d xs t hl ht
     by_cases hshort : xs.length ≤ 1
-    · rw [pairTree_short ftz d hshort ht]
+    · rw [pairwiseGroupSum_short ftz d hshort ht]
       exact Rat.add_nonneg (Rat.mul_nonneg (gam_nonneg (h + 1)) (sumQ_absQ_nonneg xs))
         (Rat.mul_nonneg (kap_nonneg (h + 1)) (eta_nonneg ftz))
     · match xs, d, hshort, ht with
       | [], _, hs, _ => simp at hs
       | [_], _, hs, _ => simp at hs
-      | x :: y :: rest, 0, _, ht => simp [pairTree] at ht
+      | x :: y :: rest, 0, _, ht => simp [pairwiseGroupSum] at ht
       | x :: y :: rest, d + 1, _, ht =>
         generalize hxs : x :: y :: rest = xs at ht hl ⊢
-        have htr : pairTree ftz (d + 1) xs = (do
-            let u ← pairTree ftz d (xs.take (xs.length / 2))
-            let v ← pairTree ftz d (xs.drop (xs.length / 2))
+        have htr : pairwiseGroupSum ftz (d + 1) xs = (do
+            let u ← pairwiseGroupSum ftz d (xs.take (xs.length / 2))
+            let v ← pairwiseGroupSum ftz d (xs.drop (xs.length / 2))
             flValue ftz (u + v)) := by subst hxs; rfl
         rw [htr] at ht
-        cases hu : pairTree ftz d (xs.take (xs.length / 2)) with
+        cases hu : pairwiseGroupSum ftz d (xs.take (xs.length / 2)) with
         | none => rw [hu] at ht; simp at ht
         | some u =>
-          cases hv : pairTree ftz d (xs.drop (xs.length / 2)) with
+          cases hv : pairwiseGroupSum ftz d (xs.drop (xs.length / 2)) with
           | none => rw [hu, hv] at ht; simp at ht
           | some v =>
             rw [hu, hv] at ht
@@ -470,7 +470,7 @@ theorem lin_pairwise {X F d1 d2 d3 Pp C Q Tt Sv E k L : ℚ}
 
 /-- **CDNA 2 from the inputs** (`N_FMA ≤ 4`). With `x'` the inputs after flushing subnormals,
 `|exact − d| ≤ |exact − exact'| + 2^-21 (Σ|p'_ℓ| + |c'|) + 2^-120`. -/
-theorem pairwise_apriori {P : Profile} (hacc : P.accumulation = .pairWiseSum) (hn : P.nfma ≤ 4)
+theorem pairwise_apriori {P : Model} (hacc : P.accumulation = .pairWiseSum) (hn : P.nfma ≤ 4)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     absQ (t.prepared.exact - wordValue t.d) ≤
       absQ (t.prepared.exact - (if P.subnormals then t.prepared else t.prepared.flushed).exact) +
@@ -499,17 +499,17 @@ theorem pairwise_apriori {P : Profile} (hacc : P.accumulation = .pairWiseSum) (h
   | none => rw [hm] at hs; simp at hs
   | some ps =>
     rw [hm] at hs
-    cases ht : pairTree ftz ps.length ps with
+    cases ht : pairwiseGroupSum ftz ps.length ps with
     | none => simp [ht] at hs
     | some tt =>
-      change (pairTree ftz ps.length ps).bind (fun t => some (x'.c.value + t)) = some t.sAcc at hs
+      change (pairwiseGroupSum ftz ps.length ps).bind (fun t => some (x'.c.value + t)) = some t.sAcc at hs
       rw [ht] at hs
       simp only [Option.bind_some, Option.some.injEq] at hs
       have hpl : ps.length = x'.p.length := mapM_length_option hm
       have e1 := mapM_flValue_error ftz x'.p ps hm
       have e1b := sumQ_flBound_le ftz x'.p
       have eQ := mapM_flValue_abs ftz x'.p ps hm
-      have e2 := pairTree_apriori ftz 2 ps.length ps tt (by rw [hpl]; simpa using hlen') ht
+      have e2 := pairwiseGroupSum_apriori ftz 2 ps.length ps tt (by rw [hpl]; simpa using hlen') ht
       have g2 : gam 2 = 33554433 / 281474976710656 := by unfold gam; decide +kernel
       have k2 : kap 2 = 3 + 1 / 8388608 := by simp only [kap]; decide +kernel
       have u24 : pow2 (-24) = 1 / 16777216 := by decide +kernel

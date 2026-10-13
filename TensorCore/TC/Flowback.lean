@@ -8,25 +8,25 @@ import TensorCore.TC.ErrorBounds
 namespace TensorCore
 
 /-- Definition III.2: for fixed decoded products, a smaller finite accumulator input never produces a larger accepted output. -/
-def MonotoneInAccumulator (prof : Profile) (products : List (Decoded × Decoded)) : Prop :=
+def MonotoneInAccumulator (prof : Model) (products : List (Decoded × Decoded)) : Prop :=
   ∀ (c c' : Decoded) (t t' : BlockTrace),
     evalPrepared ⟨prof, products, c⟩ = .ok t → evalPrepared ⟨prof, products, c'⟩ = .ok t' →
     c'.value < c.value → t'.output.value ≤ t.output.value
 
 /-- Definition III.3: the flowback `ω = Σᵢ (trunc_{q'A}(Tᵢ) − trunc_{qA}(Tᵢ))` of the products between the alignment grids selected by `c` and by `c'`. -/
-def flowback (prof : Profile) (products : List (Decoded × Decoded)) (c c' : Decoded) : ℚ :=
+def flowback (prof : Model) (products : List (Decoded × Decoded)) (c c' : Decoded) : ℚ :=
   sumQ (products.map fun (a, b) =>
     truncGrid (unnormalizedMul a b).value (PreparedBlock.mk prof products c').alignGridExponent -
       truncGrid (unnormalizedMul a b).value (PreparedBlock.mk prof products c).alignGridExponent)
 
 /-- Definition III.3: `ΔA = trunc_{qA}(c) − trunc_{q'A}(c')`. -/
-def accumulatorShift (prof : Profile) (products : List (Decoded × Decoded)) (c c' : Decoded) :
+def accumulatorShift (prof : Model) (products : List (Decoded × Decoded)) (c c' : Decoded) :
     ℚ :=
   truncGrid c.value (PreparedBlock.mk prof products c).alignGridExponent -
     truncGrid c'.value (PreparedBlock.mk prof products c').alignGridExponent
 
 /-- `A'acc = Aacc + ω − ΔA`. -/
-theorem perturbed_accumulator (prof : Profile) (products : List (Decoded × Decoded))
+theorem perturbed_accumulator (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) :
     (PreparedBlock.mk prof products c').accumulator =
       (PreparedBlock.mk prof products c).accumulator + flowback prof products c c' -
@@ -185,7 +185,7 @@ theorem signedRounded_trunc_of_finite (x : ℚ) (h : FiniteValue32 x) :
     exact (Option.some.inj hd').symm
 
 /-- Equation 6: the accepted outputs compare exactly as the truncations of `Aacc` and `Aacc + ω − ΔA`. -/
-theorem output_condition (prof : Profile) (products : List (Decoded × Decoded))
+theorem output_condition (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
     (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t') :
@@ -197,7 +197,7 @@ theorem output_condition (prof : Profile) (products : List (Decoded × Decoded))
     perturbed_accumulator prof products c c']
 
 /-- `ω > ΔA` is necessary for an output increase. -/
-theorem flowback_necessary (prof : Profile) (products : List (Decoded × Decoded))
+theorem flowback_necessary (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
     (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t')
@@ -216,7 +216,7 @@ theorem flowback_necessary (prof : Profile) (products : List (Decoded × Decoded
   grind
 
 /-- `ω > ΔA` is sufficient when both accumulators are representable. -/
-theorem flowback_sufficient (prof : Profile) (products : List (Decoded × Decoded))
+theorem flowback_sufficient (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
     (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t')
@@ -230,7 +230,7 @@ theorem flowback_sufficient (prof : Profile) (products : List (Decoded × Decode
   grind
 
 /-- When both accumulator inputs are retained exactly on their grids, `ΔA = c − c'`. -/
-theorem accumulatorShift_of_exact (prof : Profile) (products : List (Decoded × Decoded))
+theorem accumulatorShift_of_exact (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded)
     (hc : truncGrid c.value (PreparedBlock.mk prof products c).alignGridExponent = c.value)
     (hc' : truncGrid c'.value (PreparedBlock.mk prof products c').alignGridExponent = c'.value) :
@@ -239,8 +239,8 @@ theorem accumulatorShift_of_exact (prof : Profile) (products : List (Decoded × 
   rw [hc, hc']
 
 /-- Theorem III.4 as a failure of Definition III.2: the construction's products are not monotone in the accumulator input once `K ≥ 3·2^p`. -/
-theorem construction_not_monotone (prof : Profile) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.alignFloor, f ≤ -1)
+theorem construction_not_monotone (prof : Model) (p K : ℕ) (da db : Decoded)
+    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (unnormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (unnormalizedMul da db).unnormalizedExp ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hthr : 3 * 2 ^ p ≤ K) :
     ¬ MonotoneInAccumulator prof (List.replicate K (da, db)) := by

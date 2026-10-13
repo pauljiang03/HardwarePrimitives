@@ -15,8 +15,8 @@ theorem zero_product_canonical :
       .error .wrongProductCount := by decide +kernel
 
 theorem fused_requires_one_product :
-    ¬ ({v100Invocation with products := 0, accumulation := .fused} : InvocationSpec).Valid ∧
-    ¬ ({v100Invocation with products := 2, accumulation := .fused} : InvocationSpec).Valid := by
+    ¬ ({v100Invocation with nfma := 0, accumulation := .fused} : InvocationSpec).Valid ∧
+    ¬ ({v100Invocation with nfma := 2, accumulation := .fused} : InvocationSpec).Valid := by
   decide +kernel
 
 theorem finite_range_rounding_policy :

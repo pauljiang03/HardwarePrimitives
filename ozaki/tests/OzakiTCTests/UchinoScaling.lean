@@ -79,10 +79,10 @@ theorem hP1g : GridMultiple 42 P1 := ⟨(P1 * 2 ^ (-42 : ℤ)).floor, by decide 
 `ozaki2Uchino_scaled_error` holds, and the computed value is within `2^-45` of `x · y` (the
 truncation error dominates). -/
 theorem e2e (v : ℚ)
-    (hv : ozaki2Uchino exactEngine (roundRNE 53 (-1022) 1023) B G1 P1 P2 Pinv s2 (6 + 41) (7 + 41)
+    (hv : ozaki2Uchino exactMultiplier (roundRNE 53 (-1022) 1023) B G1 P1 P2 Pinv s2 (6 + 41) (7 + 41)
       x y = some v) :
     Rat.abs (v - dot x y) ≤ 2 ^ (-45 : ℤ) := by
-  refine Rat.le_trans (ozaki2Uchino_scaled_error (exactEngine_exactOn 7 (4 * (2 ^ 7 * 2 ^ 7)))
+  refine Rat.le_trans (ozaki2Uchino_scaled_error (exactMultiplier_exactOn 7 (4 * (2 ^ 7 * 2 ^ 7)))
     (by decide) (by decide) rfl rfl hB (by decide +kernel) (by decide +kernel) (by decide +kernel)
     (M := (P : ℚ)) (by decide +kernel) (by decide +kernel) (g0 := 42) (by decide +kernel)
     (by decide) (by decide) (K := 2 ^ (12 : ℤ)) (by decide +kernel) (by decide +kernel)
@@ -94,7 +94,7 @@ theorem e2e (v : ℚ)
   decide +kernel
 
 /-- The algorithm returns a value, and it is that close. -/
-example : ∃ v, ozaki2Uchino exactEngine (roundRNE 53 (-1022) 1023) B G1 P1 P2 Pinv s2 (6 + 41)
+example : ∃ v, ozaki2Uchino exactMultiplier (roundRNE 53 (-1022) 1023) B G1 P1 P2 Pinv s2 (6 + 41)
     (7 + 41) x y = some v ∧ Rat.abs (v - dot x y) ≤ 2 ^ (-45 : ℤ) := by
   decide +kernel
 

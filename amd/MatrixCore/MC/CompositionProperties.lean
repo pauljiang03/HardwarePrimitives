@@ -26,7 +26,7 @@ theorem padToBlocks_exact (n : ℕ) (xs : List (BitVec w)) (h : xs.length = n) :
   unfold padToBlocks; rw [h]; simp
 
 /-- An inner product with exactly `N_FMA` products is one block. -/
-theorem dotBits_single (P : Profile) (hn : 0 < P.nfma) (a : List P.a.Word) (b : List P.b.Word)
+theorem dotBits_single (P : Model) (hn : 0 < P.nfma) (a : List P.a.Word) (b : List P.b.Word)
     (c : F32) (ha : a.length = P.nfma) (hb : b.length = P.nfma) :
     dotBits P a b c = blockBits (P := P) ⟨a, b, c⟩ := by
   unfold dotBits blocks

@@ -79,8 +79,8 @@ theorem exactTerms_binary32 {b s : ℕ} {x y : List ℚ} (hk : x.length * (2 ^ b
 instance grids in range, `exactTerms_binary32`), the binary32 recombination adds at most
 `(n − 1) 2^-24 Σ|tⱼ|` (Jeannerod and Rump), and the slicing at most
 `(s + 1) Σᵢ min(2|xᵢyᵢ|, 2^(E+F−s(b+1)))`. -/
-theorem tcOzaki1_error_jr {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
+theorem tcOzaki1_error_jr {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hterms : ∀ t ∈ exactTerms b s x y, Binary32Value t) {v : ℚ}
     (hv : tcOzaki1 p b s x y = some v) :
@@ -88,7 +88,7 @@ theorem tcOzaki1_error_jr {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Hold
       (((trianglePairs s).length - 1 : ℕ) : ℚ) * 2 ^ (-24 : ℤ) *
           ((exactTerms b s x y).map Rat.abs).sum +
         ((s + 1 : ℕ) : ℚ) * capSum (2 ^ (splitExp b x + splitExp b y - s * (b + 1))) x y :=
-  ozaki1_error_jr (rnd := rne32Q) (tcEngine_exactOn hp hh hK) (Rat.le_of_lt (two_pow_pos _))
+  ozaki1_error_jr (rnd := rne32Q) (tcMultiplier_exactOn hp hh hK) (Rat.le_of_lt (two_pow_pos _))
     (roundRNE_jrAdd (p := 24) (emin := -126) (emax := 127) (by decide) (by decide)) hlen hk hterms hv
 
 end Ozaki.TC

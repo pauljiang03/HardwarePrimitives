@@ -16,7 +16,7 @@ theorem fl32_isSome_iff (ftz : Bool) (x : ℚ) :
   rw [← rne32_isSome_iff]; unfold fl32; cases rne32 x <;> simp
 
 /-- Every accepted evaluation decomposes into its stages. -/
-theorem evalBlock_ok {P : Profile} {x : BlockInput P} {t : BlockTrace P}
+theorem evalBlock_ok {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) :
     x.a.length = P.nfma ∧ x.b.length = P.nfma ∧ prepare x = some t.prepared ∧
       accumulate P t.prepared = .ok t.sAcc ∧ fl32 (!P.subnormals) t.sAcc = some t.d := by
@@ -38,7 +38,7 @@ theorem evalBlock_ok {P : Profile} {x : BlockInput P} {t : BlockTrace P}
           exact ⟨by omega, by omega, hpx, hs, hd⟩
 
 /-- Exact accepted domain of `evalBlock`. -/
-theorem evalBlock_success_iff {P : Profile} (x : BlockInput P) :
+theorem evalBlock_success_iff {P : Model} (x : BlockInput P) :
     (∃ t, evalBlock x = .ok t) ↔
       x.a.length = P.nfma ∧ x.b.length = P.nfma ∧
         ∃ px s, prepare x = some px ∧ accumulate P px = .ok s ∧ absQ s < overflowThreshold32 := by
@@ -57,7 +57,7 @@ theorem evalBlock_success_iff {P : Profile} (x : BlockInput P) :
 
 /-- The output of an accepted block on a profile with subnormals is the nearest binary32 value to
 `S_acc`, ties to even. -/
-theorem evalBlock_nearestEven {P : Profile} {x : BlockInput P} {t : BlockTrace P}
+theorem evalBlock_nearestEven {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) (hs : P.subnormals = true) : NearestEven32 t.sAcc t.d := by
   obtain ⟨_, _, _, _, hd⟩ := evalBlock_ok h
   rw [hs] at hd

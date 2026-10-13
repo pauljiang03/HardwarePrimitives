@@ -33,7 +33,7 @@ theorem fp32Add_succeeds : AddSucceeds fp32Add maxFinite32 := by
   rw [fp32Add_eq_addOfRound]; exact addOfRound_succeeds round32Value_succeeds
 
 /-- **Ozaki-I returns a value on the matrix core** (`[H.1]`). -/
-theorem mcOzaki1_isSome {P : Profile} {b : ℕ} (hP : ExactEngine P b) (s : ℕ) {x y : List ℚ}
+theorem mcOzaki1_isSome {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (s : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hL : (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length *
         ((trianglePairs s).length * (x.length * 2 ^ (splitExp b x + splitExp b y))) +
@@ -44,7 +44,7 @@ theorem mcOzaki1_isSome {P : Profile} {b : ℕ} (hP : ExactEngine P b) (s : ℕ)
     fp32Add_within fp32Add_succeeds hlen hk hL
 
 /-- **Ozaki-II returns a value on the matrix core** (`[H.1]`). -/
-theorem mcOzaki2_isSome {P : Profile} {b : ℕ} (hP : ExactEngine P b) {B : CRTBasis} (hB : B.Valid)
+theorem mcOzaki2_isSome {P : Model} {b : ℕ} (hP : ExactMultiplier P b) {B : CRTBasis} (hB : B.Valid)
     (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (Pb : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hrange : 2 * x.length * (2 ^ Pb * 2 ^ Pb) < B.modulus)
@@ -61,7 +61,7 @@ theorem z3_ozaki2_range : 4 * (2 : ℚ) ^ (120 : ℤ) ≤ maxFinite32 := by deci
 
 /-- **The Z3 Ozaki-I model returns a value** on any path whose engine is exact on `11`-bit slices,
 whenever every entry of `x` and `y` is at most `2^60` in magnitude. -/
-theorem ozaki1_z3_isSome {P : Profile} (hP : ExactEngine P z3SliceBits) {x y : List ℚ}
+theorem ozaki1_z3_isSome {P : Model} (hP : ExactMultiplier P z3SliceBits) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :
     ∃ v, mcOzaki1 P z3SliceBits z3Slices x y = some v := by
@@ -84,7 +84,7 @@ theorem ozaki1_z3_isSome {P : Profile} (hP : ExactEngine P z3SliceBits) {x y : L
 
 /-- **The Z3 Ozaki-II model returns a value** on any path whose engine is exact on `11`-bit slices,
 whenever every entry of `x` and `y` is at most `2^60` in magnitude. -/
-theorem ozaki2_z3_isSome {P : Profile} (hP : ExactEngine P z3SliceBits) {x y : List ℚ}
+theorem ozaki2_z3_isSome {P : Model} (hP : ExactMultiplier P z3SliceBits) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :
     ∃ v, mcOzaki2 P z3Basis z3Bits x y = some v := by
@@ -104,12 +104,12 @@ theorem ozaki2_z3_isSome {P : Profile} (hP : ExactEngine P z3SliceBits) {x y : L
 theorem cdna3F16_ozaki1_z3_isSome {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :
     ∃ v, mcOzaki1 cdna3F16 z3SliceBits z3Slices x y = some v :=
-  ozaki1_z3_isSome (cdna3F16_exactEngine (by decide)) hlen hk hx hy
+  ozaki1_z3_isSome (cdna3F16_exactMultiplier (by decide)) hlen hk hx hy
 
 /-- The Z3 Ozaki-II model returns a value on CDNA 3 fp16 for entries at most `2^60`. -/
 theorem cdna3F16_ozaki2_z3_isSome {x y : List ℚ} (hlen : x.length = y.length) (hk : x.length = z3K)
     (hx : ∀ a ∈ x, Rat.abs a ≤ 2 ^ (60 : ℤ)) (hy : ∀ a ∈ y, Rat.abs a ≤ 2 ^ (60 : ℤ)) :
     ∃ v, mcOzaki2 cdna3F16 z3Basis z3Bits x y = some v :=
-  ozaki2_z3_isSome (cdna3F16_exactEngine (by decide)) hlen hk hx hy
+  ozaki2_z3_isSome (cdna3F16_exactMultiplier (by decide)) hlen hk hx hy
 
 end Ozaki.MC

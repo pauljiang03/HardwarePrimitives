@@ -142,7 +142,7 @@ structure C32 (v : ℚ) (eC : ℤ) : Prop where
   ge : eC ≠ -126 → pow2 eC ≤ absQ v
   grid : OnGrid v (eC - 23)
 
-theorem c32_of_decode {P : Profile} (hcz : P.cZeroExp = some (-126)) {w : F32} {c : Unpacked}
+theorem c32_of_decode {P : Model} (hcz : P.cZeroExp = some (-126)) {w : F32} {c : Unpacked}
     (h : (binary32.decode w).toFinite = some c) : ∃ eC, cExp P c = some eC ∧ C32 c.value eC := by
   obtain ⟨ht, hm, he1, _, hn⟩ := decode32_finite_fields (toFinite_some h)
   unfold cExp
@@ -235,7 +235,7 @@ theorem alignedSum_facts {neab : ℕ} {ps : List Unpacked} {e : ℤ} {S : ℚ}
 
 /-- `S_{p_i,sum}` lies on the alignment grid and is at most `|ps| · 2^(e_max+2)` plus two RD
 steps. -/
-theorem productSum_facts (P : Profile) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
+theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
     ((productSum P ps).1 = none → (productSum P ps).2 = 0) ∧
     (∀ e, (productSum P ps).1 = some e →
       OnGrid (productSum P ps).2 (e - (23 + P.neab : ℕ)) ∧
@@ -305,7 +305,7 @@ theorem productSum_facts (P : Profile) {ps : List Unpacked} (hb : ∀ p ∈ ps, 
 
 /-- The CDNA 3 late-addition parameters: `n_eab = 1`, `e_{c=0} = −126`, `(24, 32, RD)` and 31
 fractional bits after normalisation, a cutoff (if any) beyond 24, and at most 16 products. -/
-structure LateProfile (P : Profile) : Prop where
+structure LateModel (P : Model) : Prop where
   neab : P.neab = 1
   cZero : P.cZeroExp = some (-126)
   cFrac : P.late.cFracBits = 24
@@ -315,7 +315,7 @@ structure LateProfile (P : Profile) : Prop where
   nfma : P.nfma ≤ 16
 
 /-- `s'_c` on the product grid, between `−2^(e+1)` and `2^(e+1) − 2^(e−23)`. -/
-theorem shiftedC_bounds {P : Profile} (hL : LateProfile P) {e eC : ℤ} {c : Unpacked}
+theorem shiftedC_bounds {P : Model} (hL : LateModel P) {e eC : ℤ} {c : Unpacked}
     (hc : C32 c.value eC) (he : eC ≤ e) :
     OnGrid (shiftedC P e eC c) (e - 24) ∧ shiftedC P e eC c ≤ 16777215 * pow2 (e - 23) ∧
       -pow2 (e + 1) ≤ shiftedC P e eC c := by
@@ -345,7 +345,7 @@ theorem shiftedC_bounds {P : Profile} (hL : LateProfile P) {e eC : ℤ} {c : Unp
     · exact rd
   · exact rd
 
-theorem shiftedC_mono {P : Profile} (hL : LateProfile P) {e eC eC' : ℤ} {c c' : Unpacked}
+theorem shiftedC_mono {P : Model} (hL : LateModel P) {e eC eC' : ℤ} {c c' : Unpacked}
     (hc : C32 c.value eC) (hc' : C32 c'.value eC') (hv : c.value ≤ c'.value) :
     shiftedC P e eC c ≤ shiftedC P e eC' c' := by
   unfold shiftedC
@@ -380,7 +380,7 @@ theorem shiftedC_mono {P : Profile} (hL : LateProfile P) {e eC eC' : ℤ} {c c' 
 
 /-- **The late addition is monotone in `c`.** With `e_max` and `S_{p_i,sum}` fixed, a larger `c`
 gives a larger `S_acc`, within either branch and across the switch at `e_c = e_max`. -/
-theorem lateSum_mono {P : Profile} (hL : LateProfile P) {eMax : Option ℤ} {pSum : ℚ}
+theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : ℚ}
     (hpn : eMax = none → pSum = 0)
     (hps : ∀ e, eMax = some e → OnGrid pSum (e - 24) ∧ absQ pSum < pow2 (e + 7))
     {c c' : Unpacked} {eC eC' : ℤ} (hc : cExp P c = some eC) (hc' : cExp P c' = some eC')
@@ -504,7 +504,7 @@ theorem lateSum_mono {P : Profile} (hL : LateProfile P) {eMax : Option ℤ} {pSu
 
 /-! ## One block -/
 
-theorem prepare_same {P : Profile} {a : List P.a.Word} {b : List P.b.Word} {c c' : F32}
+theorem prepare_same {P : Model} {a : List P.a.Word} {b : List P.b.Word} {c c' : F32}
     {px px' : Prepared} (h : prepare (P := P) ⟨a, b, c⟩ = some px)
     (h' : prepare (P := P) ⟨a, b, c'⟩ = some px') : px.a = px'.a ∧ px.b = px'.b := by
   unfold prepare at h h'
@@ -543,7 +543,7 @@ theorem flush_value32 {w : F32} {c : Unpacked} (h : (binary32.decode w).toFinite
       exact Rat.le_trans (pow2_le_of_le he1) h2
     simp only [hs, ↓reduceIte, hbig]
 
-theorem pairwiseSum_c {P : Profile} {px px' : Prepared} {s s' : ℚ} (ha : px.a = px'.a)
+theorem pairwiseSum_c {P : Model} {px px' : Prepared} {s s' : ℚ} (ha : px.a = px'.a)
     (hb : px.b = px'.b) (h : pairwiseSum P px = some s) (h' : pairwiseSum P px' = some s') :
     s - (if P.subnormals then px else px.flushed).c.value =
       s' - (if P.subnormals then px' else px'.flushed).c.value := by
@@ -558,22 +558,22 @@ theorem pairwiseSum_c {P : Profile} {px px' : Prepared} {s s' : ℚ} (ha : px.a 
   | none => rw [hm] at h; simp at h
   | some ps =>
     rw [hm] at h h'
-    cases ht : pairTree (!P.subnormals) ps.length ps with
+    cases ht : pairwiseGroupSum (!P.subnormals) ps.length ps with
     | none => simp [ht] at h
     | some t =>
-      change (pairTree (!P.subnormals) ps.length ps).bind (fun t => some (y.c.value + t)) = some s at h
-      change (pairTree (!P.subnormals) ps.length ps).bind (fun t => some (y'.c.value + t)) = some s' at h'
+      change (pairwiseGroupSum (!P.subnormals) ps.length ps).bind (fun t => some (y.c.value + t)) = some s at h
+      change (pairwiseGroupSum (!P.subnormals) ps.length ps).bind (fun t => some (y'.c.value + t)) = some s' at h'
       rw [ht] at h h'
       simp only [Option.bind_some, Option.some.injEq] at h h'
       subst h; subst h'
       grind
 
 /-- A profile whose output is monotone in `c`: every configuration of the paper. -/
-def MonotoneProfile (P : Profile) : Prop :=
+def MonotoneModel (P : Model) : Prop :=
   P.accumulation = .correctRounding ∨ P.accumulation = .pairWiseSum ∨
-    ((P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping) ∧ LateProfile P)
+    ((P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping) ∧ LateModel P)
 
-theorem accumulate_c_mono {P : Profile} (hP : MonotoneProfile P) {a : List P.a.Word}
+theorem accumulate_c_mono {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     {b : List P.b.Word} {c c' : F32} {px px' : Prepared}
     (hp : prepare (P := P) ⟨a, b, c⟩ = some px) (hp' : prepare (P := P) ⟨a, b, c'⟩ = some px')
     (hlen : a.length = P.nfma) (hv : px.c.value ≤ px'.c.value) {s s' : ℚ}
@@ -630,7 +630,7 @@ theorem accumulate_c_mono {P : Profile} (hP : MonotoneProfile P) {a : List P.a.W
 
 /-- **Monotonicity in `c`.** On every configuration of the paper, for the same `a` and `b`, a
 larger `c` never gives a smaller output. -/
-theorem evalBlock_c_monotone {P : Profile} (hP : MonotoneProfile P) {a : List P.a.Word}
+theorem evalBlock_c_monotone {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     {b : List P.b.Word} {c c' : F32} {t t' : BlockTrace P}
     (h : evalBlock (P := P) ⟨a, b, c⟩ = .ok t) (h' : evalBlock (P := P) ⟨a, b, c'⟩ = .ok t')
     (hc : wordValue c ≤ wordValue c') : wordValue t.d ≤ wordValue t'.d := by
@@ -642,7 +642,7 @@ theorem evalBlock_c_monotone {P : Profile} (hP : MonotoneProfile P) {a : List P.
 
 /-! ## Inner products -/
 
-theorem runBlocks_c_monotone {P : Profile} (hP : MonotoneProfile P) :
+theorem runBlocks_c_monotone {P : Model} (hP : MonotoneModel P) :
     ∀ (bs : List (List P.a.Word × List P.b.Word)) (c c' : F32) (ts ts' : List (BlockTrace P)),
       runBlocks P c bs = .ok ts → runBlocks P c' bs = .ok ts' → wordValue c ≤ wordValue c' →
       wordValue (lastOutput c ts) ≤ wordValue (lastOutput c' ts')
@@ -654,7 +654,7 @@ theorem runBlocks_c_monotone {P : Profile} (hP : MonotoneProfile P) :
     exact runBlocks_c_monotone hP rest t.d t'.d us us' hr hr' (evalBlock_c_monotone hP he he' hc)
 
 /-- **Inner products are monotone in `c`.** -/
-theorem dotBits_c_monotone {P : Profile} (hP : MonotoneProfile P) {a : List P.a.Word}
+theorem dotBits_c_monotone {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     {b : List P.b.Word} {c c' d d' : F32} (hlen : a.length = b.length)
     (h : dotBits P a b c = .ok d) (h' : dotBits P a b c' = .ok d')
     (hc : wordValue c ≤ wordValue c') : wordValue d ≤ wordValue d' := by
@@ -665,25 +665,25 @@ theorem dotBits_c_monotone {P : Profile} (hP : MonotoneProfile P) {a : List P.a.
 
 /-! ## The profiles -/
 
-theorem lateProfile_cdna3F16 : LateProfile cdna3F16 :=
+theorem lateModel_cdna3F16 : LateModel cdna3F16 :=
   ⟨rfl, rfl, rfl, rfl, rfl, fun _ h => by simp [cdna3F16] at h, by decide⟩
-theorem lateProfile_cdna3BF16 : LateProfile cdna3BF16 :=
+theorem lateModel_cdna3BF16 : LateModel cdna3BF16 :=
   ⟨rfl, rfl, rfl, rfl, rfl, fun _ h => by simp [cdna3BF16] at h, by decide⟩
-theorem lateProfile_cdna3XF32 : LateProfile cdna3XF32 :=
+theorem lateModel_cdna3XF32 : LateModel cdna3XF32 :=
   ⟨rfl, rfl, rfl, rfl, rfl, fun _ h => by simp [cdna3XF32] at h, by decide⟩
-theorem lateProfile_cdna3FP8 (fa fb : Format) : LateProfile (cdna3FP8 fa fb) :=
+theorem lateModel_cdna3FP8 (fa fb : Format) : LateModel (cdna3FP8 fa fb) :=
   ⟨rfl, rfl, rfl, rfl, rfl, fun n h => by simp [cdna3FP8] at h; omega, by simp [cdna3FP8]⟩
 
 /-- Every architecture and input format of the paper is monotone in `c`. -/
-theorem paper_profiles_monotone :
-    MonotoneProfile sfmaF32 ∧ MonotoneProfile cdna1F16 ∧ MonotoneProfile cdna1BF16 ∧
-    MonotoneProfile cdna2F16 ∧ MonotoneProfile cdna2BF16 ∧ MonotoneProfile cdna2BF16_1k ∧
-    MonotoneProfile cdna3F16 ∧ MonotoneProfile cdna3BF16 ∧ MonotoneProfile cdna3XF32 ∧
-    ∀ fa fb, MonotoneProfile (cdna3FP8 fa fb) :=
+theorem paper_models_monotone :
+    MonotoneModel sfmaF32 ∧ MonotoneModel cdna1F16 ∧ MonotoneModel cdna1BF16 ∧
+    MonotoneModel cdna2F16 ∧ MonotoneModel cdna2BF16 ∧ MonotoneModel cdna2BF16_1k ∧
+    MonotoneModel cdna3F16 ∧ MonotoneModel cdna3BF16 ∧ MonotoneModel cdna3XF32 ∧
+    ∀ fa fb, MonotoneModel (cdna3FP8 fa fb) :=
   ⟨Or.inl rfl, Or.inl rfl, Or.inl rfl, Or.inr (Or.inl rfl), Or.inr (Or.inl rfl),
-    Or.inr (Or.inl rfl), Or.inr (Or.inr ⟨Or.inl rfl, lateProfile_cdna3F16⟩),
-    Or.inr (Or.inr ⟨Or.inl rfl, lateProfile_cdna3BF16⟩),
-    Or.inr (Or.inr ⟨Or.inl rfl, lateProfile_cdna3XF32⟩),
-    fun fa fb => Or.inr (Or.inr ⟨Or.inr rfl, lateProfile_cdna3FP8 fa fb⟩)⟩
+    Or.inr (Or.inl rfl), Or.inr (Or.inr ⟨Or.inl rfl, lateModel_cdna3F16⟩),
+    Or.inr (Or.inr ⟨Or.inl rfl, lateModel_cdna3BF16⟩),
+    Or.inr (Or.inr ⟨Or.inl rfl, lateModel_cdna3XF32⟩),
+    fun fa fb => Or.inr (Or.inr ⟨Or.inr rfl, lateModel_cdna3FP8 fa fb⟩)⟩
 
 end MatrixCore

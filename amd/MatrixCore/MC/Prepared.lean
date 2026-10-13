@@ -167,7 +167,7 @@ theorem read_bounded {i : InputFormat} {w : i.Word} {u : Unpacked}
 
 /-! ## Prepared blocks -/
 
-theorem prepare_lengths {P : Profile} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
+theorem prepare_lengths {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
     px.a.length = x.a.length ∧ px.b.length = x.b.length := by
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
@@ -176,7 +176,7 @@ theorem prepare_lengths {P : Profile} {x : BlockInput P} {px : Prepared} (h : pr
   subst h
   exact ⟨mapM_length_option hA, mapM_length_option hB⟩
 
-theorem prepare_c_t {P : Profile} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
+theorem prepare_c_t {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
     px.c.t = 23 := by
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
@@ -188,7 +188,7 @@ theorem prepare_c_t {P : Profile} {x : BlockInput P} {px : Prepared} (h : prepar
     cases hd : MatrixCore.binary32.decode x.c <;> rw [hd] at hC <;> simp [Datum.toFinite] at hC; rw [hC]
   exact (decode32_finite_fields hd).1
 
-theorem prepare_bounded {P : Profile} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
+theorem prepare_bounded {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
     px.a.length = x.a.length ∧ (∀ u ∈ px.a, u.m < 2 ^ (u.t + 1)) ∧
       ∀ u ∈ px.b, u.m < 2 ^ (u.t + 1) := by
   unfold prepare at h
@@ -222,7 +222,7 @@ theorem Unpacked.absQ_value_lt {u : Unpacked} (hm : u.m < 2 ^ (u.t + 1)) :
   rwa [← pow2_add, show ((u.t + 1 : ℕ) : ℤ) + (u.e - u.t) = u.e + 1 by omega] at this
 
 /-- The decoded `c` of a prepared block is the decoding of its word. -/
-theorem prepare_c {P : Profile} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
+theorem prepare_c {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
     (binary32.decode x.c).toFinite = some px.c := by
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
@@ -231,13 +231,13 @@ theorem prepare_c {P : Profile} {x : BlockInput P} {px : Prepared} (h : prepare 
   subst h
   rfl
 
-theorem prepare_c_bounded {P : Profile} {x : BlockInput P} {px : Prepared}
+theorem prepare_c_bounded {P : Model} {x : BlockInput P} {px : Prepared}
     (h : prepare x = some px) : px.c.m < 2 ^ (px.c.t + 1) := by
   obtain ⟨ht, hm⟩ := decodeNat_bounded (f := binary32) (n := x.c.toNat) (toFinite_some (prepare_c h))
   rw [ht]; exact hm
 
 /-- `|c| < 2^(e_c + 1)` for the exponent `e_c` the late addition uses. -/
-theorem prepare_cExp_bound {P : Profile} {x : BlockInput P} {px : Prepared}
+theorem prepare_cExp_bound {P : Model} {x : BlockInput P} {px : Prepared}
     (h : prepare x = some px) : ∀ eC, cExp P px.c = some eC → absQ px.c.value < pow2 (eC + 1) := by
   intro eC he
   unfold cExp at he

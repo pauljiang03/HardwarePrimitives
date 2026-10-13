@@ -17,30 +17,30 @@ open MatrixCore
 
 namespace Ozaki.MC
 
-def mcOzaki1CRDI (P : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) : List FVal → List FVal → FVal :=
+def mcOzaki1CRDI (P : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) : List FVal → List FVal → FVal :=
   crIEEE (mcOzaki1CRD P b ss smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki1CRLI (P : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) : List FVal → List FVal → FVal :=
+def mcOzaki1CRLI (P : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) : List FVal → List FVal → FVal :=
   crIEEE (mcOzaki1CRL P b ss smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki1CRDWI (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
+def mcOzaki1CRDWI (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki1CRDW P b W ss smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki1CRLWI (P : Profile) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
+def mcOzaki1CRLWI (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki1CRLW P b W ss smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki2CRDI (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
+def mcOzaki2CRDI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki2CRD P cfgs b smax) (exactSignB (mcSplitK P b) b smax)
 
-def mcOzaki2CRLI (P : Profile) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
+def mcOzaki2CRLI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki2CRL P cfgs b smax) (exactSignB (mcSplitK P b) b smax)
 
 /-- **Correctly rounded FP64 GEMM on AMD matrix cores with IEEE special values.** -/
-theorem mcOzaki1CRDI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki1CRDI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 53 (-1022) 1023) (hy : ∀ a ∈ ys, a.InFormat 53 (-1022) 1023)
     (hlen : xs.length = ys.length) :
@@ -49,7 +49,7 @@ theorem mcOzaki1CRDI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
     (fun _ _ hx hy => vanish64 (by omega) hsmax hx hy)
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRD_eq hP hb ss hsmax hx hy (by rw [hl1, hl2])) hx hy hlen
 
-theorem mcOzaki1CRLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki1CRLI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 24 (-126) 127) (hy : ∀ a ∈ ys, a.InFormat 24 (-126) 127)
     (hlen : xs.length = ys.length) :
@@ -58,7 +58,7 @@ theorem mcOzaki1CRLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
     (fun _ _ hx hy => vanish32Q (by omega) hsmax hx hy)
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRL_eq hP hb ss hsmax hx hy (by rw [hl1, hl2])) hx hy hlen
 
-theorem mcOzaki1CRDWI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRDWI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 53 (-1022) 1023) (hy : ∀ a ∈ ys, a.InFormat 53 (-1022) 1023)
     (hlen : xs.length = ys.length) :
@@ -68,7 +68,7 @@ theorem mcOzaki1CRDWI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRDW_eq hP hb W ss hsmax hx hy (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki1CRLWI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24) (W : ℕ)
+theorem mcOzaki1CRLWI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 24 (-126) 127) (hy : ∀ a ∈ ys, a.InFormat 24 (-126) 127)
     (hlen : xs.length = ys.length) :
@@ -78,7 +78,7 @@ theorem mcOzaki1CRLWI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 
     (fun _ _ hx hy hl1 hl2 => mcOzaki1CRLW_eq hP hb W ss hsmax hx hy (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki2CRDI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki2CRDI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List FVal}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
@@ -91,7 +91,7 @@ theorem mcOzaki2CRDI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
       (by rw [hl1, hl2]))
     hx hy hlen
 
-theorem mcOzaki2CRLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 * b ≤ 24)
+theorem mcOzaki2CRLI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {xs ys : List FVal}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
@@ -106,10 +106,10 @@ theorem mcOzaki2CRLI_eq {P : Profile} {b : ℕ} (hP : ExactEngine P b) (hb : 2 *
 
 /-- FP64 emulation by Ozaki-I on matrix-core blocks with IEEE special values: binary64 IEEE
 additions. -/
-def mcOzaki1DI (P : Profile) (b s : ℕ) : List FVal → List FVal → FVal :=
+def mcOzaki1DI (P : Model) (b s : ℕ) : List FVal → List FVal → FVal :=
   ozaki1IEEE (mcSplitK P b) 53 (-1022) 1023 b s
 
-theorem mcOzaki1DI_fin {P : Profile} {b s : ℕ} {sx sy : List Signed} {v : ℚ}
+theorem mcOzaki1DI_fin {P : Model} {b s : ℕ} {sx sy : List Signed} {v : ℚ}
     (h : mcOzaki1D P b s (vals sx) (vals sy) = some v) :
     ∃ n, mcOzaki1DI P b s (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ :=
   ozaki1IEEE_fin h
@@ -120,22 +120,22 @@ theorem fp32Add_eq_rne32Q : fp32Add = addOfRound rne32Q := by
   exact round32Value_eq_rne32Q (a + b)
 
 /-- Ozaki-I on a matrix-core path with IEEE special values: binary32 IEEE additions. -/
-def mcOzaki1I (P : Profile) (b s : ℕ) : List FVal → List FVal → FVal :=
-  ozaki1IEEE (mcEngine P) 24 (-126) 127 b s
+def mcOzaki1I (P : Model) (b s : ℕ) : List FVal → List FVal → FVal :=
+  ozaki1IEEE (mcMultiplier P) 24 (-126) 127 b s
 
 /-- Ozaki-II on a matrix-core path with IEEE special values: one binary32 IEEE rounding. -/
-def mcOzaki2I (P : Profile) (B : CRTBasis) (Pb : ℕ) : List FVal → List FVal → FVal :=
-  ozaki2IEEE (mcEngine P) 24 (-126) 127 B Pb
+def mcOzaki2I (P : Model) (B : CRTBasis) (Pb : ℕ) : List FVal → List FVal → FVal :=
+  ozaki2IEEE (mcMultiplier P) 24 (-126) 127 B Pb
 
 /-- **Plain binary32 Ozaki-I with special values returns Ozaki-I's result** whenever it is finite. -/
-theorem mcOzaki1I_fin {P : Profile} {b s : ℕ} {sx sy : List Signed} {v : ℚ}
+theorem mcOzaki1I_fin {P : Model} {b s : ℕ} {sx sy : List Signed} {v : ℚ}
     (h : mcOzaki1 P b s (vals sx) (vals sy) = some v) :
     ∃ n, mcOzaki1I P b s (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ := by
   unfold mcOzaki1 at h
   rw [fp32Add_eq_rne32Q] at h
   exact ozaki1IEEE_fin h
 
-theorem mcOzaki2I_fin {P : Profile} {B : CRTBasis} {Pb : ℕ} {sx sy : List Signed} {v : ℚ}
+theorem mcOzaki2I_fin {P : Model} {B : CRTBasis} {Pb : ℕ} {sx sy : List Signed} {v : ℚ}
     (h : mcOzaki2 P B Pb (vals sx) (vals sy) = some v) :
     ∃ n, mcOzaki2I P B Pb (sx.map .fin) (sy.map .fin) = .fin ⟨v, n⟩ := by
   unfold mcOzaki2 at h

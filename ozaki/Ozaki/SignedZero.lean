@@ -1,4 +1,4 @@
-import Ozaki.Window
+import Ozaki.TruncatedSum
 
 /-! # Signed zeros
 
@@ -13,7 +13,7 @@ to nearest:
 `Signed` pairs a value with its sign bit, and `crSigned` is this specification: the round to
 nearest of the exact sum, with the sign above. The enclosure check settles the sign as well when
 the enclosure lies on one side of zero (`signFromEnclosure`), and the exact path knows it outright;
-`certifySigned_eq` proves the signed check returns `crSigned`. `ozaki1CRWS` is the correctly
+`roundingTestSigned_eq` proves the signed check returns `crSigned`. `ozaki1CRWS` is the correctly
 rounded Ozaki-I with a window accumulator and signed zeros (`ozaki1CRWS_eq`). -/
 
 local notation "ℕ" => Nat
@@ -61,13 +61,13 @@ def signFromEnclosure (H B r : ℚ) : Option Bool :=
 
 /-- The signed check: try the enclosures in order, accepting one whose ends round alike and whose
 sign is settled; after the last, the exact value. `z` is `allNegZero` of the inputs. -/
-def certifySigned (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Bool → Option Signed
+def roundingTestSigned (rnd : ℚ → Option ℚ) : List (Option (ℚ × ℚ)) → Option ℚ → Bool → Option Signed
   | [], exact, z => exact.bind fun v => (rnd v).map fun r => ⟨r, sumNeg v z⟩
   | c :: cs, exact, z =>
     match c.bind (fun p => (roundEnclosure rnd p.1 p.2).bind fun r =>
         (signFromEnclosure p.1 p.2 r).map fun n => (⟨r, n⟩ : Signed)) with
     | some w => some w
-    | none => certifySigned rnd cs exact z
+    | none => roundingTestSigned rnd cs exact z
 
 /-- A rounding to nearest that fixes zero preserves the sign of a nonzero result. -/
 theorem sign_of_round {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
@@ -86,14 +86,14 @@ theorem sign_of_round {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsT
     simp [hrg, hvg]
 
 /-- **The signed check returns the correctly rounded value with the IEEE sign.** -/
-theorem certifySigned_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
+theorem roundingTestSigned_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {v : ℚ} (z : Bool) :
     ∀ (cs : List (Option (ℚ × ℚ))) (exact : Option ℚ),
       (∀ c ∈ cs, ∀ H B, c = some (H, B) → Rat.abs (v - H) ≤ B) → exact = some v →
-      certifySigned rnd cs exact z = (rnd v).map fun r => ⟨r, sumNeg v z⟩
+      roundingTestSigned rnd cs exact z = (rnd v).map fun r => ⟨r, sumNeg v z⟩
   | [], exact, _, hex => by subst hex; rfl
   | c :: cs, exact, hcs, hex => by
-    unfold certifySigned
+    unfold roundingTestSigned
     split
     · rename_i w hw
       cases c with
@@ -136,29 +136,29 @@ theorem certifySigned_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : Roun
                   rw [if_neg (by grind)]
                   simp [hvneg]
                 · cases hs
-    · exact certifySigned_eq h hI h0 z cs exact (fun c' hc' => hcs c' (List.mem_cons_of_mem _ hc')) hex
+    · exact roundingTestSigned_eq h hI h0 z cs exact (fun c' hc' => hcs c' (List.mem_cons_of_mem _ hc')) hex
 
 /-- **Correctly rounded Ozaki-I with a window accumulator and signed zeros.** -/
-def ozaki1CRWS (eng : Engine) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRWS (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List Signed) : Option Signed :=
-  certifySigned rnd (ss.map fun s => ozaki1WindowEnclosure eng b s W (vals xs) (vals ys))
-    (ozaki1ExactPath eng b smax (vals xs) (vals ys)) (allNegZero xs ys)
+  roundingTestSigned rnd (ss.map fun s => ozaki1TruncatedEnclosure mult b s W (vals xs) (vals ys))
+    (ozaki1ExactFallback mult b smax (vals xs) (vals ys)) (allNegZero xs ys)
 
 /-- **Signed correct rounding.** On an exact engine, `ozaki1CRWS` returns the correctly rounded
 dot product with IEEE's sign for zero results. -/
 theorem ozaki1CRWS_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ} {xs ys : List Signed}
+    (hI : RoundsOnIntervals rnd) (h0 : rnd 0 = some 0) {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ} {xs ys : List Signed}
     (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s (vals xs) (vals ys) = true) :
-    ozaki1CRWS eng rnd b W ss smax xs ys = crSigned rnd xs ys := by
+    ozaki1CRWS mult rnd b W ss smax xs ys = crSigned rnd xs ys := by
   have hl : (vals xs).length = (vals ys).length := by simp [vals, hlen]
-  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa [vals] using hbudget
+  have hb : (vals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa [vals] using hbound
   unfold ozaki1CRWS crSigned
-  apply certifySigned_eq h hI h0 _ _ _ _ (ozaki1ExactPath_eq heng hl hb hvanish)
+  apply roundingTestSigned_eq h hI h0 _ _ _ _ (ozaki1ExactFallback_eq hmult hl hb hvanish)
   intro c hc H B hcB
   obtain ⟨s, _, rfl⟩ := List.mem_map.mp hc
-  exact ozaki1WindowEnclosure_sound heng s W hl hb hcB
+  exact ozaki1TruncatedEnclosure_sound hmult s W hl hb hcB
 
 end Ozaki

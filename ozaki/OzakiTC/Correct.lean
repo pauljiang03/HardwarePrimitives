@@ -57,38 +57,38 @@ theorem fp64Round_intervals : RoundsOnIntervals fp64Round := rne64_intervals
 
 /-- Correctly rounded Ozaki-I on Tensor Core blocks: slice counts `ss` in turn, then the exact
 product. -/
-def tcOzaki1CR (p : Profile) (b : ℕ) (ss : List ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1CR (tcEngine p) round32Value b ss x y
+def tcOzaki1CR (p : Model) (b : ℕ) (ss : List ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1CR (tcMultiplier p) round32Value b ss x y
 
 /-- Correctly rounded Ozaki-II on Tensor Core blocks: configurations `(basis, P)` in turn, then
 the exact product. -/
-def tcOzaki2CR (p : Profile) (cfgs : List (CRTBasis × ℕ)) (x y : List ℚ) : Option ℚ :=
-  ozaki2CR (tcEngine p) round32Value cfgs x y
+def tcOzaki2CR (p : Model) (cfgs : List (CRTBasis × ℕ)) (x y : List ℚ) : Option ℚ :=
+  ozaki2CR (tcMultiplier p) round32Value cfgs x y
 
-def tcOzaki1CRGemm (p : Profile) (b : ℕ) (ss : List ℕ) (A B : List (List ℚ)) :
+def tcOzaki1CRGemm (p : Model) (b : ℕ) (ss : List ℕ) (A B : List (List ℚ)) :
     Option (List (List ℚ)) :=
   A.mapM fun x => (transpose B).mapM fun y => tcOzaki1CR p b ss x y
 
-def tcOzaki2CRGemm (p : Profile) (cfgs : List (CRTBasis × ℕ)) (A B : List (List ℚ)) :
+def tcOzaki2CRGemm (p : Model) (cfgs : List (CRTBasis × ℕ)) (A B : List (List ℚ)) :
     Option (List (List ℚ)) :=
   A.mapM fun x => (transpose B).mapM fun y => tcOzaki2CR p cfgs x y
 
 /-- **Ozaki-I on the Tensor Core, correctly rounded.** On any path where the engine is exact on
 `b`-bit slices, the result is the binary32 round to nearest of `x · y`, for every input. -/
-theorem tcOzaki1CR_eq {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
+theorem tcOzaki1CR_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :
     tcOzaki1CR p b ss x y = round32Value (dot x y) :=
-  ozaki1CR_eq round32Value_nearest round32Value_intervals (tcEngine_exactOn hp hh hK) ss hlen hk
+  ozaki1CR_eq round32Value_nearest round32Value_intervals (tcMultiplier_exactOn hp hh hK) ss hlen hk
 
 /-- **Ozaki-II on the Tensor Core, correctly rounded.** -/
-theorem tcOzaki2CR_eq {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) {cfgs : List (CRTBasis × ℕ)} {x y : List ℚ}
+theorem tcOzaki2CR_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) {cfgs : List (CRTBasis × ℕ)} {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * x.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :
     tcOzaki2CR p cfgs x y = round32Value (dot x y) :=
-  ozaki2CR_eq round32Value_nearest round32Value_intervals (tcEngine_exactOn hp hh hK) hcfg hlen hk
+  ozaki2CR_eq round32Value_nearest round32Value_intervals (tcMultiplier_exactOn hp hh hK) hcfg hlen hk
 
 /-- The Z3 models' configuration on V100, correctly rounded: any slice counts. -/
 theorem v100_ozaki1CR_z3 (ss : List ℕ) {x y : List ℚ} (hlen : x.length = y.length)
@@ -122,15 +122,15 @@ theorem splitExp_le_128 {b : ℕ} (hb : b ≤ 129) {x : List ℚ} (hx : ∀ a �
     exact Rat.le_of_lt (lt_of_le_of_lt' this hmax)
 
 /-- Correctly rounded Ozaki-I with the exact path on Tensor Core blocks as well. -/
-def tcOzaki1CRE (p : Profile) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1CRE (tcEngine p) round32Value b ss smax x y
+def tcOzaki1CRE (p : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1CRE (tcMultiplier p) round32Value b ss smax x y
 
 /-- **Ozaki-I on the Tensor Core, correctly rounded, with every engine product on Tensor Core
 blocks.** For binary32 inputs, every result, whether the check settles it or the exact path does,
 is the binary32 round to nearest of `x · y`; all slice products, including the exact path's, run on
 Tensor Core blocks, while the slicing, their exact sum and the check are exact arithmetic. -/
-theorem tcOzaki1CRE_eq {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) (hb : b ≤ 129)
+theorem tcOzaki1CRE_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) (hb : b ≤ 129)
     {x y : List ℚ} (hx : ∀ a ∈ x, FiniteValue32 a) (hy : ∀ a ∈ y, FiniteValue32 a)
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :
     tcOzaki1CRE p b ss smax x y = round32Value (dot x y) := by
@@ -142,7 +142,7 @@ theorem tcOzaki1CRE_eq {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsIn
     · exact h
   have hex := splitExp_le_128 hb hx
   have hey := splitExp_le_128 hb hy
-  exact ozaki1CRE_eq round32Value_nearest round32Value_intervals (tcEngine_exactOn hp hh hK) ss
+  exact ozaki1CRE_eq round32Value_nearest round32Value_intervals (tcMultiplier_exactOn hp hh hK) ss
     hlen hk (residualsVanish_of_gridMultiple hpos (fun a ha => finiteValue32_gridMultiple (hx a ha))
       (fun a ha => finiteValue32_gridMultiple (hy a ha)) (by omega) (by omega))
 
@@ -181,7 +181,7 @@ def adpEnclosure (s W : ℕ) (x y : List ℚ) : ℚ × ℚ :=
 in turn (not ADP's ESC-driven choice or its guardrails), then the exact
 product. -/
 def adpCR (cfgs : List (ℕ × ℕ)) (x y : List ℚ) : Option ℚ :=
-  certify fp64Round (cfgs.map fun c => some (adpEnclosure c.1 c.2 x y)) (some (dot x y))
+  roundingTest fp64Round (cfgs.map fun c => some (adpEnclosure c.1 c.2 x y)) (some (dot x y))
 
 def adpCRGemm (cfgs : List (ℕ × ℕ)) (A B : List (List ℚ)) : Option (List (List ℚ)) :=
   A.mapM fun x => (transpose B).mapM fun y => adpCR cfgs x y
@@ -252,7 +252,7 @@ their slice counts and dot products short enough that INT32 cannot wrap (`k · 2
 theorem adpCR_eq {cfgs : List (ℕ × ℕ)} (hcfg : ∀ c ∈ cfgs, 0 < c.1 ∧ ADP.remapFits c.2 c.1 = true)
     {x y : List ℚ} (hk : x.length * (128 * 128) < 2 ^ 31) :
     adpCR cfgs x y = fp64Round (dot x y) := by
-  apply certify_eq fp64Round_nearest fp64Round_intervals _ _ _ rfl
+  apply roundingTest_eq fp64Round_nearest fp64Round_intervals _ _ _ rfl
   intro c hc H B hcB
   obtain ⟨cfg, hmem, rfl⟩ := List.mem_map.mp hc
   obtain ⟨hs, hfit⟩ := hcfg cfg hmem

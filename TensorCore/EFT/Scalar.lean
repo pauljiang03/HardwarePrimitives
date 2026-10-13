@@ -78,7 +78,7 @@ theorem scalarCorrectedIn_isSome_iff (t : BlockTrace) (f : Format) :
     rw [hb]; rfl
 
 /-- A returned correction rounds the independent original-input ideal. -/
-theorem evalBlock_scalarCorrectedIn_correct {p : Profile} {x : BlockInput p} {t : BlockTrace}
+theorem evalBlock_scalarCorrectedIn_correct {p : Model} {x : BlockInput p} {t : BlockTrace}
     {z : ℚ} {b : F32} (f : Format) (h : evalBlock x = .ok t) (hz : exactDot x = some z)
     (hb : t.scalarCorrectedIn f = some b) : NearestEven32 z b := by
   have hp : t.scalarPredicateIn f = true :=

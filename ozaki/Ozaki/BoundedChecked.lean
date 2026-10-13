@@ -23,17 +23,17 @@ and parity tests produce no new magnitude and are not guarded; list lengths are 
 The descent's register width `W + bitlen n + 1` is guarded too: a register may be at most one bit
 wider than the data guard (`Widths.gw`). The result value `±M · 2^g` that `finishRNE` assembles is the output, not an
 intermediate. The engine's own arithmetic is guarded when it runs through the guarded split-K
-engine (`Ozaki.CheckedEngines.chunkedC`).
+engine (`Ozaki.CheckedMultipliers.chunkedC`).
 
 Each `…C_eq` lemma proves that, on inputs within stated bounds, the checked twin returns exactly
 what the unchecked function returns: no guard ever fails. They compose into one theorem,
 `ozaki1CRIC_eq`: on binary entries with an exact engine, if `R` and `X` meet requirements given by
 explicit formulas in `p`, `emin`, `emax`, `b`, the slice counts, the vector length `k`, `W` and the
-engine's budget (`checkD`, `checkX` for the checks, `exactR`, `exactX` for the exact path), the
+engine's budget (`testD`, `testX` for the checks, `exactR`, `exactX` for the exact path), the
 checked `ozaki1CRIC` equals `ozaki1CRI`. `ozaki1CRISC_eq` does the same for the variant with signed
 zeros (one more requirement, `R ≥ 2p`, for the product of two significands in the sign test).
 
-The check's integers need `max (W, s (b + 1)) + …` bits (`checkD`), the exact path's
+The check's integers need `max (W, s (b + 1)) + …` bits (`testD`), the exact path's
 `bitlen budget + 2 (bitlen (smax² + 1) + p + 4) + …` (`exactR`); the descent's fuel is bounded by
 `exactR` (`exact_fuel_lt`), so `X` is set by the exponents alone (`exactX`). Concrete widths, for
 `11`-bit slices, at most `8` slices in each check, a `96`-bit window and `k ≤ 2^20`: binary64 with at
@@ -774,7 +774,7 @@ def maxTopC : List (ℤ × ℤ) → Option ℤ
     let tt ← topOfC B t
     maxTopFromC B tt ts
 
-def winTopC (A qa : ℤ) (rs : List (ℤ × ℤ)) : Option ℤ :=
+def rangeTopC (A qa : ℤ) (rs : List (ℤ × ℤ)) : Option ℤ :=
   if A = 0 then maxTopC B rs else topOfC B (A, qa)
 
 def tdivPowC (z : ℤ) (d : ℕ) : Option ℤ := do
@@ -800,7 +800,7 @@ def loPartC (q : ℤ) (t : ℤ × ℤ) : Option (ℤ × ℤ) :=
     let m ← tmodPowC B t.1 d.toNat
     pure (m, t.2)
 
-def winRestC (q : ℤ) (ts : List (ℤ × ℤ)) : Option (List (ℤ × ℤ)) := do
+def rangeRestC (q : ℤ) (ts : List (ℤ × ℤ)) : Option (List (ℤ × ℤ)) := do
   let ls ← ts.mapM (loPartC B q)
   pure (nonzero ls)
 
@@ -813,19 +813,19 @@ def fixedSumFromC (w : ℕ) : ℤ → List ℤ → Option ℤ
 
 def fixedSumC (w : ℕ) (zs : List ℤ) : Option ℤ := fixedSumFromC B w 0 zs
 
-def descendJC (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (Option (ℤ × ℤ × List (ℤ × ℤ)))
+def topDownSumJC (W T : ℕ) : ℕ → ℤ → ℤ → List (ℤ × ℤ) → Option (Option (ℤ × ℤ × List (ℤ × ℤ)))
   | fuel, A, qa, rs => do
-    let top ← winTopC B A qa rs
+    let top ← rangeTopC B A qa rs
     let q ← B.ge (top - W)
     let parts ← ((A, qa) :: rs).mapM (hiPartC B q)
     if parts.all (fun z => decide (z.natAbs < 2 ^ W)) then do
       let w ← B.gw (W + bitlen parts.length + 1)
       let N ← fixedSumC B w parts
-      let rs' ← winRestC B q ((A, qa) :: rs)
+      let rs' ← rangeRestC B q ((A, qa) :: rs)
       if rs' = [] ∨ T < bitlen N.natAbs then pure (some (N, q, rs'))
       else match fuel with
         | 0 => pure none
-        | k + 1 => descendJC W T k N q rs'
+        | k + 1 => topDownSumJC W T k N q rs'
     else pure none
 
 /-- The potential (the descent's fuel), its partial sums guarded by the data width: a counter of
@@ -836,11 +836,11 @@ def potentialC : List (ℤ × ℤ) → Option ℕ
     let r ← potentialC ts
     B.gn (bitlen t.1.natAbs + r)
 
-def descendAllJC (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (Option (ℤ × ℤ × List (ℤ × ℤ))) := do
+def topDownSumAllJC (W T : ℕ) (ts : List (ℤ × ℤ)) : Option (Option (ℤ × ℤ × List (ℤ × ℤ))) := do
   let rs := nonzero ts
   let f ← potentialC B rs
   let top ← maxTopC B rs
-  descendJC B W T f 0 top rs
+  topDownSumJC B W T f 0 top rs
 
 end Checked
 
@@ -946,10 +946,10 @@ theorem loPartC_eq {B : Widths} {q : ℤ} {t : ℤ × ℤ} (hz : t.1.natAbs < 2 
     rw [tmodPowC_eq hz]
     rfl
 
-theorem winRestC_eq {B : Widths} {q : ℤ} {ts : List (ℤ × ℤ)}
+theorem rangeRestC_eq {B : Widths} {q : ℤ} {ts : List (ℤ × ℤ)}
     (h : ∀ t ∈ ts, t.1.natAbs < 2 ^ B.R ∧ t.2.natAbs + q.natAbs < 2 ^ B.X) :
-    winRestC B q ts = some (winRest q ts) := by
-  unfold winRestC winRest
+    rangeRestC B q ts = some (rangeRest q ts) := by
+  unfold rangeRestC rangeRest
   rw [mapM_eq_some_map fun t ht => loPartC_eq (h t ht).1 (h t ht).2]
   rfl
 
@@ -971,63 +971,63 @@ theorem fixedSumC_eq {B : Widths} {w : ℕ} (hw : 0 < w) (hR : w - 1 ≤ B.R) {z
   fixedSumFromC_eq hw hR zs 0 (by simpa using h)
 
 /-- The guards of one window of the descent pass. -/
-theorem descendJ_guards {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
+theorem topDownSumJ_guards {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
     (hX : 2 * (gL.natAbs + gU.natAbs + Z + T + W + 1) < 2 ^ B.X) {A qa : ℤ} {rs : List (ℤ × ℤ)}
     {n : ℕ} (hn : rs.length ≤ n) (hRn : W + bitlen (n + 1) ≤ B.R) (hA : bitlen A.natAbs ≤ T)
     (hrs : TermsIn Z gL gU rs) (hne : ∀ t ∈ rs, t.1 ≠ 0 ∧ topOf t ≤ qa)
     (hq1 : min (gL + 1) 0 ≤ qa) (hq2 : qa ≤ max (gU + Z) 0) :
-    winTopC B A qa rs = some (winTop A qa rs) ∧
-      B.ge (winTop A qa rs - W) = some (winTop A qa rs - W) ∧
-      ((A, qa) :: rs).mapM (hiPartC B (winTop A qa rs - W)) =
-        some (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))) ∧
-      (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))).all
+    rangeTopC B A qa rs = some (rangeTop A qa rs) ∧
+      B.ge (rangeTop A qa rs - W) = some (rangeTop A qa rs - W) ∧
+      ((A, qa) :: rs).mapM (hiPartC B (rangeTop A qa rs - W)) =
+        some (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))) ∧
+      (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))).all
         (fun z => decide (z.natAbs < 2 ^ W)) = true ∧
-      fixedSumC B (W + bitlen (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))).length + 1)
-          (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))) =
-        some (fixedSum (W + bitlen (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))).length + 1)
-          (((A, qa) :: rs).map (hiPart (winTop A qa rs - W)))) ∧
-      winRestC B (winTop A qa rs - W) ((A, qa) :: rs) =
-        some (winRest (winTop A qa rs - W) ((A, qa) :: rs)) ∧
-      winTop A qa rs - W ≤ max (gU + Z) 0 := by
+      fixedSumC B (W + bitlen (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))).length + 1)
+          (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))) =
+        some (fixedSum (W + bitlen (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))).length + 1)
+          (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W)))) ∧
+      rangeRestC B (rangeTop A qa rs - W) ((A, qa) :: rs) =
+        some (rangeRest (rangeTop A qa rs - W) ((A, qa) :: rs)) ∧
+      rangeTop A qa rs - W ≤ max (gU + Z) 0 := by
   have hAR : A.natAbs < 2 ^ T := Nat.lt_of_lt_of_le (lt_two_pow_bitlen A.natAbs)
     (Nat.pow_le_pow_right (by decide) hA)
   have hqa : qa.natAbs ≤ gL.natAbs + gU.natAbs + Z + 1 := by
     rw [Int.max_def] at hq2; rw [Int.min_def] at hq1
     split at hq2 <;> split at hq1 <;> omega
-  have hwt : winTopC B A qa rs = some (winTop A qa rs) := by
-    unfold winTopC winTop
+  have hwt : rangeTopC B A qa rs = some (rangeTop A qa rs) := by
+    unfold rangeTopC rangeTop
     split
     · exact maxTopC_eq (by omega) hrs
     · exact topOfC_eq (by
         show (qa + (bitlen A.natAbs : ℤ)).natAbs < 2 ^ B.X
         have := Int.natAbs_add_le qa (bitlen A.natAbs : ℤ); omega)
-  have hwt1 : min (gL + 1) 0 ≤ winTop A qa rs := by
-    unfold winTop; split
+  have hwt1 : min (gL + 1) 0 ≤ rangeTop A qa rs := by
+    unfold rangeTop; split
     · by_cases hrs0 : rs = []
       · subst hrs0; simp [maxTop]; exact Int.min_le_right _ _
       · have := maxTop_ge_of hrs (fun t ht => (hne t ht).1) hrs0
         exact Int.le_trans (Int.min_le_left _ _) this
     · unfold topOf; simp only; omega
-  have hwt2 : winTop A qa rs ≤ max (gU + Z) 0 + T := by
-    unfold winTop; split
+  have hwt2 : rangeTop A qa rs ≤ max (gU + Z) 0 + T := by
+    unfold rangeTop; split
     · have := maxTop_le_of hrs; omega
     · unfold topOf; simp only; omega
-  have hqb : (winTop A qa rs - W).natAbs ≤ gL.natAbs + gU.natAbs + Z + T + W + 1 := by
+  have hqb : (rangeTop A qa rs - W).natAbs ≤ gL.natAbs + gU.natAbs + Z + T + W + 1 := by
     rw [Int.max_def] at hwt2; rw [Int.min_def] at hwt1
     split at hwt2 <;> split at hwt1 <;> omega
-  have htops : ∀ t ∈ (A, qa) :: rs, t.1 = 0 ∨ topOf t ≤ winTop A qa rs - W + W := by
+  have htops : ∀ t ∈ (A, qa) :: rs, t.1 = 0 ∨ topOf t ≤ rangeTop A qa rs - W + W := by
     intro t ht
-    rw [show winTop A qa rs - (W : ℤ) + W = winTop A qa rs by omega]
+    rw [show rangeTop A qa rs - (W : ℤ) + W = rangeTop A qa rs by omega]
     rcases List.mem_cons.mp ht with rfl | ht
     · by_cases hA0 : A = 0
       · exact Or.inl hA0
-      · right; unfold winTop; rw [if_neg hA0]; exact Int.le_refl _
+      · right; unfold rangeTop; rw [if_neg hA0]; exact Int.le_refl _
     · right
-      unfold winTop; split
+      unfold rangeTop; split
       · exact le_maxTop ht
       · exact Int.le_trans (hne t ht).2 (by unfold topOf; simp only; omega)
   have hbnd : ∀ t ∈ (A, qa) :: rs, t.1.natAbs < 2 ^ B.R ∧
-      t.2.natAbs + (winTop A qa rs - W).natAbs < 2 ^ B.X := by
+      t.2.natAbs + (rangeTop A qa rs - W).natAbs < 2 ^ B.X := by
     intro t ht
     rcases List.mem_cons.mp ht with rfl | ht
     · exact ⟨Nat.lt_of_lt_of_le hAR (Nat.pow_le_pow_right (by decide) (by omega)),
@@ -1035,27 +1035,27 @@ theorem descendJ_guards {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (
     · have h := hrs t ht
       have hb : t.2.natAbs ≤ gL.natAbs + gU.natAbs := by omega
       exact ⟨Nat.lt_of_lt_of_le h.1 (Nat.pow_le_pow_right (by decide) (by omega)), by omega⟩
-  have hparts := descendJ_parts_lt (W := W) (A := A) (qa := qa) (rs := rs) (by omega)
+  have hparts := topDownSumJ_parts_lt (W := W) (A := A) (qa := qa) (rs := rs) (by omega)
     (fun t ht => (hne t ht).2)
   have hsum := sum_natAbs_le hparts
-  have hlen' : (((A, qa) :: rs).map (hiPart (winTop A qa rs - W))).length = rs.length + 1 := by
+  have hlen' : (((A, qa) :: rs).map (hiPart (rangeTop A qa rs - W))).length = rs.length + 1 := by
     simp
   have hb1 := lt_two_pow_bitlen (rs.length + 1)
   have hb2 := bitlen_mono (Nat.add_le_add_right hn 1)
   refine ⟨hwt, Widths.ge_ok (by omega),
     mapM_eq_some_map fun t ht => hiPartC_eq (hbnd t ht).1 (by omega) (htops t ht) (hbnd t ht).2,
-    List.all_eq_true.mpr fun z hz => decide_eq_true (hparts z hz), ?_, winRestC_eq hbnd, ?_⟩
+    List.all_eq_true.mpr fun z hz => decide_eq_true (hparts z hz), ?_, rangeRestC_eq hbnd, ?_⟩
   · rw [hlen'] at hsum ⊢
     exact fixedSumC_eq (by omega) (by omega) (by
       rw [show W + bitlen (rs.length + 1) + 1 - 1 = bitlen (rs.length + 1) + W by omega, Nat.pow_add]
       exact Nat.lt_of_le_of_lt hsum (Nat.mul_lt_mul_of_pos_right hb1 (Nat.two_pow_pos W)))
-  · unfold winTop; split
+  · unfold rangeTop; split
     · have := maxTop_le_of hrs; omega
     · unfold topOf; simp only; omega
 
 /-- The descent's register-width guard passes: the register has `W + bitlen (n + 1) + 1` bits at
 most, and `W + bitlen (n + 1) ≤ R`. -/
-theorem descendJ_reg_guard {B : Widths} {W : ℕ} {A qa q : ℤ} {rs : List (ℤ × ℤ)} {n : ℕ}
+theorem topDownSumJ_reg_guard {B : Widths} {W : ℕ} {A qa q : ℤ} {rs : List (ℤ × ℤ)} {n : ℕ}
     (hn : rs.length ≤ n) (hRn : W + bitlen (n + 1) ≤ B.R) :
     B.gw (W + bitlen (((A, qa) :: rs).map (hiPart q)).length + 1) =
       some (W + bitlen (((A, qa) :: rs).map (hiPart q)).length + 1) := by
@@ -1068,25 +1068,25 @@ theorem descendJ_reg_guard {B : Widths} {W : ℕ} {A qa q : ℤ} {rs : List (ℤ
 /-- **The descent never fails a guard**: on terms with significands below `2^Z` and grids in
 `[gL, gU]`, at most `n` of them, with `R ≥ Z + 1`, `R ≥ W + bitlen (n + 1)` and `X` above twice the
 exponent span plus `Z + T + W`, for any fuel. -/
-theorem descendJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
+theorem topDownSumJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
     (hX : 2 * (gL.natAbs + gU.natAbs + Z + T + W + 1) < 2 ^ B.X) :
     ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)) (n : ℕ), rs.length ≤ n →
       W + bitlen (n + 1) ≤ B.R → bitlen A.natAbs ≤ T → TermsIn Z gL gU rs →
       (∀ t ∈ rs, t.1 ≠ 0 ∧ topOf t ≤ qa) → min (gL + 1) 0 ≤ qa → qa ≤ max (gU + Z) 0 →
-      descendJC B W T fuel A qa rs = some (descendJ W T fuel A qa rs) := by
+      topDownSumJC B W T fuel A qa rs = some (topDownSumJ W T fuel A qa rs) := by
   intro fuel
   induction fuel with
   | zero =>
     intro A qa rs n hn hRn hA hrs hne hq1 hq2
-    obtain ⟨h1, h2, h3, h4, h5, h6, _⟩ := descendJ_guards hTW hZ hX hn hRn hA hrs hne hq1 hq2
-    unfold descendJC descendJ
+    obtain ⟨h1, h2, h3, h4, h5, h6, _⟩ := topDownSumJ_guards hTW hZ hX hn hRn hA hrs hne hq1 hq2
+    unfold topDownSumJC topDownSumJ
     rw [h1]
     simp only [Option.bind_eq_bind, Option.bind_some]
     rw [h2]
     simp only [Option.bind_some]
     rw [h3]
     simp only [Option.bind_some]
-    rw [if_pos h4, if_pos h4, descendJ_reg_guard hn hRn]
+    rw [if_pos h4, if_pos h4, topDownSumJ_reg_guard hn hRn]
     simp only [Option.bind_some]
     rw [h5]
     simp only [Option.bind_some]
@@ -1095,15 +1095,15 @@ theorem descendJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ 
     split <;> rfl
   | succ k ih =>
     intro A qa rs n hn hRn hA hrs hne hq1 hq2
-    obtain ⟨h1, h2, h3, h4, h5, h6, hq2'⟩ := descendJ_guards hTW hZ hX hn hRn hA hrs hne hq1 hq2
-    unfold descendJC descendJ
+    obtain ⟨h1, h2, h3, h4, h5, h6, hq2'⟩ := topDownSumJ_guards hTW hZ hX hn hRn hA hrs hne hq1 hq2
+    unfold topDownSumJC topDownSumJ
     rw [h1]
     simp only [Option.bind_eq_bind, Option.bind_some]
     rw [h2]
     simp only [Option.bind_some]
     rw [h3]
     simp only [Option.bind_some]
-    rw [if_pos h4, if_pos h4, descendJ_reg_guard hn hRn]
+    rw [if_pos h4, if_pos h4, topDownSumJ_reg_guard hn hRn]
     simp only [Option.bind_some]
     rw [h5]
     simp only [Option.bind_some]
@@ -1112,50 +1112,50 @@ theorem descendJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ 
     split
     · rfl
     · rename_i hstop
-      have hacc : A = 0 ∨ winTop A qa rs - W ≤ qa := by
+      have hacc : A = 0 ∨ rangeTop A qa rs - W ≤ qa := by
         by_cases hA0 : A = 0
         · exact Or.inl hA0
-        · right; unfold winTop topOf; rw [if_neg hA0]; simp only; omega
-      rw [winRest_acc hacc] at hstop ⊢
+        · right; unfold rangeTop topOf; rw [if_neg hA0]; simp only; omega
+      rw [rangeRest_acc hacc] at hstop ⊢
       have hN := Nat.le_of_not_lt (fun h => hstop (Or.inr h))
-      have hne' : winRest (winTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
-      have hrs' : TermsIn Z gL gU (winRest (winTop A qa rs - W) rs) := by
+      have hne' : rangeRest (rangeTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
+      have hrs' : TermsIn Z gL gU (rangeRest (rangeTop A qa rs - W) rs) := by
         intro t' ht'
-        obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_winRest ht'
+        obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_rangeRest ht'
         exact ⟨Nat.lt_of_le_of_lt h2 (hrs t ht).1, by rw [h1]; exact (hrs t ht).2.1,
           by rw [h1]; exact (hrs t ht).2.2⟩
-      have hq1' : min (gL + 1) 0 ≤ winTop A qa rs - W := by
+      have hq1' : min (gL + 1) 0 ≤ rangeTop A qa rs - W := by
         obtain ⟨t', ht'⟩ := List.exists_mem_of_ne_nil _ hne'
-        obtain ⟨h0, htop, t, ht, h1, _, _⟩ := mem_winRest ht'
+        obtain ⟨h0, htop, t, ht, h1, _, _⟩ := mem_rangeRest ht'
         have hb := bitlen_pos (n := t'.1.natAbs) (by omega)
         have := (hrs t ht).2.1
         unfold topOf at htop
         exact Int.le_trans (Int.min_le_left _ _) (by omega)
-      exact ih _ _ _ n (Nat.le_trans (length_winRest _ _) hn) hRn hN hrs'
-        (fun t' ht' => by obtain ⟨h0, htop, _⟩ := mem_winRest ht'; exact ⟨h0, htop⟩) hq1' hq2'
+      exact ih _ _ _ n (Nat.le_trans (length_rangeRest _ _) hn) hRn hN hrs'
+        (fun t' ht' => by obtain ⟨h0, htop, _⟩ := mem_rangeRest ht'; exact ⟨h0, htop⟩) hq1' hq2'
 
 /-- **The descent's last grid is bounded** by the terms' exponent span. -/
-theorem descendJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) :
+theorem topDownSumJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) :
     ∀ (fuel : ℕ) (A qa : ℤ) (rs : List (ℤ × ℤ)), bitlen A.natAbs ≤ T → TermsIn Z gL gU rs →
       (∀ t ∈ rs, t.1 ≠ 0 ∧ topOf t ≤ qa) → min (gL + 1) 0 ≤ qa → qa ≤ max (gU + Z) 0 →
-      ∀ {N q : ℤ} {rs' : List (ℤ × ℤ)}, descendJ W T fuel A qa rs = some (N, q, rs') →
+      ∀ {N q : ℤ} {rs' : List (ℤ × ℤ)}, topDownSumJ W T fuel A qa rs = some (N, q, rs') →
         q.natAbs ≤ gL.natAbs + gU.natAbs + Z + T + W + 1 := by
   intro fuel
   induction fuel with
   | zero =>
     intro A qa rs hA hrs hne hq1 hq2 N q rs' h
-    have hwt1 : min (gL + 1) 0 ≤ winTop A qa rs := by
-      unfold winTop; split
+    have hwt1 : min (gL + 1) 0 ≤ rangeTop A qa rs := by
+      unfold rangeTop; split
       · by_cases hrs0 : rs = []
         · subst hrs0; simp [maxTop]; exact Int.min_le_right _ _
         · exact Int.le_trans (Int.min_le_left _ _)
             (maxTop_ge_of hrs (fun t ht => (hne t ht).1) hrs0)
       · unfold topOf; simp only; omega
-    have hwt2 : winTop A qa rs ≤ max (gU + Z) 0 + T := by
-      unfold winTop; split
+    have hwt2 : rangeTop A qa rs ≤ max (gU + Z) 0 + T := by
+      unfold rangeTop; split
       · have := maxTop_le_of hrs; omega
       · unfold topOf; simp only; omega
-    unfold descendJ at h
+    unfold topDownSumJ at h
     simp only at h
     split at h
     · split at h
@@ -1167,18 +1167,18 @@ theorem descendJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) :
     · simp at h
   | succ k ih =>
     intro A qa rs hA hrs hne hq1 hq2 N q rs' h
-    have hwt1 : min (gL + 1) 0 ≤ winTop A qa rs := by
-      unfold winTop; split
+    have hwt1 : min (gL + 1) 0 ≤ rangeTop A qa rs := by
+      unfold rangeTop; split
       · by_cases hrs0 : rs = []
         · subst hrs0; simp [maxTop]; exact Int.min_le_right _ _
         · exact Int.le_trans (Int.min_le_left _ _)
             (maxTop_ge_of hrs (fun t ht => (hne t ht).1) hrs0)
       · unfold topOf; simp only; omega
-    have hwt2 : winTop A qa rs ≤ max (gU + Z) 0 + T := by
-      unfold winTop; split
+    have hwt2 : rangeTop A qa rs ≤ max (gU + Z) 0 + T := by
+      unfold rangeTop; split
       · have := maxTop_le_of hrs; omega
       · unfold topOf; simp only; omega
-    unfold descendJ at h
+    unfold topDownSumJ at h
     simp only at h
     split at h
     · split at h
@@ -1187,31 +1187,31 @@ theorem descendJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) :
         rw [Int.max_def] at hwt2; rw [Int.min_def] at hwt1
         split at hwt2 <;> split at hwt1 <;> omega
       · rename_i hstop
-        have hacc : A = 0 ∨ winTop A qa rs - W ≤ qa := by
+        have hacc : A = 0 ∨ rangeTop A qa rs - W ≤ qa := by
           by_cases hA0 : A = 0
           · exact Or.inl hA0
-          · right; unfold winTop topOf; rw [if_neg hA0]; simp only; omega
-        rw [winRest_acc hacc] at hstop h
+          · right; unfold rangeTop topOf; rw [if_neg hA0]; simp only; omega
+        rw [rangeRest_acc hacc] at hstop h
         have hN := Nat.le_of_not_lt (fun h => hstop (Or.inr h))
-        have hne' : winRest (winTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
-        have hrs' : TermsIn Z gL gU (winRest (winTop A qa rs - W) rs) := by
+        have hne' : rangeRest (rangeTop A qa rs - W) rs ≠ [] := fun h => hstop (Or.inl h)
+        have hrs' : TermsIn Z gL gU (rangeRest (rangeTop A qa rs - W) rs) := by
           intro t' ht'
-          obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_winRest ht'
+          obtain ⟨_, _, t, ht, h1, h2, _⟩ := mem_rangeRest ht'
           exact ⟨Nat.lt_of_le_of_lt h2 (hrs t ht).1, by rw [h1]; exact (hrs t ht).2.1,
             by rw [h1]; exact (hrs t ht).2.2⟩
-        have hq1' : min (gL + 1) 0 ≤ winTop A qa rs - W := by
+        have hq1' : min (gL + 1) 0 ≤ rangeTop A qa rs - W := by
           obtain ⟨t', ht'⟩ := List.exists_mem_of_ne_nil _ hne'
-          obtain ⟨h0, htop, t, ht, h1, _, _⟩ := mem_winRest ht'
+          obtain ⟨h0, htop, t, ht, h1, _, _⟩ := mem_rangeRest ht'
           have hb := bitlen_pos (n := t'.1.natAbs) (by omega)
           have := (hrs t ht).2.1
           unfold topOf at htop
           exact Int.le_trans (Int.min_le_left _ _) (by omega)
-        have hq2' : winTop A qa rs - W ≤ max (gU + Z) 0 := by
-          unfold winTop; split
+        have hq2' : rangeTop A qa rs - W ≤ max (gU + Z) 0 := by
+          unfold rangeTop; split
           · have := maxTop_le_of hrs; omega
           · unfold topOf; simp only; omega
         exact ih _ _ _ hN hrs'
-          (fun t' ht' => by obtain ⟨h0, htop, _⟩ := mem_winRest ht'; exact ⟨h0, htop⟩) hq1' hq2' h
+          (fun t' ht' => by obtain ⟨h0, htop, _⟩ := mem_rangeRest ht'; exact ⟨h0, htop⟩) hq1' hq2' h
     · simp at h
 
 theorem potential_le_mul {Z : ℕ} : ∀ {ts : List (ℤ × ℤ)}, (∀ t ∈ ts, t.1.natAbs < 2 ^ Z) →
@@ -1242,14 +1242,14 @@ theorem TermsIn.nonzero {Z : ℕ} {gL gU : ℤ} {ts : List (ℤ × ℤ)} (h : Te
     TermsIn Z gL gU (nonzero ts) := fun t ht => h t (mem_nonzero.mp ht).1
 
 /-- **The descent from the top never fails a guard.** -/
-theorem descendAllJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
+theorem topDownSumAllJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (hZ : Z + 1 ≤ B.R)
     (hX : 2 * (gL.natAbs + gU.natAbs + Z + T + W + 1) < 2 ^ B.X) {ts : List (ℤ × ℤ)}
     (hts : TermsIn Z gL gU ts) (hRn : W + bitlen (ts.length + 1) ≤ B.R)
     (hXn : ts.length * Z < 2 ^ B.R) :
-    descendAllJC B W T ts = some (descendAllJ W T ts) := by
+    topDownSumAllJC B W T ts = some (topDownSumAllJ W T ts) := by
   have hnz := hts.nonzero
   have hlen := length_nonzero ts
-  unfold descendAllJC descendAllJ
+  unfold topDownSumAllJC topDownSumAllJ
   simp only
   rw [potentialC_eq (fun t ht => (hnz t ht).1)
     (Nat.lt_of_le_of_lt (Nat.mul_le_mul_right _ hlen) hXn)]
@@ -1261,12 +1261,12 @@ theorem descendAllJC_eq {B : Widths} {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) (
     · rw [h0]; simp [maxTop]; exact Int.min_le_right _ _
     · exact Int.le_trans (Int.min_le_left _ _)
         (maxTop_ge_of hnz (fun t ht => (mem_nonzero.mp ht).2) h0)
-  exact descendJC_eq hTW hZ hX _ 0 _ _ ts.length hlen hRn (by simp [bitlen]) hnz
+  exact topDownSumJC_eq hTW hZ hX _ 0 _ _ ts.length hlen hRn (by simp [bitlen]) hnz
     (fun t ht => ⟨(mem_nonzero.mp ht).2, le_maxTop ht⟩) hq1 (maxTop_le_of hnz)
 
-theorem descendAllJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) {ts : List (ℤ × ℤ)}
+theorem topDownSumAllJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) {ts : List (ℤ × ℤ)}
     (hts : TermsIn Z gL gU ts) {N q : ℤ} {rs' : List (ℤ × ℤ)}
-    (h : descendAllJ W T ts = some (N, q, rs')) :
+    (h : topDownSumAllJ W T ts = some (N, q, rs')) :
     q.natAbs ≤ gL.natAbs + gU.natAbs + Z + T + W + 1 := by
   have hnz := hts.nonzero
   have hq1 : min (gL + 1) 0 ≤ maxTop (nonzero ts) := by
@@ -1274,7 +1274,7 @@ theorem descendAllJ_q_bound {W T Z : ℕ} {gL gU : ℤ} (hTW : T < W) {ts : List
     · rw [h0]; simp [maxTop]; exact Int.min_le_right _ _
     · exact Int.le_trans (Int.min_le_left _ _)
         (maxTop_ge_of hnz (fun t ht => (mem_nonzero.mp ht).2) h0)
-  exact descendJ_q_bound hTW _ 0 _ _ (by simp [bitlen]) hnz
+  exact topDownSumJ_q_bound hTW _ 0 _ _ (by simp [bitlen]) hnz
     (fun t ht => ⟨(mem_nonzero.mp ht).2, le_maxTop ht⟩) hq1 (maxTop_le_of hnz) h
 
 /-! ## The sign and the round to nearest even of a sum -/
@@ -1285,7 +1285,7 @@ variable (B : Widths)
 
 def signSumJC (W : ℕ) (ts : List (ℤ × ℤ)) : Option ℤ := do
   let T ← B.gi (bitlen (nonzero ts).length)
-  let r ← descendAllJC B W T ts
+  let r ← topDownSumAllJC B W T ts
   pure (match r with
     | some (N, _, _) => N.sign
     | none => 0)
@@ -1299,7 +1299,7 @@ def queryTermC (N q s K h : ℤ) : Option (ℤ × ℤ) := do
 
 def roundSumJC (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : Option (Option ℚ) := do
   let T ← B.gi (bitlen (nonzero ts).length + p + 3)
-  let r ← descendAllJC B W T ts
+  let r ← topDownSumAllJC B W T ts
   match r with
   | none => pure none
   | some (N, q, rs') =>
@@ -1333,7 +1333,7 @@ theorem signSumJC_eq {B : Widths} {W Z : ℕ} {gL gU : ℤ} {ts : List (ℤ × �
   unfold signSumJC signSumJ
   rw [Widths.gi_ok (by omega)]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [descendAllJC_eq (T := bitlen (nonzero ts).length) (by omega) hZ (by omega) hts hRn hXn]
+  rw [topDownSumAllJC_eq (T := bitlen (nonzero ts).length) (by omega) hZ (by omega) hts hRn hXn]
   rfl
 
 theorem queryTermC_eq {B : Widths} {N q s K h : ℤ} {p : ℕ} (hs : s.natAbs ≤ 1) (hK0 : 0 ≤ K)
@@ -1469,20 +1469,20 @@ theorem roundSumJC_eq {B : Widths} {p Z W : ℕ} {emin emax gL gU : ℤ} {ts : L
   unfold roundSumJC roundSumJ
   rw [Widths.gi_ok (by omega)]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [descendAllJC_eq (T := bitlen (nonzero ts).length + p + 3) (by omega) (by omega) (by omega)
+  rw [topDownSumAllJC_eq (T := bitlen (nonzero ts).length + p + 3) (by omega) (by omega) (by omega)
     hts (by omega) hXn]
   simp only [Option.bind_some]
-  cases hd : descendAllJ W (bitlen (nonzero ts).length + p + 3) ts with
+  cases hd : topDownSumAllJ W (bitlen (nonzero ts).length + p + 3) ts with
   | none => rfl
   | some r =>
     obtain ⟨N, q, rs'⟩ := r
     simp only
     obtain ⟨N', q', rs'', hd', _, htop, hstop, hlen, hsub, hNb⟩ :=
-      descendAllJ_spec (W := W) (T := bitlen (nonzero ts).length + p + 3) (by omega) ts
+      topDownSumAllJ_spec (W := W) (T := bitlen (nonzero ts).length + p + 3) (by omega) ts
     rw [hd] at hd'
     simp only [Option.some.injEq, Prod.mk.injEq] at hd'
     obtain ⟨rfl, rfl, rfl⟩ := hd'
-    have hqb := descendAllJ_q_bound (by omega) hts hd
+    have hqb := topDownSumAllJ_q_bound (by omega) hts hd
     have hN : N.natAbs < 2 ^ D := by
       have := bitlen_mono (Nat.add_le_add_right (length_nonzero ts) 1)
       exact Nat.lt_of_le_of_lt hNb (Nat.pow_lt_pow_right (by decide) (by omega))
@@ -1558,15 +1558,15 @@ def splitExpIntC (b : ℕ) (xs : List (ℤ × ℤ)) : Option ℤ := do
   let g ← gridIntC B b b xs
   B.ge (g + b)
 
-def windowGridIntC (b W : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ := do
+def truncationGridIntC (b W : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℤ := do
   let ex ← splitExpIntC B b xs
   let ey ← splitExpIntC B b ys
   let e ← B.ge (ex + ey)
   B.ge (e - W)
 
 /-- An engine output read back: the integer is guarded, and so is the grid sum. -/
-def sliceProductIntC (eng : Engine) (sl sl' : Slice) : Option (Option (ℤ × ℤ)) :=
-  match eng sl.coeffs sl'.coeffs with
+def sliceProductIntC (mult : MatrixMultiplier) (sl sl' : Slice) : Option (Option (ℤ × ℤ)) :=
+  match mult sl.coeffs sl'.coeffs with
   | none => some none
   | some v =>
     if v.den = 1 then do
@@ -1575,8 +1575,8 @@ def sliceProductIntC (eng : Engine) (sl sl' : Slice) : Option (Option (ℤ × �
       pure (some (z, g))
     else some none
 
-def pairIntC (eng : Engine) (sx sy : List Slice) (pr : ℕ × ℕ) : Option (Option (ℤ × ℤ)) :=
-  sliceProductIntC B eng (sx.getD pr.1 default) (sy.getD pr.2 default)
+def pairIntC (mult : MatrixMultiplier) (sx sy : List Slice) (pr : ℕ × ℕ) : Option (Option (ℤ × ℤ)) :=
+  sliceProductIntC B mult (sx.getD pr.1 default) (sy.getD pr.2 default)
 
 def floorPartC (q : ℤ) (t : ℤ × ℤ) : Option ℤ :=
   if q ≤ t.2 then do
@@ -1602,15 +1602,15 @@ def roundEnclosureBC (p : ℕ) (emin emax : ℤ) (N q K c : ℤ) (n : ℕ) : Opt
     | some w, some w' => if w = w' then some w else none
     | _, _ => none)
 
-def ozaki1CheckIC (eng : Engine) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (xs ys : List (ℤ × ℤ)) :
+def ozaki1TestIC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b s W : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option (Option ℚ) := do
   let sx ← splitIntFromC B b s b xs
   let sy ← splitIntFromC B b s b ys
-  let lo ← (trianglePairs s).mapM (pairIntC B eng sx.1 sy.1)
+  let lo ← (trianglePairs s).mapM (pairIntC B mult sx.1 sy.1)
   match lo.mapM id with
   | none => pure none
   | some ts => do
-    let q ← windowGridIntC B b W xs ys
+    let q ← truncationGridIntC B b W xs ys
     let parts ← ts.mapM (floorPartC B q)
     let w ← B.gi (W + bitlen (ts.length * (xs.length + 2)) + 1)
     let N ← fixedSumC B w parts
@@ -1634,7 +1634,7 @@ def findC (f : ℕ → Option Bool) : List ℕ → Option (Option ℕ)
     let v ← f a
     if v then pure (some a) else findC f l
 
-def ozaki1ExactPathIC (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
+def ozaki1ExactFallbackIC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option (Option ℚ) := do
   let so ← findC (fun s => vanishIntC B b s xs ys) (List.range' 1 smax)
   match so with
@@ -1642,7 +1642,7 @@ def ozaki1ExactPathIC (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
   | some s => do
     let sx ← splitIntFromC B b s b xs
     let sy ← splitIntFromC B b s b ys
-    let lo ← (slicePairs sx.1 sy.1).mapM (fun pr => sliceProductIntC B eng pr.1 pr.2)
+    let lo ← (slicePairs sx.1 sy.1).mapM (fun pr => sliceProductIntC B mult pr.1 pr.2)
     match lo.mapM id with
     | none => pure none
     | some ts => do
@@ -1650,15 +1650,15 @@ def ozaki1ExactPathIC (eng : Engine) (p : ℕ) (emin emax : ℤ) (b smax : ℕ)
       roundSumJC B p emin emax W' ts
 
 /-- **Correctly rounded Ozaki-I in integers, every integer guarded.** -/
-def ozaki1CRIC (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRIC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option (Option ℚ) :=
   match ss with
-  | [] => ozaki1ExactPathIC B eng p emin emax b smax xs ys
+  | [] => ozaki1ExactFallbackIC B mult p emin emax b smax xs ys
   | s :: ss => do
-    let r ← ozaki1CheckIC B eng p emin emax b s W xs ys
+    let r ← ozaki1TestIC B mult p emin emax b s W xs ys
     match r with
     | some w => pure (some w)
-    | none => ozaki1CRIC eng p emin emax b W ss smax xs ys
+    | none => ozaki1CRIC mult p emin emax b W ss smax xs ys
 
 end Checked
 
@@ -1700,11 +1700,11 @@ theorem splitExpIntC_eq {B : Widths} {b p EM : ℕ} {xs : List (ℤ × ℤ)} (hx
   unfold splitExpInt at this
   exact Widths.ge_ok (by omega)
 
-theorem windowGridIntC_eq {B : Widths} {b p EM W : ℕ} {xs ys : List (ℤ × ℤ)}
+theorem truncationGridIntC_eq {B : Widths} {b p EM W : ℕ} {xs ys : List (ℤ × ℤ)}
     (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys) (hR : p + 1 ≤ B.R)
     (hX : 2 * (p + 1 + EM + 3 * b + 2) + W < 2 ^ B.X) :
-    windowGridIntC B b W xs ys = some (windowGridInt b W xs ys) := by
-  unfold windowGridIntC windowGridInt
+    truncationGridIntC B b W xs ys = some (truncationGridInt b W xs ys) := by
+  unfold truncationGridIntC truncationGridInt
   rw [splitExpIntC_eq hx hR (by omega), splitExpIntC_eq hy hR (by omega)]
   simp only [Option.bind_eq_bind, Option.bind_some]
   have h1 := splitExpInt_natAbs_le (b := b) hx
@@ -1713,10 +1713,10 @@ theorem windowGridIntC_eq {B : Widths} {b p EM W : ℕ} {xs ys : List (ℤ × �
   simp only [Option.bind_some]
   exact Widths.ge_ok (by omega)
 
-theorem sliceProductIntC_eq {B : Widths} {eng : Engine} {sl sl' : Slice} {z : ℤ}
-    (h : eng sl.coeffs sl'.coeffs = some (z : ℚ)) (hz : z.natAbs < 2 ^ B.R)
+theorem sliceProductIntC_eq {B : Widths} {mult : MatrixMultiplier} {sl sl' : Slice} {z : ℤ}
+    (h : mult sl.coeffs sl'.coeffs = some (z : ℚ)) (hz : z.natAbs < 2 ^ B.R)
     (hg : (sl.grid + sl'.grid).natAbs < 2 ^ B.X) :
-    sliceProductIntC B eng sl sl' = some (sliceProductInt eng sl sl') := by
+    sliceProductIntC B mult sl sl' = some (sliceProductInt mult sl sl') := by
   unfold sliceProductIntC sliceProductInt
   rw [h]
   simp only [Option.bind_some, Rat.den_intCast, Rat.num_intCast, ↓reduceIte]
@@ -1824,13 +1824,13 @@ theorem roundEnclosureBC_eq {B : Widths} {p E D : ℕ} {emin emax N q K c : ℤ}
     roundExactC_eq (D := D) (by omega) hpD hR (by omega)]
   rfl
 
-theorem sliceProductIntC_exact {B : Widths} {eng : Engine} {b budget s : ℕ}
-    (heng : eng.ExactOn b budget) {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget) {sl sl' : Slice}
-    (hsl : sl ∈ (split b s x).1) (hsl' : sl' ∈ (split b s y).1) (hRb : budget < 2 ^ B.R)
+theorem sliceProductIntC_exact {B : Widths} {mult : MatrixMultiplier} {b bound s : ℕ}
+    (hmult : mult.ExactOn b bound) {x y : List ℚ} (hlen : x.length = y.length)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound) {sl sl' : Slice}
+    (hsl : sl ∈ (split b s x).1) (hsl' : sl' ∈ (split b s y).1) (hRb : bound < 2 ^ B.R)
     (hg : (sl.grid + sl'.grid).natAbs < 2 ^ B.X) :
-    sliceProductIntC B eng sl sl' = some (some (exactSliceInt sl sl')) := by
-  obtain ⟨he, hb⟩ := engine_exact heng hlen hbudget hsl hsl'
+    sliceProductIntC B mult sl sl' = some (some (exactSliceInt sl sl')) := by
+  obtain ⟨he, hb⟩ := multiplier_exact hmult hlen hbound hsl hsl'
   rw [sliceProductIntC_eq he (Nat.lt_of_le_of_lt (Nat.le_trans (natAbs_dotZ_le _ _) hb) hRb) hg,
     sliceProductInt_of_eq he]
   rfl
@@ -1848,41 +1848,41 @@ theorem splitInt_grid_bound {b p EM s : ℕ} {xs : List (ℤ × ℤ)} (hx : Entr
 
 /-- The requirement on `R` for the check with `s` slices: `D + b + 3`, where `D` bounds the
 enclosure's integers. -/
-def checkD (p b s W k : ℕ) : ℕ :=
+def testD (p b s W k : ℕ) : ℕ :=
   max W (s * (b + 1)) + bitlen ((trianglePairs s).length * (k + 2)) + bitlen ((s + 1) * k) + p +
     bitlen (k + 2) + 2
 
 set_option maxHeartbeats 4000000 in
 /-- **The check never fails a guard**: on binary entries (significands below `2^p`, exponents at
-most `EM` in magnitude), with an exact engine, `R ≥ checkD + b + 3`, `budget < 2^R`, and `X` as
+most `EM` in magnitude), with an exact engine, `R ≥ testD + b + 3`, `budget < 2^R`, and `X` as
 stated. -/
-theorem ozaki1CheckIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1TestIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM s W : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) (hx : EntriesIn p EM xs)
-    (hy : EntriesIn p EM ys) (hR : checkD p b s W xs.length + b + 3 ≤ B.R)
-    (hRb : budget < 2 ^ B.R)
-    (hX : 8 * (p + 1 + EM + 3 * b + 2 + s * (b + 1)) + 4 * W + 2 * checkD p b s W xs.length +
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM xs)
+    (hy : EntriesIn p EM ys) (hR : testD p b s W xs.length + b + 3 ≤ B.R)
+    (hRb : bound < 2 ^ B.R)
+    (hX : 8 * (p + 1 + EM + 3 * b + 2 + s * (b + 1)) + 4 * W + 2 * testD p b s W xs.length +
       emin.natAbs + emax.natAbs + 2 * p + 2 * B.R + 8 < 2 ^ B.X) :
-    ozaki1CheckIC B eng p emin emax b s W xs ys = some (ozaki1CheckI eng p emin emax b s W xs ys) := by
-  generalize hDdef : checkD p b s W xs.length = D at hR hX
+    ozaki1TestIC B mult p emin emax b s W xs ys = some (ozaki1TestI mult p emin emax b s W xs ys) := by
+  generalize hDdef : testD p b s W xs.length = D at hR hX
   have hD := hDdef
-  unfold checkD at hD
+  unfold testD at hD
   have hl : (entryVals xs).length = (entryVals ys).length := by
     rw [length_entryVals, length_entryVals, hlen]
-  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by
-    rw [length_entryVals]; exact hbudget
+  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by
+    rw [length_entryVals]; exact hbound
   have hsplit : ∀ zs : List (ℤ × ℤ), EntriesIn p EM zs →
       splitIntFromC B b s (b : ℤ) zs = some (splitInt b s zs) := fun zs hz =>
     splitIntFromC_eq (by omega) s (b : ℤ) (p + 1 + EM + b) zs hz (by rw [Int.natAbs_natCast]; omega)
       (by omega)
       (by have : (s + 1) * (b + 1) = s * (b + 1) + (b + 1) := by rw [Nat.add_mul, Nat.one_mul]
           omega)
-  unfold ozaki1CheckIC ozaki1CheckI
+  unfold ozaki1TestIC ozaki1TestI
   rw [hsplit xs hx, hsplit ys hy]
   simp only [Option.bind_eq_bind, Option.bind_some]
   rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
   -- the engine's slice products
-  have hpairs : ∀ pr ∈ trianglePairs s, pairIntC B eng (split b s (entryVals xs)).1
+  have hpairs : ∀ pr ∈ trianglePairs s, pairIntC B mult (split b s (entryVals xs)).1
       (split b s (entryVals ys)).1 pr =
         some (some (exactPairInt (split b s (entryVals xs)).1 (split b s (entryVals ys)).1 pr)) := by
     intro pr hpr
@@ -1894,7 +1894,7 @@ theorem ozaki1CheckIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : en
     have hm2 := getD_mem (l := (split b s (entryVals ys)).1) (t := u) (by omega)
     have g1 := splitInt_grid_bound (s := s) (b := b) hx _ hm1
     have g2 := splitInt_grid_bound (s := s) (b := b) hy _ hm2
-    exact sliceProductIntC_exact heng hl hb' hm1 hm2 hRb (by
+    exact sliceProductIntC_exact hmult hl hb' hm1 hm2 hRb (by
       dsimp only
       have := Int.natAbs_add_le ((split b s (entryVals xs)).1.getD t default).grid
         ((split b s (entryVals ys)).1.getD u default).grid
@@ -1904,20 +1904,20 @@ theorem ozaki1CheckIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : en
   rw [show (trianglePairs s).map (fun pr => some (exactPairInt (split b s (entryVals xs)).1
       (split b s (entryVals ys)).1 pr)) = ((trianglePairs s).map (exactPairInt
       (split b s (entryVals xs)).1 (split b s (entryVals ys)).1)).map some by rw [List.map_map]; rfl,
-    mapM_id_map, mapM_eq_some_map fun _ hp => pairInt_exact heng hl hb' hp]
+    mapM_id_map, mapM_eq_some_map fun _ hp => pairInt_exact hmult hl hb' hp]
   simp only
   generalize hts : (trianglePairs s).map (exactPairInt (split b s (entryVals xs)).1
     (split b s (entryVals ys)).1) = ts
   -- the window grid and the window parts
   have hsx := splitExpInt_natAbs_le (b := b) hx
   have hsy := splitExpInt_natAbs_le (b := b) hy
-  rw [windowGridIntC_eq hx hy (by omega) (by omega)]
+  rw [truncationGridIntC_eq hx hy (by omega) (by omega)]
   simp only [Option.bind_some]
-  have hwg : windowGridInt b W xs ys = windowGrid b W (entryVals xs) (entryVals ys) :=
-    windowGridInt_eq b W xs ys
-  have hqb : (windowGridInt b W xs ys).natAbs ≤ 2 * (p + 1 + EM + 3 * b + 1) + W := by
-    unfold windowGridInt; omega
-  have hpart : ∀ t ∈ ts, (floorPart (windowGridInt b W xs ys) t).natAbs < xs.length * 2 ^ W + 2 ∧
+  have hwg : truncationGridInt b W xs ys = truncationGrid b W (entryVals xs) (entryVals ys) :=
+    truncationGridInt_eq b W xs ys
+  have hqb : (truncationGridInt b W xs ys).natAbs ≤ 2 * (p + 1 + EM + 3 * b + 1) + W := by
+    unfold truncationGridInt; omega
+  have hpart : ∀ t ∈ ts, (floorPart (truncationGridInt b W xs ys) t).natAbs < xs.length * 2 ^ W + 2 ∧
       t.2.natAbs ≤ 2 * (p + 1 + EM + b + s * (b + 1)) := by
     intro t ht
     rw [← hts] at ht
@@ -1935,8 +1935,8 @@ theorem ozaki1CheckIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : en
       apply natAbs_floorPart_lt
       rw [tval_exactPairInt, hwg]
       have := abs_exactTerm_le b s (entryVals xs) (entryVals ys) hpr
-      rw [show windowGrid b W (entryVals xs) (entryVals ys) + (W : ℤ) =
-        splitExp b (entryVals xs) + splitExp b (entryVals ys) by unfold windowGrid; omega]
+      rw [show truncationGrid b W (entryVals xs) (entryVals ys) + (W : ℤ) =
+        splitExp b (entryVals xs) + splitExp b (entryVals ys) by unfold truncationGrid; omega]
       exact this
     · unfold exactPairInt exactSliceInt
       simp only
@@ -1959,7 +1959,7 @@ theorem ozaki1CheckIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : en
   rw [hlts, Widths.gi_ok (by omega)]
   simp only [Option.bind_some]
   -- the register
-  have hreg := ozaki1CheckB_register b s W (entryVals xs) (entryVals ys)
+  have hreg := ozaki1TestB_register b s W (entryVals xs) (entryVals ys)
   rw [hts, ← hwg, length_entryVals] at hreg
   rw [fixedSumC_eq (by omega) (by omega) (by
     rw [show W + bitlen ((trianglePairs s).length * (xs.length + 2)) + 1 - 1 =
@@ -1982,28 +1982,28 @@ theorem ozaki1CheckIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : en
   simp only [Option.bind_some]
   -- the enclosure test
   have hN := fixedSum_eq (w := W + bitlen ((trianglePairs s).length * (xs.length + 2)) + 1)
-    (by omega) (zs := ts.map (floorPart (windowGridInt b W xs ys))) (by
+    (by omega) (zs := ts.map (floorPart (truncationGridInt b W xs ys))) (by
       rw [show W + bitlen ((trianglePairs s).length * (xs.length + 2)) + 1 - 1 =
         W + bitlen ((trianglePairs s).length * (xs.length + 2)) by omega]
       exact hreg)
   have hNb : (fixedSum (W + bitlen ((trianglePairs s).length * (xs.length + 2)) + 1)
-      (ts.map (floorPart (windowGridInt b W xs ys)))).natAbs <
+      (ts.map (floorPart (truncationGridInt b W xs ys)))).natAbs <
       2 ^ (W + bitlen ((trianglePairs s).length * (xs.length + 2))) := by
     rw [hN]
     exact Nat.lt_of_le_of_lt (natAbs_listSum_le _) hreg
   generalize fixedSum (W + bitlen ((trianglePairs s).length * (xs.length + 2)) + 1)
-    (ts.map (floorPart (windowGridInt b W xs ys))) = N at hNb ⊢
-  have hqc : windowGridInt b W xs ys - (splitExpInt b xs + splitExpInt b ys - s * (b + 1)) =
-      (s * (b + 1) : ℤ) - W := by unfold windowGridInt; omega
+    (ts.map (floorPart (truncationGridInt b W xs ys))) = N at hNb ⊢
+  have hqc : truncationGridInt b W xs ys - (splitExpInt b xs + splitExpInt b ys - s * (b + 1)) =
+      (s * (b + 1) : ℤ) - W := by unfold truncationGridInt; omega
   generalize hβ : bitlen ((trianglePairs s).length * (xs.length + 2)) = β at hNb hD hR hX
   generalize hκdef : bitlen ((s + 1) * xs.length) = κ at hκ hD
-  have hdq : (windowGridInt b W xs ys - min (windowGridInt b W xs ys)
+  have hdq : (truncationGridInt b W xs ys - min (truncationGridInt b W xs ys)
       (splitExpInt b xs + splitExpInt b ys - s * (b + 1))).toNat ≤ s * (b + 1) := by
     rw [Int.min_def]; split <;> omega
-  have hdq2 : (windowGridInt b W xs ys - min (windowGridInt b W xs ys)
+  have hdq2 : (truncationGridInt b W xs ys - min (truncationGridInt b W xs ys)
       (splitExpInt b xs + splitExpInt b ys - s * (b + 1))).toNat ≤ max W (s * (b + 1)) - W := by
     rw [Int.min_def, Nat.max_def]; split <;> split <;> omega
-  have hdc : (splitExpInt b xs + splitExpInt b ys - s * (b + 1) - min (windowGridInt b W xs ys)
+  have hdc : (splitExpInt b xs + splitExpInt b ys - s * (b + 1) - min (truncationGridInt b W xs ys)
       (splitExpInt b xs + splitExpInt b ys - s * (b + 1))).toNat ≤ W := by
     rw [Int.min_def]; split <;> omega
   have hn : (trianglePairs s).length < 2 ^ β := by
@@ -2038,12 +2038,12 @@ theorem vanishIntC_eq {B : Widths} {b p EM s : ℕ} {xs ys : List (ℤ × ℤ)}
 def exactW (p smax : ℕ) : ℕ := bitlen (smax * smax + 1) + p + 4
 
 /-- The requirement on `R` for the exact path. -/
-def exactR (p smax budget : ℕ) : ℕ :=
-  bitlen budget + 2 * exactW p smax + bitlen (smax * smax + 2) + p + 8
+def exactR (p smax bound : ℕ) : ℕ :=
+  bitlen bound + 2 * exactW p smax + bitlen (smax * smax + 2) + p + 8
 
 /-- The requirement on `X` for the exact path. -/
-def exactX (p b EM smax budget : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
-  32 * (p + 1 + EM + b + (smax + 1) * (b + 1)) + 6 * bitlen budget + 20 * exactW p smax +
+def exactX (p b EM smax bound : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
+  32 * (p + 1 + EM + b + (smax + 1) * (b + 1)) + 6 * bitlen bound + 20 * exactW p smax +
     4 * p + emin.natAbs + emax.natAbs + 2 * R + 48
 
 theorem mul_lt_two_pow_bitlen_add (A Z : ℕ) : A * Z < 2 ^ (bitlen A + Z) := by
@@ -2057,8 +2057,8 @@ theorem mul_lt_two_pow_bitlen_add (A Z : ℕ) : A * Z < 2 ^ (bitlen A + Z) := by
 
 /-- **The descent's fuel fits the data width**: the potential of the exact path's terms is at most
 `(smax² + 1)` terms times their bit length, below `2^R` whenever `R ≥ exactR`. -/
-theorem exact_fuel_lt {p smax budget R : ℕ} (hR : exactR p smax budget ≤ R) :
-    (smax * smax + 1) * (bitlen budget + 2 * exactW p smax + p + 7) < 2 ^ R := by
+theorem exact_fuel_lt {p smax bound R : ℕ} (hR : exactR p smax bound ≤ R) :
+    (smax * smax + 1) * (bitlen bound + 2 * exactW p smax + p + 7) < 2 ^ R := by
   refine Nat.lt_of_lt_of_le (mul_lt_two_pow_bitlen_add _ _) (Nat.pow_le_pow_right (by decide) ?_)
   have := bitlen_mono (show smax * smax + 1 ≤ smax * smax + 2 by omega)
   unfold exactR at hR
@@ -2067,28 +2067,28 @@ theorem exact_fuel_lt {p smax budget R : ℕ} (hR : exactR p smax budget ≤ R) 
 set_option maxHeartbeats 4000000 in
 /-- **The exact path never fails a guard**: on binary entries with an exact engine, with
 `R ≥ exactR` (and `R ≥ p + b + 3`), `budget < 2^R` and `2^X > exactX`. -/
-theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
-    (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys) (hR : exactR p smax budget ≤ B.R)
-    (hRb : p + b + 3 ≤ B.R) (hX : exactX p b EM smax budget emin emax B.R < 2 ^ B.X) :
-    ozaki1ExactPathIC B eng p emin emax b smax xs ys =
-      some (ozaki1ExactPathI eng p emin emax b smax xs ys) := by
+theorem ozaki1ExactFallbackIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)}
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
+    (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys) (hR : exactR p smax bound ≤ B.R)
+    (hRb : p + b + 3 ≤ B.R) (hX : exactX p b EM smax bound emin emax B.R < 2 ^ B.X) :
+    ozaki1ExactFallbackIC B mult p emin emax b smax xs ys =
+      some (ozaki1ExactFallbackI mult p emin emax b smax xs ys) := by
   have hfuel := exact_fuel_lt hR
   unfold exactW at hfuel
   unfold exactR exactW at hR
   unfold exactX exactW at hX
   have hl : (entryVals xs).length = (entryVals ys).length := by
     rw [length_entryVals, length_entryVals, hlen]
-  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by
-    rw [length_entryVals]; exact hbudget
-  have hbud : budget < 2 ^ B.R :=
-    Nat.lt_of_lt_of_le (lt_two_pow_bitlen budget) (Nat.pow_le_pow_right (by decide) (by omega))
+  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by
+    rw [length_entryVals]; exact hbound
+  have hbud : bound < 2 ^ B.R :=
+    Nat.lt_of_lt_of_le (lt_two_pow_bitlen bound) (Nat.pow_le_pow_right (by decide) (by omega))
   have hXs : ∀ s, s ≤ smax → EM + (p + 1 + EM + b) + (s + 1) * (b + 1) + p + 2 < 2 ^ B.X := by
     intro s hs
     have : (s + 1) * (b + 1) ≤ (smax + 1) * (b + 1) := Nat.mul_le_mul_right _ (by omega)
     omega
-  unfold ozaki1ExactPathIC ozaki1ExactPathI
+  unfold ozaki1ExactFallbackIC ozaki1ExactFallbackI
   rw [findC_eq (g := fun s => vanishInt b s xs ys) fun s hs =>
     vanishIntC_eq hx hy hRb (hXs s (by simp [List.mem_range'] at hs; omega))]
   simp only [Option.bind_eq_bind, Option.bind_some]
@@ -2108,12 +2108,12 @@ theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
     rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
     have hsb : s * (b + 1) ≤ (smax + 1) * (b + 1) := Nat.mul_le_mul_right _ (by omega)
     have hprs : ∀ pr ∈ slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1,
-        sliceProductIntC B eng pr.1 pr.2 = some (some (exactSliceInt pr.1 pr.2)) := by
+        sliceProductIntC B mult pr.1 pr.2 = some (some (exactSliceInt pr.1 pr.2)) := by
       intro pr hpr
       obtain ⟨m1, m2⟩ := mem_slicePairs hpr
       have g1 := splitInt_grid_bound (s := s) (b := b) hx _ m1
       have g2 := splitInt_grid_bound (s := s) (b := b) hy _ m2
-      exact sliceProductIntC_exact heng hl hb' m1 m2 hbud (by
+      exact sliceProductIntC_exact hmult hl hb' m1 m2 hbud (by
         have := Int.natAbs_add_le pr.1.grid pr.2.grid
         omega)
     rw [mapM_eq_some_map hprs]
@@ -2123,7 +2123,7 @@ theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
         ((slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).map
           (fun pr => exactSliceInt pr.1 pr.2)).map some by rw [List.map_map]; rfl,
       mapM_id_map, mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
-        sliceProductInt_exact heng hl hb' (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
+        sliceProductInt_exact hmult hl hb' (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
     simp only
     -- the terms of the exact path
     have hplen : (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).length =
@@ -2135,7 +2135,7 @@ theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
       simp only [List.length_map, hly]
       rw [sum_map_const_nat, hlx]
     obtain ⟨GE, hGE⟩ : ∃ GE : ℕ, GE = 2 * (p + 1 + EM + b + (smax + 1) * (b + 1)) := ⟨_, rfl⟩
-    have hterms : TermsIn (bitlen budget) (-(GE : ℤ)) (GE : ℤ)
+    have hterms : TermsIn (bitlen bound) (-(GE : ℤ)) (GE : ℤ)
         ((slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).map
           (fun pr => exactSliceInt pr.1 pr.2)) := by
       intro t ht
@@ -2143,10 +2143,10 @@ theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
       obtain ⟨m1, m2⟩ := mem_slicePairs hpr
       have g1 := splitInt_grid_bound (s := s) (b := b) hx _ m1
       have g2 := splitInt_grid_bound (s := s) (b := b) hy _ m2
-      have hv := sliceProductInt_natAbs_le heng hl hb' m1 m2
+      have hv := sliceProductInt_natAbs_le hmult hl hb' m1 m2
       have hgs := Int.natAbs_add_le pr.1.grid pr.2.grid
       unfold exactSliceInt at hv ⊢
-      exact ⟨Nat.lt_of_le_of_lt hv (lt_two_pow_bitlen budget), by simp only; omega,
+      exact ⟨Nat.lt_of_le_of_lt hv (lt_two_pow_bitlen bound), by simp only; omega,
         by simp only; omega⟩
     rw [← List.length_map (f := fun pr => exactSliceInt pr.1 pr.2)] at hplen
     generalize (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).map
@@ -2156,9 +2156,9 @@ theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
     have hb2 : bitlen (ts.length + 2) ≤ bitlen (smax * smax + 2) := bitlen_mono (by omega)
     rw [Widths.gi_ok (by omega)]
     simp only [Option.bind_some]
-    have hprod : (ts.length + 1) * (bitlen budget + (bitlen (ts.length + 1) + p + 4 +
+    have hprod : (ts.length + 1) * (bitlen bound + (bitlen (ts.length + 1) + p + 4 +
         bitlen (ts.length + 1) + 1) + p + 6) ≤ (smax * smax + 1) *
-        (bitlen budget + 2 * (bitlen (smax * smax + 1) + p + 4) + p + 7) :=
+        (bitlen bound + 2 * (bitlen (smax * smax + 1) + p + 4) + p + 7) :=
       Nat.mul_le_mul (by omega) (by omega)
     have hGE' : (-(GE : ℤ)).natAbs = GE := by simp
     have hGE'' : ((GE : ℤ)).natAbs = GE := by simp
@@ -2166,40 +2166,40 @@ theorem ozaki1ExactPathIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
       (by omega) (by rw [hGE', hGE'']; omega) (Nat.lt_of_le_of_lt hprod hfuel)
 
 /-- The requirement on `X` for the check with `s` slices. -/
-def checkX (p b EM s W k : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
-  8 * (p + 1 + EM + 3 * b + 2 + s * (b + 1)) + 4 * W + 2 * checkD p b s W k +
+def testX (p b EM s W k : ℕ) (emin emax : ℤ) (R : ℕ) : ℕ :=
+  8 * (p + 1 + EM + 3 * b + 2 + s * (b + 1)) + 4 * W + 2 * testD p b s W k +
     emin.natAbs + emax.natAbs + 2 * p + 2 * R + 8
 
 /-- **One theorem bounding every integer of correctly rounded Ozaki-I.** On binary entries
 (significands below `2^p`, exponents at most `EM` in magnitude), with an exact engine, if `R` and
-`X` meet the requirements of the checks (`checkD`, `checkX`, for every slice count in `ss`) and of
+`X` meet the requirements of the checks (`testD`, `testX`, for every slice count in `ss`) and of
 the exact path (`exactR`, `exactX`), the checked function returns exactly what `ozaki1CRI`
 returns: no guard ever fails. -/
-theorem ozaki1CRIC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1CRIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM W smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) (hx : EntriesIn p EM xs)
-    (hy : EntriesIn p EM ys) (hRe : exactR p smax budget ≤ B.R) (hRb : p + b + 3 ≤ B.R)
-    (hXe : exactX p b EM smax budget emin emax B.R < 2 ^ B.X) :
-    ∀ ss : List ℕ, (∀ s ∈ ss, checkD p b s W xs.length + b + 3 ≤ B.R) →
-      (∀ s ∈ ss, checkX p b EM s W xs.length emin emax B.R < 2 ^ B.X) →
-      ozaki1CRIC B eng p emin emax b W ss smax xs ys =
-        some (ozaki1CRI eng p emin emax b W ss smax xs ys)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM xs)
+    (hy : EntriesIn p EM ys) (hRe : exactR p smax bound ≤ B.R) (hRb : p + b + 3 ≤ B.R)
+    (hXe : exactX p b EM smax bound emin emax B.R < 2 ^ B.X) :
+    ∀ ss : List ℕ, (∀ s ∈ ss, testD p b s W xs.length + b + 3 ≤ B.R) →
+      (∀ s ∈ ss, testX p b EM s W xs.length emin emax B.R < 2 ^ B.X) →
+      ozaki1CRIC B mult p emin emax b W ss smax xs ys =
+        some (ozaki1CRI mult p emin emax b W ss smax xs ys)
   | [], _, _ => by
     unfold ozaki1CRIC ozaki1CRI
-    exact ozaki1ExactPathIC_eq heng hlen hbudget hx hy hRe hRb hXe
+    exact ozaki1ExactFallbackIC_eq hmult hlen hbound hx hy hRe hRb hXe
   | s :: ss, hRc, hXc => by
-    have hbud : budget < 2 ^ B.R := by
+    have hbud : bound < 2 ^ B.R := by
       unfold exactR at hRe
-      exact Nat.lt_of_lt_of_le (lt_two_pow_bitlen budget)
+      exact Nat.lt_of_lt_of_le (lt_two_pow_bitlen bound)
         (Nat.pow_le_pow_right (by decide) (by omega))
     unfold ozaki1CRIC ozaki1CRI
-    rw [ozaki1CheckIC_eq heng hlen hbudget hx hy (hRc s List.mem_cons_self) hbud
+    rw [ozaki1TestIC_eq hmult hlen hbound hx hy (hRc s List.mem_cons_self) hbud
       (hXc s List.mem_cons_self)]
     simp only [Option.bind_eq_bind, Option.bind_some]
-    cases ozaki1CheckI eng p emin emax b s W xs ys with
+    cases ozaki1TestI mult p emin emax b s W xs ys with
     | some w => rfl
     | none =>
-      exact ozaki1CRIC_eq heng hlen hbudget hx hy hRe hRb hXe ss
+      exact ozaki1CRIC_eq hmult hlen hbound hx hy hRe hRb hXe ss
         (fun t ht => hRc t (List.mem_cons_of_mem _ ht))
         (fun t ht => hXc t (List.mem_cons_of_mem _ ht))
 
@@ -2219,9 +2219,9 @@ theorem trianglePairs_length_le {s S : ℕ} (hs : s ≤ S) :
   omega
 
 /-- The check's requirement for at most `8` slices of `11` bits, a `96`-bit window and
-`k ≤ 2^20`: `checkD ≤ 169 + p`. -/
-theorem checkD_le_8 {p s k : ℕ} (hs : s ≤ 8) (hk : k ≤ 2 ^ 20) :
-    checkD p 11 s 96 k ≤ 169 + p := by
+`k ≤ 2^20`: `testD ≤ 169 + p`. -/
+theorem testD_le_8 {p s k : ℕ} (hs : s ≤ 8) (hk : k ≤ 2 ^ 20) :
+    testD p 11 s 96 k ≤ 169 + p := by
   have hn := trianglePairs_length_le hs
   have h1 : bitlen ((trianglePairs s).length * (k + 2)) ≤ 26 := bitlen_le_iff.mpr (by
     have : (trianglePairs s).length * (k + 2) ≤ 36 * (2 ^ 20 + 2) :=
@@ -2232,32 +2232,32 @@ theorem checkD_le_8 {p s k : ℕ} (hs : s ≤ 8) (hk : k ≤ 2 ^ 20) :
     omega)
   have h3 : bitlen (k + 2) ≤ 21 := bitlen_le_iff.mpr (by omega)
   have h4 : s * (11 + 1) ≤ 96 := by omega
-  unfold checkD; rw [Nat.max_eq_left h4]; omega
+  unfold testD; rw [Nat.max_eq_left h4]; omega
 
-theorem bitlen_budget_le {k : ℕ} (hk : k ≤ 2 ^ 20) : bitlen (k * (2 ^ 11 * 2 ^ 11)) ≤ 43 :=
+theorem bitlen_dotAbsBound_le {k : ℕ} (hk : k ≤ 2 ^ 20) : bitlen (k * (2 ^ 11 * 2 ^ 11)) ≤ 43 :=
   bitlen_le_iff.mpr (by omega)
 
 /-- **Every integer of correctly rounded FP64 Ozaki-I fits 332 bits, every exponent and counter
 24 bits**: on binary64 entries, `k ≤ 2^20`, `11`-bit slices with at most `8` in each check, a
 `96`-bit window and at most `175` slices on the exact path, with an exact engine. -/
-theorem ozaki1CRIC_binary64 {eng : Engine} {xs ys : List (ℤ × ℤ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRIC_binary64 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRIC ⟨332, 24⟩ eng 53 (-1022) 1023 11 96 ss 175 xs ys =
-      some (ozaki1CRI eng 53 (-1022) 1023 11 96 ss 175 xs ys) := by
+    ozaki1CRIC ⟨332, 24⟩ mult 53 (-1022) 1023 11 96 ss 175 xs ys =
+      some (ozaki1CRI mult 53 (-1022) 1023 11 96 ss 175 xs ys) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hb2 : bitlen (175 * 175 + 2) = 15 := by decide
-  refine ozaki1CRIC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  refine ozaki1CRIC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) ?_ (by decide) ?_ ss
-    (fun s hs => by have := checkD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
+    (fun s hs => by have := testD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
     (fun s hs => by
-      have := checkD_le_8 (p := 53) (hss s hs) hk
+      have := testD_le_8 (p := 53) (hss s hs) hk
       have h8 := hss s hs
-      unfold checkX; simp only
+      unfold testX; simp only
       have : (-1022 : ℤ).natAbs = 1022 := by decide
       have : (1023 : ℤ).natAbs = 1023 := by decide
       omega)
@@ -2270,24 +2270,24 @@ theorem ozaki1CRIC_binary64 {eng : Engine} {xs ys : List (ℤ × ℤ)}
 /-- **Every integer of correctly rounded binary32 Ozaki-I fits 303 bits, every exponent and counter
 17 bits**: on binary32 entries, `k ≤ 2^20`, `11`-bit slices with at most `8` in each check, a
 `96`-bit window and at most `24` slices on the exact path. -/
-theorem ozaki1CRIC_binary32 {eng : Engine} {xs ys : List (ℤ × ℤ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRIC_binary32 {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
     (hy : ∀ a ∈ ys, FormatEntry 24 (-126) 127 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRIC ⟨303, 17⟩ eng 24 (-126) 127 11 96 ss 24 xs ys =
-      some (ozaki1CRI eng 24 (-126) 127 11 96 ss 24 xs ys) := by
+    ozaki1CRIC ⟨303, 17⟩ mult 24 (-126) 127 11 96 ss 24 xs ys =
+      some (ozaki1CRI mult 24 (-126) 127 11 96 ss 24 xs ys) := by
   have hE : ((-126 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 ∧
       ((127 : ℤ) - ((24 : ℕ) - 1 : ℤ)).natAbs ≤ 149 := by decide
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 24 24 = 38 := by decide
   have hb2 : bitlen (24 * 24 + 2) = 10 := by decide
-  refine ozaki1CRIC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
+  refine ozaki1CRIC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx)
     (entriesIn_of_format hE hy) ?_ (by decide) ?_ ss
-    (fun s hs => by have := checkD_le_8 (p := 24) (hss s hs) hk; simp only; omega)
+    (fun s hs => by have := testD_le_8 (p := 24) (hss s hs) hk; simp only; omega)
     (fun s hs => by
-      have := checkD_le_8 (p := 24) (hss s hs) hk
+      have := testD_le_8 (p := 24) (hss s hs) hk
       have h8 := hss s hs
-      unfold checkX; simp only
+      unfold testX; simp only
       have : (-126 : ℤ).natAbs = 126 := by decide
       have : (127 : ℤ).natAbs = 127 := by decide
       omega)
@@ -2299,39 +2299,39 @@ theorem ozaki1CRIC_binary32 {eng : Engine} {xs ys : List (ℤ × ℤ)}
 
 /-- **FP64, every integer within 332 bits, correctly rounded**: the checked function returns the
 IEEE binary64 round to nearest of `x · y`. -/
-theorem ozaki1CRIC_binary64_eq {eng : Engine} {xs ys : List (ℤ × ℤ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRIC_binary64_eq {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRIC ⟨332, 24⟩ eng 53 (-1022) 1023 11 96 ss 175 xs ys =
+    ozaki1CRIC ⟨332, 24⟩ mult 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (rne64 (dot (entryVals xs) (entryVals ys))) := by
-  rw [ozaki1CRIC_binary64 heng hlen hk hx hy hss,
-    ozaki1CRI64_eq heng 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
+  rw [ozaki1CRIC_binary64 hmult hlen hk hx hy hss,
+    ozaki1CRI64_eq hmult 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
       (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue)]
 
 /-- **Binary32, every integer within 303 bits, correctly rounded.** -/
-theorem ozaki1CRIC_binary32_eq {eng : Engine} {xs ys : List (ℤ × ℤ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRIC_binary32_eq {mult : MatrixMultiplier} {xs ys : List (ℤ × ℤ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 24 (-126) 127 a)
     (hy : ∀ a ∈ ys, FormatEntry 24 (-126) 127 a) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRIC ⟨303, 17⟩ eng 24 (-126) 127 11 96 ss 24 xs ys =
+    ozaki1CRIC ⟨303, 17⟩ mult 24 (-126) 127 11 96 ss 24 xs ys =
       some (rne32Q (dot (entryVals xs) (entryVals ys))) := by
-  rw [ozaki1CRIC_binary32 heng hlen hk hx hy hss,
-    ozaki1CRI32_eq heng 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
+  rw [ozaki1CRIC_binary32 hmult hlen hk hx hy hss,
+    ozaki1CRI32_eq hmult 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
       (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue)]
 
 namespace Checked
 
 variable (B : Widths)
 
-def exactSignIC (eng : Engine) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option (Option ℤ) := do
+def exactSignIC (mult : MatrixMultiplier) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option (Option ℤ) := do
   let so ← findC (fun s => vanishIntC B b s xs ys) (List.range' 1 smax)
   match so with
   | none => pure none
   | some s => do
     let sx ← splitIntFromC B b s b xs
     let sy ← splitIntFromC B b s b ys
-    let lo ← (slicePairs sx.1 sy.1).mapM (fun pr => sliceProductIntC B eng pr.1 pr.2)
+    let lo ← (slicePairs sx.1 sy.1).mapM (fun pr => sliceProductIntC B mult pr.1 pr.2)
     match lo.mapM id with
     | none => pure none
     | some ts => do
@@ -2347,15 +2347,15 @@ def allNegZeroIC (xs ys : List SEntry) : Option Bool := do
   pure (!ps.isEmpty && ps.all id)
 
 /-- **Correctly rounded Ozaki-I in integers with signed zeros, every integer guarded.** -/
-def ozaki1CRISC (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRISC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List SEntry) : Option (Option Signed) := do
-  let r ← ozaki1CRIC B eng p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1))
+  let r ← ozaki1CRIC B mult p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1))
   match r with
   | none => pure none
   | some r =>
     if r ≠ 0 then pure (some ⟨r, decide (r < 0)⟩)
     else do
-      let sg ← exactSignIC B eng b smax (xs.map (·.1)) (ys.map (·.1))
+      let sg ← exactSignIC B mult b smax (xs.map (·.1)) (ys.map (·.1))
       match sg with
       | none => pure none
       | some sg => do
@@ -2366,22 +2366,22 @@ end Checked
 
 set_option maxHeartbeats 4000000 in
 /-- **The sign of the exact sum never fails a guard**, under the requirements of the exact path. -/
-theorem exactSignIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
-    (heng : eng.ExactOn b budget) {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
-    (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys) (hR : exactR p smax budget ≤ B.R)
-    (hRb : p + b + 3 ≤ B.R) (hX : exactX p b EM smax budget emin emax B.R < 2 ^ B.X) :
-    exactSignIC B eng b smax xs ys = some (exactSignI eng b smax xs ys) := by
+theorem exactSignIC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ}
+    (hmult : mult.ExactOn b bound) {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List (ℤ × ℤ)}
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
+    (hx : EntriesIn p EM xs) (hy : EntriesIn p EM ys) (hR : exactR p smax bound ≤ B.R)
+    (hRb : p + b + 3 ≤ B.R) (hX : exactX p b EM smax bound emin emax B.R < 2 ^ B.X) :
+    exactSignIC B mult b smax xs ys = some (exactSignI mult b smax xs ys) := by
   have hfuel := exact_fuel_lt hR
   unfold exactW at hfuel
   unfold exactR exactW at hR
   unfold exactX exactW at hX
   have hl : (entryVals xs).length = (entryVals ys).length := by
     rw [length_entryVals, length_entryVals, hlen]
-  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ budget := by
-    rw [length_entryVals]; exact hbudget
-  have hbud : budget < 2 ^ B.R :=
-    Nat.lt_of_lt_of_le (lt_two_pow_bitlen budget) (Nat.pow_le_pow_right (by decide) (by omega))
+  have hb' : (entryVals xs).length * (2 ^ b * 2 ^ b) ≤ bound := by
+    rw [length_entryVals]; exact hbound
+  have hbud : bound < 2 ^ B.R :=
+    Nat.lt_of_lt_of_le (lt_two_pow_bitlen bound) (Nat.pow_le_pow_right (by decide) (by omega))
   have hXs : ∀ s, s ≤ smax → EM + (p + 1 + EM + b) + (s + 1) * (b + 1) + p + 2 < 2 ^ B.X := by
     intro s hs
     have : (s + 1) * (b + 1) ≤ (smax + 1) * (b + 1) := Nat.mul_le_mul_right _ (by omega)
@@ -2406,12 +2406,12 @@ theorem exactSignIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
     rw [(splitInt_eq b s xs).1, (splitInt_eq b s ys).1]
     have hsb : s * (b + 1) ≤ (smax + 1) * (b + 1) := Nat.mul_le_mul_right _ (by omega)
     have hprs : ∀ pr ∈ slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1,
-        sliceProductIntC B eng pr.1 pr.2 = some (some (exactSliceInt pr.1 pr.2)) := by
+        sliceProductIntC B mult pr.1 pr.2 = some (some (exactSliceInt pr.1 pr.2)) := by
       intro pr hpr
       obtain ⟨m1, m2⟩ := mem_slicePairs hpr
       have g1 := splitInt_grid_bound (s := s) (b := b) hx _ m1
       have g2 := splitInt_grid_bound (s := s) (b := b) hy _ m2
-      exact sliceProductIntC_exact heng hl hb' m1 m2 hbud (by
+      exact sliceProductIntC_exact hmult hl hb' m1 m2 hbud (by
         have := Int.natAbs_add_le pr.1.grid pr.2.grid
         omega)
     rw [mapM_eq_some_map hprs]
@@ -2421,7 +2421,7 @@ theorem exactSignIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
         ((slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).map
           (fun pr => exactSliceInt pr.1 pr.2)).map some by rw [List.map_map]; rfl,
       mapM_id_map, mapM_eq_some_map (g := fun pr => exactSliceInt pr.1 pr.2) fun pr hpr =>
-        sliceProductInt_exact heng hl hb' (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
+        sliceProductInt_exact hmult hl hb' (mem_slicePairs hpr).1 (mem_slicePairs hpr).2]
     simp only [Option.map_some]
     -- the terms of the exact path
     have hplen : (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).length =
@@ -2433,7 +2433,7 @@ theorem exactSignIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
       simp only [List.length_map, hly]
       rw [sum_map_const_nat, hlx]
     obtain ⟨GE, hGE⟩ : ∃ GE : ℕ, GE = 2 * (p + 1 + EM + b + (smax + 1) * (b + 1)) := ⟨_, rfl⟩
-    have hterms : TermsIn (bitlen budget) (-(GE : ℤ)) (GE : ℤ)
+    have hterms : TermsIn (bitlen bound) (-(GE : ℤ)) (GE : ℤ)
         ((slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).map
           (fun pr => exactSliceInt pr.1 pr.2)) := by
       intro t ht
@@ -2441,10 +2441,10 @@ theorem exactSignIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
       obtain ⟨m1, m2⟩ := mem_slicePairs hpr
       have g1 := splitInt_grid_bound (s := s) (b := b) hx _ m1
       have g2 := splitInt_grid_bound (s := s) (b := b) hy _ m2
-      have hv := sliceProductInt_natAbs_le heng hl hb' m1 m2
+      have hv := sliceProductInt_natAbs_le hmult hl hb' m1 m2
       have hgs := Int.natAbs_add_le pr.1.grid pr.2.grid
       unfold exactSliceInt at hv ⊢
-      exact ⟨Nat.lt_of_le_of_lt hv (lt_two_pow_bitlen budget), by simp only; omega,
+      exact ⟨Nat.lt_of_le_of_lt hv (lt_two_pow_bitlen bound), by simp only; omega,
         by simp only; omega⟩
     rw [← List.length_map (f := fun pr => exactSliceInt pr.1 pr.2)] at hplen
     generalize (slicePairs (split b s (entryVals xs)).1 (split b s (entryVals ys)).1).map
@@ -2457,8 +2457,8 @@ theorem exactSignIC_eq {B : Widths} {eng : Engine} {b budget : ℕ}
     simp only [Option.bind_some]
     have hGE' : (-(GE : ℤ)).natAbs = GE := by simp
     have hGE'' : ((GE : ℤ)).natAbs = GE := by simp
-    have hprod : ts.length * bitlen budget ≤ (smax * smax + 1) *
-        (bitlen budget + 2 * (bitlen (smax * smax + 1) + p + 4) + p + 7) :=
+    have hprod : ts.length * bitlen bound ≤ (smax * smax + 1) *
+        (bitlen bound + 2 * (bitlen (smax * smax + 1) + p + 4) + p + 7) :=
       Nat.mul_le_mul (by omega) (by omega)
     rw [signSumJC_eq (W := bitlen ts.length + 1) (by omega) (by omega)
       (by rw [hGE', hGE'']; omega) hterms (by omega) (Nat.lt_of_le_of_lt hprod hfuel)]
@@ -2491,32 +2491,32 @@ theorem allNegZeroIC_eq {B : Widths} {p : ℕ} {xs ys : List SEntry} (hR : 2 * p
 
 /-- **The signed function never fails a guard** under the requirements of the unsigned one and
 `R ≥ 2p` (the sign-bit test multiplies two significands). -/
-theorem ozaki1CRISC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem ozaki1CRISC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM W smax : ℕ} {emin emax : ℤ} {xs ys : List SEntry} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) (hx : EntriesIn p EM (xs.map (·.1)))
-    (hy : EntriesIn p EM (ys.map (·.1))) (hRe : exactR p smax budget ≤ B.R)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM (xs.map (·.1)))
+    (hy : EntriesIn p EM (ys.map (·.1))) (hRe : exactR p smax bound ≤ B.R)
     (hRb : p + b + 3 ≤ B.R) (hR2 : 2 * p ≤ B.R)
-    (hXe : exactX p b EM smax budget emin emax B.R < 2 ^ B.X) {ss : List ℕ}
-    (hRc : ∀ s ∈ ss, checkD p b s W xs.length + b + 3 ≤ B.R)
-    (hXc : ∀ s ∈ ss, checkX p b EM s W xs.length emin emax B.R < 2 ^ B.X) :
-    ozaki1CRISC B eng p emin emax b W ss smax xs ys =
-      some (ozaki1CRIS eng p emin emax b W ss smax xs ys) := by
+    (hXe : exactX p b EM smax bound emin emax B.R < 2 ^ B.X) {ss : List ℕ}
+    (hRc : ∀ s ∈ ss, testD p b s W xs.length + b + 3 ≤ B.R)
+    (hXc : ∀ s ∈ ss, testX p b EM s W xs.length emin emax B.R < 2 ^ B.X) :
+    ozaki1CRISC B mult p emin emax b W ss smax xs ys =
+      some (ozaki1CRIS mult p emin emax b W ss smax xs ys) := by
   have hl : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
-  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa using hbudget
+  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa using hbound
   have hlx : (xs.map (·.1)).length = xs.length := by simp
   unfold ozaki1CRISC ozaki1CRIS
-  rw [ozaki1CRIC_eq heng hl hb hx hy hRe hRb hXe ss (by rw [hlx]; exact hRc)
+  rw [ozaki1CRIC_eq hmult hl hb hx hy hRe hRb hXe ss (by rw [hlx]; exact hRc)
     (by rw [hlx]; exact hXc)]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  cases ozaki1CRI eng p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1)) with
+  cases ozaki1CRI mult p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1)) with
   | none => rfl
   | some r =>
     simp only
     split
     · rfl
-    · rw [exactSignIC_eq heng hl hb hx hy hRe hRb hXe]
+    · rw [exactSignIC_eq hmult hl hb hx hy hRe hRb hXe]
       simp only [Option.bind_some]
-      cases exactSignI eng b smax (xs.map (·.1)) (ys.map (·.1)) with
+      cases exactSignI mult b smax (xs.map (·.1)) (ys.map (·.1)) with
       | none => rfl
       | some sg =>
         simp only [Option.map_some]
@@ -2526,11 +2526,11 @@ theorem ozaki1CRISC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.
         rfl
 
 /-- **FP64 with signed zeros, every integer within 332 bits.** -/
-theorem ozaki1CRISC_binary64_eq {eng : Engine} {xs ys : List SEntry}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki1CRISC_binary64_eq {mult : MatrixMultiplier} {xs ys : List SEntry}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a.1)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a.1) {ss : List ℕ} (hss : ∀ s ∈ ss, s ≤ 8) :
-    ozaki1CRISC ⟨332, 24⟩ eng 53 (-1022) 1023 11 96 ss 175 xs ys =
+    ozaki1CRISC ⟨332, 24⟩ mult 53 (-1022) 1023 11 96 ss 175 xs ys =
       some (crSigned rne64 (xs.map toSigned) (ys.map toSigned)) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
@@ -2538,25 +2538,25 @@ theorem ozaki1CRISC_binary64_eq {eng : Engine} {xs ys : List SEntry}
     intro a ha; obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact hx c hc
   have hy' : ∀ a ∈ ys.map (·.1), FormatEntry 53 (-1022) 1023 a := by
     intro a ha; obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact hy c hc
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hb2 : bitlen (175 * 175 + 2) = 15 := by decide
-  rw [ozaki1CRISC_eq heng hlen (Nat.le_refl _) (entriesIn_of_format hE hx')
+  rw [ozaki1CRISC_eq hmult hlen (Nat.le_refl _) (entriesIn_of_format hE hx')
     (entriesIn_of_format hE hy') (by unfold exactR; rw [hW, hb2]; simp only; omega) (by decide)
     (by decide) (by
       unfold exactX; rw [hW]; simp only
       have : (-1022 : ℤ).natAbs = 1022 := by decide
       have : (1023 : ℤ).natAbs = 1023 := by decide
       omega)
-    (fun s hs => by have := checkD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
+    (fun s hs => by have := testD_le_8 (p := 53) (hss s hs) hk; simp only; omega)
     (fun s hs => by
-      have := checkD_le_8 (p := 53) (hss s hs) hk
+      have := testD_le_8 (p := 53) (hss s hs) hk
       have h8 := hss s hs
-      unfold checkX; simp only
+      unfold testX; simp only
       have : (-1022 : ℤ).natAbs = 1022 := by decide
       have : (1023 : ℤ).natAbs = 1023 := by decide
       omega)]
-  exact congrArg some (ozaki1CRIS64_eq heng 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
+  exact congrArg some (ozaki1CRIS64_eq hmult 96 ss (by decide) (by decide) hlen (Nat.le_refl _)
     (fun a ha => (hx a ha).formatValue) (fun a ha => (hy a ha).formatValue))
 
 /-! ## Examples, checked by the kernel -/
@@ -2569,18 +2569,18 @@ def ckYs : List (ℤ × ℤ) := [(4503599627370497, -52), (6000000000000007, -70
 
 /-- At the proved widths the checked function agrees with the unchecked one, through the check and
 through the exact path. -/
-example : Checked.ozaki1CRIC ⟨332, 24⟩ exactEngine 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
-    some (ozaki1CRI exactEngine 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs) := by decide +kernel
+example : Checked.ozaki1CRIC ⟨332, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
+    some (ozaki1CRI exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs) := by decide +kernel
 
-example : Checked.ozaki1CRIC ⟨332, 24⟩ exactEngine 53 (-1022) 1023 11 96 [] 175 ckXs ckYs =
-    some (ozaki1CRI exactEngine 53 (-1022) 1023 11 96 [] 175 ckXs ckYs) := by decide +kernel
+example : Checked.ozaki1CRIC ⟨332, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [] 175 ckXs ckYs =
+    some (ozaki1CRI exactMultiplier 53 (-1022) 1023 11 96 [] 175 ckXs ckYs) := by decide +kernel
 
 /-- The guards are real: a `64`-bit data register is too narrow for the `96`-bit window, and an
 `11`-bit exponent register too narrow for the grids of the slicing. -/
-example : Checked.ozaki1CRIC ⟨64, 24⟩ exactEngine 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
+example : Checked.ozaki1CRIC ⟨64, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
     none := by decide +kernel
 
-example : Checked.ozaki1CRIC ⟨332, 11⟩ exactEngine 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
+example : Checked.ozaki1CRIC ⟨332, 11⟩ exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
     none := by decide +kernel
 
 end Ozaki

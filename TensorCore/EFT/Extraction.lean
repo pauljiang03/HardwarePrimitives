@@ -201,7 +201,7 @@ theorem scalarTcEft_eq_corrected (t : BlockTrace) (h : t.scalarPredicate = true)
   rw [if_pos h, scalarCorrectedUnchecked_eq t h, corrected_eq_round_exactDot]
 
 /-- On a successful encoded-input evaluation, a scalar EFT result correctly rounds the independent ideal sum. -/
-theorem evalBlock_scalarTcEft_correct {p : Profile} {x : BlockInput p} {t : BlockTrace} {z : ℚ}
+theorem evalBlock_scalarTcEft_correct {p : Model} {x : BlockInput p} {t : BlockTrace} {z : ℚ}
     {b : F32} (h : evalBlock x = .ok t) (hz : exactDot x = some z) (hb : t.scalarTcEft = some b) :
     NearestEven32 z b := by
   simp only [exactDot, evalBlock_prepared h, Option.map_some] at hz

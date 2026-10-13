@@ -2,14 +2,14 @@ import OzakiTC.Exactness
 
 /-! # The Tensor Core as an Ozaki engine
 
-`tcEngine p` evaluates an integer dot product on the Tensor Core model of profile `p`: it encodes
+`tcMultiplier p` evaluates an integer dot product on the Tensor Core model of profile `p`: it encodes
 each integer exactly as an operand word (fp16, bf16, or tf32 by profile), pads the product list
 with zero words to whole groups of `K`, and chains the groups through `runBlocks` from `c = +0`.
 
-`tcEngine_exactOn`: under the conditions of `IntExact` and when the operand format holds every
+`tcMultiplier_exactOn`: under the conditions of `IntExact` and when the operand format holds every
 `b`-bit integer, the engine is exact on `b`-bit vectors whose products total at most `2^24` in
 magnitude. The concrete instances for the eight GPU paths of `TensorCore` are in
-`OzakiTC.Profiles`. -/
+`OzakiTC.Models`. -/
 
 open TensorCore
 
@@ -142,15 +142,15 @@ theorem groupsOf_spec {K : ℕ} (hK : 0 < K) (pad : α) (ps : List α) :
 
 /-- **The Tensor Core as an Ozaki engine.** Encode the integers exactly, pad with zero words to
 whole groups of `K` products, run the chained blocks from `c = +0`, and return the value. -/
-def tcEngine (p : Profile) : Engine := fun x y => do
+def tcMultiplier (p : Model) : MatrixMultiplier := fun x y => do
   let ax ← x.mapM (encodeInt p.input)
   let ay ← y.mapM (encodeInt p.input)
-  match runBlocks p 0 (groupsOf p.products (0, 0) (List.zip ax ay)) with
+  match runBlocks p 0 (groupsOf p.nfma (0, 0) (List.zip ax ay)) with
   | .ok ts => some (runValue 0 ts)
   | .error _ => none
 
 /-- The operand format holds every `b`-bit integer and is a well-formed binary format. -/
-structure HoldsInts (p : Profile) (b : ℕ) : Prop where
+structure HoldsInts (p : Model) (b : ℕ) : Prop where
   wellFormed : p.input.WellFormed
   bits : b ≤ p.input.mantissaBits + 1
   emin : p.input.emin ≤ p.input.mantissaBits
@@ -176,31 +176,31 @@ theorem dotAbs_eq_zip_sum (x y : List ℤ) :
       simp only [dotAbs_cons, List.zip_cons_cons, List.map_cons, List.sum_cons, Rat.natCast_add, ih]
       rw [← Rat.intCast_mul, abs_intCast]
 
-theorem wordBudget_replicate_zero (p : Profile) (hf : p.input.WellFormed) (n : ℕ) :
-    wordBudget p (List.replicate n (0, 0)) = 0 ∧ wordProducts p (List.replicate n (0, 0)) = 0 := by
+theorem wordDotAbs_replicate_zero (p : Model) (hf : p.input.WellFormed) (n : ℕ) :
+    wordDotAbs p (List.replicate n (0, 0)) = 0 ∧ wordProducts p (List.replicate n (0, 0)) = 0 := by
   have hz : wordValue p 0 = 0 := by
-    unfold wordValue decodeD Profile.decode
+    unfold wordValue decodeD Model.decode
     rw [decode_zero_word p.input hf]; simp [Decoded.value]
   induction n with
-  | zero => simp [wordBudget, wordProducts]
+  | zero => simp [wordDotAbs, wordProducts]
   | succ n ih =>
-    simp only [wordBudget, wordProducts, List.replicate_succ, List.map_cons, List.sum_cons] at ih ⊢
+    simp only [wordDotAbs, wordProducts, List.replicate_succ, List.map_cons, List.sum_cons] at ih ⊢
     rw [ih.1, ih.2, hz, Rat.zero_mul, abs_zero]
     grind
 
 /-- **Exact engine.** Under `IntExact` and `HoldsInts`, the Tensor Core engine is exact on `b`-bit
 integer vectors whose products total at most `2^24` in magnitude. -/
-theorem tcEngine_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) : (tcEngine p).ExactOn b (2 ^ 24) := by
-  intro x y hlen hx hy hbudget
+theorem tcMultiplier_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) : (tcMultiplier p).ExactOn b (2 ^ 24) := by
+  intro x y hlen hx hy hbound
   -- every entry is encoded exactly
   have henc : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → ∃ w, encodeInt p.input z = some w ∧
       (p.decode w).isSome ∧ wordValue p w = z := by
     intro z hz
     obtain ⟨w, hw, d, hd, hv⟩ := encodeInt_spec hh.wellFormed hh.emin hh.emax
       (Nat.le_trans hz (Nat.pow_le_pow_right (by decide) hh.bits))
-    refine ⟨w, hw, by simp [Profile.decode, hd], ?_⟩
-    unfold wordValue decodeD Profile.decode; rw [hd]; exact hv
+    refine ⟨w, hw, by simp [Model.decode, hd], ?_⟩
+    unfold wordValue decodeD Model.decode; rw [hd]; exact hv
   let E : ℤ → p.Word := fun z => (encodeInt p.input z).getD 0
   have hE : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → encodeInt p.input z = some (E z) ∧
       IntWord p b (E z) ∧ wordValue p (E z) = z := by
@@ -214,14 +214,14 @@ theorem tcEngine_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Holds
     mapM_eq_some_map fun z hz => (hE z (hy z hz)).1
   have hzip : List.zip (x.map E) (y.map E) = (List.zip x y).map (Prod.map E E) := List.zip_map
   have hz0 : IntWord p b (0 : p.Word) := by
-    refine ⟨by rw [Profile.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
-    unfold wordValue decodeD Profile.decode; rw [decode_zero_word p.input hh.wellFormed]
+    refine ⟨by rw [Model.decode, decode_zero_word p.input hh.wellFormed]; rfl, 0, ?_, by simp⟩
+    unfold wordValue decodeD Model.decode; rw [decode_zero_word p.input hh.wellFormed]
     simp [Decoded.value]
   obtain ⟨hglen, hflat⟩ := groupsOf_spec hK ((0 : p.Word), (0 : p.Word))
     ((List.zip x y).map (Prod.map E E))
-  generalize hpad : groupCount p.products ((List.zip x y).map (Prod.map E E)).length * p.products -
+  generalize hpad : groupCount p.nfma ((List.zip x y).map (Prod.map E E)).length * p.nfma -
     ((List.zip x y).map (Prod.map E E)).length = n at hflat
-  have hzw := wordBudget_replicate_zero p hh.wellFormed n
+  have hzw := wordDotAbs_replicate_zero p hh.wellFormed n
   -- values and budget of the encoded pairs
   have hvals : ∀ q ∈ List.zip x y, wordValue p (E q.1) * wordValue p (E q.2) = (q.1 : ℚ) * q.2 := by
     intro q hq
@@ -230,14 +230,14 @@ theorem tcEngine_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Holds
   have hprod : wordProducts p ((List.zip x y).map (Prod.map E E)) = (dotZ x y : ℚ) := by
     unfold wordProducts; rw [List.map_map, dotZ_eq_zip_sum]
     exact congrArg List.sum (List.map_congr_left hvals)
-  have hbud : wordBudget p ((List.zip x y).map (Prod.map E E)) = (dotAbs x y : ℚ) := by
-    unfold wordBudget; rw [List.map_map, dotAbs_eq_zip_sum]
+  have hbud : wordDotAbs p ((List.zip x y).map (Prod.map E E)) = (dotAbs x y : ℚ) := by
+    unfold wordDotAbs; rw [List.map_map, dotAbs_eq_zip_sum]
     exact congrArg List.sum (List.map_congr_left fun q hq => by
       simp only [Function.comp_def, Prod.map]; rw [hvals q hq])
-  obtain ⟨ts, hts, hval⟩ := runBlocks_int hp (groupsOf p.products (0, 0)
+  obtain ⟨ts, hts, hval⟩ := runBlocks_int hp (groupsOf p.nfma (0, 0)
     ((List.zip x y).map (Prod.map E E))) 0 0 (by decide +kernel)
     (fun g hg => ⟨hglen g hg, fun q hq => by
-      have hq' : q ∈ (groupsOf p.products (0, 0) ((List.zip x y).map (Prod.map E E))).flatten :=
+      have hq' : q ∈ (groupsOf p.nfma (0, 0) ((List.zip x y).map (Prod.map E E))).flatten :=
         List.mem_flatten.mpr ⟨g, hg, hq⟩
       rw [hflat] at hq'
       rcases List.mem_append.mp hq' with hq' | hq'
@@ -246,11 +246,11 @@ theorem tcEngine_exactOn {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : Holds
         exact ⟨(hE r.1 (hx _ this.1)).2.1, (hE r.2 (hy _ this.2)).2.1⟩
       · rw [(List.mem_replicate.mp hq').2]; exact ⟨hz0, hz0⟩⟩)
     (by
-      rw [hflat, wordBudget_append, hzw.1, hbud, Rat.intCast_zero, abs_zero]
-      have : ((dotAbs x y : ℕ) : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_le_natCast.mpr hbudget
+      rw [hflat, wordDotAbs_append, hzw.1, hbud, Rat.intCast_zero, abs_zero]
+      have : ((dotAbs x y : ℕ) : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_le_natCast.mpr hbound
       rw [← two_pow_natCast] at this
       grind)
-  unfold tcEngine
+  unfold tcMultiplier
   simp only [hmx, hmy, Option.bind_eq_bind, Option.bind_some, hzip, hts]
   rw [hval, hflat, wordProducts_append, hzw.2, hprod, Rat.intCast_zero]
   congr 1; grind

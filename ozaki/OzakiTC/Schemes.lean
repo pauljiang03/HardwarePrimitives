@@ -1,4 +1,4 @@
-import OzakiTC.Profiles
+import OzakiTC.Models
 import OzakiTC.Split32
 
 /-! # Ozaki-I and Ozaki-II on the Tensor Core model
@@ -28,33 +28,33 @@ open TensorCore
 namespace Ozaki.TC
 
 /-- Ozaki-I on a Tensor Core path, with binary32 recombination. -/
-def tcOzaki1 (p : Profile) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1 (tcEngine p) add32 b s x y
+def tcOzaki1 (p : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1 (tcMultiplier p) add32 b s x y
 
 /-- Ozaki-II on a Tensor Core path, with one binary32 rounding. -/
-def tcOzaki2 (p : Profile) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki2 (tcEngine p) round32Value B P x y
+def tcOzaki2 (p : Model) (B : CRTBasis) (P : ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki2 (tcMultiplier p) round32Value B P x y
 
 /-- `C = AB` with Ozaki-I on a Tensor Core path; `A` and `B` by rows. -/
-def tcOzaki1Gemm (p : Profile) (b s : ℕ) (A B : List (List ℚ)) : Option (List (List ℚ)) :=
-  ozaki1Gemm (tcEngine p) add32 b s A B
+def tcOzaki1Gemm (p : Model) (b s : ℕ) (A B : List (List ℚ)) : Option (List (List ℚ)) :=
+  ozaki1Gemm (tcMultiplier p) add32 b s A B
 
 /-- `C = AB` with Ozaki-II on a Tensor Core path; `A` and `B` by rows. -/
-def tcOzaki2Gemm (p : Profile) (B : CRTBasis) (P : ℕ) (A Bm : List (List ℚ)) :
+def tcOzaki2Gemm (p : Model) (B : CRTBasis) (P : ℕ) (A Bm : List (List ℚ)) :
     Option (List (List ℚ)) :=
-  ozaki2Gemm (tcEngine p) round32Value B P A Bm
+  ozaki2Gemm (tcMultiplier p) round32Value B P A Bm
 
 /-- **Ozaki-I on the Tensor Core.** Every block returns its slice product exactly; the result is
 the binary32 sum of the exact scaled slice products. -/
-theorem tcOzaki1_eq {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
+theorem tcOzaki1_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) :
     tcOzaki1 p b s x y = sumWith add32 0 (exactTerms b s x y) :=
-  ozaki1_eq_sumWith (tcEngine_exactOn hp hh hK) add32 s hlen hk
+  ozaki1_eq_sumWith (tcMultiplier_exactOn hp hh hK) add32 s hlen hk
 
 /-- **Ozaki-I error on the Tensor Core.** -/
-theorem tcOzaki1_error {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
+theorem tcOzaki1_error {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) (s : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24) {v : ℚ} (hv : tcOzaki1 p b s x y = some v) :
     Rat.abs (v - dot x y) ≤
       ((1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length - 1) *
@@ -62,25 +62,25 @@ theorem tcOzaki1_error {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsIn
         (trianglePairs s).length * (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length *
           2 ^ (-150 : ℤ) +
         ((s + 1 : ℕ) : ℚ) * x.length * 2 ^ (splitExp b x + splitExp b y - s * (b + 1)) :=
-  ozaki1_error (tcEngine_exactOn hp hh hK) (Rat.le_of_lt (two_pow_pos _))
+  ozaki1_error (tcMultiplier_exactOn hp hh hK) (Rat.le_of_lt (two_pow_pos _))
     (Rat.le_of_lt (two_pow_pos _)) add32_within hlen hk hv
 
 /-- **Ozaki-II on the Tensor Core.** With moduli at most `2^(b+1)` and `2 k 2^(2P) < M`, every
 block returns its residue product exactly, reconstruction is exact, and the result is one
 binary32 rounding of `2^(−sₓ−s_y) (a · c)`. -/
-theorem tcOzaki2_eq {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
+theorem tcOzaki2_eq {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus) :
     tcOzaki2 p B P x y =
       round32Value ((dotZ (scaleTrunc (scaleShift P x) x) (scaleTrunc (scaleShift P y) y) : ℚ) *
         2 ^ (-(scaleShift P x + scaleShift P y))) :=
-  ozaki2_eq (tcEngine_exactOn hp hh hK) round32Value hB hmb P hlen hk hrange
+  ozaki2_eq (tcMultiplier_exactOn hp hh hK) round32Value hB hmb P hlen hk hrange
 
 /-- **Ozaki-II error on the Tensor Core.** -/
-theorem tcOzaki2_error {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hK : 0 < p.products) {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
+theorem tcOzaki2_error {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
+    (hK : 0 < p.nfma) {B : CRTBasis} (hB : B.Valid) (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1))
     (P : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hrange : 2 * x.length * (2 ^ P * 2 ^ P) < B.modulus) {v : ℚ}
@@ -92,7 +92,7 @@ theorem tcOzaki2_error {p : Profile} {b : ℕ} (hp : IntExact p b) (hh : HoldsIn
       (List.zipWith (fun a b => 2 ^ (-scaleShift P x) * Rat.abs b +
           2 ^ (-(scaleShift P x + scaleShift P y)) *
             Rat.abs (truncInt (a * 2 ^ scaleShift P x) : ℚ)) x y).sum :=
-  ozaki2_error (tcEngine_exactOn hp hh hK) round32Value_within hB hmb P hlen hk hrange hv
+  ozaki2_error (tcMultiplier_exactOn hp hh hK) round32Value_within hB hmb P hlen hk hrange hv
 
 /-! ## The Z3 configuration on V100 -/
 

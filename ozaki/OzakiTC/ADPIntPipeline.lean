@@ -14,7 +14,7 @@ step is integer arithmetic:
 * **ADP's integer enclosure** from them (`adpEnclosureZ`, equal to `adpEnclosureB` on the values,
   `adpEnclosureZ_eq`): the remapped byte slices, the split-K INT8 products, the recombination, and
   the bound `K`;
-* the exact path with integer slicing on the split-K INT8 engine (`Ozaki.ozaki1ExactPathZ`).
+* the exact path with integer slicing on the split-K INT8 engine (`Ozaki.ozaki1ExactFallbackZ`).
 
 `adpCRZ` is the binary64 round to nearest of `x · y` for binary64 inputs of any length given as
 integer pairs (`adpCRZ_eq`).
@@ -77,13 +77,13 @@ theorem adpEnclosureZ_eq (s W : ℕ) (xs ys : List (ℤ × ℤ)) :
 enclosures of the configurations in turn, then the exact path with integer slicing on the split-K
 INT8 engine. -/
 def adpCRZ (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List (ℤ × ℤ)) : Option ℚ :=
-  certifyB 53 (-1022) 1023 (cfgs.map fun c => some (adpEnclosureZ c.1 c.2 xs ys))
-    (ozaki1ExactPathZ int8SplitK 53 (-1022) 1023 6 smax xs ys)
+  roundingTestB 53 (-1022) 1023 (cfgs.map fun c => some (adpEnclosureZ c.1 c.2 xs ys))
+    (ozaki1ExactFallbackZ int8SplitK 53 (-1022) 1023 6 smax xs ys)
 
 theorem adpCRZ_eq_CRB (cfgs : List (ℕ × ℕ)) (smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     adpCRZ cfgs smax xs ys = adpCRB cfgs smax (entryVals xs) (entryVals ys) := by
   unfold adpCRZ adpCRB
-  rw [ozaki1ExactPathZ_eq]
+  rw [ozaki1ExactFallbackZ_eq]
   congr 1
   apply List.map_congr_left
   intro c _

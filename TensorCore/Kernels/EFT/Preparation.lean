@@ -9,33 +9,33 @@ set_option maxRecDepth 4096
 set_option maxHeartbeats 1000000
 set_option exponentiation.threshold 1024
 
-theorem decodeFactor_profile (path : Path) (word : path.profile.Word) :
-    (decodeFactor path.kind (word.zeroExtend 32)).map Factor.decoded = path.profile.decode word := by
+theorem decodeFactor_model (variant : Variant) (word : variant.model.Word) :
+    (decodeFactor variant.kind (word.zeroExtend 32)).map Factor.decoded = variant.model.decode word := by
   rw [decodeFactor_asDecoded]
-  cases path <;> rw [BitVec.toNat_setWidth_of_le (by decide)] <;> rfl
+  cases variant <;> rw [BitVec.toNat_setWidth_of_le (by decide)] <;> rfl
 
-theorem decodeProduct_value (path : Path) (pair : path.profile.Word × path.profile.Word) :
-    (decodeProduct path pair).map (fun t => t.word.value) =
-      (do let a ← path.profile.decode pair.1
-          let b ← path.profile.decode pair.2
+theorem decodeProduct_value (variant : Variant) (pair : variant.model.Word × variant.model.Word) :
+    (decodeProduct variant pair).map (fun t => t.word.value) =
+      (do let a ← variant.model.decode pair.1
+          let b ← variant.model.decode pair.2
           pure (a.value * b.value) : Option ℚ) := by
-  rw [← decodeFactor_profile, ← decodeFactor_profile]
-  cases ha : decodeFactor path.kind (pair.1.zeroExtend 32) with
+  rw [← decodeFactor_model, ← decodeFactor_model]
+  cases ha : decodeFactor variant.kind (pair.1.zeroExtend 32) with
   | none => simp [decodeProduct, ha]
   | some a =>
-    cases hb : decodeFactor path.kind (pair.2.zeroExtend 32) with
+    cases hb : decodeFactor variant.kind (pair.2.zeroExtend 32) with
     | none => simp [decodeProduct, ha, hb]
     | some b =>
       simp only [decodeProduct, ha, hb, Option.map_some, pure]
       exact congrArg some ((product_value (decodeFactor_bounds ha)
         (decodeFactor_bounds hb)).trans (unnormalizedProduct_value _ _))
 
-theorem decodeProduct_magnitude {path : Path} {pair : path.profile.Word × path.profile.Word}
-    {t : Term} (h : decodeProduct path pair = some t) : t.word.magnitude.toNat < 2 ^ 550 := by
-  cases ha : decodeFactor path.kind (pair.1.zeroExtend 32) with
+theorem decodeProduct_magnitude {variant : Variant} {pair : variant.model.Word × variant.model.Word}
+    {t : Term} (h : decodeProduct variant pair = some t) : t.word.magnitude.toNat < 2 ^ 550 := by
+  cases ha : decodeFactor variant.kind (pair.1.zeroExtend 32) with
   | none => simp [decodeProduct, ha] at h
   | some a =>
-    cases hb : decodeFactor path.kind (pair.2.zeroExtend 32) with
+    cases hb : decodeFactor variant.kind (pair.2.zeroExtend 32) with
     | none => simp [decodeProduct, ha, hb] at h
     | some b =>
       simp [decodeProduct, ha, hb] at h
@@ -74,25 +74,25 @@ theorem mapM_bounds {f : α → Option β} {P : β → Prop}
         · exact hf x z hh
         · exact hP z hz
 
-theorem decodeProducts_values (path : Path) (ps : List (path.profile.Word × path.profile.Word)) :
-    (ps.mapM (decodeProduct path)).map (fun ts => ts.map fun t => t.word.value) =
-      (TensorCore.prepareProducts path.profile ps).map
+theorem decodeProducts_values (variant : Variant) (ps : List (variant.model.Word × variant.model.Word)) :
+    (ps.mapM (decodeProduct variant)).map (fun ts => ts.map fun t => t.word.value) =
+      (TensorCore.prepareProducts variant.model ps).map
         (fun ds => ds.map fun (a, b) => a.value * b.value) := by
   apply mapM_project_eq
   intro pair
   rw [decodeProduct_value]
   rcases pair with ⟨a, b⟩
   dsimp only
-  cases path.profile.decode a <;> cases path.profile.decode b <;> rfl
+  cases variant.model.decode a <;> cases variant.model.decode b <;> rfl
 
 def Prepared.ideal (p : Prepared) : ℚ := sumQ (p.terms.map fun t => t.word.value)
 
-theorem prepare_spec {path : Path} {x : BlockInput path.profile} {D : F32} {p : Prepared}
-    (h : prepare path x D = .ok p) :
-    x.products.length = path.profile.products ∧
+theorem prepare_spec {variant : Variant} {x : BlockInput variant.model} {D : F32} {p : Prepared}
+    (h : prepare variant x D = .ok p) :
+    x.products.length = variant.model.nfma ∧
       TensorCore.exactDot x = some p.ideal ∧
       TensorCore.value32 D = some p.output.value ∧
-      p.terms.length = path.profile.products + 1 ∧
+      p.terms.length = variant.model.nfma + 1 ∧
       (∀ t ∈ p.terms, t.word.magnitude.toNat < 2 ^ 550) ∧
       p.output.magnitude.toNat < 2 ^ 424 := by
   unfold prepare at h
@@ -100,11 +100,11 @@ theorem prepare_spec {path : Path} {x : BlockInput path.profile} {D : F32} {p : 
   split at h
   · contradiction
   · rename_i hlen
-    have hlen' : x.products.length = path.profile.products := by simpa using hlen
+    have hlen' : x.products.length = variant.model.nfma := by simpa using hlen
     cases hc : decode32Term x.c with
     | none => simp [hc] at h
     | some c =>
-      cases hps : x.products.mapM (decodeProduct path) with
+      cases hps : x.products.mapM (decodeProduct variant) with
       | none => simp [hc, hps] at h
       | some ps =>
         cases hd : decode32Word D with
@@ -117,9 +117,9 @@ theorem prepare_spec {path : Path} {x : BlockInput path.profile} {D : F32} {p : 
             rw [← decode32Word_value, hdc]; rfl
           have hvd : TensorCore.value32 D = some d.value := by
             rw [← decode32Word_value, hd]; rfl
-          have hvs := decodeProducts_values path x.products
+          have hvs := decodeProducts_values variant x.products
           rw [hps] at hvs
-          cases hp : TensorCore.prepareProducts path.profile x.products with
+          cases hp : TensorCore.prepareProducts variant.model x.products with
           | none => simp [hp] at hvs
           | some ds =>
             simp only [hp, Option.map_some, Option.some.injEq] at hvs
@@ -139,24 +139,24 @@ theorem prepare_spec {path : Path} {x : BlockInput path.profile} {D : F32} {p : 
               · omega
               · exact hb.2 t ht
 
-theorem path_count (path : Path) : path.profile.products ≤ 16 := by cases path <;> decide
+theorem variant_count (variant : Variant) : variant.model.nfma ≤ 16 := by cases variant <;> decide
 
-theorem prepare_capacity {path : Path} {x : BlockInput path.profile} {D : F32} {p : Prepared}
-    (h : prepare path x D = .ok p) :
-    wordBudget (p.terms.map Term.word) < 2 ^ 555 ∧ p.output.magnitude.toNat < 2 ^ 424 := by
+theorem prepare_capacity {variant : Variant} {x : BlockInput variant.model} {D : F32} {p : Prepared}
+    (h : prepare variant x D = .ok p) :
+    wordMagnitudeSum (p.terms.map Term.word) < 2 ^ 555 ∧ p.output.magnitude.toNat < 2 ^ 424 := by
   obtain ⟨_, _, _, hlen, ht, hd⟩ := prepare_spec h
-  have hc := path_count path
-  have hb : wordBudget (p.terms.map Term.word) ≤ p.terms.length * (2 ^ 550 - 1) := by
+  have hc := variant_count variant
+  have hb : wordMagnitudeSum (p.terms.map Term.word) ≤ p.terms.length * (2 ^ 550 - 1) := by
     suffices ∀ ts : List Term, (∀ t ∈ ts, t.word.magnitude.toNat < 2 ^ 550) →
-        wordBudget (ts.map Term.word) ≤ ts.length * (2 ^ 550 - 1) from this p.terms ht
+        wordMagnitudeSum (ts.map Term.word) ≤ ts.length * (2 ^ 550 - 1) from this p.terms ht
     intro ts ht
     induction ts with
-    | nil => simp [wordBudget]
+    | nil => simp [wordMagnitudeSum]
     | cons t ts ih =>
       have hm := ht t (by simp)
       have hh := ih (by intro u hu; exact ht u (by simp [hu]))
-      simp only [List.map_cons, wordBudget, List.sum_cons, List.length_cons]
-      simp only [wordBudget, List.map_map] at hh
+      simp only [List.map_cons, wordMagnitudeSum, List.sum_cons, List.length_cons]
+      simp only [wordMagnitudeSum, List.map_map] at hh
       simp only [List.map_map]
       omega
   exact ⟨by omega, hd⟩

@@ -28,31 +28,31 @@ local notation "ℚ" => Rat
 namespace Ozaki
 
 /-- **The sign step of the signed integer pipelines.** -/
-def signStep (eng : Engine) (b smax : ℕ) (r : Option ℚ) (xs ys : List SEntry) : Option Signed :=
+def signStep (mult : MatrixMultiplier) (b smax : ℕ) (r : Option ℚ) (xs ys : List SEntry) : Option Signed :=
   match r with
   | none => none
   | some r =>
     if r ≠ 0 then some ⟨r, decide (r < 0)⟩
-    else (exactSignI eng b smax (xs.map (·.1)) (ys.map (·.1))).map fun sg =>
+    else (exactSignI mult b smax (xs.map (·.1)) (ys.map (·.1))).map fun sg =>
       ⟨0, if sg = 0 then allNegZeroI xs ys else decide (sg < 0)⟩
 
-theorem ozaki1CRIS_eq_signStep (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ)
+theorem ozaki1CRIS_eq_signStep (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ)
     (smax : ℕ) (xs ys : List SEntry) :
-    ozaki1CRIS eng p emin emax b W ss smax xs ys =
-      signStep eng b smax (ozaki1CRI eng p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1)))
+    ozaki1CRIS mult p emin emax b W ss smax xs ys =
+      signStep mult b smax (ozaki1CRI mult p emin emax b W ss smax (xs.map (·.1)) (ys.map (·.1)))
         xs ys := rfl
 
 /-- **The sign step of a correctly rounded value is the specification.** -/
-theorem signStep_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget smax : ℕ} (heng : eng.ExactOn b budget) {xs ys : List SEntry}
-    (hlen : xs.length = ys.length) (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+theorem signStep_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound smax : ℕ} (hmult : mult.ExactOn b bound) {xs ys : List SEntry}
+    (hlen : xs.length = ys.length) (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s (xs.map (·.1)) (ys.map (·.1)) = true)
     {r : Option ℚ}
     (hr : r = roundRNE p emin emax (dot (entryVals (xs.map (·.1))) (entryVals (ys.map (·.1))))) :
-    signStep eng b smax r xs ys =
+    signStep mult b smax r xs ys =
       crSigned (roundRNE p emin emax) (xs.map toSigned) (ys.map toSigned) := by
   have hl : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
-  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa using hbudget
+  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa using hbound
   subst hr
   unfold signStep crSigned
   rw [vals_toSigned, vals_toSigned, ← allNegZeroI_eq]
@@ -63,7 +63,7 @@ theorem signStep_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ ema
     simp only [Option.map_some]
     by_cases hr0 : r = 0
     · subst hr0
-      rw [if_neg (by simp), exactSignI_eq heng hl hb hvanish, hv, Option.map_some]
+      rw [if_neg (by simp), exactSignI_eq hmult hl hb hvanish, hv, Option.map_some]
       unfold sumNeg
       by_cases hz : v = 0
       · rw [if_pos ((sgnQ_eq_zero_iff v).mpr hz), if_pos hz]
@@ -81,14 +81,14 @@ namespace Checked
 variable (B : Widths)
 
 /-- **The sign step with every integer guarded.** -/
-def signStepC (eng : Engine) (b smax : ℕ) (r : Option ℚ) (xs ys : List SEntry) :
+def signStepC (mult : MatrixMultiplier) (b smax : ℕ) (r : Option ℚ) (xs ys : List SEntry) :
     Option (Option Signed) :=
   match r with
   | none => pure none
   | some r =>
     if r ≠ 0 then pure (some ⟨r, decide (r < 0)⟩)
     else do
-      let sg ← exactSignIC B eng b smax (xs.map (·.1)) (ys.map (·.1))
+      let sg ← exactSignIC B mult b smax (xs.map (·.1)) (ys.map (·.1))
       match sg with
       | none => pure none
       | some sg => do
@@ -96,25 +96,25 @@ def signStepC (eng : Engine) (b smax : ℕ) (r : Option ℚ) (xs ys : List SEntr
         pure (some ⟨0, if sg = 0 then z else decide (sg < 0)⟩)
 
 /-- **Correctly rounded Ozaki-II in integers with signed zeros, every integer guarded.** -/
-def ozaki2CRJSC (eng : Engine) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
+def ozaki2CRJSC (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ)
     (xs ys : List SEntry) : Option (Option Signed) := do
-  let r ← ozaki2CRJC B eng p emin emax cfgs b smax (xs.map (·.1)) (ys.map (·.1))
-  signStepC B eng b smax r xs ys
+  let r ← ozaki2CRJC B mult p emin emax cfgs b smax (xs.map (·.1)) (ys.map (·.1))
+  signStepC B mult b smax r xs ys
 
 end Checked
 
 open Checked
 
 /-- **The checked sign step never fails a guard.** -/
-theorem signStepC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+theorem signStepC_eq {B : Widths} {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     {p EM smax : ℕ} {emin emax : ℤ} {xs ys : List SEntry} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) (hx : EntriesIn p EM (xs.map (·.1)))
-    (hy : EntriesIn p EM (ys.map (·.1))) (hRe : exactR p smax budget ≤ B.R)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM (xs.map (·.1)))
+    (hy : EntriesIn p EM (ys.map (·.1))) (hRe : exactR p smax bound ≤ B.R)
     (hRb : p + b + 3 ≤ B.R) (hR2 : 2 * p ≤ B.R)
-    (hXe : exactX p b EM smax budget emin emax B.R < 2 ^ B.X) (r : Option ℚ) :
-    signStepC B eng b smax r xs ys = some (signStep eng b smax r xs ys) := by
+    (hXe : exactX p b EM smax bound emin emax B.R < 2 ^ B.X) (r : Option ℚ) :
+    signStepC B mult b smax r xs ys = some (signStep mult b smax r xs ys) := by
   have hl : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
-  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa using hbudget
+  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa using hbound
   unfold signStepC signStep
   cases r with
   | none => rfl
@@ -122,9 +122,9 @@ theorem signStepC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.Ex
     simp only
     split
     · rfl
-    · rw [exactSignIC_eq heng hl hb hx hy hRe hRb hXe]
+    · rw [exactSignIC_eq hmult hl hb hx hy hRe hRb hXe]
       simp only [Option.bind_eq_bind, Option.bind_some]
-      cases exactSignI eng b smax (xs.map (·.1)) (ys.map (·.1)) with
+      cases exactSignI mult b smax (xs.map (·.1)) (ys.map (·.1)) with
       | none => rfl
       | some sg =>
         simp only [Option.map_some]
@@ -136,46 +136,46 @@ theorem signStepC_eq {B : Widths} {eng : Engine} {b budget : ℕ} (heng : eng.Ex
 /-- **Signed Ozaki-II, every integer bounded**: under the requirements of `ozaki2CRJC_eq` and
 `R ≥ 2p`, the checked function returns exactly what `ozaki2CRJS` returns. -/
 theorem ozaki2CRJSC_eq {B : Widths} {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax)
-    {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget) {EM smax : ℕ}
+    {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound) {EM smax : ℕ}
     {cfgs : List (CRTBasis × ℕ)} {xs ys : List SEntry} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget) (hx : EntriesIn p EM (xs.map (·.1)))
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound) (hx : EntriesIn p EM (xs.map (·.1)))
     (hy : EntriesIn p EM (ys.map (·.1)))
     (hcfgC : ∀ c ∈ cfgs, (∀ m ∈ c.1.moduli, 0 < m ∧ m ≤ 2 ^ (b + 1)) ∧ 0 < c.1.modulus ∧
       crtSize c.1 < 2 ^ B.R ∧ 2 * c.1.modulus < 2 ^ B.R ∧ ozaki2R c.1 c.2 p xs.length ≤ B.R ∧
       ozaki2X c.1 c.2 p EM xs.length emin emax B.R < 2 ^ B.X)
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
       2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus)
-    (hRe : exactR p smax budget ≤ B.R) (hRb : p + b + 3 ≤ B.R) (hR2 : 2 * p ≤ B.R)
-    (hXe : exactX p b EM smax budget emin emax B.R < 2 ^ B.X)
+    (hRe : exactR p smax bound ≤ B.R) (hRb : p + b + 3 ≤ B.R) (hR2 : 2 * p ≤ B.R)
+    (hXe : exactX p b EM smax bound emin emax B.R < 2 ^ B.X)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s (xs.map (·.1)) (ys.map (·.1)) = true) :
-    ozaki2CRJSC B eng p emin emax cfgs b smax xs ys =
-      some (ozaki2CRJS eng p emin emax cfgs b smax xs ys) := by
+    ozaki2CRJSC B mult p emin emax cfgs b smax xs ys =
+      some (ozaki2CRJS mult p emin emax cfgs b smax xs ys) := by
   have hl : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
-  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ budget := by simpa using hbudget
+  have hb : (xs.map (·.1)).length * (2 ^ b * 2 ^ b) ≤ bound := by simpa using hbound
   have hlx : (xs.map (·.1)).length = xs.length := by simp
   unfold ozaki2CRJSC
-  rw [ozaki2CRJC_eq heng hl hb hx hy (by rw [hlx]; exact hcfgC) hRe hRb hXe]
+  rw [ozaki2CRJC_eq hmult hl hb hx hy (by rw [hlx]; exact hcfgC) hRe hRb hXe]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [signStepC_eq heng hlen hbudget hx hy hRe hRb hR2 hXe]
+  rw [signStepC_eq hmult hlen hbound hx hy hRe hRb hR2 hXe]
   congr 1
   have hv' : ∃ s ∈ List.range' 1 smax, residualsVanish b s (entryVals (xs.map (·.1)))
       (entryVals (ys.map (·.1))) = true :=
     hvanish.imp fun s h => ⟨h.1, by rw [← vanishInt_eq]; exact h.2⟩
-  rw [ozaki2CRJS_eq hp hle heng hcfg hlen hbudget hv']
-  exact signStep_eq hp hle heng hlen hbudget hvanish
-    (ozaki2CRJ_eq hp hle heng (by rw [hlx]; exact hcfg) hl hb hv')
+  rw [ozaki2CRJS_eq hp hle hmult hcfg hlen hbound hv']
+  exact signStep_eq hp hle hmult hlen hbound hvanish
+    (ozaki2CRJ_eq hp hle hmult (by rw [hlx]; exact hcfg) hl hb hv')
 
 /-- **Signed FP64 by Ozaki-II, every integer within 264 bits and every exponent and counter within
 24 bits**: on binary64 entries, `k ≤ 2^20`, the twelve moduli at most `4096` with `P ≤ 69`,
 `11`-bit slices and at most `175` slices on the exact path, the IEEE binary64 result with IEEE's
 sign of zero. -/
-theorem ozaki2CRJSC_binary64_eq {eng : Engine} {xs ys : List SEntry} {cfgs : List (CRTBasis × ℕ)}
-    (heng : eng.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
+theorem ozaki2CRJSC_binary64_eq {mult : MatrixMultiplier} {xs ys : List SEntry} {cfgs : List (CRTBasis × ℕ)}
+    (hmult : mult.ExactOn 11 (xs.length * (2 ^ 11 * 2 ^ 11))) (hlen : xs.length = ys.length)
     (hk : xs.length ≤ 2 ^ 20) (hx : ∀ a ∈ xs, FormatEntry 53 (-1022) 1023 a.1)
     (hy : ∀ a ∈ ys, FormatEntry 53 (-1022) 1023 a.1)
     (hcfgs : ∀ c ∈ cfgs, c.1 = fp64Basis ∧ c.2 ≤ 69)
     (hrange : ∀ c ∈ cfgs, 2 * xs.length * (2 ^ c.2 * 2 ^ c.2) < c.1.modulus) :
-    ozaki2CRJSC ⟨264, 24⟩ eng 53 (-1022) 1023 cfgs 11 175 xs ys =
+    ozaki2CRJSC ⟨264, 24⟩ mult 53 (-1022) 1023 cfgs 11 175 xs ys =
       some (crSigned rne64 (xs.map toSigned) (ys.map toSigned)) := by
   have hE : ((-1022 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 ∧
       ((1023 : ℤ) - ((53 : ℕ) - 1 : ℤ)).natAbs ≤ 1074 := by decide
@@ -186,31 +186,31 @@ theorem ozaki2CRJSC_binary64_eq {eng : Engine} {xs ys : List SEntry} {cfgs : Lis
   have hlx : (xs.map (·.1)).length = xs.length := by simp
   have hl' : (xs.map (·.1)).length = (ys.map (·.1)).length := by simp [hlen]
   -- the checked unsigned value is `ozaki2CRJ`, by the unsigned instance
-  have hu := ozaki2CRJC_binary64 (eng := eng) (xs := xs.map (·.1)) (ys := ys.map (·.1))
-    (by rw [hlx]; exact heng) hl' (by rw [hlx]; exact hk) hx' hy' hcfgs
-  have hval := ozaki2CRJ64_eq (eng := eng) (cfgs := cfgs) (smax := 175) (xs := xs.map (·.1))
-    (ys := ys.map (·.1)) heng (by decide) (by decide) (fun c hc => by
+  have hu := ozaki2CRJC_binary64 (mult := mult) (xs := xs.map (·.1)) (ys := ys.map (·.1))
+    (by rw [hlx]; exact hmult) hl' (by rw [hlx]; exact hk) hx' hy' hcfgs
+  have hval := ozaki2CRJ64_eq (mult := mult) (cfgs := cfgs) (smax := 175) (xs := xs.map (·.1))
+    (ys := ys.map (·.1)) hmult (by decide) (by decide) (fun c hc => by
       obtain ⟨h1, _⟩ := hcfgs c hc
       refine ⟨?_, ?_, by rw [hlx]; exact hrange c hc⟩
       · rw [h1]; decide +kernel
       · rw [h1]; exact fun m hm => (fp64Basis_facts.1 m hm).2) hl' (by rw [hlx]; exact Nat.le_refl _)
     (fun v hv => by obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hv; exact (hx' a ha).formatValue)
     (fun v hv => by obtain ⟨a, ha, rfl⟩ := List.mem_map.mp hv; exact (hy' a ha).formatValue)
-  have hbud := bitlen_budget_le hk
+  have hbud := bitlen_dotAbsBound_le hk
   have hW : exactW 53 175 = 72 := by decide
   have hm1 : (-1022 : ℤ).natAbs = 1022 := by decide
   have hm2 : (1023 : ℤ).natAbs = 1023 := by decide
   unfold ozaki2CRJSC
   rw [hu]
   simp only [Option.bind_eq_bind, Option.bind_some]
-  rw [signStepC_eq (emin := -1022) (emax := 1023) heng hlen (Nat.le_refl _)
+  rw [signStepC_eq (emin := -1022) (emax := 1023) hmult hlen (Nat.le_refl _)
     (entriesIn_of_format hE hx') (entriesIn_of_format hE hy')
     (by unfold exactR; rw [hW]; have : bitlen (175 * 175 + 2) = 15 := by decide
         simp only; omega)
     (by decide) (by decide)
     (by unfold exactX; rw [hW]; simp only; omega)]
   congr 1
-  exact signStep_eq (by decide) (by decide) heng hlen (Nat.le_refl _)
+  exact signStep_eq (by decide) (by decide) hmult hlen (Nat.le_refl _)
     (vanishInt64 (by decide) (by decide)
       (fun a ha => by obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact (hx c hc).formatValue)
       (fun a ha => by obtain ⟨c, hc, rfl⟩ := List.mem_map.mp ha; exact (hy c hc).formatValue))

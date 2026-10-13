@@ -40,7 +40,7 @@ def Rounds (x : ℚ) (bits : BitVec 32) : Prop :=
 
 ```lean
 /-- Every supported GPU path and every input, with failures observed as none. -/
-theorem supported_eq_spec (path : Path) (x : BlockInput (implementationProfile path)) :
+theorem supported_eq_spec (path : Path) (x : BlockInput (implementationModel path)) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parameters path) (supportedInput path x)
 ```

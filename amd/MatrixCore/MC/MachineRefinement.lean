@@ -121,14 +121,14 @@ theorem shiftRegister_spec {w : ℕ} (F : ℕ) (e : ℤ) (s : Option ℤ × BitV
 
 /-- With `|ps| ≤ 2^carryBits` products of significand below 4, `w`-bit registers give the model's
 `(e_max, S_{p_i,sum})` in both groupings. -/
-theorem machineProductSum_eq (w carryBits : ℕ) (P : Profile) (ps : List Unpacked)
+theorem machineProductSum_eq (w carryBits : ℕ) (P : Model) (ps : List Unpacked)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) (hcount : ps.length ≤ 2 ^ carryBits)
     (hw : P.alignFracBits + 2 + carryBits + 1 ≤ w) :
     machineProductSum w P ps = productSum P ps := by
   have hw0 : 0 < w := by omega
   have hcap : ps.length * (2 ^ (23 + P.neab + 2) - 1) < 2 ^ (w - 1) :=
     Nat.lt_of_lt_of_le (count_mul_lt _ _ _ hcount)
-      (Nat.pow_le_pow_right (by decide) (by simp only [Profile.alignFracBits] at hw; omega))
+      (Nat.pow_le_pow_right (by decide) (by simp only [Model.alignFracBits] at hw; omega))
   unfold machineProductSum productSum
   cases hacc : P.accumulation
   case oddEvenGrouping =>
@@ -161,7 +161,7 @@ theorem machineProductSum_eq (w carryBits : ℕ) (P : Profile) (ps : List Unpack
     simp only
     exact (machineAlignedSum_spec w P.neab ps hw0 hb hcap).1.symm
 
-theorem accumulateMachine_eq (w : ℕ) (P : Profile) (x : Prepared)
+theorem accumulateMachine_eq (w : ℕ) (P : Model) (x : Prepared)
     (h : machineProductSum w P x.p = productSum P x.p) :
     accumulateMachine w P x = accumulate P x := by
   unfold accumulateMachine accumulate machineAlignedAccumulation alignedAccumulation
@@ -173,7 +173,7 @@ theorem accumulateMachine_eq (w : ℕ) (P : Profile) (x : Prepared)
 /-- **Fixed-width refinement.** For every profile and every input, accumulating the products in
 `w`-bit registers gives the model's result, whenever `N_FMA ≤ 2^carryBits` and
 `23 + n_eab + 2 + carryBits + 1 ≤ w`. -/
-theorem evalBlockMachine_eq {P : Profile} (x : BlockInput P) (w carryBits : ℕ)
+theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)
     (hcount : P.nfma ≤ 2 ^ carryBits) (hw : P.alignFracBits + 2 + carryBits + 1 ≤ w) :
     evalBlockMachine w x = evalBlock x := by
   unfold evalBlockMachine evalBlock
@@ -225,6 +225,6 @@ theorem cdna3XF32_machine_eq (x : BlockInput cdna3XF32) : evalBlockMachine 29 x 
 odd and even sums. -/
 theorem cdna3FP8_machine_eq (fa fb : Format) (x : BlockInput (cdna3FP8 fa fb)) :
     evalBlockMachine 31 x = evalBlock x :=
-  evalBlockMachine_eq x 31 4 (by simp [cdna3FP8]) (by simp [cdna3FP8, Profile.alignFracBits])
+  evalBlockMachine_eq x 31 4 (by simp [cdna3FP8]) (by simp [cdna3FP8, Model.alignFracBits])
 
 end MatrixCore

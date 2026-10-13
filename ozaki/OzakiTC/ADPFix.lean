@@ -122,22 +122,22 @@ theorem adpSafe_accuracy {cfg : ADPConfig} {A B : List (List (BitVec 64))} {path
 
 /-! ## The exact path on the INT8 engine -/
 
-/-- The INT8 engine as an `Engine`: products accumulated in TC-EFT's 32-bit register. -/
-def int8Engine : Engine := fun x y => some ((int8Dot 32 x y : ℤ) : ℚ)
+/-- The INT8 engine as an `MatrixMultiplier`: products accumulated in TC-EFT's 32-bit register. -/
+def int8Multiplier : MatrixMultiplier := fun x y => some ((int8Dot 32 x y : ℤ) : ℚ)
 
 /-- Exact on `6`-bit slices (signed bytes) while the products total less than `2^31`. -/
-theorem int8Engine_exactOn : int8Engine.ExactOn 6 (2 ^ 31 - 1) := by
+theorem int8Multiplier_exactOn : int8Multiplier.ExactOn 6 (2 ^ 31 - 1) := by
   intro x y _ _ _ hb
-  unfold int8Engine
+  unfold int8Multiplier
   rw [int8Dot_exact (by decide) (Nat.lt_of_le_of_lt hb (by decide))]
   rfl
 
 /-- Split-K on the INT8 engine: chunks of `2^18` products of `6`-bit slices
 (`2^18 · 2^12 = 2^30 < 2^31`), the chunk results added exactly. -/
-def int8SplitK : Engine := chunked (2 ^ 18) int8Engine
+def int8SplitK : MatrixMultiplier := chunked (2 ^ 18) int8Multiplier
 
 theorem int8SplitK_exactOn (B : ℕ) : int8SplitK.ExactOn 6 B :=
-  chunked_exactOn int8Engine_exactOn (by decide) (by decide) B
+  chunked_exactOn int8Multiplier_exactOn (by decide) (by decide) B
 
 /-- The INT8 dot product of signed bytes with split-K: chunks of `2^16` products, each in the
 32-bit register, the chunk results added exactly. -/
@@ -196,8 +196,8 @@ configurations `(s, W)` in turn, each an enclosure of split-K INT8 slice product
 path: Ozaki-I with all slice products of `6`-bit slices on the split-K INT8 engine. -/
 def adpCREWith (rnd : ℚ → Option ℚ) (cfgs : List (ℕ × ℕ)) (smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
-  certify rnd (cfgs.map fun c => some (adpEnclosureK c.1 c.2 x y))
-    (ozaki1ExactPath int8SplitK 6 smax x y)
+  roundingTest rnd (cfgs.map fun c => some (adpEnclosureK c.1 c.2 x y))
+    (ozaki1ExactFallback int8SplitK 6 smax x y)
 
 theorem adpCREWith_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
     (hI : RoundsOnIntervals rnd) {cfgs : List (ℕ × ℕ)}
@@ -205,8 +205,8 @@ theorem adpCREWith_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsT
     (hsmax : 2098 < smax * 7) {x y : List ℚ} (hx : ∀ a ∈ x, Binary64Value a)
     (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
     adpCREWith rnd cfgs smax x y = rnd (dot x y) := by
-  apply certify_eq h hI _ _ _
-    (ozaki1ExactPath_eq (int8SplitK_exactOn _) hlen (Nat.le_refl _)
+  apply roundingTest_eq h hI _ _ _
+    (ozaki1ExactFallback_eq (int8SplitK_exactOn _) hlen (Nat.le_refl _)
       (vanish64 (by decide) (by simpa using hsmax) hx hy))
   intro c hc H B hcB
   obtain ⟨cfg, hmem, rfl⟩ := List.mem_map.mp hc

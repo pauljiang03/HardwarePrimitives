@@ -1,5 +1,5 @@
 import Ozaki.SliceRuleCR
-import Ozaki.Window
+import Ozaki.TruncatedSum
 import Ozaki.BoundedInt
 
 /-! # Two design rules for correctly rounded Ozaki-I, from the simulation
@@ -20,13 +20,13 @@ list of slice counts (`ozaki1CRE_eq`, `ozaki1CRW_eq`, `ozaki1CRI_eq`); what they
 
 **The cost model.** `creCost` counts the engine products of an implementation that computes each
 check's slice products afresh: `s(s+1)/2` for every check tried, up to and including the first that
-settles, plus `sₑ²` for the exact path if none settles (`certifyCost` follows `certify`'s control
+settles, plus `sₑ²` for the exact path if none settles (`roundingTestCost` follows `roundingTest`'s control
 flow). The exact path takes `sₑ²` products (`slicePairs_split_length`) and a check `s(s+1)/2`
 (`trianglePairs_length`). Then:
 
 * `ozaki1CRA_cost_le`: the adaptive scheme never costs more than `ozaki1CRE` with the same list;
 * `ozaki1CRA_cost_shortcut`: when `sₑ² ≤ s(s+1)/2` for the first check, it costs exactly `sₑ²`,
-  and when the first check settles, `ozaki1CRE` costs exactly `s(s+1)/2` (`creCost_first_settles`).
+  and when the first check settles, `ozaki1CRE` costs exactly `s(s+1)/2` (`creCost_first_succeeds`).
 
 An implementation that reuses the products of one check in the next (the triangles are nested,
 `split_prefix`) costs less for both; the comparison is the same. The costs are engine products per
@@ -54,43 +54,43 @@ theorem crSlices_head_bound {b t k r : ℕ} (hs : 0 < slicesForCR b t k) {x y : 
   ⟨_, crSlices_head b t k r, ozaki1Bound_le_cr hs hk hx hy⟩
 
 /-- Correctly rounded Ozaki-I with slice counts from `crSlices`, `k` taken from the inputs. -/
-def ozaki1CRK (eng : Engine) (rnd : ℚ → Option ℚ) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
-  ozaki1CRE eng rnd b (crSlices b t x.length r) smax x y
+def ozaki1CRK (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b t r smax : ℕ) (x y : List ℚ) : Option ℚ :=
+  ozaki1CRE mult rnd b (crSlices b t x.length r) smax x y
 
 theorem ozaki1CRK_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (t r : ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRK eng rnd b t r smax x y = rnd (dot x y) :=
-  ozaki1CRE_eq h hI heng _ hlen hbudget hvanish
+    ozaki1CRK mult rnd b t r smax x y = rnd (dot x y) :=
+  ozaki1CRE_eq h hI hmult _ hlen hbound hvanish
 
 /-- The same with the window accumulator. -/
-def ozaki1CRWK (eng : Engine) (rnd : ℚ → Option ℚ) (b W t r smax : ℕ) (x y : List ℚ) :
+def ozaki1CRWK (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W t r smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
-  ozaki1CRW eng rnd b W (crSlices b t x.length r) smax x y
+  ozaki1CRW mult rnd b W (crSlices b t x.length r) smax x y
 
 theorem ozaki1CRWK_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (W t r : ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRWK eng rnd b W t r smax x y = rnd (dot x y) :=
-  ozaki1CRW_eq h hI heng W _ hlen hbudget hvanish
+    ozaki1CRWK mult rnd b W t r smax x y = rnd (dot x y) :=
+  ozaki1CRW_eq h hI hmult W _ hlen hbound hvanish
 
 /-- The same as one integer function from `(significand, exponent)` inputs. -/
-def ozaki1CRIK (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W t r smax : ℕ)
+def ozaki1CRIK (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W t r smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
-  ozaki1CRI eng p emin emax b W (crSlices b t xs.length r) smax xs ys
+  ozaki1CRI mult p emin emax b W (crSlices b t xs.length r) smax xs ys
 
-theorem ozaki1CRIK_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W t r : ℕ) {smax : ℕ}
+theorem ozaki1CRIK_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W t r : ℕ) {smax : ℕ}
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s xs ys = true) :
-    ozaki1CRIK eng p emin emax b W t r smax xs ys =
+    ozaki1CRIK mult p emin emax b W t r smax xs ys =
       roundRNE p emin emax (dot (entryVals xs) (entryVals ys)) :=
-  ozaki1CRI_eq hp hle heng W _ hlen hbudget hvanish
+  ozaki1CRI_eq hp hle hmult W _ hlen hbound hvanish
 
 /-! ## The adaptive shortcut -/
 
@@ -119,73 +119,73 @@ def adaptList (se : Option ℕ) (ss : List ℕ) : List ℕ :=
   | none => ss
 
 /-- Correctly rounded Ozaki-I with the adaptive shortcut. -/
-def ozaki1CRA (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRA (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
-  ozaki1CRE eng rnd b (adaptList (exactCount b smax x y) ss) smax x y
+  ozaki1CRE mult rnd b (adaptList (exactCount b smax x y) ss) smax x y
 
 /-- **The shortcut keeps correct rounding.** -/
 theorem ozaki1CRA_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (ss : List ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRA eng rnd b ss smax x y = rnd (dot x y) :=
-  ozaki1CRE_eq h hI heng _ hlen hbudget hvanish
+    ozaki1CRA mult rnd b ss smax x y = rnd (dot x y) :=
+  ozaki1CRE_eq h hI hmult _ hlen hbound hvanish
 
 /-- With the window accumulator. -/
-def ozaki1CRWA (eng : Engine) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRWA (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : Option ℚ :=
-  ozaki1CRW eng rnd b W (adaptList (exactCount b smax x y) ss) smax x y
+  ozaki1CRW mult rnd b W (adaptList (exactCount b smax x y) ss) smax x y
 
 theorem ozaki1CRWA_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (W : ℕ) (ss : List ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRWA eng rnd b W ss smax x y = rnd (dot x y) :=
-  ozaki1CRW_eq h hI heng W _ hlen hbudget hvanish
+    ozaki1CRWA mult rnd b W ss smax x y = rnd (dot x y) :=
+  ozaki1CRW_eq h hI hmult W _ hlen hbound hvanish
 
 /-- As one integer function: the exact path's slice count by integer operations, then the integer
 scheme with the adaptive list. -/
-def ozaki1CRIA (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
+def ozaki1CRIA (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W : ℕ) (ss : List ℕ) (smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
-  ozaki1CRI eng p emin emax b W (adaptList (exactCountI b smax xs ys) ss) smax xs ys
+  ozaki1CRI mult p emin emax b W (adaptList (exactCountI b smax xs ys) ss) smax xs ys
 
-theorem ozaki1CRIA_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W : ℕ) (ss : List ℕ) {smax : ℕ}
+theorem ozaki1CRIA_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W : ℕ) (ss : List ℕ) {smax : ℕ}
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s xs ys = true) :
-    ozaki1CRIA eng p emin emax b W ss smax xs ys =
+    ozaki1CRIA mult p emin emax b W ss smax xs ys =
       roundRNE p emin emax (dot (entryVals xs) (entryVals ys)) :=
-  ozaki1CRI_eq hp hle heng W _ hlen hbudget hvanish
+  ozaki1CRI_eq hp hle hmult W _ hlen hbound hvanish
 
 /-- Both rules together: slice counts from `k`, and the shortcut. -/
-def ozaki1CRKA (eng : Engine) (rnd : ℚ → Option ℚ) (b t r smax : ℕ) (x y : List ℚ) :
+def ozaki1CRKA (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b t r smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
-  ozaki1CRA eng rnd b (crSlices b t x.length r) smax x y
+  ozaki1CRA mult rnd b (crSlices b t x.length r) smax x y
 
 theorem ozaki1CRKA_eq {R : ℚ → Prop} {rnd : ℚ → Option ℚ} (h : RoundsToNearest R rnd)
-    (hI : RoundsOnIntervals rnd) {eng : Engine} {b budget : ℕ} (heng : eng.ExactOn b budget)
+    (hI : RoundsOnIntervals rnd) {mult : MatrixMultiplier} {b bound : ℕ} (hmult : mult.ExactOn b bound)
     (t r : ℕ) {smax : ℕ} {x y : List ℚ} (hlen : x.length = y.length)
-    (hbudget : x.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : x.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, residualsVanish b s x y = true) :
-    ozaki1CRKA eng rnd b t r smax x y = rnd (dot x y) :=
-  ozaki1CRA_eq h hI heng _ hlen hbudget hvanish
+    ozaki1CRKA mult rnd b t r smax x y = rnd (dot x y) :=
+  ozaki1CRA_eq h hI hmult _ hlen hbound hvanish
 
 /-- Both rules as one integer function. -/
-def ozaki1CRIKA (eng : Engine) (p : ℕ) (emin emax : ℤ) (b W t r smax : ℕ)
+def ozaki1CRIKA (mult : MatrixMultiplier) (p : ℕ) (emin emax : ℤ) (b W t r smax : ℕ)
     (xs ys : List (ℤ × ℤ)) : Option ℚ :=
-  ozaki1CRIA eng p emin emax b W (crSlices b t xs.length r) smax xs ys
+  ozaki1CRIA mult p emin emax b W (crSlices b t xs.length r) smax xs ys
 
-theorem ozaki1CRIKA_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {eng : Engine}
-    {b budget : ℕ} (heng : eng.ExactOn b budget) (W t r : ℕ) {smax : ℕ}
+theorem ozaki1CRIKA_eq {p : ℕ} {emin emax : ℤ} (hp : 0 < p) (hle : emin ≤ emax) {mult : MatrixMultiplier}
+    {b bound : ℕ} (hmult : mult.ExactOn b bound) (W t r : ℕ) {smax : ℕ}
     {xs ys : List (ℤ × ℤ)} (hlen : xs.length = ys.length)
-    (hbudget : xs.length * (2 ^ b * 2 ^ b) ≤ budget)
+    (hbound : xs.length * (2 ^ b * 2 ^ b) ≤ bound)
     (hvanish : ∃ s ∈ List.range' 1 smax, vanishInt b s xs ys = true) :
-    ozaki1CRIKA eng p emin emax b W t r smax xs ys =
+    ozaki1CRIKA mult p emin emax b W t r smax xs ys =
       roundRNE p emin emax (dot (entryVals xs) (entryVals ys)) :=
-  ozaki1CRIA_eq hp hle heng W _ hlen hbudget hvanish
+  ozaki1CRIA_eq hp hle hmult W _ hlen hbound hvanish
 
 /-! ## The cost model -/
 
@@ -202,37 +202,37 @@ theorem slicePairs_split_length (b s : ℕ) (x y : List ℚ) :
     (slicePairs (split b s x).1 (split b s y).1).length = s * s := by
   rw [slicePairs_length, (split_length b s x).1, (split_length b s y).1]
 
-/-- Engine products of `certify` over checks given as (settles, products), then the exact path's
+/-- Engine products of `roundingTest` over checks given as (settles, products), then the exact path's
 `e`: each check tried until one settles; the exact path only if none does. -/
-def certifyCost : List (Bool × ℕ) → ℕ → ℕ
+def roundingTestCost : List (Bool × ℕ) → ℕ → ℕ
   | [], e => e
-  | (settled, w) :: cs, e => w + if settled then 0 else certifyCost cs e
+  | (settled, w) :: cs, e => w + if settled then 0 else roundingTestCost cs e
 
 /-- Whether the enclosure from `s` slices settles the entry. -/
-def checkSettles (eng : Engine) (rnd : ℚ → Option ℚ) (b s : ℕ) (x y : List ℚ) : Bool :=
-  ((ozaki1Enclosure eng b s x y).bind fun p => roundEnclosure rnd p.1 p.2).isSome
+def testSucceeds (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b s : ℕ) (x y : List ℚ) : Bool :=
+  ((ozaki1Enclosure mult b s x y).bind fun p => roundEnclosure rnd p.1 p.2).isSome
 
 /-- **The engine products of `ozaki1CRE`**: `s(s+1)/2` per check tried, and `sₑ²` for the exact path
 if no check settles. -/
-def creCost (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
+def creCost (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : ℕ :=
-  certifyCost (ss.map fun s => (checkSettles eng rnd b s x y, (trianglePairs s).length))
+  roundingTestCost (ss.map fun s => (testSucceeds mult rnd b s x y, (trianglePairs s).length))
     ((exactCount b smax x y).elim 0 fun se => se * se)
 
 /-- The engine products of `ozaki1CRA`. -/
-def craCost (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
+def craCost (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
     (x y : List ℚ) : ℕ :=
-  creCost eng rnd b (adaptList (exactCount b smax x y) ss) smax x y
+  creCost mult rnd b (adaptList (exactCount b smax x y) ss) smax x y
 
-theorem firstCost_le_creCost (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ)
-    (smax : ℕ) (x y : List ℚ) : firstCost ss ≤ creCost eng rnd b ss smax x y := by
+theorem firstCost_le_creCost (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ)
+    (smax : ℕ) (x y : List ℚ) : firstCost ss ≤ creCost mult rnd b ss smax x y := by
   cases ss with
   | nil => simp [firstCost]
-  | cons s ss => simp only [firstCost, creCost, List.map_cons, certifyCost]; omega
+  | cons s ss => simp only [firstCost, creCost, List.map_cons, roundingTestCost]; omega
 
 /-- **The shortcut never costs more.** -/
-theorem ozaki1CRA_cost_le (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
-    (x y : List ℚ) : craCost eng rnd b ss smax x y ≤ creCost eng rnd b ss smax x y := by
+theorem ozaki1CRA_cost_le (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ) (smax : ℕ)
+    (x y : List ℚ) : craCost mult rnd b ss smax x y ≤ creCost mult rnd b ss smax x y := by
   unfold craCost
   cases hse : exactCount b smax x y with
   | none => simp [adaptList]
@@ -240,34 +240,34 @@ theorem ozaki1CRA_cost_le (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (s
     simp only [adaptList]
     split
     · rename_i hle
-      have h1 : creCost eng rnd b [] smax x y = se * se := by
-        simp [creCost, certifyCost, hse]
+      have h1 : creCost mult rnd b [] smax x y = se * se := by
+        simp [creCost, roundingTestCost, hse]
       rw [h1]
-      exact Nat.le_trans hle (firstCost_le_creCost eng rnd b ss smax x y)
+      exact Nat.le_trans hle (firstCost_le_creCost mult rnd b ss smax x y)
     · exact Nat.le_refl _
 
 /-- **When it takes the shortcut, it costs exactly `sₑ²`**, which is at most the first check's
 `s(s+1)/2`. -/
-theorem ozaki1CRA_cost_shortcut (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ)
+theorem ozaki1CRA_cost_shortcut (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ)
     {smax : ℕ} {x y : List ℚ} {se : ℕ} (hse : exactCount b smax x y = some se)
-    (hle : se * se ≤ firstCost ss) : craCost eng rnd b ss smax x y = se * se := by
+    (hle : se * se ≤ firstCost ss) : craCost mult rnd b ss smax x y = se * se := by
   unfold craCost
   rw [hse]
   simp only [adaptList, if_pos hle]
-  simp [creCost, certifyCost, hse]
+  simp [creCost, roundingTestCost, hse]
 
 /-- **When the first check settles, `ozaki1CRE` costs exactly its `s(s+1)/2`.** -/
-theorem creCost_first_settles (eng : Engine) (rnd : ℚ → Option ℚ) (b s : ℕ) (ss : List ℕ)
-    (smax : ℕ) (x y : List ℚ) (hs : checkSettles eng rnd b s x y = true) :
-    creCost eng rnd b (s :: ss) smax x y = (trianglePairs s).length := by
-  simp [creCost, certifyCost, hs]
+theorem creCost_first_succeeds (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b s : ℕ) (ss : List ℕ)
+    (smax : ℕ) (x y : List ℚ) (hs : testSucceeds mult rnd b s x y = true) :
+    creCost mult rnd b (s :: ss) smax x y = (trianglePairs s).length := by
+  simp [creCost, roundingTestCost, hs]
 
 /-- Without the shortcut the two schemes and their costs coincide. -/
-theorem ozaki1CRA_noshortcut (eng : Engine) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ)
+theorem ozaki1CRA_noshortcut (mult : MatrixMultiplier) (rnd : ℚ → Option ℚ) (b : ℕ) (ss : List ℕ)
     {smax : ℕ} {x y : List ℚ}
     (hno : ∀ se, exactCount b smax x y = some se → firstCost ss < se * se) :
-    ozaki1CRA eng rnd b ss smax x y = ozaki1CRE eng rnd b ss smax x y ∧
-      craCost eng rnd b ss smax x y = creCost eng rnd b ss smax x y := by
+    ozaki1CRA mult rnd b ss smax x y = ozaki1CRE mult rnd b ss smax x y ∧
+      craCost mult rnd b ss smax x y = creCost mult rnd b ss smax x y := by
   unfold ozaki1CRA craCost
   cases hse : exactCount b smax x y with
   | none => simp [adaptList]

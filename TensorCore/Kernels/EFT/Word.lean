@@ -105,16 +105,16 @@ theorem sumWords_value {xs : List Word} {z : Word} (h : sumWords xs = some z) :
       rw [Word.add_value h, ih hs]
       rfl
 
-def wordBudget (xs : List Word) : ℕ := (xs.map fun x => x.magnitude.toNat).sum
+def wordMagnitudeSum (xs : List Word) : ℕ := (xs.map fun x => x.magnitude.toNat).sum
 
 /-- Every suffix sum fits under the original inputs' absolute budget. -/
-theorem sumWords_exists (xs : List Word) (h : wordBudget xs < 2 ^ 576) :
-    ∃ z, sumWords xs = some z ∧ z.magnitude.toNat ≤ wordBudget xs := by
+theorem sumWords_exists (xs : List Word) (h : wordMagnitudeSum xs < 2 ^ 576) :
+    ∃ z, sumWords xs = some z ∧ z.magnitude.toNat ≤ wordMagnitudeSum xs := by
   induction xs with
-  | nil => exact ⟨Word.zero, rfl, by simp [wordBudget, Word.zero]⟩
+  | nil => exact ⟨Word.zero, rfl, by simp [wordMagnitudeSum, Word.zero]⟩
   | cons x xs ih =>
-    have hb : wordBudget (x :: xs) = x.magnitude.toNat + wordBudget xs := by
-      simp [wordBudget]
+    have hb : wordMagnitudeSum (x :: xs) = x.magnitude.toNat + wordMagnitudeSum xs := by
+      simp [wordMagnitudeSum]
     obtain ⟨y, hy, hmy⟩ := ih (by omega)
     obtain ⟨z, hz⟩ := Word.add_exists x y (by omega)
     refine ⟨z, by simp [sumWords, hy, hz], ?_⟩

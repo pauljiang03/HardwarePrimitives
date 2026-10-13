@@ -14,7 +14,7 @@ structure EftSnapshot where
   scalarTcEftBits : Option ℕ
   deriving Repr, DecidableEq
 
-def eftSnapshot {p : Profile} (x : BlockInput p) : Except ModelError EftSnapshot := do
+def eftSnapshot {p : Model} (x : BlockInput p) : Except ModelError EftSnapshot := do
   let t ← evalBlock x
   return ⟨t.extractionExponent, t.lowParts, t.overlap, t.scalarPredicate,
     t.scalarCorrectedUnchecked.map BitVec.toNat, t.scalarTcEft.map BitVec.toNat⟩
