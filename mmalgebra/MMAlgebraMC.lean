@@ -17,6 +17,8 @@ import MMAlgebraMC.SFMA
 import MMAlgebraMC.AllInputs
 import MMAlgebraMC.ParityLaw
 import MMAlgebraMC.FP8
+import MMAlgebraMC.ParityFP8
+import MMAlgebraMC.CDNA3Formats
 
 /-! # The reduction algebra on the AMD matrix-core model
 

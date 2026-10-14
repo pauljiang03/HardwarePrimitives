@@ -16,6 +16,7 @@ import MMAlgebraTC.PinnedDemo
 import MMAlgebraTC.SubnormalGamma
 import MMAlgebraTC.Bridge
 import MMAlgebraTC.FP8
+import MMAlgebraTC.FP8Complete
 
 /-! # The reduction algebra on the NVIDIA Tensor Core model
 
