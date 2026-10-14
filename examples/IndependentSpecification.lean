@@ -13,10 +13,10 @@ example (x : BlockInput a100BF16F32)
     (h : IndependentSpec.Valid (IndependentSpec.parametersOf a100BF16F32) (IndependentSpec.inputOf x)) :
     ∃ t, evalBlock x = .ok t ∧
       IndependentSpec.bits (IndependentSpec.parametersOf a100BF16F32) (IndependentSpec.inputOf x) = some t.output.bits :=
-  IndependentSpec.valid_success x h
+  IndependentSpec.valid_success x h (by decide)
 
-/-- Every intermediate encoding in an explicitly ordered schedule. -/
-example (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word))) :
+/-- Every intermediate encoding in an explicitly ordered schedule, for a binary32 block output. -/
+example (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word))) (hw : 23 ≤ p.outputFracBits) :
     (runBlocks p c blocks).toOption.map (fun ts => ts.map fun t => t.output.bits) =
       IndependentSpec.runChain (IndependentSpec.parametersOf p) c blocks :=
-  IndependentSpec.runBlocks_eq_spec p c blocks
+  IndependentSpec.runBlocks_eq_spec p c blocks hw

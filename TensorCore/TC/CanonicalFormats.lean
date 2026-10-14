@@ -7,8 +7,8 @@ namespace TensorCore
 
 /-- Uncorrected output, error, and machine-width contract for any model. -/
 theorem model_contract (p : Model) (F carryBits : ℕ) (hF : p.alignFracBits = F)
-    (hc : p.nfma + 1 ≤ 2 ^ carryBits) (x : BlockInput p) (t : BlockTrace)
-    (h : evalBlock x = .ok t) :
+    (hc : p.nfma + 1 ≤ 2 ^ carryBits) (hw : 23 ≤ p.outputFracBits) (x : BlockInput p)
+    (t : BlockTrace) (h : evalBlock x = .ok t) :
     exactDot x = some t.block.exactDot ∧
     round32 .truncate t.block.accumulator = some t.output.bits ∧
     absQ (t.block.exactDot - t.output.value) <
@@ -20,12 +20,12 @@ theorem model_contract (p : Model) (F carryBits : ℕ) (hF : p.alignFracBits = F
   have hshape : x.products.length = p.nfma := by
     unfold evalBlock at h
     split at h <;> simp_all
-  have herr := evalBlock_error_bound h
-  have hw := evalBlock_machineAccumulator h F carryBits hF hc
-  refine ⟨by simp [exactDot, hp], evalPrepared_output (evalBlock_evalPrepared h), ?_, ?_⟩
+  have herr := evalBlock_error_bound h hw
+  have hm := evalBlock_machineAccumulator h F carryBits hF hc
+  refine ⟨by simp [exactDot, hp], evalBlock_output h hw, ?_, ?_⟩
   · simpa [hlen, hshape] using herr
   · have he : F + 2 + carryBits + 1 = F + 3 + carryBits := by omega
-    simpa [he] using hw
+    simpa [he] using hm
 
 theorem bf16Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (bf16Fp32Model K neab eAlignMin)) (t : BlockTrace)
@@ -36,7 +36,8 @@ theorem bf16Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
       ((K + 1 : ℕ) : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits) ∧
     t.block.machineAccumulator (26 + neab + carryBits) = t.block.accumulator := by
-  have := model_contract (bf16Fp32Model K neab eAlignMin) (23 + neab) carryBits rfl hc x t h
+  have := model_contract (bf16Fp32Model K neab eAlignMin) (23 + neab) carryBits rfl hc
+    (Nat.le_refl 23) x t h
   have he : 23 + neab + 3 + carryBits = 26 + neab + carryBits := by omega
   simpa [he, bf16Fp32Model] using this
 
@@ -49,7 +50,8 @@ theorem tf19Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
       ((K + 1 : ℕ) : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits) ∧
     t.block.machineAccumulator (26 + neab + carryBits) = t.block.accumulator := by
-  have := model_contract (tf19Fp32Model K neab eAlignMin) (23 + neab) carryBits rfl hc x t h
+  have := model_contract (tf19Fp32Model K neab eAlignMin) (23 + neab) carryBits rfl hc
+    (Nat.le_refl 23) x t h
   have he : 23 + neab + 3 + carryBits = 26 + neab + carryBits := by omega
   simpa [he, tf19Fp32Model] using this
 
@@ -61,7 +63,7 @@ theorem bf16Fp32_invocation_compatible (K neab : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (bf16Fp32Model K neab eAlignMin)) :
     invocationBits (x.toInvocation (23 + neab)) =
       (evalBlock x).toOption.map (fun t => t.output.bits) :=
-  legacy_invocation_bits x (23 + neab) (by change bf16.WellFormed; decide) rfl
+  legacy_invocation_bits x (23 + neab) (by change bf16.WellFormed; decide) rfl (Nat.le_refl 23)
 
 /-- A padded TF32 register word decodes as its value word under the `tf19` model. -/
 theorem tf32Register_decode (K neab : ℕ) (eAlignMin : Option ℤ) (w : tf32Register.Word)
@@ -154,12 +156,12 @@ theorem padded_prepared_bits (f : Format) (pad K F : ℕ) (eAlignMin : Option �
     (ps : List (Decoded × Decoded)) (c : Decoded) :
     (evalInvocationPrepared (p := alignedInvocation ⟨⟨f, .ieee⟩, pad⟩ K F eAlignMin)
       ⟨ps, c⟩).toOption.map (fun t => t.output.bits) =
-      (evalPrepared ⟨⟨f, K, F, eAlignMin⟩, ps, c⟩).toOption.map (fun t => t.output.bits) := by
+      (evalPrepared ⟨⟨f, K, F, eAlignMin, 23⟩, ps, c⟩).toOption.map (fun t => t.output.bits) := by
   simp only [evalInvocationPrepared, accumulateInvocation, alignedInvocation,
     PreparedInvocation.alignedBlock, runRoundings]
-  simp only [RoundingStage.roundValue, evalPrepared, ite_true]
+  simp only [RoundingStage.roundValue, evalPrepared, ite_true, truncateFraction32_23]
   rw [roundBinary_fp32 .truncate]
-  cases hr : round32 .truncate (PreparedBlock.mk ⟨f, K, F, eAlignMin⟩ ps c).accumulator with
+  cases hr : round32 .truncate (PreparedBlock.mk ⟨f, K, F, eAlignMin, 23⟩ ps c).accumulator with
   | none => rfl
   | some bits =>
     cases hd : decode32 bits with

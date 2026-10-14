@@ -96,7 +96,8 @@ theorem tcOzaki2_error {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts
 
 /-! ## The Z3 configuration on V100 -/
 
-theorem v100_intExact : IntExact v100F16F32 11 := ⟨by decide, by decide, (fun _ h => by cases h), by decide⟩
+theorem v100_intExact : IntExact v100F16F32 11 :=
+  ⟨by decide, by decide, (fun _ h => by cases h), by decide, by decide⟩
 theorem v100_holdsInts : HoldsInts v100F16F32 11 := ⟨by decide, by decide, by decide, by decide⟩
 
 /-- **The Z3 Ozaki-I model on the V100 Tensor Core.** For `k = 4`, four slices of `11` bits: all

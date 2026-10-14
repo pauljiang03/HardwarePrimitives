@@ -18,8 +18,10 @@ theorem round32_finite_exists (mode : RoundingMode) (x : ℚ) (hr : absQ x ≤ m
 
 theorem evalPrepared_total (b : PreparedBlock) (hr : absQ b.accumulator ≤ maxFinite32) :
     ∃ t, evalPrepared b = .ok t := by
-  obtain ⟨bits, d, hb, hd⟩ := round32_finite_exists .truncate b.accumulator hr
-  have hf : finite32 bits = some ⟨bits, d, hd⟩ := by
+  obtain ⟨bits, d₀, hb, hd₀⟩ := round32_finite_exists .truncate b.accumulator hr
+  obtain ⟨d, hd⟩ := Option.isSome_iff_exists.mp
+    (decode32_truncateFraction32 (m := b.model.outputFracBits) (by rw [hd₀]; rfl))
+  have hf : finite32 (truncateFraction32 b.model.outputFracBits bits) = some ⟨_, d, hd⟩ := by
     unfold finite32
     split
     · rename_i he
@@ -29,7 +31,7 @@ theorem evalPrepared_total (b : PreparedBlock) (hr : absQ b.accumulator ≤ maxF
       rw [hd] at he
       cases Option.some.inj he
       rfl
-  exact ⟨⟨b, ⟨bits, d, hd⟩⟩, by simp [evalPrepared, hb, hf]⟩
+  exact ⟨⟨b, ⟨_, d, hd⟩⟩, by simp [evalPrepared, hb, hf]⟩
 
 /-- Exact accepted domain: correct shape, finite decoded operands, and in-range aligned accumulator. -/
 theorem evalBlock_success_iff (p : Model) (x : BlockInput p) :
@@ -39,7 +41,8 @@ theorem evalBlock_success_iff (p : Model) (x : BlockInput p) :
   constructor
   · rintro ⟨t, ht⟩
     have hp := evalBlock_prepared ht
-    have hr := round32_range (evalPrepared_output (evalBlock_evalPrepared ht))
+    obtain ⟨_, hout, _⟩ := evalPrepared_output_fraction (evalBlock_evalPrepared ht)
+    have hr := round32_range hout
     refine ⟨?_, t.block, hp, hr⟩
     unfold evalBlock at ht
     split at ht <;> simp_all

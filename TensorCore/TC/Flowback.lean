@@ -40,11 +40,12 @@ theorem perturbed_accumulator (prof : Model) (products : List (Decoded × Decode
   rw [hc, hc']
   grind
 
-/-- The value of an accepted output is the signed truncation of the accumulator. -/
+/-- With a binary32 block output, the value of an accepted output is the signed truncation of the
+accumulator. -/
 theorem evalPrepared_output_value {b : PreparedBlock} {t : BlockTrace}
-    (h : evalPrepared b = .ok t) :
+    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputFracBits) :
     t.output.value = signedRounded .truncate b.accumulator := by
-  have hout := evalPrepared_output h
+  have hout := evalPrepared_output h hw
   have hd : value32 t.output.bits = some t.output.value := by
     simp [value32, t.output.valid, Finite32.value]
   by_cases hz : b.accumulator = 0
@@ -188,43 +189,43 @@ theorem signedRounded_trunc_of_finite (x : ℚ) (h : FiniteValue32 x) :
 theorem output_condition (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
-    (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t') :
+    (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t') (hw : 23 ≤ prof.outputFracBits) :
     (t.output.value < t'.output.value ↔
       signedRounded .truncate (PreparedBlock.mk prof products c).accumulator <
         signedRounded .truncate ((PreparedBlock.mk prof products c).accumulator +
           flowback prof products c c' - accumulatorShift prof products c c')) := by
-  rw [evalPrepared_output_value h, evalPrepared_output_value h',
+  rw [evalPrepared_output_value h hw, evalPrepared_output_value h' hw,
     perturbed_accumulator prof products c c']
 
 /-- `ω > ΔA` is necessary for an output increase. -/
 theorem flowback_necessary (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
-    (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t')
+    (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t') (hw : 23 ≤ prof.outputFracBits)
     (hinc : t.output.value < t'.output.value) :
     accumulatorShift prof products c c' < flowback prof products c c' := by
   apply Classical.byContradiction
   intro hle
   have hle' : flowback prof products c c' ≤ accumulatorShift prof products c c' := by grind
   have hA := perturbed_accumulator prof products c c'
-  have hr := round32_range (evalPrepared_output h)
-  have hr' := round32_range (evalPrepared_output h')
+  have hr := round32_range (evalPrepared_output h hw)
+  have hr' := round32_range (evalPrepared_output h' hw)
   have hmono := signedRounded_trunc_monotone _ _
     (show (PreparedBlock.mk prof products c').accumulator ≤
       (PreparedBlock.mk prof products c).accumulator by rw [hA]; grind) hr' hr
-  rw [evalPrepared_output_value h, evalPrepared_output_value h'] at hinc
+  rw [evalPrepared_output_value h hw, evalPrepared_output_value h' hw] at hinc
   grind
 
 /-- `ω > ΔA` is sufficient when both accumulators are representable. -/
 theorem flowback_sufficient (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
-    (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t')
+    (h' : evalPrepared ⟨prof, products, c'⟩ = .ok t') (hw : 23 ≤ prof.outputFracBits)
     (hA : FiniteValue32 (PreparedBlock.mk prof products c).accumulator)
     (hA' : FiniteValue32 (PreparedBlock.mk prof products c').accumulator)
     (hgt : accumulatorShift prof products c c' < flowback prof products c c') :
     t.output.value < t'.output.value := by
-  rw [evalPrepared_output_value h, evalPrepared_output_value h',
+  rw [evalPrepared_output_value h hw, evalPrepared_output_value h' hw,
     signedRounded_trunc_of_finite _ hA, signedRounded_trunc_of_finite _ hA',
     perturbed_accumulator prof products c c']
   grind
@@ -241,12 +242,13 @@ theorem accumulatorShift_of_exact (prof : Model) (products : List (Decoded × De
 /-- Theorem III.4 as a failure of Definition III.2: the construction's products are not monotone in the accumulator input once `K ≥ 3·2^p`. -/
 theorem construction_not_monotone (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
+    (hw : 23 ≤ prof.outputFracBits)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hthr : 3 * 2 ^ p ≤ K) :
     ¬ MonotoneInAccumulator prof (List.replicate K (da, db)) := by
   intro hmono
   obtain ⟨t, t', h, h', hv, hiff⟩ :=
-    nonmonotone_perturbation prof p K da db hF hfl hval hscale hK
+    nonmonotone_perturbation prof p K da db hF hfl hw hval hscale hK
   have hlt : belowOneDecoded.value < oneDecoded.value := by decide +kernel
   have := hmono oneDecoded belowOneDecoded t t' h h' hlt
   have h1 := hiff.mpr hthr

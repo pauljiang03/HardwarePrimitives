@@ -7,11 +7,17 @@ namespace TensorCore
 
 /-- BF16 products, FP32 c and output, and `F = 23 + neab` fractional bits after alignment. -/
 @[implicit_reducible] def bf16Fp32Model (K neab : ℕ) (eAlignMin : Option ℤ := none) :
-    Model := ⟨bf16, K, 23 + neab, eAlignMin⟩
+    Model := ⟨bf16, K, 23 + neab, eAlignMin, 23⟩
 
 /-- TF32 values in the packed 19-bit `tf19` layout, FP32 c and output. -/
 @[implicit_reducible] def tf19Fp32Model (K neab : ℕ) (eAlignMin : Option ℤ := none) :
-    Model := ⟨tf19, K, 23 + neab, eAlignMin⟩
+    Model := ⟨tf19, K, 23 + neab, eAlignMin, 23⟩
+
+@[simp] theorem bf16Fp32Model_outputFracBits (K neab : ℕ) (eAlignMin : Option ℤ) :
+    (bf16Fp32Model K neab eAlignMin).outputFracBits = 23 := rfl
+
+@[simp] theorem tf19Fp32Model_outputFracBits (K neab : ℕ) (eAlignMin : Option ℤ) :
+    (tf19Fp32Model K neab eAlignMin).outputFracBits = 23 := rfl
 
 @[implicit_reducible] def a100BF16F32 : Model := bf16Fp32Model 8 1 (some (-132))
 @[implicit_reducible] def hopperBF16F32 : Model := bf16Fp32Model 16 2 (some (-133))

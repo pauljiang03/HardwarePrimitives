@@ -203,7 +203,7 @@ theorem blockOut_ne_negZero {K neab : ℕ} {eAlignMin : Option ℤ}
       | some b =>
         rw [hp] at ht
         simp only at ht
-        have hout := evalPrepared_output ht
+        have hout := evalPrepared_output ht (by rw [prepare_model hp]; exact Nat.le_refl 23)
         intro hneg
         by_cases hz : b.accumulator = 0
         · rw [hz] at hout

@@ -137,6 +137,7 @@ theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decod
 /-- TC-EFT Theorem III.4. -/
 theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
+    (hw : 23 ≤ prof.outputFracBits)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
@@ -181,8 +182,8 @@ theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
   obtain ⟨f2, hf2, _, hf2v⟩ := finite32_of_value32 _ _ hv2
   refine ⟨⟨⟨prof, List.replicate K (da, db), oneDecoded⟩, f1⟩,
     ⟨⟨prof, List.replicate K (da, db), belowOneDecoded⟩, f2⟩, ?_, ?_, hf1v, ?_⟩
-  · simp only [evalPrepared, hA1, hr1, hf1]
-  · simp only [evalPrepared, hA2, hb2, hf2]
+  · simp only [evalPrepared, hA1, hr1, truncateFraction32_of_le hw, hf1]
+  · simp only [evalPrepared, hA2, hb2, truncateFraction32_of_le hw, hf2]
   · change 1 < f2.value ↔ _
     rw [hf2v]
     unfold signedRounded
@@ -286,7 +287,8 @@ theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f �
     show ((23 + p : ℕ) : ℤ) = 23 + (p : ℤ)
     omega
   obtain ⟨t, t', h1, h2, hv, hiff⟩ :=
-    nonmonotone_perturbation (fp16Fp32Model K p eAlignMin) p K da db hF hfl hval hscale hK
+    nonmonotone_perturbation (fp16Fp32Model K p eAlignMin) p K da db hF hfl (Nat.le_refl 23) hval
+      hscale hK
   have hc1 : decode32 (0x3f800000 : F32) = some oneDecoded := by decide +kernel
   have hc2 : decode32 (0x3f7fffff : F32) = some belowOneDecoded := by decide +kernel
   have hps := prepareProducts_replicate _ a b da db K ha hb

@@ -6,14 +6,16 @@ import TensorCore.TC.Composition
 
 namespace TensorCore.IndependentSpec
 
-/-- All encoded intermediate outputs, and failures, agree for every finite schedule. -/
-theorem runBlocks_eq_spec (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word))) :
+/-- All encoded intermediate outputs, and failures, agree for every finite schedule of a model
+with a binary32 block output. -/
+theorem runBlocks_eq_spec (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word)))
+    (hw : 23 ≤ p.outputFracBits) :
     (runBlocks p c blocks).toOption.map (fun ts => ts.map fun t => t.output.bits) =
       runChain (parametersOf p) c blocks := by
   induction blocks generalizing c with
   | nil => rfl
   | cons block rest ih =>
-    have hb := evalBlock_eq_spec (⟨block, c⟩ : BlockInput p)
+    have hb := evalBlock_eq_spec (⟨block, c⟩ : BlockInput p) hw
     change (evalBlock (⟨block, c⟩ : BlockInput p)).toOption.map (fun t => t.output.bits) =
       bits (parametersOf p) ⟨block, c⟩ at hb
     simp only [runChain, ← hb]
@@ -27,12 +29,12 @@ theorem runBlocks_eq_spec (p : Model) (c : F32) (blocks : List (List (p.Word × 
 
 /-- Projection of the preceding stronger theorem to just the final output bits. -/
 theorem schedule_last_eq_spec (p : Model) (c : F32)
-    (blocks : List (List (p.Word × p.Word))) :
+    (blocks : List (List (p.Word × p.Word))) (hw : 23 ≤ p.outputFracBits) :
     (runBlocks p c blocks).toOption.map (fun ts =>
       (ts.map fun t => t.output.bits).getLast?.getD c) =
       lastBits (parametersOf p) c blocks := by
   unfold lastBits
-  rw [← runBlocks_eq_spec]
+  rw [← runBlocks_eq_spec p c blocks hw]
   simp only [Option.map_map]
   rfl
 

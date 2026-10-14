@@ -108,7 +108,7 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
   have hr : absQ blk.accumulator ≤ maxFinite32 := by rw [hacc, hexact]; exact hfin
   obtain ⟨t, ht⟩ := evalPrepared_total blk hr
   refine ⟨t, by rw [hev]; exact ht, ?_⟩
-  rw [evalPrepared_output_value ht, hacc, hexact]
+  rw [evalPrepared_output_value ht (by rw [hprof]; exact hp.output), hacc, hexact]
 
 /-! ## Truncation of an integer -/
 
@@ -465,50 +465,50 @@ theorem tcMultiplier2_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : Ho
 /-- **A100 fp16 with full block FMAs**: eight products of `11`-bit slices
 (`8 · 2^22 = 2^25 = 2^(F+1)`), two passes each, exact for every length. -/
 theorem a100F16_exactOn2 (B : ℕ) : (tcMultiplier2 ampereF16F32).ExactOn 11 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 fp16 with full block FMAs**: sixteen products of `11`-bit slices
 (`16 · 2^22 = 2^26 = 2^(F+1)`), two passes each, exact for every length. -/
 theorem h100F16_exactOn2 (B : ℕ) : (tcMultiplier2 hopperF16F32).ExactOn 11 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **V100 fp16**: four products of `11`-bit slices (`4 · 2^22 = 2^24 = 2^(F+1)`). -/
 theorem v100F16_exactOn2 (B : ℕ) : (tcMultiplier2 v100F16F32).ExactOn 11 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, (fun _ hf => by cases hf), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, (fun _ hf => by cases hf), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **A100 bf16**: eight products of `8`-bit slices. -/
 theorem a100BF16_exactOn2 (B : ℕ) : (tcMultiplier2 a100BF16F32).ExactOn 8 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 bf16**: sixteen products of `8`-bit slices. -/
 theorem h100BF16_exactOn2 (B : ℕ) : (tcMultiplier2 hopperBF16F32).ExactOn 8 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **A100 tf32**: four products of `11`-bit slices. -/
 theorem a100TF32_exactOn2 (B : ℕ) : (tcMultiplier2 a100TF32F32).ExactOn 11 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 tf32 (wmma)**: four products of `11`-bit slices. -/
 theorem h100TF32Wmma_exactOn2 (B : ℕ) : (tcMultiplier2 hopperTF32WmmaF32).ExactOn 11 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 
 /-- **H100 tf32 (mma)**: eight products of `11`-bit slices (`8 · 2^22 = 2^25 ≤ 2^26`). -/
 theorem h100TF32Mma_exactOn2 (B : ℕ) : (tcMultiplier2 hopperTF32MmaF32).ExactOn 11 B :=
-  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier2_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (by decide) (by decide)
     (by decide +kernel) B
 

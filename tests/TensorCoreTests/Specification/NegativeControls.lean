@@ -33,7 +33,7 @@ theorem premature_normalization_detected :
     bits (parametersOf v100F16F32) (inputOf Regression.r1a) = some 0x40100001 := by
   constructor
   · decide +kernel
-  · rw [← evalBlock_eq_spec]
+  · rw [← evalBlock_eq_spec _ (Nat.le_refl 23)]
     decide +kernel
 
 theorem ieee_alignment_detected :
@@ -41,7 +41,7 @@ theorem ieee_alignment_detected :
     bits (parametersOf v100F16F32) (inputOf Regression.r1b) = some 0x40100000 := by
   constructor
   · decide +kernel
-  · rw [← evalBlock_eq_spec]
+  · rw [← evalBlock_eq_spec _ (Nat.le_refl 23)]
     decide +kernel
 
 /-- A100: p1 = sum_{j=150..155} 2^-j, p2 = 2^-156, p3 = p4 = 2^-157. -/
@@ -59,7 +59,7 @@ theorem ampere_eAlignMin_removal_detected :
     bits (parametersOf a100BF16F32) (inputOf ampereEAlignMinInput) = some 0 := by
   constructor
   · decide +kernel
-  · rw [← evalBlock_eq_spec]
+  · rw [← evalBlock_eq_spec _ (Nat.le_refl 23)]
     decide +kernel
 
 theorem hopper_eAlignMin_removal_detected :
@@ -67,7 +67,7 @@ theorem hopper_eAlignMin_removal_detected :
     bits (parametersOf hopperBF16F32) (inputOf hopperEAlignMinInput) = some 0 := by
   constructor
   · decide +kernel
-  · rw [← evalBlock_eq_spec]
+  · rw [← evalBlock_eq_spec _ (Nat.le_refl 23)]
     decide +kernel
 
 def cancelBlock : List (F16 × F16) := (0xbc00, 0x3c00) :: List.replicate 7 (0, 0)
@@ -77,9 +77,11 @@ theorem block_reversal_detected :
     lastBits (parametersOf ampereF16F32) 0x3f800000 [cancelBlock, tinyBlock] = some 0x33800000 ∧
     lastBits (parametersOf ampereF16F32) 0x3f800000 [tinyBlock, cancelBlock] = some 0 := by
   constructor
-  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [cancelBlock, tinyBlock]).symm.trans
+  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [cancelBlock, tinyBlock]
+      (Nat.le_refl 23)).symm.trans
       (by decide +kernel)
-  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [tinyBlock, cancelBlock]).symm.trans
+  · exact (schedule_last_eq_spec ampereF16F32 0x3f800000 [tinyBlock, cancelBlock]
+      (Nat.le_refl 23)).symm.trans
       (by decide +kernel)
 
 /-- Value equality alone cannot distinguish these two encodings; the sign clause can. -/

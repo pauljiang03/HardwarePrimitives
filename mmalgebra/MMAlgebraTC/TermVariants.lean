@@ -39,9 +39,11 @@ theorem gridOK_zero (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩) : GridOK 
   rw [wordValue_zero_of p hz, Rat.zero_mul, Rat.zero_mul]
   rfl
 
-/-- **A block whose terms lie on the binary32 grid never returns `−0`.** -/
+/-- **A block whose terms lie on the binary32 grid never returns `−0`**, with a binary32 block
+output. -/
 theorem blockOut_ne_negZero_of {p : Model} {x : BlockInput p} {d : F32}
-    (hg : ∀ b, prepare x = some b → OnGridQ b.accumulator (-149)) (h : blockOut x = .ok d) :
+    (hg : ∀ b, prepare x = some b → OnGridQ b.accumulator (-149)) (h : blockOut x = .ok d)
+    (hw : 23 ≤ p.outputFracBits) :
     d ≠ 0x80000000 := by
   unfold blockOut at h
   cases ht : evalBlock x with
@@ -58,7 +60,7 @@ theorem blockOut_ne_negZero_of {p : Model} {x : BlockInput p} {d : F32}
       | some b =>
         rw [hp] at ht
         simp only at ht
-        have hout := evalPrepared_output ht
+        have hout := evalPrepared_output ht (by rw [prepare_model hp]; exact hw)
         intro hneg
         by_cases hz : b.accumulator = 0
         · rw [hz] at hout
@@ -101,7 +103,8 @@ theorem terms_onGridQ_of {p : Model}
         exact hps q hq
 
 /-- **On operand pairs with products on the binary32 grid, Tensor Core blocks return good words.** -/
-theorem tc_sub_block_good (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩) (d : F32)
+theorem tc_sub_block_good (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
+    (hw : 23 ≤ p.outputFracBits) (d : F32)
     (ps : List (Option {q : p.Word × p.Word // GridOK p q})) (o : F32)
     (h : (tcMachine p).block d (ps.map (Option.map Subtype.val)) = some o) : Good o := by
   have h' : (blockOut (p := p) ⟨slotPairs p (ps.map (Option.map Subtype.val)), d⟩).toOption = some o := h
@@ -118,7 +121,7 @@ theorem tc_sub_block_good (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩) (d 
     rw [hb] at h'
     simp only [Except.toOption, Option.some.injEq] at h'
     subst h'
-    refine ⟨?_, blockOut_ne_negZero_of (fun b hp => ?_) hb⟩
+    refine ⟨?_, blockOut_ne_negZero_of (fun b hp => ?_) hb hw⟩
     · unfold blockOut at hb
       cases ht : evalBlock (p := p) ⟨slotPairs p (ps.map (Option.map Subtype.val)), d⟩ with
       | error e => rw [ht] at hb; simp [Except.map] at hb
@@ -135,14 +138,16 @@ theorem tc_sub_block_good (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩) (d 
 
 /-- The laws of a rigid multiplier on a Tensor Core model, on operand pairs with products on the
 binary32 grid. -/
-def tcSubAlg (p : Model) (hF : 23 ≤ p.alignFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
+def tcSubAlg (p : Model) (hF : 23 ≤ p.alignFracBits)
+    (hout : 23 ≤ p.outputFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
     (hz : p.decode 0 = some ⟨0, 0, 0⟩) : MMAlgebra.RigidAlg ((tcMachine p).sub (GridOK p)) p.nfma :=
-  MMAlgebra.RigidAlg.sub (tcLaws p hF hmin hz) (GridOK p) (gridOK_zero p hz) (tc_add_comm p)
-    (fun x hx => tc_add_zero p x hx) (tc_sub_block_good p hz) (tc_add_good p)
+  MMAlgebra.RigidAlg.sub (tcLaws p hF hout hmin hz) (GridOK p) (gridOK_zero p hz) (tc_add_comm p)
+    (fun x hx => tc_add_zero p x hx) (tc_sub_block_good p hz hout) (tc_add_good p)
 
 /-- **Completeness for terms on a Tensor Core model, on inputs with products on the binary32
 grid**, from fingerprint tables. -/
 theorem tc_sub_term_complete (p : Model) (hF : 23 ≤ p.alignFracBits)
+    (hout : 23 ≤ p.outputFracBits)
     (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
     (ins2 ins3 : List (ℕ → {q : p.Word × p.Word // GridOK p q}))
     (hnd2 : ((MMAlgebra.codes2All.filter fun κ => MMAlgebra.rvalid (MMAlgebra.LTree.realize2 κ 0 1)).map
@@ -157,7 +162,7 @@ theorem tc_sub_term_complete (p : Model) (hF : 23 ≤ p.alignFracBits)
     ∃ (s : List ℕ) (q : ℕ → p.Word × p.Word), s.length ≤ 3 ∧ (∀ i, i ∉ s → q i = (0, 0)) ∧
       (∀ i, GridOK p (q i)) ∧
       MMAlgebra.eval (tcMachine p) q 0 0 t₁ ≠ MMAlgebra.eval (tcMachine p) q 0 0 t₂ := by
-  obtain ⟨s, q, hs, hzq, hq⟩ := MMAlgebra.rigid_term_complete (tcSubAlg p hF hmin hz) ins2 ins3
+  obtain ⟨s, q, hs, hzq, hq⟩ := MMAlgebra.rigid_term_complete (tcSubAlg p hF hout hmin hz) ins2 ins3
     hnd2 hnd3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl hne
   refine ⟨s, fun i => (q i).1, hs, fun i hi => by show (q i).1 = (0, 0); rw [hzq i hi]; rfl,
     fun i => (q i).2, ?_⟩
@@ -167,6 +172,7 @@ theorem tc_sub_term_complete (p : Model) (hF : 23 ≤ p.alignFracBits)
 /-- **On inputs with products on the binary32 grid, terms are equivalent exactly when their normal
 forms agree**, from fingerprint tables. -/
 theorem tc_sub_term_equiv_iff (p : Model) (hF : 23 ≤ p.alignFracBits)
+    (hout : 23 ≤ p.outputFracBits)
     (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
     (ins2 ins3 : List (ℕ → {q : p.Word × p.Word // GridOK p q}))
     (hnd2 : ((MMAlgebra.codes2All.filter fun κ => MMAlgebra.rvalid (MMAlgebra.LTree.realize2 κ 0 1)).map
@@ -183,12 +189,12 @@ theorem tc_sub_term_equiv_iff (p : Model) (hF : 23 ≤ p.alignFracBits)
   constructor
   · intro h
     apply Classical.byContradiction; intro hne
-    obtain ⟨_, q, _, _, hok, hq⟩ := tc_sub_term_complete p hF hmin hz ins2 ins3 hnd2 hnd3
+    obtain ⟨_, q, _, _, hok, hq⟩ := tc_sub_term_complete p hF hout hmin hz ins2 ins3 hnd2 hnd3
       t₁ t₂ hw₁ hw₂ n₁ n₂ hl hne
     exact hq (h q hok)
   · intro h q hok
-    have e₁ := MMAlgebra.rigid_sound (tcSubAlg p hF hmin hz) (fun i => ⟨q i, hok i⟩) t₁ hw₁ n₁
-    have e₂ := MMAlgebra.rigid_sound (tcSubAlg p hF hmin hz) (fun i => ⟨q i, hok i⟩) t₂ hw₂ n₂
+    have e₁ := MMAlgebra.rigid_sound (tcSubAlg p hF hout hmin hz) (fun i => ⟨q i, hok i⟩) t₁ hw₁ n₁
+    have e₂ := MMAlgebra.rigid_sound (tcSubAlg p hF hout hmin hz) (fun i => ⟨q i, hok i⟩) t₂ hw₂ n₂
     rw [h] at e₁
     have := e₁.trans e₂.symm
     rw [MMAlgebra.eval_sub, MMAlgebra.eval_sub] at this
@@ -234,7 +240,7 @@ theorem a100bf16_term_equiv_iff (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra.
     (∀ q : ℕ → a100BF16F32.Word × a100BF16F32.Word, (∀ i, GridOK a100BF16F32 (q i)) →
       MMAlgebra.eval (tcMachine a100BF16F32) q 0 0 t₁ = MMAlgebra.eval (tcMachine a100BF16F32) q 0 0 t₂) ↔
       MMAlgebra.nfR t₁ = MMAlgebra.nfR t₂ :=
-  tc_sub_term_equiv_iff a100BF16F32 (by decide) (by simp [a100BF16F32, bf16Fp32Model]) (bf16_decode_zero 8 1 _) a100bf16In2 a100bf16In3
+  tc_sub_term_equiv_iff a100BF16F32 (by decide) (by decide) (by simp [a100BF16F32, bf16Fp32Model]) (bf16_decode_zero 8 1 _) a100bf16In2 a100bf16In3
     a100bf16_table2 a100bf16_table3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl
 
 /-! ### H100 (bf16) -/
@@ -269,7 +275,7 @@ theorem h100bf16_term_equiv_iff (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra.
     (∀ q : ℕ → hopperBF16F32.Word × hopperBF16F32.Word, (∀ i, GridOK hopperBF16F32 (q i)) →
       MMAlgebra.eval (tcMachine hopperBF16F32) q 0 0 t₁ = MMAlgebra.eval (tcMachine hopperBF16F32) q 0 0 t₂) ↔
       MMAlgebra.nfR t₁ = MMAlgebra.nfR t₂ :=
-  tc_sub_term_equiv_iff hopperBF16F32 (by decide) (by simp [hopperBF16F32, bf16Fp32Model]) (bf16_decode_zero 16 2 _) h100bf16In2 h100bf16In3
+  tc_sub_term_equiv_iff hopperBF16F32 (by decide) (by decide) (by simp [hopperBF16F32, bf16Fp32Model]) (bf16_decode_zero 16 2 _) h100bf16In2 h100bf16In3
     h100bf16_table2 h100bf16_table3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl
 
 /-! ### A100 (tf32) -/
@@ -305,7 +311,7 @@ theorem a100tf32_term_equiv_iff (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra.
     (∀ q : ℕ → a100TF32F32.Word × a100TF32F32.Word, (∀ i, GridOK a100TF32F32 (q i)) →
       MMAlgebra.eval (tcMachine a100TF32F32) q 0 0 t₁ = MMAlgebra.eval (tcMachine a100TF32F32) q 0 0 t₂) ↔
       MMAlgebra.nfR t₁ = MMAlgebra.nfR t₂ :=
-  tc_sub_term_equiv_iff a100TF32F32 (by decide) (by simp [a100TF32F32, tf19Fp32Model]) (tf19_decode_zero 4 1 _) a100tf32In2 a100tf32In3
+  tc_sub_term_equiv_iff a100TF32F32 (by decide) (by decide) (by simp [a100TF32F32, tf19Fp32Model]) (tf19_decode_zero 4 1 _) a100tf32In2 a100tf32In3
     a100tf32_table2 a100tf32_table3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl
 
 /-! ### H100 (tf32, wmma) -/
@@ -342,7 +348,7 @@ theorem h100tf32w_term_equiv_iff (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra
     (∀ q : ℕ → hopperTF32WmmaF32.Word × hopperTF32WmmaF32.Word, (∀ i, GridOK hopperTF32WmmaF32 (q i)) →
       MMAlgebra.eval (tcMachine hopperTF32WmmaF32) q 0 0 t₁ = MMAlgebra.eval (tcMachine hopperTF32WmmaF32) q 0 0 t₂) ↔
       MMAlgebra.nfR t₁ = MMAlgebra.nfR t₂ :=
-  tc_sub_term_equiv_iff hopperTF32WmmaF32 (by decide) (by simp [hopperTF32WmmaF32, tf19Fp32Model]) (tf19_decode_zero 4 2 _) h100tf32wIn2 h100tf32wIn3
+  tc_sub_term_equiv_iff hopperTF32WmmaF32 (by decide) (by decide) (by simp [hopperTF32WmmaF32, tf19Fp32Model]) (tf19_decode_zero 4 2 _) h100tf32wIn2 h100tf32wIn3
     h100tf32w_table2 h100tf32w_table3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl
 
 /-! ### H100 (tf32, mma) -/
@@ -377,7 +383,7 @@ theorem h100tf32m_term_equiv_iff (t₁ t₂ : MMAlgebra.Term) (hw₁ : MMAlgebra
     (∀ q : ℕ → hopperTF32MmaF32.Word × hopperTF32MmaF32.Word, (∀ i, GridOK hopperTF32MmaF32 (q i)) →
       MMAlgebra.eval (tcMachine hopperTF32MmaF32) q 0 0 t₁ = MMAlgebra.eval (tcMachine hopperTF32MmaF32) q 0 0 t₂) ↔
       MMAlgebra.nfR t₁ = MMAlgebra.nfR t₂ :=
-  tc_sub_term_equiv_iff hopperTF32MmaF32 (by decide) (by simp [hopperTF32MmaF32, tf19Fp32Model]) (tf19_decode_zero 8 2 _) h100tf32mIn2 h100tf32mIn3
+  tc_sub_term_equiv_iff hopperTF32MmaF32 (by decide) (by decide) (by simp [hopperTF32MmaF32, tf19Fp32Model]) (tf19_decode_zero 8 2 _) h100tf32mIn2 h100tf32mIn3
     h100tf32m_table2 h100tf32m_table3 t₁ t₂ hw₁ hw₂ n₁ n₂ hl
 
 end MMAlgebra.TC

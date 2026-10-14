@@ -5,7 +5,8 @@ import OzakiTC.TwoPass
 
 /-! # The error contract of the Tensor Core models
 
-The model's error bound (`TensorCore.evalBlock_error_bound`) says that a block FMA is within
+The model's error bound (`TensorCore.evalBlock_error_bound`) says that a block FMA with a binary32
+block output is within
 `(K + 1)·2^(η − F) + ulp(D)` of the exact sum of its inputs, where `η` is the alignment exponent and
 `D` the output. In terms of magnitudes (`tc_block_le`): `2^η` is at most `|c| + 2^-126` or, for a
 product, 2 to the sum of its operands' exponents (`expMag`, at most `|aᵢbᵢ|` when both operands are
@@ -204,11 +205,13 @@ theorem slotAbs_words (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩) :
       rw [wordValue_zero_of p hz]; simp
     | some q => rfl
 
-/-- **The Tensor Core block contract.** A block whose accumulator has magnitude at most `A` is
-within `(K + 1)·2^-F·(A + 2^-125 + Σ expMag) + 2^-23·(A + Σ|aᵢbᵢ|) + 2^-149` of the exact sum of
-its inputs. -/
+/-- **The Tensor Core block contract.** On a model with a binary32 block output, a block whose
+accumulator has magnitude at most `A` is within
+`(K + 1)·2^-F·(A + 2^-125 + Σ expMag) + 2^-23·(A + Σ|aᵢbᵢ|) + 2^-149` of the exact sum of its
+inputs. -/
 theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
-    (hz : p.decode 0 = some ⟨0, 0, 0⟩) (d : F32) (ps : List (Option (p.Word × p.Word))) (o : F32)
+    (hz : p.decode 0 = some ⟨0, 0, 0⟩) (hw : 23 ≤ p.outputFracBits) (d : F32)
+    (ps : List (Option (p.Word × p.Word))) (o : F32)
     (A : ℚ) (hA : Rat.abs ((tcMachine p).val d) ≤ A) (h : (tcMachine p).block d ps = some o) :
     Rat.abs ((tcMachine p).val o - ((tcMachine p).val d + (tcMachine p).slotVal ps)) ≤
       ((ps.length : ℚ) + 1) * pow2 (-p.alignFracBits) *
@@ -221,7 +224,7 @@ theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
     unfold blockOut at h'; rw [ht] at h'
     simp only [Except.map, Except.toOption, Option.some.injEq] at h'
     subst h'
-    have hb := evalBlock_error_bound ht
+    have hb := evalBlock_error_bound ht hw
     have hprep := evalBlock_prepared ht
     have hev := evalBlock_evalPrepared ht
     unfold prepare at hprep
@@ -271,7 +274,8 @@ theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
             obtain ⟨u, hu, rfl⟩ := List.mem_map.mp hx
             rw [hval0 u hu, truncGrid_zero]
           have hout0 : t.output.value = 0 := by
-            rw [evalPrepared_output_value hev, hacc0]; decide +kernel
+            rw [evalPrepared_output_value hev (by rw [evalBlock_model ht]; exact hw), hacc0]
+            decide +kernel
           have hexact0 : t.block.exactDot = 0 := by
             have hc0 : dc.value = 0 := hval0 ⟨dc.significand, dc.exponent, dc.mantissaBits⟩ (by
               rw [← hprep]; unfold PreparedBlock.terms; exact List.mem_cons_self)
@@ -359,7 +363,7 @@ theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
                   grind
           -- the output's magnitude
           have hout : absQ t.output.value ≤ A + (tcMachine p).slotAbs ps := by
-            rw [evalPrepared_output_value hev]
+            rw [evalPrepared_output_value hev (by rw [evalBlock_model ht]; exact hw)]
             refine Rat.le_trans (abs_signedRounded_trunc_le _) ?_
             rw [accumulator_value]
             refine Rat.le_trans (absQ_sumQ_le _) ?_
@@ -469,14 +473,15 @@ theorem tc_add_le (p : Model) (x y o : F32) (h : (tcMachine p).add x y = some o)
     pow2 (-24) * (Rat.abs (value32D x) + Rat.abs (value32D y)) + pow2 (-150)
   grind
 
-/-- The error contract of a Tensor Core model: the block contract `tc_block_le` and binary32
-round-to-nearest addition. -/
-def tcContract (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩) :
+/-- The error contract of a Tensor Core model with a binary32 block output: the block contract
+`tc_block_le` and binary32 round-to-nearest addition. -/
+def tcContract (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
+    (hw : 23 ≤ p.outputFracBits) :
     MMAlgebra.Contract (tcMachine p) where
   blockErr A ps := ((ps.length : ℚ) + 1) * pow2 (-p.alignFracBits) *
       (A + pow2 (-125) + ((slotPairs p ps).map (expMag p)).sum) +
     pow2 (-23) * (A + (tcMachine p).slotAbs ps) + pow2 (-149)
-  block_le d ps o A hA h := tc_block_le p hmin hz d ps o A hA h
+  block_le d ps o A hA h := tc_block_le p hmin hz hw d ps o A hA h
   addRel := pow2 (-24)
   addRel_nonneg := Rat.le_of_lt (pow2_pos _)
   addAbs := pow2 (-150)
@@ -518,9 +523,11 @@ theorem v100_divergence (q : ℕ → F16 × F16) (c : F32) (t₁ t₂ : MMAlgebr
     (hex : MMAlgebra.exact (tcMachine v100F16F32) q (value32D c) (value32D c) t₁ =
       MMAlgebra.exact (tcMachine v100F16F32) q (value32D c) (value32D c) t₂) :
     Rat.abs (value32D o₁ - value32D o₂) ≤
-      MMAlgebra.err (tcContract v100F16F32 (by simp [v100F16F32]) (fp16_decode_zero 4 0 none)) q
+      MMAlgebra.err (tcContract v100F16F32 (by simp [v100F16F32]) (fp16_decode_zero 4 0 none)
+          (by decide)) q
           (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₁ +
-        MMAlgebra.err (tcContract v100F16F32 (by simp [v100F16F32]) (fp16_decode_zero 4 0 none)) q
+        MMAlgebra.err (tcContract v100F16F32 (by simp [v100F16F32]) (fp16_decode_zero 4 0 none)
+          (by decide)) q
           (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₂ :=
   MMAlgebra.divergence _ _ q q c c c c t₁ t₂ he₁ he₂ hex
 
@@ -532,9 +539,9 @@ theorem a100_divergence (q : ℕ → F16 × F16) (c : F32) (t₁ t₂ : MMAlgebr
       MMAlgebra.exact (tcMachine ampereF16F32) q (value32D c) (value32D c) t₂) :
     Rat.abs (value32D o₁ - value32D o₂) ≤
       MMAlgebra.err (tcContract ampereF16F32 (by simp [ampereF16F32, fp16Fp32Model])
-          (fp16_decode_zero 8 1 _)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₁ +
+          (fp16_decode_zero 8 1 _) (by decide)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₁ +
         MMAlgebra.err (tcContract ampereF16F32 (by simp [ampereF16F32, fp16Fp32Model])
-          (fp16_decode_zero 8 1 _)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₂ :=
+          (fp16_decode_zero 8 1 _) (by decide)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₂ :=
   MMAlgebra.divergence _ _ q q c c c c t₁ t₂ he₁ he₂ hex
 
 /-- **Divergence on H100.** -/
@@ -545,9 +552,9 @@ theorem h100_divergence (q : ℕ → F16 × F16) (c : F32) (t₁ t₂ : MMAlgebr
       MMAlgebra.exact (tcMachine hopperF16F32) q (value32D c) (value32D c) t₂) :
     Rat.abs (value32D o₁ - value32D o₂) ≤
       MMAlgebra.err (tcContract hopperF16F32 (by simp [hopperF16F32, fp16Fp32Model])
-          (fp16_decode_zero 16 2 _)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₁ +
+          (fp16_decode_zero 16 2 _) (by decide)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₁ +
         MMAlgebra.err (tcContract hopperF16F32 (by simp [hopperF16F32, fp16Fp32Model])
-          (fp16_decode_zero 16 2 _)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₂ :=
+          (fp16_decode_zero 16 2 _) (by decide)) q (Rat.abs (value32D c)) (Rat.abs (value32D c)) t₂ :=
   MMAlgebra.divergence _ _ q q c c c c t₁ t₂ he₁ he₂ hex
 
 end MMAlgebra.TC

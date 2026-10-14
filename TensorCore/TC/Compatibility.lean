@@ -44,18 +44,20 @@ private theorem finite32_some {bits : F32} {d : Decoded} (hd : decode32 bits = s
 
 set_option maxRecDepth 4096 in
 theorem legacy_prepared_bits (p : Model) (ps : List (Decoded × Decoded)) (c : Decoded)
-    (F : ℕ) (hF : p.alignFracBits = F) :
+    (F : ℕ) (hF : p.alignFracBits = F) (hw : 23 ≤ p.outputFracBits) :
     (evalInvocationPrepared (p := p.toInvocation F) ⟨ps, c⟩).toOption.map (fun t => t.output.bits) =
       (evalPrepared ⟨p, ps, c⟩).toOption.map (fun t => t.output.bits) := by
-  rcases p with ⟨f, K, af, eAlignMin⟩
-  simp only at hF
+  rcases p with ⟨f, K, af, eAlignMin, m⟩
+  simp only at hF hw
   subst af
+  have hacc : (PreparedBlock.mk ⟨f, K, F, eAlignMin, m⟩ ps c).accumulator =
+      (PreparedBlock.mk ⟨f, K, F, eAlignMin, 23⟩ ps c).accumulator := rfl
   simp only [evalInvocationPrepared, accumulateInvocation, Model.toInvocation,
     PreparedInvocation.alignedBlock, runRoundings]
-  simp only [RoundingStage.roundValue, evalPrepared]
+  simp only [RoundingStage.roundValue, evalPrepared, hacc, truncateFraction32_of_le hw]
   simp only [packedIEEE, ite_true]
   rw [roundBinary_fp32 .truncate]
-  cases hr : round32 .truncate (PreparedBlock.mk ⟨f, K, F, eAlignMin⟩ ps c).accumulator with
+  cases hr : round32 .truncate (PreparedBlock.mk ⟨f, K, F, eAlignMin, 23⟩ ps c).accumulator with
   | none => rfl
   | some bits =>
     cases hd : decode32 bits with
@@ -64,7 +66,7 @@ theorem legacy_prepared_bits (p : Model) (ps : List (Decoded × Decoded)) (c : D
 
 set_option maxRecDepth 4096 in
 theorem legacy_invocation_bits {p : Model} (x : BlockInput p) (F : ℕ)
-    (hinput : p.input.WellFormed) (hF : p.alignFracBits = F) :
+    (hinput : p.input.WellFormed) (hF : p.alignFracBits = F) (hw : 23 ≤ p.outputFracBits) :
     invocationBits (x.toInvocation F) = (evalBlock x).toOption.map (fun t => t.output.bits) := by
   have hv : (p.toInvocation F).Valid := by
     refine ⟨hinput, ?_, rfl, ?_, trivial⟩ <;> change fp32.WellFormed <;> decide
@@ -84,10 +86,10 @@ theorem legacy_invocation_bits {p : Model} (x : BlockInput p) (F : ℕ)
     | some c =>
       cases hp : prepareProducts p x.products with
       | none => rfl
-      | some ps => exact legacy_prepared_bits p ps c F hF
+      | some ps => exact legacy_prepared_bits p ps c F hF hw
 
 theorem v100_invocation_bits (x : BlockInput v100F16F32) :
     invocationBits (x.toInvocation 23) = (evalV100 x).toOption.map (fun t => t.output.bits) :=
-  legacy_invocation_bits x 23 (by decide) rfl
+  legacy_invocation_bits x 23 (by decide) rfl (by decide)
 
 end TensorCore

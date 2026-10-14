@@ -37,7 +37,7 @@ theorem flowback_without_increase :
 theorem v100_products_not_monotone :
     ¬ MonotoneInAccumulator v100F16F32 (List.replicate 4 (halfDecoded (-12), halfDecoded (-12))) :=
   construction_not_monotone v100F16F32 0 4 (halfDecoded (-12)) (halfDecoded (-12)) rfl
-    (by simp [v100F16F32]) (by decide +kernel) (by decide +kernel)
+    (by simp [v100F16F32]) (by decide) (by decide +kernel) (by decide +kernel)
     (by decide) (by decide)
 
 /-- Algorithm 1 on the EFT cases: R3 takes the scalar branch, the coefficient-bound and subnormal-accumulator cases take the exact reference branch. -/

@@ -128,7 +128,7 @@ theorem canonical_source_neab_output (K neab : ℕ) (eAlignMin : Option ℤ)
     (he : evalBlock x = .ok t) :
     round32 .truncate t.block.exactDot = some t.output.bits :=
   (evalBlock_exact_alignment he (canonical_source_neab_exact K neab eAlignMin hf hneab x
-    t.block (evalBlock_prepared he))).2
+    t.block (evalBlock_prepared he)) (Nat.le_refl 23)).2
 
 theorem canonical_source_neab_success_iff (K neab : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hneab : 156 ≤ neab)
@@ -184,7 +184,7 @@ theorem canonical_neab_output (K neab : ℕ) (eAlignMin : Option ℤ)
     (he : evalBlock x = .ok t) :
     round32 .truncate t.block.exactDot = some t.output.bits :=
   (evalBlock_exact_alignment he (canonical_neab_exact K neab eAlignMin hf hneab x
-    t.block (evalBlock_prepared he))).2
+    t.block (evalBlock_prepared he)) (Nat.le_refl 23)).2
 
 /-- With enough extra alignment bits, acceptance depends on the ideal sum's range directly. -/
 theorem canonical_neab_success_iff (K neab : ℕ) (eAlignMin : Option ℤ)

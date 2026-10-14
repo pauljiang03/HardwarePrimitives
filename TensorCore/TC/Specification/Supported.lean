@@ -27,21 +27,21 @@ theorem supported_parameters (variant : Variant) :
 theorem supported_eq_spec (variant : Variant) (x : BlockInput (implementationModel variant)) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parameters variant) (supportedInput variant x) := by
-  cases variant <;> exact evalBlock_eq_spec x
+  cases variant <;> exact evalBlock_eq_spec x (Nat.le_refl 23)
 
 /-- Every paper-valid input of every supported variant produces the specified bits. -/
 theorem supported_valid_success (variant : Variant) (x : BlockInput (implementationModel variant))
     (hv : Valid (parameters variant) (supportedInput variant x)) :
     ∃ t, evalBlock x = .ok t ∧
       bits (parameters variant) (supportedInput variant x) = some t.output.bits := by
-  cases variant <;> exact valid_success x hv
+  cases variant <;> exact valid_success x hv (Nat.le_refl 23)
 
 /-- The compatibility layer transfers the result to the public aligned invocation API. -/
 theorem invocation_eq_spec {p : Model} (x : BlockInput p) (F : ℕ)
-    (hf : p.input.WellFormed) (hF : p.alignFracBits = F) :
+    (hf : p.input.WellFormed) (hF : p.alignFracBits = F) (hw : 23 ≤ p.outputFracBits) :
     invocationBits (x.toInvocation F) = bits (parametersOf p) (inputOf x) := by
-  rw [legacy_invocation_bits x F hf hF]
-  exact evalBlock_eq_spec x
+  rw [legacy_invocation_bits x F hf hF hw]
+  exact evalBlock_eq_spec x hw
 
 /-- Register-level TF32 agreement on every correctly padded input. -/
 theorem tf32_eq_spec (K neab : ℕ) (eAlignMin : Option ℤ)
@@ -57,7 +57,7 @@ theorem tf32_eq_spec (K neab : ℕ) (eAlignMin : Option ℤ)
     change (pair.2.toNat % 8192 == 0) = true at hb
     rw [ha, hb]
     rfl
-  rw [tf32_invocation_bits K neab eAlignMin ps c hp, evalBlock_eq_spec]
+  rw [tf32_invocation_bits K neab eAlignMin ps c hp, evalBlock_eq_spec _ (Nat.le_refl 23)]
   simp only [tf32Bits, hpad, ↓reduceIte]
   rfl
 

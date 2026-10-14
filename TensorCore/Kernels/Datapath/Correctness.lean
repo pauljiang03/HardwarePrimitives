@@ -287,7 +287,8 @@ theorem evalBlock_eq (variant : Variant) (x : BlockInput variant.model) :
               split
               · rename_i he; rw [hd] at he; contradiction
               · rename_i d' he; rw [hd] at he; cases Option.some.inj he; rfl
-            simp only [hf]
+            have hw : variant.model.outputFracBits = 23 := by cases variant <;> rfl
+            simp only [hw, truncateFraction32_23, hf]
             rfl
   · have hb : (x.products.length != variant.model.nfma) = true := by simpa using hlen
     rw [if_pos hb, if_pos hb]

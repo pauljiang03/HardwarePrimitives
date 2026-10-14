@@ -29,35 +29,35 @@ theorem eAlignMin_ok (f : ℤ) (F : ℤ) (h : f ≤ F) : ∀ g ∈ some f, g ≤
   intro g hg; cases hg; exact h
 
 theorem v100_exactOn : (tcMultiplier v100F16F32).ExactOn 11 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, (fun _ hf => by cases hf), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, (fun _ hf => by cases hf), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem a100F16_exactOn : (tcMultiplier ampereF16F32).ExactOn 11 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem a100BF16_exactOn : (tcMultiplier a100BF16F32).ExactOn 8 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem a100TF32_exactOn : (tcMultiplier a100TF32F32).ExactOn 11 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem h100F16_exactOn : (tcMultiplier hopperF16F32).ExactOn 11 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem h100BF16_exactOn : (tcMultiplier hopperBF16F32).ExactOn 8 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem h100TF32Wmma_exactOn : (tcMultiplier hopperTF32WmmaF32).ExactOn 11 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem h100TF32Mma_exactOn : (tcMultiplier hopperTF32MmaF32).ExactOn 11 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 end Ozaki.TC

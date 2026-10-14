@@ -72,10 +72,11 @@ theorem accumulator_perm (p : Model) (c : Decoded) {ps qs : List (Decoded × Dec
 def blockOut {p : Model} (x : BlockInput p) : Except ModelError F32 :=
   (evalBlock x).map fun t => t.output.bits
 
-theorem evalPrepared_bits_eq {b b' : PreparedBlock} (h : b.accumulator = b'.accumulator) :
+theorem evalPrepared_bits_eq {b b' : PreparedBlock} (h : b.accumulator = b'.accumulator)
+    (hw : b.model.outputFracBits = b'.model.outputFracBits) :
     (evalPrepared b).map (fun t => t.output.bits) = (evalPrepared b').map (fun t => t.output.bits) := by
   unfold evalPrepared
-  rw [h]
+  rw [h, hw]
   split
   · rfl
   · split <;> rfl
@@ -101,7 +102,7 @@ theorem evalBlock_bits_perm {p : Model} {ps qs : List (p.Word × p.Word)} (h : p
       revert hm
       cases prepareProducts p ps <;> cases prepareProducts p qs <;> simp [PermOpt]
       intro hperm
-      exact evalPrepared_bits_eq (accumulator_perm p dc hperm)
+      exact evalPrepared_bits_eq (accumulator_perm p dc hperm) rfl
 
 
 /-! ## Zero products are invisible -/
@@ -243,6 +244,6 @@ theorem evalBlock_bits_zero {p : Model} {ps qs : List (p.Word × p.Word)}
       revert hm
       cases prepareProducts p ps <;> cases prepareProducts p qs <;> simp [RelOpt]
       intro hrel
-      exact evalPrepared_bits_eq (accumulator_rel p dc hrel)
+      exact evalPrepared_bits_eq (accumulator_rel p dc hrel) rfl
 
 end MMAlgebra.TC

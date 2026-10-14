@@ -117,10 +117,11 @@ def candidates (p : Model) (bmax : ℕ) : List SliceRun :=
 /-- **Every candidate is exact**, on vectors of every length. -/
 theorem candidates_exact {p : Model} {bmax : ℕ}
     (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits) (hwide : 23 ≤ p.alignFracBits)
-    (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma) :
+    (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma)
+    (hout : 23 ≤ p.outputFracBits) :
     ∀ r ∈ candidates p bmax, ∀ B, (r.multiplier p).ExactOn r.width B := by
   have hint : ∀ b : ℕ, 1 ≤ b → 2 * (b : ℤ) ≤ p.alignFracBits → IntExact p b :=
-    fun b hb1 hb => ⟨hb, hwide, hfloor, by omega⟩
+    fun b hb1 hb => ⟨hb, hwide, hfloor, by omega, hout⟩
   have hholds : ∀ b : ℕ, b ≤ bmax → HoldsInts p b :=
     fun b hb => ⟨hh.wellFormed, Nat.le_trans hb hh.bits, hh.emin, hh.emax⟩
   intro r hr B
@@ -226,15 +227,15 @@ choices (`11`-bit slices on V100, A100 tf32 and the H100 tf32 `wmma` variant, `8
 the instances of `OzakiTC.Models` and `OzakiTC.LongDot`. -/
 
 theorem a100F16_exactOn10 : (tcMultiplier ampereF16F32).ExactOn 10 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem h100F16_exactOn10 : (tcMultiplier hopperF16F32).ExactOn 10 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 theorem h100TF32Mma_exactOn10 : (tcMultiplier hopperTF32MmaF32).ExactOn 10 (2 ^ 24) :=
-  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+  tcMultiplier_exactOn ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide)
 
 /-- Split-K with `10`-bit slices on H100 fp16 (chunks of sixteen, one full block FMA each) is exact

@@ -71,7 +71,7 @@ def invocationIdeal {p : InvocationSpec} (x : InvocationInput p) : Option ℚ :=
 /-- Reuse the proved denormalized-product/grid primitive. -/
 def PreparedInvocation.alignedBlock {p : InvocationSpec} (b : PreparedInvocation p)
     (F : ℕ) (eAlignMin : Option ℤ) (includeC : Bool) : PreparedBlock :=
-  ⟨⟨p.input.valueFormat.layout, p.nfma, F, eAlignMin⟩, b.products,
+  ⟨⟨p.input.valueFormat.layout, p.nfma, F, eAlignMin, 23⟩, b.products,
     if includeC then b.c else ⟨0, 0, 0⟩⟩
 
 structure LocalAccumulation where

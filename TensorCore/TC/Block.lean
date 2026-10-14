@@ -86,10 +86,11 @@ inductive ModelError where
   | nonfiniteOutput
   deriving Repr, DecidableEq
 
+/-- The accumulator truncated to binary32, then to the model's block-output fraction bits. -/
 def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate b.accumulator with
   | none => .error .accumulatorOutOfRange
-  | some bits => match finite32 bits with
+  | some bits => match finite32 (truncateFraction32 b.model.outputFracBits bits) with
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 

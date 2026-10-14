@@ -111,6 +111,7 @@ theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInp
         obtain ⟨h1, h2⟩ := int_product_term hp (hops q hq) hnz
         exact ⟨by omega, h2⟩
   obtain ⟨t, ht, hv⟩ := evalPrepared_exact blk hacc (by rw [hexact]; exact hfin)
+    (by rw [hprof]; exact hp.output)
   exact ⟨t, by rw [hev]; exact ht, by rw [hv, hexact]⟩
 
 /-- **The condition on the sum is necessary.** A block that returns its exact sum returns a
@@ -380,7 +381,7 @@ theorem a100_multiplier_cancel :
     tcMultiplier ampereF16F32 cancelX cancelY = some 0 ∧ dotAbs cancelX cancelY = 2 ^ 25 := by
   refine ⟨?_, by decide⟩
   have := tcMultiplier_cancel (p := ampereF16F32) (b := 11)
-    ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide⟩
+    ⟨by decide, by decide, eAlignMin_ok _ _ (by decide), by decide, by decide⟩
     ⟨by decide, by decide, by decide, by decide⟩ (by decide) (x := cancelX) (y := cancelY)
     (by decide) (by decide) (by decide) ⟨fun j hj => by
       have h8 : ampereF16F32.nfma = 8 := rfl

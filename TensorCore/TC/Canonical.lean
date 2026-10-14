@@ -10,7 +10,7 @@ theorem fp16Fp32_invocation_compatible (K neab : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K neab eAlignMin)) :
     invocationBits (x.toInvocation (23 + neab)) =
       (evalBlock x).toOption.map (fun t => t.output.bits) :=
-  legacy_invocation_bits x (23 + neab) (by change fp16.WellFormed; decide) rfl
+  legacy_invocation_bits x (23 + neab) (by change fp16.WellFormed; decide) rfl (Nat.le_refl 23)
 
 /-- One public contract for any FMA size and any number of extra alignment bits. -/
 theorem fp16Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
@@ -27,9 +27,9 @@ theorem fp16Fp32_contract (K neab carryBits : ℕ) (eAlignMin : Option ℤ)
   have hshape : x.products.length = K := by
     unfold evalBlock at h
     split at h <;> simp_all [fp16Fp32Model]
-  have herr := evalBlock_error_bound h
+  have herr := evalBlock_error_bound h (Nat.le_refl 23)
   have hw := evalBlock_machineAccumulator h (23 + neab) carryBits rfl hc
-  refine ⟨by simp [exactDot, hp], evalPrepared_output (evalBlock_evalPrepared h), ?_, ?_⟩
+  refine ⟨by simp [exactDot, hp], evalBlock_output h (Nat.le_refl 23), ?_, ?_⟩
   · simpa [hlen, hshape] using herr
   · have he : 23 + neab + 2 + carryBits + 1 = 26 + neab + carryBits := by omega
     simpa [he] using hw

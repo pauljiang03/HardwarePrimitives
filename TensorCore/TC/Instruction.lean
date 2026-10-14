@@ -215,12 +215,12 @@ theorem zero_products_passthrough (K neab : ℕ) (eAlignMin : Option ℤ)
       have hv : f.value = 0 := by simp [Finite32.value, Decoded.value, hsig]
       have hr : round32 .truncate 0 = some (0 : F32) := by decide +kernel
       have hf0 : finite32 (0 : F32) = some f := by rw [← hc0]; exact hf
-      simp only [evalPrepared, hacc, hv, hr, hf0]
+      simp only [evalPrepared, hacc, hv, hr, fp16Fp32Model_outputFracBits, truncateFraction32_23, hf0]
     · have hv : f.value ≠ 0 := Decoded.value_ne_zero f.decoded hsig
       have hval32 : value32 c = some f.value := by
         unfold value32; rw [hc]; rfl
       have hr := value32_round32 .truncate c f.value hval32 hv
-      simp only [evalPrepared, hacc, hr, hf]
+      simp only [evalPrepared, hacc, hr, fp16Fp32Model_outputFracBits, truncateFraction32_23, hf]
   refine ⟨⟨PreparedBlock.mk (fp16Fp32Model K neab eAlignMin)
     (List.replicate K (⟨0, 0, 0⟩, ⟨0, 0, 0⟩)) f.decoded, f⟩, ?_, hbits⟩
   unfold evalBlock

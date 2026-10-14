@@ -45,12 +45,13 @@ theorem trunc_binade {y : ℚ} {α : ℤ} (hα : -126 ≤ α) (h1 : pow2 α ≤ 
   have hm : max α emin32 = α := by unfold emin32; omega
   rw [hm]; rfl
 
-/-- Model and range conditions of an anchored chain at `α`. -/
+/-- Model and range conditions of an anchored chain at `α`, with a binary32 block output. -/
 structure AnchorModel (p : Model) (α : ℤ) : Prop where
   wide : 23 ≤ p.alignFracBits
   eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ α
   lo : -126 ≤ α
   hi : α ≤ 127
+  output : 23 ≤ p.outputFracBits
 
 /-- Products of a block: finite words, none with exponent above `α`. -/
 structure AnchorBlock (p : Model) (α : ℤ) (ps : List (p.Word × p.Word)) : Prop where
@@ -122,7 +123,7 @@ theorem evalBlock_anchored {p : Model} {α : ℤ} (hm : AnchorModel p α) {x : B
       change dc.value = v; exact hdcv
     rw [hcv, hK, truncGrid_exact_of_grid K (α - 23) (α - p.alignFracBits) (by have := hm.wide; omega)]
     rfl
-  have hout := evalPrepared_output_value hev
+  have hout := evalPrepared_output_value hev (by rw [hmodel]; exact hm.output)
   rw [hacc, trunc_binade hm.lo hs1 hs2] at hout
   rw [hout]
   obtain ⟨K, hK⟩ := hcg

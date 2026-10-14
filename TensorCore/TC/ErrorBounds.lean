@@ -6,13 +6,16 @@ import TensorCore.Numerics.Truncation
 
 namespace TensorCore
 
-theorem evalPrepared_output {b : PreparedBlock} {t : BlockTrace}
-    (h : evalPrepared b = .ok t) : round32 .truncate b.accumulator = some t.output.bits := by
+/-- The output word is the binary32 truncation of the accumulator, truncated further to the
+model's block-output fraction bits. -/
+theorem evalPrepared_output_fraction {b : PreparedBlock} {t : BlockTrace}
+    (h : evalPrepared b = .ok t) : ∃ bits, round32 .truncate b.accumulator = some bits ∧
+      t.output.bits = truncateFraction32 b.model.outputFracBits bits := by
   unfold evalPrepared at h
   cases hr : round32 .truncate b.accumulator with
   | none => simp [hr] at h
   | some bits =>
-    cases hd : finite32 bits with
+    cases hd : finite32 (truncateFraction32 b.model.outputFracBits bits) with
     | none => simp [hr, hd] at h
     | some d =>
       simp [hr, hd] at h
@@ -21,7 +24,20 @@ theorem evalPrepared_output {b : PreparedBlock} {t : BlockTrace}
       split at hd
       · contradiction
       · cases Option.some.inj hd
-        rfl
+        exact ⟨bits, rfl, rfl⟩
+
+/-- With a binary32 block output, the output word is the binary32 truncation of the accumulator. -/
+theorem evalPrepared_output {b : PreparedBlock} {t : BlockTrace}
+    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputFracBits) :
+    round32 .truncate b.accumulator = some t.output.bits := by
+  obtain ⟨bits, hr, ht⟩ := evalPrepared_output_fraction h
+  rw [hr, ht, truncateFraction32_of_le hw]
+
+/-- With a binary32 block output, a block's output word is the binary32 truncation of its accumulator. -/
+theorem evalBlock_output {p : Model} {x : BlockInput p} {t : BlockTrace}
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
+    round32 .truncate t.block.accumulator = some t.output.bits :=
+  evalPrepared_output (evalBlock_evalPrepared h) (by rw [evalBlock_model h]; exact hw)
 
 theorem sum_residual_bounds (ts : List ℚ) (e : ℤ) :
     absQ (sumQ (ts.map fun x => x - truncGrid x e)) ≤ (ts.length : ℚ) * pow2 e ∧
@@ -68,21 +84,22 @@ theorem block_error_bound (b : PreparedBlock) (d : Finite32)
   rw [he]; grind
 
 theorem evalPrepared_error_bound {b : PreparedBlock} {t : BlockTrace}
-    (h : evalPrepared b = .ok t) :
+    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputFracBits) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits) := by
   have hb := evalPrepared_block h
   rw [hb]
-  have hout := evalPrepared_output h
+  have hout := evalPrepared_output h hw
   exact block_error_bound b t.output (round32_range hout) hout
 
-/-- The model error is below (number of terms) · (alignment grid step) + (one output ulp). -/
+/-- The model error is below (number of terms) · (alignment grid step) + (one output ulp), for a
+model with a binary32 block output. -/
 theorem evalBlock_error_bound {p : Model} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) :
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits) :=
-  evalPrepared_error_bound (evalBlock_evalPrepared h)
+  evalPrepared_error_bound (evalBlock_evalPrepared h) (by rw [evalBlock_model h]; exact hw)
 
 end TensorCore

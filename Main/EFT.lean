@@ -44,7 +44,7 @@ private def blockJson (f : TensorCore.Format) (k neab : ℕ) (eAlignMin : Option
     let c := ns[k * 2]!
     let D := ns[k * 2 + 1]!
     if c ≥ 2 ^ 32 || D ≥ 2 ^ 32 then none else do
-      let p : Model := ⟨f, k, 23 + neab, eAlignMin⟩
+      let p : Model := ⟨f, k, 23 + neab, eAlignMin, 23⟩
       let ps ← parsePairs p (ns.take (2 * k))
       let x : BlockInput p := ⟨ps, BitVec.ofNat 32 c⟩
       return Json.mkObj [

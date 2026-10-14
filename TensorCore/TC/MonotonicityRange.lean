@@ -92,6 +92,7 @@ theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Dec
 /-- TC-EFT Theorem III.5 on prepared blocks. -/
 theorem nonmonotone_range (prof : Model) (p K j : ℕ) (da db : Decoded)
     (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
+    (hw : 23 ≤ prof.outputFracBits)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
     ∃ t : BlockTrace,
@@ -147,7 +148,7 @@ theorem nonmonotone_range (prof : Model) (p K j : ℕ) (da db : Decoded)
   obtain ⟨b, hb, hv, _, _⟩ := round32_nonzero_spec .truncate A (Rat.ne_of_gt hApos) hrange
   obtain ⟨f, hf, _, hfv⟩ := finite32_of_value32 _ _ hv
   refine ⟨⟨⟨prof, List.replicate K (da, db), belowDecoded j⟩, f⟩, ?_, ?_⟩
-  · simp only [evalPrepared, hA, hb, hf]
+  · simp only [evalPrepared, hA, hb, truncateFraction32_of_le hw, hf]
   · change (1 < f.value ↔ _) ∧ (_ → f.value = _) ∧ f.value ≤ _
     rw [hfv]
     unfold signedRounded
@@ -280,7 +281,8 @@ theorem nonmonotone_range_encoded (K p j : ℕ) (eAlignMin : Option ℤ)
     show ((23 + p : ℕ) : ℤ) = 23 + (p : ℤ)
     omega
   obtain ⟨t, h1, hiff, hform, hbound⟩ :=
-    nonmonotone_range (fp16Fp32Model K p eAlignMin) p K j da db hF hfl hval hscale hK hj1 hj2
+    nonmonotone_range (fp16Fp32Model K p eAlignMin) p K j da db hF hfl (Nat.le_refl 23) hval hscale
+      hK hj1 hj2
   have hc := decode32_below j hj1 hj2
   have hps := prepareProducts_replicate _ a b da db K ha hb
   have hlen : ¬ ((List.replicate K (a, b)).length != (fp16Fp32Model K p eAlignMin).nfma) = true := by

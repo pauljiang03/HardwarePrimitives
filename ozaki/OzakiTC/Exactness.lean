@@ -59,14 +59,15 @@ theorem accumulator_eq_exactDot_of_grid (b : PreparedBlock) (g : ℤ)
       unfold PreparedBlock.alignGridExponent; rw [he]; simp only [Option.getD_some]; omega
     rw [hk]; exact truncGrid_exact_of_grid k g _ hgrid
 
-/-- An exact accumulator whose value is a binary32 number is returned unchanged. -/
+/-- An exact accumulator whose value is a binary32 number is returned unchanged by a model with a
+binary32 block output. -/
 theorem evalPrepared_exact (b : PreparedBlock) (hacc : b.accumulator = b.exactDot)
-    (hfin : FiniteValue32 b.exactDot) :
+    (hfin : FiniteValue32 b.exactDot) (hw : 23 ≤ b.model.outputFracBits) :
     ∃ t, evalPrepared b = .ok t ∧ t.output.value = b.exactDot := by
   have hr : absQ b.accumulator ≤ maxFinite32 := by rw [hacc]; exact finiteValue32_abs_le hfin
   obtain ⟨t, ht⟩ := evalPrepared_total b hr
   refine ⟨t, ht, ?_⟩
-  rw [evalPrepared_output_value ht, hacc, signedRounded_trunc_of_finite _ hfin]
+  rw [evalPrepared_output_value ht hw, hacc, signedRounded_trunc_of_finite _ hfin]
 
 /-! ## Integers -/
 
@@ -173,12 +174,14 @@ theorem decode32_isSome_of_value32 {c : F32} {v : ℚ} (h : value32 c = some v) 
 /-! ## One block -/
 
 /-- Model conditions for exact `b`-bit integer blocks: `2b ≤ F`, `F ≥ 23`, a minimum alignment
-exponent at most `F`, and a minimum normal exponent at most `b` (every format in use). -/
+exponent at most `F`, a minimum normal exponent at most `b` (every format in use), and a binary32
+block output. -/
 structure IntExact (p : Model) (b : ℕ) : Prop where
   align : 2 * (b : ℤ) ≤ p.alignFracBits
   wide : 23 ≤ p.alignFracBits
   eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits
   emin : 1 - p.input.bias ≤ b
+  output : 23 ≤ p.outputFracBits
 
 /-- **Exact integer block.** Operands that are integers of magnitude at most `2^b` and an integer
 `c` with `|c| + Σ|aᵢbᵢ| ≤ 2^24` give `c + Σ aᵢbᵢ` exactly. -/
@@ -308,7 +311,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
     have h2 : ((zc + Z).natAbs : ℚ) ≤ ((2 ^ 24 : ℕ) : ℚ) := by
       rw [← two_pow_natCast]; grind
     exact Rat.natCast_le_natCast.mp h2
-  obtain ⟨t, ht, hv⟩ := evalPrepared_exact blk hacc hfin
+  obtain ⟨t, ht, hv⟩ := evalPrepared_exact blk hacc hfin (by rw [hprof]; exact hp.output)
   exact ⟨t, by rw [hev]; exact ht, by rw [hv, hexact]⟩
 
 /-! ## Chained blocks -/

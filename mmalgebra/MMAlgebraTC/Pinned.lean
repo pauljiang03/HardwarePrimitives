@@ -92,7 +92,8 @@ theorem evalPrepared_pinned (blk : PreparedBlock) {t : BlockTrace} (hev : evalPr
     (hle : ∀ u ∈ blk.terms, u.significand ≠ 0 → u.exponent ≤ α)
     (hpin : ∃ u ∈ blk.terms, u.significand ≠ 0 ∧ u.exponent = α)
     (hlo : -149 ≤ α - blk.model.alignFracBits) (hhi : α - blk.model.alignFracBits ≤ 104)
-    (hrange : Rat.abs blk.accumulator < 2 ^ (α - blk.model.alignFracBits + 24)) :
+    (hrange : Rat.abs blk.accumulator < 2 ^ (α - blk.model.alignFracBits + 24))
+    (hw : 23 ≤ blk.model.outputFracBits) :
     t.output.value = blk.accumulator ∧
       blk.accumulator = sumQ (blk.terms.map fun u => truncGrid u.value (α - blk.model.alignFracBits)) := by
   have hg : blk.alignGridExponent = α - blk.model.alignFracBits := by
@@ -106,7 +107,7 @@ theorem evalPrepared_pinned (blk : PreparedBlock) {t : BlockTrace} (hev : evalPr
     rw [hk] at hrange; exact abs_grid_natAbs hrange
   have hfin : FiniteValue32 blk.accumulator := by
     rw [hk]; exact grid_finiteValue32 _ _ hlo hhi hnat
-  rw [evalPrepared_output_value hev, signedRounded_trunc_of_finite _ hfin]
+  rw [evalPrepared_output_value hev hw, signedRounded_trunc_of_finite _ hfin]
 
 theorem terms_eq {p : Model} (ps : List (p.Word × p.Word)) (dc : Decoded) :
     (⟨p, ps.map fun q => (decodeD p q.1, decodeD p q.2), dc⟩ : PreparedBlock).terms =
@@ -134,13 +135,14 @@ structure PinnedBlock (p : Model) (α : ℤ) (ps : List (p.Word × p.Word)) : Pr
   le : ∀ q ∈ ps, (prodTerm p q).significand ≠ 0 → (prodTerm p q).exponent ≤ α
   pin : ∃ q ∈ ps, (prodTerm p q).significand ≠ 0 ∧ (prodTerm p q).exponent = α
 
-/-- Model conditions: `F ≥ 23`, the minimum alignment exponent at most `α`, and the grid
-`2^(α−F)` within binary32's range of exact multiples. -/
+/-- Model conditions: `F ≥ 23`, the minimum alignment exponent at most `α`, the grid
+`2^(α−F)` within binary32's range of exact multiples, and a binary32 block output. -/
 structure PinnedModel (p : Model) (α : ℤ) : Prop where
   wide : 23 ≤ p.alignFracBits
   eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ α
   lo : -149 ≤ α - p.alignFracBits
   hi : α - p.alignFracBits ≤ 104
+  output : 23 ≤ p.outputFracBits
 
 /-- **Pinned block.** `c` on the grid `2^(α−F)`, a pinned block, and a result below `2^(α−F+24)`:
 the output is `c + Σ trunc_{α−F}(aᵢbᵢ)` exactly. -/
@@ -200,7 +202,7 @@ theorem evalBlock_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) {x : Blo
     rw [hg, hsum]
   obtain ⟨hout, _⟩ := evalPrepared_pinned blk hev α (by rw [hmodel]; exact hm.eAlignMin) hle hpin
     (by rw [hmodel]; exact hm.lo) (by rw [hmodel]; exact hm.hi)
-    (by rw [hacc_eq, hmodel]; exact hrange)
+    (by rw [hacc_eq, hmodel]; exact hrange) (by rw [hmodel]; exact hm.output)
   rw [hout, hacc_eq]
 
 /-! ## Chains -/

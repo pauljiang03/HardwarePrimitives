@@ -4,8 +4,8 @@ import MMAlgebraTC.Pinned
 /-! # Completeness for chains on the bf16 and tf32 Tensor Core models
 
 An empty block FMA passes a finite accumulator other than `−0` through on every Tensor Core model
-with at least 23 fractional alignment bits and a minimum alignment exponent at most `−126` whose
-zero word decodes to zero (`tc_pass_any`): the accumulator is the only nonzero term, it sets the
+with at least 23 fractional alignment bits, a binary32 block output and a minimum alignment exponent
+at most `−126` whose zero word decodes to zero (`tc_pass_any`): the accumulator is the only nonzero term, it sets the
 alignment exponent, and it lies on the alignment grid. With the multiset law, these are the laws
 that chain completeness uses (`tcLaws`), and kernel-checked base witnesses give completeness for
 chains on A100 and H100 bf16 and on A100 and H100 tf32 (`a100bf16_chain_complete`, …). On these
@@ -17,8 +17,10 @@ open TensorCore Ozaki Ozaki.TC
 namespace MMAlgebra.TC
 
 /-- **An empty block passes a good accumulator through**, on any Tensor Core model with
-`F ≥ 23`, a minimum alignment exponent at most `−126`, and a zero word that decodes to zero. -/
-theorem tc_pass_any (p : Model) (hF : 23 ≤ p.alignFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
+`F ≥ 23`, a binary32 block output, a minimum alignment exponent at most `−126`, and a zero word that
+decodes to zero. -/
+theorem tc_pass_any (p : Model) (hF : 23 ≤ p.alignFracBits)
+    (hout : 23 ≤ p.outputFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
     (hz : p.decode 0 = some ⟨0, 0, 0⟩) (d : F32) (hd : Good d) :
     (tcMachine p).block d (List.replicate p.nfma none) = some d := by
   obtain ⟨hfs, hneg⟩ := hd
@@ -79,11 +81,11 @@ theorem tc_pass_any (p : Model) (hF : 23 ≤ p.alignFracBits) (hmin : ∀ f ∈ 
       have hv : f.value = 0 := by simp [Finite32.value, Decoded.value, hsig]
       have hr : round32 .truncate 0 = some (0 : F32) := by decide +kernel
       have hf0 : finite32 (0 : F32) = some f := by rw [← hc0]; exact hf
-      simp only [evalPrepared, hacc, hv, hr, hf0]
+      simp only [evalPrepared, hacc, hv, hr, truncateFraction32_of_le hout, hf0]
     · have hv : f.value ≠ 0 := Decoded.value_ne_zero f.decoded hsig
       have hval32 : value32 d = some f.value := by unfold value32; rw [hc]; rfl
       have hr := value32_round32 .truncate d f.value hval32 hv
-      simp only [evalPrepared, hacc, hr, hf]
+      simp only [evalPrepared, hacc, hr, truncateFraction32_of_le hout, hf]
   show (blockOut (p := p) ⟨slotPairs p (List.replicate p.nfma none), d⟩).toOption = some d
   rw [hslot]
   unfold blockOut evalBlock
@@ -94,14 +96,15 @@ theorem tc_pass_any (p : Model) (hF : 23 ≤ p.alignFracBits) (hmin : ∀ f ∈ 
 
 /-- The laws of a rigid multiplier for chains, on a Tensor Core model with the conditions of
 `tc_pass_any`. -/
-def tcLaws (p : Model) (hF : 23 ≤ p.alignFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
+def tcLaws (p : Model) (hF : 23 ≤ p.alignFracBits)
+    (hout : 23 ≤ p.outputFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
     (hz : p.decode 0 = some ⟨0, 0, 0⟩) : MMAlgebra.RigidLaws (tcMachine p) p.nfma where
   z := (0, 0)
   good := Good
   slot := tc_slotZero p
   perm := tc_perm p
   zero_good := by show Good 0; decide
-  pass := tc_pass_any p hF hmin hz
+  pass := tc_pass_any p hF hout hmin hz
 
 /-! ## Base witnesses -/
 
@@ -113,12 +116,12 @@ theorem tf19_decode_zero (K neab : ℕ) (e : Option ℤ) :
     (tf19Fp32Model K neab e).decode 0 = some ⟨0, 0, 0⟩ := by
   show (classify tf19 0).finite = some _; decide +kernel
 
-def a100bf16Laws := tcLaws a100BF16F32 (by decide) (by simp [a100BF16F32, bf16Fp32Model]) (bf16_decode_zero 8 1 _)
-def h100bf16Laws := tcLaws hopperBF16F32 (by decide) (by simp [hopperBF16F32, bf16Fp32Model]) (bf16_decode_zero 16 2 _)
-def a100tf32Laws := tcLaws a100TF32F32 (by decide) (by simp [a100TF32F32, tf19Fp32Model]) (tf19_decode_zero 4 1 _)
-def h100tf32wLaws := tcLaws hopperTF32WmmaF32 (by decide) (by simp [hopperTF32WmmaF32, tf19Fp32Model])
+def a100bf16Laws := tcLaws a100BF16F32 (by decide) (by decide) (by simp [a100BF16F32, bf16Fp32Model]) (bf16_decode_zero 8 1 _)
+def h100bf16Laws := tcLaws hopperBF16F32 (by decide) (by decide) (by simp [hopperBF16F32, bf16Fp32Model]) (bf16_decode_zero 16 2 _)
+def a100tf32Laws := tcLaws a100TF32F32 (by decide) (by decide) (by simp [a100TF32F32, tf19Fp32Model]) (tf19_decode_zero 4 1 _)
+def h100tf32wLaws := tcLaws hopperTF32WmmaF32 (by decide) (by decide) (by simp [hopperTF32WmmaF32, tf19Fp32Model])
   (tf19_decode_zero 4 2 _)
-def h100tf32mLaws := tcLaws hopperTF32MmaF32 (by decide) (by simp [hopperTF32MmaF32, tf19Fp32Model])
+def h100tf32mLaws := tcLaws hopperTF32MmaF32 (by decide) (by decide) (by simp [hopperTF32MmaF32, tf19Fp32Model])
   (tf19_decode_zero 8 2 _)
 
 def a100bf16Witness : MMAlgebra.PairWitness a100bf16Laws where
