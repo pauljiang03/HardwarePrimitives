@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """Replay the recorded outputs of Ada, L40S, H100, H200 and B200 (Accurate Models toolbox, commit
-79143bd) through the Lean models and their invocation descriptors.
+79143bd) through the Lean models and their invocation descriptors, and the H100 and H200 FP8
+outputs of the toolbox's release v0.1 through the FP8 mma.sync model.
 
 Every vendored file is hash-checked first. FP16, BF16 and TF32 rows are one block FMA each; FP8
-rows hold 32 products, two block FMAs on Ada and L40S and one on H100, H200 and B200. The
-accumulator input follows each recording: it is accumulated in the block FMA, except on H100 and
-H200 FP8, recorded through wgmma with a zero accumulator, and on B200 FP8, recorded with c added
-after the block FMA in binary32 with round-to-nearest-even (Model.dotThenAdd). Before the replay,
-an independent Python decoder of E4M3 and E5M2 is compared with the Lean decoders on all 256 words
-of each format."""
+rows hold 32 products. The accumulator input follows each recording:
+  * FP16, BF16, TF32, and Ada/L40S FP8 (mma.sync, QMMA): c accumulated in the block FMA;
+  * H100 and H200 FP8 (79143bd): the Hopper block FMA from a zero accumulator, as the toolbox's
+    validation script reads these rows (wgmma with D = 0); the c file is not used;
+  * B200 FP8 (79143bd), recorded with the toolbox's mma.sync harness: c added after the products in
+    binary32 with round-to-nearest-even. The rows are replayed through the FP8 mma.sync model
+    (mmaSyncFP8Dot: two interleaved FP16 block FMAs, then c), and through the B200 block FMA from
+    c = 0 followed by the addition of c (Model.dotThenAdd); a control shows that the B200 block FMA
+    holding c disagrees with them;
+  * H100 and H200 FP8 of release v0.1 (same inputs, other outputs): the FP8 mma.sync model with c
+    from the c file; a control shows that the Hopper 13-bit block FMA disagrees with them.
+Before the replay, an independent Python decoder of E4M3 and E5M2 is compared with the Lean
+decoders on all 256 words of each format."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 from fractions import Fraction as Q
@@ -22,6 +30,7 @@ from check_device import fp32_word_to_fp16, read_bin, read_hex_rows, value
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / 'vendor/matlab-tensor-core-79143bd'
+VENDOR_V01 = ROOT / 'vendor/matlab-tensor-core-v0.1'
 BASE = VENDOR / 'model_validation'
 FEATURES = ROOT / '.lake/build/bin/tc_features'
 GPUS = ['Ada', 'L40S', 'H100', 'H200', 'B200']
@@ -167,12 +176,15 @@ def main():
             assert len(a_rows) == len(b_rows) == len(c_words) == n and n > 0
             assert all(len(r) == k for r in a_rows + b_rows), f'{gpu} {fmt} rows must hold K={k}'
             fp8 = fmt in FP8
+            c_file = list(c_words)
             if fp8 and arch == 'hopper':
-                convention = 'c = 0: wgmma with a zero accumulator; the c file is not used'
+                convention = ('c = 0: the Hopper block FMA from a zero accumulator, as the toolbox '
+                              'reads these rows (wgmma with D = 0); the c file is not used')
                 c_words = [0] * n
             elif fp8 and arch == 'blackwell':
-                convention = ('block FMA from c = 0, then c added in binary32 with '
-                              'round-to-nearest-even (Model.dotThenAdd)')
+                convention = ('recorded with the toolbox\'s mma.sync harness: c added after the '
+                              'products in binary32 with round-to-nearest-even (mmaSyncFP8Dot; '
+                              'also Model.dotThenAdd)')
             else:
                 convention = 'c accumulated in the block FMA'
             model = f'{arch}-{NAME[fmt]}' + ('-wmma' if fmt == 'tf32' and arch != 'ada' else '')
@@ -183,7 +195,7 @@ def main():
             else:
                 descriptor, descriptor_cmd = DESCRIPTOR[(arch, fmt)], 'block'
             kinds = dict(zero=0, subnormal=0, top=0, normal=0)
-            model_lines, descriptor_lines, binding = [], [], 0
+            model_lines, descriptor_lines, mma_lines, binding = [], [], [], 0
             for a, b, c in zip(a_rows, b_rows, c_words):
                 words = []
                 for x in [w for pair in zip(a, b) for w in pair]:
@@ -195,6 +207,7 @@ def main():
                 row = ' '.join(map(str, words + [c]))
                 model_lines.append(f'{model_cmd} {model} {row}')
                 descriptor_lines.append(f'{descriptor_cmd} {descriptor} {row}')
+                mma_lines.append(f'mma-sync {NAME[fmt]} 32 {c} ' + ' '.join(map(str, words)))
             key = f'{gpu}-{fmt}'
             distinct.setdefault(fmt, set()).update(
                 (tuple(a), tuple(b), c, d, convention)
@@ -223,15 +236,58 @@ def main():
                 report[key]['binary32_output_control_mismatches'] = sum(
                     r.get('bits') != d for r, d in zip(control, d_words))
                 assert report[key]['binary32_output_control_mismatches'] > 0, key
+            if fp8 and arch == 'blackwell':
+                # The FP8 mma.sync model of the recording harness, and a control: the B200 block
+                # FMA holding c (the tcgen05.mma model) disagrees with the recorded rows.
+                mma = run(mma_lines, f'replay-{key}-mma-sync.txt')
+                mma_mismatches = sum(r.get('bits') != d for r, d in zip(mma, d_words))
+                report[key]['mma_sync_model'] = f'mma-sync {NAME[fmt]} 32 (mmaSyncFP8Dot)'
+                report[key]['mma_sync_model_bit_mismatches'] = mma_mismatches
+                totals['mismatches'] += mma_mismatches
+                inside = run([line.replace('dot-then-add ', 'dot ', 1) for line in model_lines],
+                             f'replay-{key}-c-inside-control.txt')
+                report[key]['c_inside_control_mismatches'] = sum(
+                    r.get('bits') != d for r, d in zip(inside, d_words))
+                assert report[key]['c_inside_control_mismatches'] > 0, key
             totals['vectors'] += n
             totals['mismatches'] += len(mismatches) + descriptor_mismatches + disagreements
             failures += [(key, *m) for m in mismatches]
+    # Release v0.1: H100 and H200 FP8 outputs for the same inputs, through the mma.sync model.
+    pins01 = json.loads((VENDOR_V01 / 'SOURCES.json').read_text())
+    for name, expected in pins01['sha256'].items():
+        assert hashlib.sha256((VENDOR_V01 / name).read_bytes()).hexdigest() == expected, name
+    for gpu in ['H100', 'H200']:
+        for fmt in ['E4M3', 'E5M2']:
+            folder = BASE / gpu / fmt
+            a_rows = read_hex_rows(folder / f'a_{gpu}_{fmt}.txt')
+            b_rows = read_hex_rows(folder / f'b_{gpu}_{fmt}.txt')
+            c_words = read_bin(folder / f'c_{gpu}_fp32.txt')
+            d_words = read_bin(VENDOR_V01 / f'model_validation/{gpu}/{fmt}/d_{gpu}_fp32.txt')
+            assert len(d_words) == len(a_rows) == len(c_words)
+            mma_lines, control_lines = [], []
+            for a, b, c in zip(a_rows, b_rows, c_words):
+                words = [operand(x, fmt)[0] for pair in zip(a, b) for x in pair]
+                mma_lines.append(f'mma-sync {NAME[fmt]} 32 {c} ' + ' '.join(map(str, words)))
+                control_lines.append(f'dot hopper-{NAME[fmt]} ' + ' '.join(map(str, words + [0])))
+            key = f'v0.1-{gpu}-{fmt}'
+            mma = run(mma_lines, f'replay-{key}-mma-sync.txt')
+            control = run(control_lines, f'replay-{key}-control.txt')
+            mismatches = sum(r.get('bits') != d for r, d in zip(mma, d_words))
+            report[key] = dict(
+                model=f'mma-sync {NAME[fmt]} 32 (mmaSyncFP8Dot)', vectors=len(d_words),
+                accumulator_input='c from the c file, added after the products (mma.sync)',
+                bit_mismatches=mismatches,
+                hopper_13bit_zero_c_control_mismatches=sum(
+                    r.get('bits') != d for r, d in zip(control, d_words)))
+            assert report[key]['hopper_13bit_zero_c_control_mismatches'] > 0, key
+            totals['vectors'] += len(d_words)
+            totals['mismatches'] += mismatches
     # Recorded files that the v0.5 replay already covers, by hash.
     v05 = json.loads((ROOT / 'vendor/SOURCES.json').read_text())['sha256']
     v05_hashes = {(n.split('/')[1], n.split('/')[2], n.split('/')[-1][0]): h for n, h in v05.items()
                   if n.startswith('model_validation/') and n.count('/') == 3}
     same = []
-    for key in [k for k in report if '-' in k]:
+    for key in [k for k in report if '-' in k and not k.startswith('v0.1-')]:
         gpu, fmt = key.split('-')
         names = {r: f'model_validation/{gpu}/{fmt}/{r}_{gpu}_' + (fmt if r in 'ab' else 'fp32') + '.txt'
                  for r in 'abcd'}
@@ -241,7 +297,10 @@ def main():
     report['totals'] = dict(totals, fp16_bf16_tf32=sum(v['vectors'] for k, v in report.items()
                                                        if k.split('-')[-1] in ('fp16', 'bf16', 'tf32')),
                             fp8=sum(v['vectors'] for k, v in report.items()
-                                    if k.split('-')[-1] in ('E4M3', 'E5M2')),
+                                    if k.split('-')[-1] in ('E4M3', 'E5M2')
+                                    and not k.startswith('v0.1-')),
+                            fp8_release_v0_1=sum(v['vectors'] for k, v in report.items()
+                                                 if k.startswith('v0.1-')),
                             distinct_rows={fmt: len(rows) for fmt, rows in distinct.items()},
                             identical_to_v0_5=same)
     report['notes'] = ['The L40S files are byte-identical to the Ada files.',
@@ -249,7 +308,11 @@ def main():
                        'distinct_rows counts the rows that differ in inputs, c, output or c convention.',
                        'The TF32 inputs are the V100 FP16 inputs of v0.5: FP16 values.',
                        'No recorded E4M3 operand lies in the top binade (256 to 448); the decoder '
-                       'comparison covers it.']
+                       'comparison covers it.',
+                       'Release v0.1 holds H100 and H200 FP8 outputs for the same inputs; from v0.3 '
+                       'on the toolbox holds the outputs replayed above with c = 0.',
+                       'No recorded output has c inside the FP8 block FMA of wgmma or tcgen05.mma; '
+                       'scripts/check_mmasim.py cross-checks those against MMA-Sim.']
     report['method'] = ('One model and one descriptor evaluation per row, bitwise comparison with the '
                         'recorded output and with each other; no new GPU measurements')
     (ROOT / 'data/regressions/device-replay-report.json').write_text(json.dumps(report, indent=2) + '\n')

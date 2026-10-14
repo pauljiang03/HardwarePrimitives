@@ -415,7 +415,7 @@
     "products_per_row": 32,
     "nfma": 32,
     "block_fmas_per_row": 1,
-    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "accumulator_input": "c = 0: the Hopper block FMA from a zero accumulator, as the toolbox reads these rows (wgmma with D = 0); the c file is not used",
     "vectors": 5000,
     "model_errors": 0,
     "bit_mismatches": 0,
@@ -440,7 +440,7 @@
     "products_per_row": 32,
     "nfma": 32,
     "block_fmas_per_row": 1,
-    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "accumulator_input": "c = 0: the Hopper block FMA from a zero accumulator, as the toolbox reads these rows (wgmma with D = 0); the c file is not used",
     "vectors": 5000,
     "model_errors": 0,
     "bit_mismatches": 0,
@@ -465,7 +465,7 @@
     "products_per_row": 32,
     "nfma": 32,
     "block_fmas_per_row": 1,
-    "accumulator_input": "block FMA from c = 0, then c added in binary32 with round-to-nearest-even (Model.dotThenAdd)",
+    "accumulator_input": "recorded with the toolbox's mma.sync harness: c added after the products in binary32 with round-to-nearest-even (mmaSyncFP8Dot; also Model.dotThenAdd)",
     "vectors": 5000,
     "model_errors": 0,
     "bit_mismatches": 0,
@@ -481,7 +481,10 @@
     "c": {
       "zero": 0,
       "subnormal": 0
-    }
+    },
+    "mma_sync_model": "mma-sync e4m3 32 (mmaSyncFP8Dot)",
+    "mma_sync_model_bit_mismatches": 0,
+    "c_inside_control_mismatches": 1793
   },
   "Ada-E5M2": {
     "model": "dot ada-e5m2",
@@ -539,7 +542,7 @@
     "products_per_row": 32,
     "nfma": 32,
     "block_fmas_per_row": 1,
-    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "accumulator_input": "c = 0: the Hopper block FMA from a zero accumulator, as the toolbox reads these rows (wgmma with D = 0); the c file is not used",
     "vectors": 5000,
     "model_errors": 0,
     "bit_mismatches": 0,
@@ -564,7 +567,7 @@
     "products_per_row": 32,
     "nfma": 32,
     "block_fmas_per_row": 1,
-    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "accumulator_input": "c = 0: the Hopper block FMA from a zero accumulator, as the toolbox reads these rows (wgmma with D = 0); the c file is not used",
     "vectors": 5000,
     "model_errors": 0,
     "bit_mismatches": 0,
@@ -589,7 +592,7 @@
     "products_per_row": 32,
     "nfma": 32,
     "block_fmas_per_row": 1,
-    "accumulator_input": "block FMA from c = 0, then c added in binary32 with round-to-nearest-even (Model.dotThenAdd)",
+    "accumulator_input": "recorded with the toolbox's mma.sync harness: c added after the products in binary32 with round-to-nearest-even (mmaSyncFP8Dot; also Model.dotThenAdd)",
     "vectors": 5000,
     "model_errors": 0,
     "bit_mismatches": 0,
@@ -605,7 +608,38 @@
     "c": {
       "zero": 0,
       "subnormal": 0
-    }
+    },
+    "mma_sync_model": "mma-sync e5m2 32 (mmaSyncFP8Dot)",
+    "mma_sync_model_bit_mismatches": 0,
+    "c_inside_control_mismatches": 1764
+  },
+  "v0.1-H100-E4M3": {
+    "model": "mma-sync e4m3 32 (mmaSyncFP8Dot)",
+    "vectors": 5000,
+    "accumulator_input": "c from the c file, added after the products (mma.sync)",
+    "bit_mismatches": 0,
+    "hopper_13bit_zero_c_control_mismatches": 5000
+  },
+  "v0.1-H100-E5M2": {
+    "model": "mma-sync e5m2 32 (mmaSyncFP8Dot)",
+    "vectors": 5000,
+    "accumulator_input": "c from the c file, added after the products (mma.sync)",
+    "bit_mismatches": 0,
+    "hopper_13bit_zero_c_control_mismatches": 5000
+  },
+  "v0.1-H200-E4M3": {
+    "model": "mma-sync e4m3 32 (mmaSyncFP8Dot)",
+    "vectors": 5000,
+    "accumulator_input": "c from the c file, added after the products (mma.sync)",
+    "bit_mismatches": 0,
+    "hopper_13bit_zero_c_control_mismatches": 5000
+  },
+  "v0.1-H200-E5M2": {
+    "model": "mma-sync e5m2 32 (mmaSyncFP8Dot)",
+    "vectors": 5000,
+    "accumulator_input": "c from the c file, added after the products (mma.sync)",
+    "bit_mismatches": 0,
+    "hopper_13bit_zero_c_control_mismatches": 5000
   },
   "fp8_decoders": {
     "words": 512,
@@ -620,10 +654,11 @@
     }
   },
   "totals": {
-    "vectors": 125000,
+    "vectors": 145000,
     "mismatches": 0,
     "fp16_bf16_tf32": 75000,
     "fp8": 50000,
+    "fp8_release_v0_1": 20000,
     "distinct_rows": {
       "fp16": 20000,
       "bf16": 20000,
@@ -642,7 +677,9 @@
     "H100 and H200 share their FP8 inputs and, with c = 0, their FP8 outputs.",
     "distinct_rows counts the rows that differ in inputs, c, output or c convention.",
     "The TF32 inputs are the V100 FP16 inputs of v0.5: FP16 values.",
-    "No recorded E4M3 operand lies in the top binade (256 to 448); the decoder comparison covers it."
+    "No recorded E4M3 operand lies in the top binade (256 to 448); the decoder comparison covers it.",
+    "Release v0.1 holds H100 and H200 FP8 outputs for the same inputs; from v0.3 on the toolbox holds the outputs replayed above with c = 0.",
+    "No recorded output has c inside the FP8 block FMA of wgmma or tcgen05.mma; scripts/check_mmasim.py cross-checks those against MMA-Sim."
   ],
   "method": "One model and one descriptor evaluation per row, bitwise comparison with the recorded output and with each other; no new GPU measurements"
 }

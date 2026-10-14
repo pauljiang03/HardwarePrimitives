@@ -2,7 +2,8 @@
   "repository": "https://github.com/north-numerical-computing/MATLAB-tensor-core",
   "commit": "79143bd29a4a71dc7c2ed47741b63572498b17f6",
   "commit_date": "2026-09-13T16:20:55+01:00",
-  "selection": "Unmodified copies of LICENCE, README.md and the recorded validation vectors for Ada, L40S, H100, H200 and B200 with FP16, BF16, TF32, E4M3 and E5M2 inputs and binary32 c and d (the a, b, c and d_*_fp32 files of model_validation/). Not included: the FP16-output vectors (d_*_fp16.txt), the other GPUs, the MATLAB models and scripts, and the rest of the toolbox.",
+  "selection": "Unmodified copies of LICENCE, README.md and the recorded validation vectors for Ada, L40S, H100, H200 and B200 with FP16, BF16, TF32, E4M3 and E5M2 inputs and binary32 c and d (the a, b, c and d_*_fp32 files of model_validation/). Also the CUDA harness of the FP8 rows with binary32 output (model_validation/CUDA/mma_fp8_output_fp32.cu). Not included: the FP16-output vectors (d_*_fp16.txt), the other GPUs, the MATLAB models and scripts, and the rest of the toolbox.",
+  "purpose_cuda": "model_validation/CUDA/mma_fp8_output_fp32.cu is the harness that issues mma.sync.aligned.m16n8k32 (and m16n8k16) with FP8 operands and binary32 c and d. It documents the instruction behind the FP8 rows, which scripts/check_device_replay.py and the documentation attribute to mma.sync.",
   "licence": "BSD 2-Clause (LICENCE, copied unchanged): redistribution in source or binary form is permitted provided the copyright notice, the conditions and the disclaimer are retained",
   "sha256": {
     "LICENCE": "1fb3b38cdcc2483e81bcd8422321d25553f76f540f1c3089e04114e398363a8c",
@@ -106,7 +107,8 @@
     "model_validation/B200/E5M2/a_B200_E5M2.txt": "229abb5f9e0f1dfdae18ab467bccc38547749b3286128f99ba134573b443ee1f",
     "model_validation/B200/E5M2/b_B200_E5M2.txt": "dc105fe914100f96ba77b18ec88014bde43b4f5be0bc105e337d2e6bd51eeb35",
     "model_validation/B200/E5M2/c_B200_fp32.txt": "97b4b8782c9256fda537336e569319e541d20b823dc646e10bc90bbb4344d5af",
-    "model_validation/B200/E5M2/d_B200_fp32.txt": "bfb758780a1759715151a660375a4f8846e0baa6441910aa4ac1af692e28f365"
+    "model_validation/B200/E5M2/d_B200_fp32.txt": "bfb758780a1759715151a660375a4f8846e0baa6441910aa4ac1af692e28f365",
+    "model_validation/CUDA/mma_fp8_output_fp32.cu": "c0c86e19d5c19716572213e17f501edc1ff9bdf32888a4e2839efa55ea7726eb"
   },
   "device_vectors": {
     "rows": 5000,

@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/north-numerical-computing/MATLAB-tensor-core",
+  "tag": "v0.1",
+  "commit": "109e412d9a6f1db6eae963493c754a8722500709",
+  "commit_date": "2025-11-29T21:04:17Z",
+  "selection": "Unmodified copies of LICENCE and the binary32 FP8 outputs of H100 and H200 (model_validation/{H100,H200}/{E4M3,E5M2}/d_*_fp32.txt) as published in releases v0.1 and v0.2. Their inputs (a, b, c) are the files of commit 79143bd, vendored in ../matlab-tensor-core-79143bd: commits between v0.2 and v0.3 replaced only these output files. Not included: everything else.",
+  "purpose": "These are the only recorded H100 and H200 FP8 outputs in which c is accumulated (the 79143bd outputs of the same inputs agree with a zero accumulator). scripts/check_device_replay.py replays them through the FP8 mma.sync model (two interleaved FP16 block FMAs, then c in binary32), which they match bit for bit; it is the recorded evidence for that model on Hopper.",
+  "licence": "BSD 2-Clause (LICENCE, copied unchanged): redistribution in source or binary form is permitted provided the copyright notice, the conditions and the disclaimer are retained",
+  "sha256": {
+    "LICENCE": "1fb3b38cdcc2483e81bcd8422321d25553f76f540f1c3089e04114e398363a8c",
+    "model_validation/H100/E4M3/d_H100_fp32.txt": "c08f8a52a7c38e9ba98ff5e60e679b13bf85012f31504c87f5d81fd2933bfe1a",
+    "model_validation/H100/E5M2/d_H100_fp32.txt": "6e19914e253c2af001b2a7fb30e562d219ab5c4675c5ccb03c9e488ab20e6fde",
+    "model_validation/H200/E4M3/d_H200_fp32.txt": "8fdd466d6fd9a81efda423315461c5b416ad8fc2f4735ef0438c0802809089d5",
+    "model_validation/H200/E5M2/d_H200_fp32.txt": "d591da7c93a3afd020ba42fbbf23d3fdcf23bc1cc47e994b69f5e641572e5254"
+  }
+}
