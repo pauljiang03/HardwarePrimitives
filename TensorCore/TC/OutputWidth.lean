@@ -398,7 +398,7 @@ theorem outputUlpExponent_truncateMantissa32 (m : ℕ) (w : F32) :
 /-- The model error is below (number of terms) · (alignment grid step) plus `2^(23 − m)` units in
 the last place of the binary32 output word, where `m` is the model's number of output mantissa
 bits. With `m = 13` (Ada and Hopper FP8) the output term is one unit in the last place of the
-14-bit output significand; with `m ≥ 23` it is the snapshot's bound. -/
+14-bit output significand; with `m ≥ 23` it is the bound of `evalBlock_error_bound`. -/
 theorem evalPrepared_error_bound_any {b : PreparedBlock} {t : BlockTrace}
     (h : evalPrepared b = .ok t) :
     absQ (t.block.exactDot - t.output.value) <

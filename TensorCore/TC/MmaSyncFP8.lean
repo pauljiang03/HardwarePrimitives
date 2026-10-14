@@ -21,8 +21,9 @@ The model of one instruction (`mmaSyncFP8`):
 
 The paper does not state that the second block takes the first block's output, nor the order of
 the groups. Its interleaving experiment excludes the order in which the second group comes first
-(`interleave_test_e5m2`, `interleave_test_reversed`); recorded outputs exclude two independent
-blocks added in binary32 (the validation is in `scripts/check_device_replay.py`).
+(`interleave_test_e5m2`, `interleave_test_reversed`); a recorded B200 output excludes two
+independent blocks whose outputs are added in binary32 (`separate_groups_excluded`). The replay of
+the recorded rows is in `scripts/check_device_replay.py`.
 
 The RTX PRO 6000 (Blackwell) runs an FP8 `mma.sync` as `QMMA.16832` with B200's FP8 features: 32
 products, the 23-bit mantissa plus 2 padding bits after alignment, and `c` inside the block FMA
@@ -118,6 +119,34 @@ def lateInput : List (BitVec 8 × BitVec 8) :=
 theorem late_c_witness :
     mmaSyncFP8 e5m2ToF16 0x3f800000 lateInput = some 0x3f800002 ∧
     rtxPro6000E5M2F32.dot 0x3f800000 lateInput = some 0x3f800001 := by
+  decide +kernel
+
+/-- The alternative in which the two groups are summed by independent FP16 block FMAs from `+0`,
+their outputs added in binary32, then `c` added in binary32. -/
+def mmaSyncFP8Separate (conv : BitVec 8 → F16) (c : F32) (ps : List (BitVec 8 × BitVec 8)) :
+    Option F32 := do
+  let ps16 := ps.map fun (a, b) => (conv a, conv b)
+  let d1 ← hmma 0 (groupA ps16)
+  let d2 ← hmma 0 (groupB ps16)
+  let s ← addBinary32 d1 d2
+  addBinary32 s c
+
+/-- The operands of row 3936 (line number) of the recorded B200 E5M2 vectors of the Accurate Models
+toolbox, commit 79143bd (`vendor/matlab-tensor-core-79143bd/model_validation/B200/E5M2/`): `c` is
+`0x3f01684f` and the recorded output `0xc10ddf7c`. -/
+def b200E5M2Row3936 : List (BitVec 8 × BitVec 8) :=
+  [(0xc0, 0x37), (0xb8, 0xbb), (0xb9, 0xb6), (0xb5, 0x35), (0xa7, 0x04), (0x2c, 0xb8),
+   (0x3b, 0x30), (0xb6, 0xb7), (0x3d, 0x3b), (0x2c, 0xbc), (0x40, 0xbc), (0xba, 0xbc),
+   (0xa9, 0xbe), (0x38, 0x3c), (0x39, 0xba), (0xbd, 0x38), (0xb6, 0xb4), (0x38, 0xc0),
+   (0xbc, 0x35), (0x3c, 0xb7), (0x33, 0x3c), (0x38, 0xc0), (0xbe, 0x32), (0x3d, 0xb7),
+   (0xb2, 0x34), (0x39, 0xaf), (0x39, 0xbb), (0x27, 0x3b), (0xbd, 0x3d), (0xbf, 0x3b),
+   (0xbc, 0x39), (0xb9, 0x3e)]
+
+/-- On that recorded row the `mma.sync` model gives the recorded output, and independent groups
+give the next binary32 word. -/
+theorem separate_groups_excluded :
+    mmaSyncFP8 e5m2ToF16 0x3f01684f b200E5M2Row3936 = some 0xc10ddf7c ∧
+    mmaSyncFP8Separate e5m2ToF16 0x3f01684f b200E5M2Row3936 = some 0xc10ddf7d := by
   decide +kernel
 
 end TensorCore

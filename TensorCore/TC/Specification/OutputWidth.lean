@@ -145,7 +145,7 @@ theorem evalBlock_eq_specM {p : Model} (x : BlockInput p) :
       contradiction
     simp [bitsM, hn, Except.toOption]
 
-/-- With at least 23 output mantissa bits the specification is the snapshot's. -/
+/-- With at least 23 output mantissa bits the specification is `Rounds`, the binary32 one. -/
 theorem roundsM_iff_rounds {m : ℕ} (hm : 23 ≤ m) (x : ℚ) (b : F32) : RoundsM m x b ↔ Rounds x b := by
   have h1 : 23 - m = 0 := by omega
   unfold RoundsM Rounds

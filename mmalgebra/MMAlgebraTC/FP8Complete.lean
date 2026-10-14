@@ -70,7 +70,7 @@ def adaE5M2Laws := narrowLaws adaE5M2F32 rfl rfl (by simp [adaE5M2F32]) e5m2_zer
 def hopperE4M3Laws := narrowLaws hopperE4M3F32 rfl rfl (by simp [hopperE4M3F32]) e4m3x_zero
 def hopperE5M2Laws := narrowLaws hopperE5M2F32 rfl rfl (by simp [hopperE5M2F32]) e5m2_zero
 
-/-- B200 FP8 keeps `F = 25` and a binary32 block output: the snapshot's laws apply. -/
+/-- B200 FP8 keeps `F = 25` and a binary32 block output: the rigid laws `tcLaws` apply. -/
 def blackwellE4M3Laws := tcLaws blackwellE4M3F32 (by decide) (by decide) (by simp [blackwellE4M3F32])
   e4m3x_zero
 def blackwellE5M2Laws := tcLaws blackwellE5M2F32 (by decide) (by decide) (by simp [blackwellE5M2F32])
