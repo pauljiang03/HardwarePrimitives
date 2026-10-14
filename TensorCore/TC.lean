@@ -18,6 +18,7 @@ import TensorCore.TC.ErrorBounds
 import TensorCore.TC.ExactAlignment
 import TensorCore.TC.Flowback
 import TensorCore.TC.FusedRounding
+import TensorCore.TC.GPUs
 import TensorCore.TC.Instruction
 import TensorCore.TC.Invocation
 import TensorCore.TC.InvocationProperties
