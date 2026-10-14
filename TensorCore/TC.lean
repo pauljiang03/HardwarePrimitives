@@ -27,10 +27,13 @@ import TensorCore.TC.Monotonicity
 import TensorCore.TC.MonotonicityRange
 import TensorCore.TC.Padding
 import TensorCore.TC.Models
+import TensorCore.TC.MmaSyncFP8
+import TensorCore.TC.OutputWidth
 import TensorCore.TC.Specification.Composition
 import TensorCore.TC.Specification.Defs
 import TensorCore.TC.Specification.Equivalence
 import TensorCore.TC.Specification.Variants
+import TensorCore.TC.Specification.OutputWidth
 import TensorCore.TC.Specification.Rounding
 import TensorCore.TC.Specification.Schedule
 import TensorCore.TC.Specification.Stages

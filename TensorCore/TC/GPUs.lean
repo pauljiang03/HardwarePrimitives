@@ -18,8 +18,10 @@ FP8 block FMAs:
 
 All truncate, and Table 3 lists no minimum alignment exponent for them. The block output of Ada
 and Hopper truncated to a 13-bit mantissa is the Accurate Models toolbox's (`GEMM.m` keeps as many
-output mantissa bits as the alignment keeps when that is fewer than 23). Not modeled: the FP8 `mma.sync` path of H100 and H200 (FP8 converted to FP16 for
-HMMA), FP4 and FP6, and the other Blackwell instructions.
+output mantissa bits as the alignment keeps when that is fewer than 23). The FP8 `mma.sync` path of
+H100, H200 and B200 (FP8 converted to FP16 and run on the FP16 Tensor Core) and the RTX PRO 6000's
+FP8 `mma.sync` are modeled in `TensorCore.TC.MmaSyncFP8`. Not modeled: FP4 and FP6, and the other
+Blackwell instructions.
 
 The toolbox's FP8 models keep their default minimum alignment exponents, −132 on Ada and −133 on
 Hopper and Blackwell. On FP8 inputs no nonzero term has an exponent below −126, so these are
@@ -27,8 +29,16 @@ inactive: `fp8_eAlignMin_inactive` proves that both choices give the same output
 error, for every input.
 
 `Model.dot` sums a long inner product with consecutive block FMAs, as the toolbox does. The
-recorded B200 FP8 outputs add `c` after the block FMAs, in binary32 with round-to-nearest-even
-(`Model.dotThenAdd`); the recorded H100 and H200 FP8 outputs (`wgmma`) start from `c = 0`. -/
+recorded FP8 outputs of the toolbox (commit 79143bd, `scripts/check_device_replay.py`) agree with
+these models as follows. The Ada and L40S rows agree with the Ada block FMAs with `c` accumulated
+inside. The H100 and H200 rows agree with the Hopper block FMAs from a zero accumulator, which is
+how the toolbox's validation script reads them (`wgmma` with `D = 0`); they hold no information
+about `c`. The B200 rows were recorded with the toolbox's `mma.sync` harness: they agree with the
+FP8 `mma.sync` model (`mmaSyncFP8Dot`), and also with the B200 block FMA from `c = 0` followed by
+the binary32 addition of `c` (`Model.dotThenAdd`), and not with the B200 block FMA that holds `c`.
+So no recorded output covers `c` inside the FP8 block FMA of `wgmma` or `tcgen05.mma`; the
+evidence there is the cross-check against MMA-Sim (`scripts/check_mmasim.py`), an independent
+simulator, not hardware. -/
 
 namespace TensorCore
 
@@ -282,18 +292,18 @@ theorem addBinary32_nearestEven {d c o : F32} {u v : ℚ} (hd : value32 d = some
   cases Option.some.inj hb
   exact hn
 
-/-- The block FMAs from `c = 0`, then `c` added in binary32 with round-to-nearest-even: the
-recorded B200 FP8 outputs add the accumulator input this way, after the block FMA rather than
-inside it. -/
+/-- The block FMAs from `c = 0`, then `c` added in binary32 with round-to-nearest-even. The
+recorded B200 FP8 outputs (recorded through `mma.sync`, which adds `c` after the products) agree
+with it on the B200 block FMA. -/
 def Model.dotThenAdd (p : Model) (c : F32) (ps : List (p.Word × p.Word)) : Option F32 := do
   addBinary32 (← p.dot 0 ps) c
 
 /-! ## Invocation descriptors
 
 The same FP8 block FMAs as descriptors: E4M3 decoded by its own encoding rather than `e4m3x`, the
-13-bit block output as a truncation stage to a format with 13 mantissa bits, and the B200 recording
-convention as an accumulator input added after the block (`CPlacement.late`) with a
-round-to-nearest-even output stage. The replay checks the descriptors against the models. -/
+13-bit block output as a truncation stage to a format with 13 mantissa bits, and the late
+accumulation of `c` that the recorded B200 outputs show as an accumulator input added after the
+block (`CPlacement.late`) with a round-to-nearest-even output stage. The replay checks the descriptors against the models. -/
 
 /-- Binary32's exponent range with 13 mantissa bits: the block output of Ada and Hopper FP8. -/
 @[implicit_reducible] def binary32Mantissa13 : Format := ⟨13, 8, 127⟩
@@ -310,7 +320,7 @@ def blackwellE4M3Invocation : InvocationSpec := alignedInvocation e4m3Encoding 3
 def blackwellE5M2Invocation : InvocationSpec := alignedInvocation e5m2Encoding 32 25 none
 
 /-- A B200 FP8 block from `c = 0` truncated to binary32, then `c` added and the sum rounded to
-nearest even: the recording convention of the B200 FP8 outputs. -/
+nearest even, as the recorded B200 FP8 outputs (`mma.sync`) add `c`. -/
 @[implicit_reducible] def thenAddInvocation (input : OperandEncoding) : InvocationSpec :=
   ⟨input, fp32, 32, .aligned 25 none (.late [⟨fp32, .truncate⟩]), [], ⟨fp32, .nearestEven⟩⟩
 

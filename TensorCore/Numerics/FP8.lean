@@ -81,4 +81,74 @@ theorem e5m2_max :
     (e5m2Encoding.decode 0xfb).map Decoded.value = some (-57344) := by
   decide +kernel
 
+/-! ## Conversion to FP16
+
+H100, H200 and B200 run an FP8 `mma.sync` on the FP16 Tensor Core after converting the operands to
+FP16 (`TensorCore.TC.MmaSyncFP8`). Both FP8 formats convert exactly. -/
+
+/-- The FP16 word of an E5M2 word: the E5M2 word followed by eight zero bits (same sign, same
+exponent field and bias, the two mantissa bits extended by zeros). -/
+def e5m2ToF16 (w : BitVec 8) : F16 := BitVec.ofNat 16 (w.toNat * 256)
+
+/-- The FP16 word with the value of an E4M3 word. Normal E4M3 values move from bias 7 to bias 15;
+the E4M3 subnormals `M · 2^-9` are FP16 normals; the NaNs `S.1111.111` become `S.11111.1000000000`. -/
+def e4m3ToF16 (w : BitVec 8) : F16 :=
+  let n := w.toNat
+  let s := n / 128 * 32768
+  let E := n / 8 % 16
+  let M := n % 8
+  BitVec.ofNat 16 <|
+    if E = 15 ∧ M = 7 then s + 0x7e00
+    else if E ≠ 0 then s + (E + 8) * 1024 + M * 128
+    else if M = 0 then s
+    else if M = 1 then s + 6 * 1024
+    else if M < 4 then s + 7 * 1024 + (M - 2) * 512
+    else s + 8 * 1024 + (M - 4) * 256
+
+/-- Converting E4M3 to FP16 keeps every value: a finite word maps to a finite word with the same
+value, a NaN to a NaN, and the sign bit (so `−0` to `−0`) is kept. -/
+theorem e4m3ToF16_exact (w : BitVec 8) :
+    (decode16 (e4m3ToF16 w)).map Decoded.value = (e4m3Encoding.decode w).map Decoded.value ∧
+    (classify fp16 (e4m3ToF16 w) = .nan ↔ e4m3Values.classifyNat w.toNat = .nan) ∧
+    (e4m3ToF16 w).toNat / 2 ^ 15 = w.toNat / 2 ^ 7 := by
+  have h : ∀ n : ℕ, n < 256 →
+      ((decode16 (e4m3ToF16 (BitVec.ofNat 8 n))).map Decoded.value =
+        (e4m3Encoding.decode (BitVec.ofNat 8 n)).map Decoded.value ∧
+      (classify fp16 (e4m3ToF16 (BitVec.ofNat 8 n)) = .nan ↔
+        e4m3Values.classifyNat (BitVec.ofNat 8 n).toNat = .nan) ∧
+      (e4m3ToF16 (BitVec.ofNat 8 n)).toNat / 2 ^ 15 = (BitVec.ofNat 8 n).toNat / 2 ^ 7) := by
+    decide +kernel
+  have hw := h w.toNat w.isLt
+  rwa [BitVec.ofNat_toNat, BitVec.setWidth_eq] at hw
+
+/-- Converting E5M2 to FP16 keeps every value, every infinity and NaN, and the sign bit. -/
+theorem e5m2ToF16_exact (w : BitVec 8) :
+    (decode16 (e5m2ToF16 w)).map Decoded.value = (e5m2Encoding.decode w).map Decoded.value ∧
+    (classify fp16 (e5m2ToF16 w) = .nan ↔ classify e5m2 w = .nan) ∧
+    (∀ s, classify fp16 (e5m2ToF16 w) = .infinity s ↔ classify e5m2 w = .infinity s) ∧
+    (e5m2ToF16 w).toNat / 2 ^ 15 = w.toNat / 2 ^ 7 := by
+  have h : ∀ n : ℕ, n < 256 →
+      ((decode16 (e5m2ToF16 (BitVec.ofNat 8 n))).map Decoded.value =
+        (e5m2Encoding.decode (BitVec.ofNat 8 n)).map Decoded.value ∧
+      (classify fp16 (e5m2ToF16 (BitVec.ofNat 8 n)) = .nan ↔ classify e5m2 (BitVec.ofNat 8 n) = .nan) ∧
+      (∀ s, classify fp16 (e5m2ToF16 (BitVec.ofNat 8 n)) = .infinity s ↔
+        classify e5m2 (BitVec.ofNat 8 n) = .infinity s) ∧
+      (e5m2ToF16 (BitVec.ofNat 8 n)).toNat / 2 ^ 15 = (BitVec.ofNat 8 n).toNat / 2 ^ 7) := by
+    intro n hn
+    have h1 : ∀ n : ℕ, n < 256 →
+        ((decode16 (e5m2ToF16 (BitVec.ofNat 8 n))).map Decoded.value =
+          (e5m2Encoding.decode (BitVec.ofNat 8 n)).map Decoded.value ∧
+        (classify fp16 (e5m2ToF16 (BitVec.ofNat 8 n)) = .nan ↔
+          classify e5m2 (BitVec.ofNat 8 n) = .nan) ∧
+        (classify fp16 (e5m2ToF16 (BitVec.ofNat 8 n)) = .infinity false ↔
+          classify e5m2 (BitVec.ofNat 8 n) = .infinity false) ∧
+        (classify fp16 (e5m2ToF16 (BitVec.ofNat 8 n)) = .infinity true ↔
+          classify e5m2 (BitVec.ofNat 8 n) = .infinity true) ∧
+        (e5m2ToF16 (BitVec.ofNat 8 n)).toNat / 2 ^ 15 = (BitVec.ofNat 8 n).toNat / 2 ^ 7) := by
+      decide +kernel
+    obtain ⟨a, b, c, d, e⟩ := h1 n hn
+    exact ⟨a, b, fun s => by cases s <;> assumption, e⟩
+  have hw := h w.toNat w.isLt
+  rwa [BitVec.ofNat_toNat, BitVec.setWidth_eq] at hw
+
 end TensorCore

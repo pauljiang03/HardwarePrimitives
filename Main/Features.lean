@@ -2,6 +2,7 @@ import TensorCore.TC.Models
 import TensorCore.TC.CanonicalDefs
 import TensorCore.TC.CanonicalFormatDefs
 import TensorCore.TC.GPUs
+import TensorCore.TC.MmaSyncFP8
 import Lean
 
 open TensorCore Lean
@@ -200,6 +201,51 @@ private def replayChain (name : String) (ns : List ℕ) : Option Json := do
     let ps ← parsePairs p ns.dropLast
     return bitsJson (chainInvocation p c ps)
 
+/-- The operand words of a model given by its parameters: FP16 and BF16 as 16-bit words, TF32
+as register words whose thirteen low bits must be zero, E5M2 as 8-bit words, E4M3 as 8-bit words
+widened to `e4m3x`. -/
+private def paramFormat : String → Option (TensorCore.Format × (ℕ → Option ℕ))
+  | "fp16" => some (fp16, fun n => if n < 2 ^ 16 then some n else none)
+  | "bf16" => some (bf16, fun n => if n < 2 ^ 16 then some n else none)
+  | "tf32" => some (tf19, fun n => if n < 2 ^ 32 ∧ n % 2 ^ 13 = 0 then some (n / 2 ^ 13) else none)
+  | "e5m2" => some (e5m2, fun n => if n < 256 then some n else none)
+  | "e4m3" => some (e4m3x, fun n => if n < 256 then some (widenE4M3 (BitVec.ofNat 8 n)).toNat else none)
+  | _ => none
+
+/-- `Model.dot` of a model given by its parameters: input format, FMA size, mantissa bits after
+alignment, minimum alignment exponent (or `none`) and block-output mantissa bits, then `c` and the
+operand pairs. -/
+private def paramDot (args : List String) : Option Json := do
+  match args with
+  | fmt :: k :: f :: e :: m :: c :: ws =>
+    let (format, word) ← paramFormat fmt
+    let K ← k.toNat?
+    let F ← f.toInt?
+    let eMin ← if e = "none" then some none else (e.toInt?).map some
+    let mb ← m.toNat?
+    let cw ← c.toNat?
+    if cw ≥ 2 ^ 32 then none else do
+      let p : Model := ⟨format, K, F, eMin, mb⟩
+      let vs ← (← ws.mapM String.toNat?).mapM word
+      let ps ← pairs (vs.map fun n => (BitVec.ofNat p.input.width n : p.Word))
+      return bitsJson ((p.dot (BitVec.ofNat 32 cw) ps).map BitVec.toNat)
+  | _ => none
+
+/-- The FP8 `mma.sync` model of H100, H200 and B200 (`mmaSyncFP8Dot`): format, instruction size
+`k` (32 or 16), `c`, then the operand pairs as 8-bit words. -/
+private def mmaSyncDot (args : List String) : Option Json := do
+  match args with
+  | fmt :: k :: c :: ws =>
+    let conv ← if fmt = "e4m3" then some e4m3ToF16 else if fmt = "e5m2" then some e5m2ToF16 else none
+    let K ← k.toNat?
+    let cw ← c.toNat?
+    if cw ≥ 2 ^ 32 ∨ K = 0 then none else do
+      let ns ← ws.mapM String.toNat?
+      if ns.any (· ≥ 256) then none else do
+        let ps ← pairs (ns.map fun n => BitVec.ofNat 8 n)
+        return bitsJson ((mmaSyncFP8Dot conv K (BitVec.ofNat 32 cw) ps).map BitVec.toNat)
+  | _ => none
+
 private def command (args : List String) : Option Json := do
   match args with
   | ["round", fmt, n, d] =>
@@ -245,6 +291,8 @@ private def command (args : List String) : Option Json := do
     replayDot true name (← words.mapM String.toNat?)
   | "chain" :: name :: words => do
     replayChain name (← words.mapM String.toNat?)
+  | "model-dot" :: rest => paramDot rest
+  | "mma-sync" :: rest => mmaSyncDot rest
   | _ => none
 
 def main (args : List String) : IO Unit := do
