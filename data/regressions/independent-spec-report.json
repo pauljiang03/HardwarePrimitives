@@ -32,18 +32,18 @@
     "Quot.sound"
   ],
   "source_sha256": {
-    "TensorCore/TC/Specification/Composition.lean": "25e769d117849e63f6ad7b8bf5773cd1394fc5af12a93f136489e576157677df",
-    "TensorCore/TC/Specification/Defs.lean": "47c688c364278f7226a519ceed6481d4553700e44ab165c8f3a2ebae4fccc6e3",
-    "TensorCore/TC/Specification/Equivalence.lean": "498b144c9f5868a67b3e5891bf35f5ba2e1f0f4d1d4cc7fa4a9313634a455114",
+    "TensorCore/TC/Specification/Composition.lean": "f0771433d9a2e38730ad5ee99f21aaeca05676bd525728d0a7927f513ace250b",
+    "TensorCore/TC/Specification/Defs.lean": "1514f6077eb7e5d44bad598ace13f0d77d1db66241f3115eea6171bf7b446cba",
+    "TensorCore/TC/Specification/Equivalence.lean": "78ef4a829f3eccdaaf12cf7941345adf655910633e8a59260f3eb78a8fd4b572",
     "TensorCore/TC/Specification/Rounding.lean": "44f0c5f8fb9424a0f5874c9c4f096f9c7e1be2d722c0a8c9832ae5b6f279f702",
     "TensorCore/TC/Specification/Schedule.lean": "4dec9a0111ed1d378231a60bca4d04b9cdcb4ce972d602f36b7865f1ca08aad5",
-    "TensorCore/TC/Specification/Stages.lean": "23192e8781de44da7e908b81844337da8404cf49961ab98dae9e75e420afa546",
-    "TensorCore/TC/Specification/Supported.lean": "e33d1d80d17a82c1b2aef595d97e2700b6151d3e16e569489992040071b943d7",
-    "TensorCore/TC/Specification/Variants.lean": "7c1f473a62aceb90217a372486877e89dbe095714268b8644d03f81c83ab050c",
+    "TensorCore/TC/Specification/Stages.lean": "48165422e5283d8f0da2cc18902090276b27f77736186d1aafb7e8fe83175aaa",
+    "TensorCore/TC/Specification/Supported.lean": "e64487523da7adb6a62b1e539b3078a3309221fb777be2590d75d268717b833b",
+    "TensorCore/TC/Specification/Variants.lean": "28600f6176b4339e8f6683116cbfb1c5f678109970cb3c2fa3b491dc8b3996d5",
     "tests/TensorCoreTests/Specification/Audit.lean": "7f7242f5b3f4379ba82855ed522e02b325df3e5182138de2e240fbb5add5a573",
     "tests/TensorCoreTests/Specification/NegativeControls.lean": "8805b0ae54270faaf5d32515c1e5c15d1753f2309707f868c851b73a349a8cbc",
     "scripts/lean/IndependentSpecAudit.lean": "c9a6896917135ba8d477194d0e14bab0219391b1cab262e4f252be09db783cfe",
-    "examples/IndependentSpecification.lean": "839cdc52bfc364e0a2dc4f656660816597b222da14f2b30f958277bb3889e4ff",
+    "examples/IndependentSpecification.lean": "55161367838ce544b02ffd78014533eb871d00c0ef3bf50f834a2f4164782e68",
     "scripts/check_independent_spec.py": "e20be88b83d7f48f410e49fea507c464a8eafad8b5b3a912ab53a3b1a1abd0f6"
   },
   "limitations": [

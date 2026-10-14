@@ -90,11 +90,11 @@
       "TensorCore/Kernels/EFT/Correctness.lean": "f491db4931d43955b5a808115241139f481d0d50ac670a29074d7a8eae2601eb",
       "TensorCore/Kernels/EFT/Cost.lean": "6ce803f7f8f3ad368b8a9142afefad89bec7cda45f5b4877c1636b34f96c3ea6",
       "TensorCore/Kernels/EFT/Decode.lean": "7df3aba37d75d7ede10b0f66f43478d84a0805390f08ef087dcdc4eef3f3823f",
-      "TensorCore/Kernels/EFT/DecodeDefs.lean": "44b6528912c1d4a8a44086cfcfe341b636560d817dbd242a5ace4740e15811df",
+      "TensorCore/Kernels/EFT/DecodeDefs.lean": "a6b95d94a1c5711acac53b6d7d08730305b10c8ee1e0ee807712fd11cb0e3e69",
       "TensorCore/Kernels/EFT/Defs.lean": "976f000d9a4740c4bf08ec0b6a3597e6779a101ec8376fe4a4c40a52db3192ac",
       "TensorCore/Kernels/EFT/Dyadic.lean": "d7725e30ef157aaf966fe70cf26781cc2817a1237fb92e28a27fb311732ea487",
       "TensorCore/Kernels/EFT/Extraction.lean": "15b8b527f6c3e84ebd8d24baf15d3aa641f2e6cd21adc7c632c647bcd2e5e76a",
-      "TensorCore/Kernels/EFT/Grid.lean": "b37fc5caa098dd5b2d66eec4fe02e15879463efb6684bd91edfb8c7fb5432bbe",
+      "TensorCore/Kernels/EFT/Grid.lean": "3c44881b7786596ebe58138a6b11445a81db5681139967b23fc9f23d654e03cd",
       "TensorCore/Kernels/EFT/Native.lean": "a87c9cc4a7ee0bca755324a963bbcdc75915655e3929fa16003c4960a9efbfe2",
       "TensorCore/Kernels/EFT/Preparation.lean": "316ae9010ee8090d13133b7d78b093feb473ccf054049ffcd52faf899b558f11",
       "TensorCore/Kernels/EFT/Refinement.lean": "cdf939967262fb7100db6c05611eb9cacb53a3feb466c6a4fe7591c0b892e71e",
@@ -132,7 +132,7 @@
     "oracle": "Lean instruction outputs compared with independent exact rational arithmetic per ordered block FMA",
     "source_sha256": {
       "scripts/check_instruction_groups.py": "86178ed6ff03fb37578acfa5662867c405935087f10699153add32c9f3d0c469",
-      "scripts/check_features.py": "d7a3c9b907887b94da59099b1e743c9e17846fdcda2eef11e7831e6b7b53d855",
+      "scripts/check_features.py": "e4ec11fc3c923d77ee0dfa2a359442b7f5a732e49a12a37bcdf5efe1722e2080",
       "examples/InstructionGroups.lean": "c3c768a255c62bdd44579ee7a20328fb9254e37f03e35055bef0cdffe3964703"
     }
   },
