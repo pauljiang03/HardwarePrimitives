@@ -1,0 +1,18 @@
+{
+  "repository": "https://github.com/microsoft/MMA-Sim",
+  "commit": "ce75698d88a48e999a7284dd614994aa8a2caa19",
+  "commit_date": "2026-10-14T11:34:54+08:00",
+  "licence": "MIT (Copyright (c) Microsoft Corporation). Nothing is vendored: scripts/check_mmasim.py runs a local checkout of this commit and checks the SHA-256 of the files it imports.",
+  "selection": "Files imported by scripts/mmasim/run.py and scripts/mmasim/mmasync.py (the NVIDIA PTX semantics and the fused dot-product-add arithmetic). mmasim/arithmetic/fma.py (FP64 FMA, a C++ kernel built with -fopenmp) is not imported: the scripts replace it by a stub that fails if called, because no FP64 instruction is checked.",
+  "sha256": {
+    "LICENSE.txt": "7c77a44a8acd9b41fdc209864a8016b3d430b5d0e09309818d5b7444336df744",
+    "src/mmasim/mmasim/__init__.py": "10ec38aeb7c45ad5a201a79e581a671452663d930ddf76af7770ff00d02a59c6",
+    "src/mmasim/mmasim/arithmetic/fdpa.py": "966ac1d2dd5bfce9134058d8e41e554ce8a59adf407596a479f8edeb450dafe6",
+    "src/mmasim/mmasim/arithmetic/helper.py": "288220c52a7b20f5f103edc5e1a4d94a7f1da539c1afec4c4f700a843a23e81c",
+    "src/mmasim/mmasim/nv_ptx/sim.py": "688bbd4d54a5c46371f6114ba814a25541f5aa9e0f87543f837cad4e9683eb2a",
+    "src/mmasim/mmasim/nv_ptx/isa_common.py": "3a5a5baf28ae0836a1ae0cb0f411d8d9e42174ee2834fc9b39e9cac662dc6c88",
+    "src/mmasim/mmasim/nv_ptx/isa_mma.py": "5c978eb664caff940a5ea74b7491dc3f18c648123e1a08e09d0077b1b9a11d43",
+    "src/mmasim/mmasim/nv_ptx/isa_wgmma.py": "24d62c4e277f94d6bc65b20eda29f5292d9e3ec3d7f261c24075c5f20c6d3563",
+    "src/mmasim/mmasim/nv_ptx/isa_tcgen05mma.py": "d00e9b030b7ce886699aa3bc1d54541c090a862a87ee9509d5963be02fd07a89"
+  }
+}

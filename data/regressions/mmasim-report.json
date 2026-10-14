@@ -1,0 +1,462 @@
+{
+  "mmasim": {
+    "repository": "https://github.com/microsoft/MMA-Sim",
+    "commit": "ce75698d88a48e999a7284dd614994aa8a2caa19"
+  },
+  "seed": 20261014,
+  "cases_per_family_and_length": 1000,
+  "instructions": {
+    "V100 fp16 mma.m8n8k4": {
+      "mmasim": "MMA(\"Volta\", \"m8n8k4.f32.f16.f16.f32\")",
+      "products_per_instruction": 4,
+      "lean": "model-dot fp16 4 23 none 23",
+      "cases": 30000,
+      "outcomes": {
+        "same": 28362,
+        "special": 1638
+      },
+      "same_with_nonzero_c": 23833,
+      "mismatch_examples": []
+    },
+    "A100 fp16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Ampere\", \"m16n8k16.f32.f16.f16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 8 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2476,
+        "same": 27524
+      },
+      "same_with_nonzero_c": 23069,
+      "mismatch_examples": []
+    },
+    "A100 fp16 mma.m16n8k8": {
+      "mmasim": "MMA(\"Ampere\", \"m16n8k8.f32.f16.f16.f32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot fp16 8 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2034,
+        "same": 27966
+      },
+      "same_with_nonzero_c": 23484,
+      "mismatch_examples": []
+    },
+    "A100 bf16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Ampere\", \"m16n8k16.f32.bf16.bf16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot bf16 8 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 738,
+        "same": 21349,
+        "overflow": 7913
+      },
+      "same_with_nonzero_c": 16786,
+      "mismatch_examples": []
+    },
+    "A100 tf32 mma.m16n8k8": {
+      "mmasim": "MMA(\"Ampere\", \"m16n8k8.f32.tf32.tf32.f32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot tf32 4 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 7430,
+        "special": 573,
+        "same": 21997
+      },
+      "same_with_nonzero_c": 17440,
+      "mismatch_examples": []
+    },
+    "Ada fp16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Ada Lovelace\", \"m16n8k16.f32.f16.f16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 8 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2517,
+        "same": 27483
+      },
+      "same_with_nonzero_c": 22943,
+      "mismatch_examples": []
+    },
+    "Ada bf16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Ada Lovelace\", \"m16n8k16.f32.bf16.bf16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot bf16 8 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 706,
+        "overflow": 7983,
+        "same": 21311
+      },
+      "same_with_nonzero_c": 16736,
+      "mismatch_examples": []
+    },
+    "Ada tf32 mma.m16n8k8": {
+      "mmasim": "MMA(\"Ada Lovelace\", \"m16n8k8.f32.tf32.tf32.f32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot tf32 4 24 -132 23",
+      "cases": 30000,
+      "outcomes": {
+        "same": 22023,
+        "overflow": 7446,
+        "special": 531
+      },
+      "same_with_nonzero_c": 17479,
+      "mismatch_examples": []
+    },
+    "H100 fp16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Hopper\", \"m16n8k16.f32.f16.f16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2487,
+        "same": 27513
+      },
+      "same_with_nonzero_c": 22947,
+      "mismatch_examples": []
+    },
+    "H100 bf16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Hopper\", \"m16n8k16.f32.bf16.bf16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot bf16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 7946,
+        "same": 21327,
+        "special": 727
+      },
+      "same_with_nonzero_c": 16838,
+      "mismatch_examples": []
+    },
+    "H100 tf32 mma.m16n8k8": {
+      "mmasim": "MMA(\"Hopper\", \"m16n8k8.f32.tf32.tf32.f32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot tf32 8 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "same": 21978,
+        "overflow": 7438,
+        "special": 584
+      },
+      "same_with_nonzero_c": 17467,
+      "mismatch_examples": []
+    },
+    "H100 tf32 mma.m16n8k4 (as WMMA HMMA.1684)": {
+      "mmasim": "MMA(\"Hopper\", \"m16n8k4.f32.tf32.tf32.f32\")",
+      "products_per_instruction": 4,
+      "lean": "model-dot tf32 4 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 6509,
+        "same": 23007,
+        "special": 484
+      },
+      "same_with_nonzero_c": 18369,
+      "mismatch_examples": []
+    },
+    "H100 fp16 wgmma.m64n8k16": {
+      "mmasim": "WGMMA(\"Hopper\", \"m64n8k16.f32.f16.f16\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2474,
+        "same": 27526
+      },
+      "same_with_nonzero_c": 23054,
+      "mismatch_examples": []
+    },
+    "H100 bf16 wgmma.m64n8k16": {
+      "mmasim": "WGMMA(\"Hopper\", \"m64n8k16.f32.bf16.bf16\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot bf16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 7912,
+        "same": 21302,
+        "special": 786
+      },
+      "same_with_nonzero_c": 16749,
+      "mismatch_examples": []
+    },
+    "H100 tf32 wgmma.m64n8k8": {
+      "mmasim": "WGMMA(\"Hopper\", \"m64n8k8.f32.tf32.tf32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot tf32 8 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 7482,
+        "same": 21971,
+        "special": 547
+      },
+      "same_with_nonzero_c": 17450,
+      "mismatch_examples": []
+    },
+    "B200 fp16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Blackwell\", \"m16n8k16.f32.f16.f16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "same": 27491,
+        "special": 2509
+      },
+      "same_with_nonzero_c": 22996,
+      "mismatch_examples": []
+    },
+    "B200 bf16 mma.m16n8k16": {
+      "mmasim": "MMA(\"Blackwell\", \"m16n8k16.f32.bf16.bf16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot bf16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 7937,
+        "special": 746,
+        "same": 21317
+      },
+      "same_with_nonzero_c": 16741,
+      "mismatch_examples": []
+    },
+    "B200 tf32 mma.m16n8k8": {
+      "mmasim": "MMA(\"Blackwell\", \"m16n8k8.f32.tf32.tf32.f32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot tf32 8 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "same": 21927,
+        "overflow": 7481,
+        "special": 592
+      },
+      "same_with_nonzero_c": 17435,
+      "mismatch_examples": []
+    },
+    "B200 fp16 tcgen05.kind::f16": {
+      "mmasim": "TCGen05MMA(\"Blackwell\", \"m64n8k16.f32.f16.f16\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2508,
+        "same": 27492
+      },
+      "same_with_nonzero_c": 22914,
+      "mismatch_examples": []
+    },
+    "B200 bf16 tcgen05.kind::f16": {
+      "mmasim": "TCGen05MMA(\"Blackwell\", \"m64n8k16.f32.bf16.bf16\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot bf16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "overflow": 7913,
+        "special": 745,
+        "same": 21342
+      },
+      "same_with_nonzero_c": 16905,
+      "mismatch_examples": []
+    },
+    "B200 tf32 tcgen05.kind::tf32": {
+      "mmasim": "TCGen05MMA(\"Blackwell\", \"m64n8k8.f32.tf32.tf32\")",
+      "products_per_instruction": 8,
+      "lean": "model-dot tf32 8 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "same": 21970,
+        "overflow": 7442,
+        "special": 588
+      },
+      "same_with_nonzero_c": 17518,
+      "mismatch_examples": []
+    },
+    "RTX PRO 6000 fp16 mma.m16n8k16": {
+      "mmasim": "MMA(\"RTX Blackwell\", \"m16n8k16.f32.f16.f16.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot fp16 16 25 -133 23",
+      "cases": 30000,
+      "outcomes": {
+        "special": 2474,
+        "same": 27526
+      },
+      "same_with_nonzero_c": 23024,
+      "mismatch_examples": []
+    },
+    "Ada e4m3 mma.m16n8k32": {
+      "mmasim": "MMA(\"Ada Lovelace\", \"m16n8k32.f32.e4m3.e4m3.f32\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e4m3 16 13 none 13",
+      "cases": 20000,
+      "outcomes": {
+        "same": 18921,
+        "special": 1079
+      },
+      "same_with_nonzero_c": 15945,
+      "mismatch_examples": []
+    },
+    "Ada e5m2 mma.m16n8k32": {
+      "mmasim": "MMA(\"Ada Lovelace\", \"m16n8k32.f32.e5m2.e5m2.f32\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e5m2 16 13 none 13",
+      "cases": 20000,
+      "outcomes": {
+        "special": 1837,
+        "same": 18163
+      },
+      "same_with_nonzero_c": 15210,
+      "mismatch_examples": []
+    },
+    "Ada e4m3 mma.m16n8k16": {
+      "mmasim": "MMA(\"Ada Lovelace\", \"m16n8k16.f32.e4m3.e4m3.f32\")",
+      "products_per_instruction": 16,
+      "lean": "model-dot e4m3 16 13 none 13",
+      "cases": 30000,
+      "outcomes": {
+        "same": 28797,
+        "special": 1203
+      },
+      "same_with_nonzero_c": 24282,
+      "mismatch_examples": []
+    },
+    "H100 e4m3 wgmma.m64n8k32": {
+      "mmasim": "WGMMA(\"Hopper\", \"m64n8k32.f32.e4m3.e4m3\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e4m3 32 13 none 13",
+      "cases": 20000,
+      "outcomes": {
+        "same": 18947,
+        "special": 1053
+      },
+      "same_with_nonzero_c": 15954,
+      "mismatch_examples": []
+    },
+    "H100 e5m2 wgmma.m64n8k32": {
+      "mmasim": "WGMMA(\"Hopper\", \"m64n8k32.f32.e5m2.e5m2\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e5m2 32 13 none 13",
+      "cases": 20000,
+      "outcomes": {
+        "same": 18144,
+        "special": 1856
+      },
+      "same_with_nonzero_c": 15168,
+      "mismatch_examples": []
+    },
+    "B200 e4m3 tcgen05.kind::f8f6f4": {
+      "mmasim": "TCGen05MMA(\"Blackwell\", \"m64n8k32.f32.e4m3.e4m3\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e4m3 32 25 none 23",
+      "cases": 20000,
+      "outcomes": {
+        "special": 997,
+        "same": 19003
+      },
+      "same_with_nonzero_c": 16017,
+      "mismatch_examples": []
+    },
+    "B200 e5m2 tcgen05.kind::f8f6f4": {
+      "mmasim": "TCGen05MMA(\"Blackwell\", \"m64n8k32.f32.e5m2.e5m2\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e5m2 32 25 none 23",
+      "cases": 20000,
+      "outcomes": {
+        "special": 1858,
+        "same": 18142
+      },
+      "same_with_nonzero_c": 15158,
+      "mismatch_examples": []
+    },
+    "RTX PRO 6000 e4m3 mma.m16n8k32": {
+      "mmasim": "MMA(\"RTX Blackwell\", \"m16n8k32.f32.e4m3.e4m3.f32\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e4m3 32 25 none 23",
+      "cases": 20000,
+      "outcomes": {
+        "same": 18976,
+        "special": 1024
+      },
+      "same_with_nonzero_c": 15949,
+      "mismatch_examples": []
+    },
+    "RTX PRO 6000 e5m2 mma.m16n8k32": {
+      "mmasim": "MMA(\"RTX Blackwell\", \"m16n8k32.f32.e5m2.e5m2.f32\")",
+      "products_per_instruction": 32,
+      "lean": "model-dot e5m2 32 25 none 23",
+      "cases": 20000,
+      "outcomes": {
+        "special": 1844,
+        "same": 18156
+      },
+      "same_with_nonzero_c": 15192,
+      "mismatch_examples": []
+    }
+  },
+  "mma_sync_composite": {
+    "Hopper e4m3 k=32": {
+      "cases": 10000,
+      "outcomes": {
+        "special": 518,
+        "same": 9482
+      }
+    },
+    "Hopper e4m3 k=16": {
+      "cases": 10000,
+      "outcomes": {
+        "special": 433,
+        "same": 9567
+      }
+    },
+    "Hopper e5m2 k=32": {
+      "cases": 10000,
+      "outcomes": {
+        "special": 945,
+        "same": 9055
+      }
+    },
+    "Hopper e5m2 k=16": {
+      "cases": 10000,
+      "outcomes": {
+        "special": 802,
+        "same": 9198
+      }
+    },
+    "Blackwell e4m3 k=32": {
+      "cases": 10000,
+      "outcomes": {
+        "special": 499,
+        "same": 9501
+      }
+    },
+    "Blackwell e4m3 k=16": {
+      "cases": 10000,
+      "outcomes": {
+        "same": 9543,
+        "special": 457
+      }
+    },
+    "Blackwell e5m2 k=32": {
+      "cases": 10000,
+      "outcomes": {
+        "special": 936,
+        "same": 9064
+      }
+    },
+    "Blackwell e5m2 k=16": {
+      "cases": 10000,
+      "outcomes": {
+        "same": 9179,
+        "special": 821
+      }
+    }
+  },
+  "totals": {
+    "same": 708953,
+    "special": 42215,
+    "same_with_nonzero_c": 581052,
+    "cases": 850000,
+    "overflow": 98832,
+    "mma_sync_special": 5411,
+    "mma_sync_same": 74589
+  }
+}
