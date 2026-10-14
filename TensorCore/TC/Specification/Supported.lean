@@ -1,5 +1,6 @@
 import TensorCore.TC.Specification.Equivalence
 import TensorCore.TC.Specification.Variants
+import TensorCore.TC.GPUs
 
 /-! The model equals the independent specification on every supported variant. -/
 
@@ -35,6 +36,15 @@ theorem supported_valid_success (variant : Variant) (x : BlockInput (implementat
     ∃ t, evalBlock x = .ok t ∧
       bits (parameters variant) (supportedInput variant x) = some t.output.bits := by
   cases variant <;> exact valid_success x hv (Nat.le_refl 23)
+
+/-- B200's FP8 block FMAs have a binary32 block output, so the specification equality covers them
+too, with E4M3 operands in the `e4m3x` layout. -/
+theorem blackwell_fp8_eq_spec :
+    (∀ x : BlockInput blackwellE4M3F32, (evalBlock x).toOption.map (fun t => t.output.bits) =
+      bits (parametersOf blackwellE4M3F32) (inputOf x)) ∧
+    (∀ x : BlockInput blackwellE5M2F32, (evalBlock x).toOption.map (fun t => t.output.bits) =
+      bits (parametersOf blackwellE5M2F32) (inputOf x)) :=
+  ⟨fun x => evalBlock_eq_spec x (Nat.le_refl 23), fun x => evalBlock_eq_spec x (Nat.le_refl 23)⟩
 
 /-- The compatibility layer transfers the result to the public aligned invocation API. -/
 theorem invocation_eq_spec {p : Model} (x : BlockInput p) (F : ℕ)

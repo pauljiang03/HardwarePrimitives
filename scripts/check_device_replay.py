@@ -226,12 +226,24 @@ def main():
             totals['vectors'] += n
             totals['mismatches'] += len(mismatches) + descriptor_mismatches + disagreements
             failures += [(key, *m) for m in mismatches]
+    # Recorded files that the v0.5 replay already covers, by hash.
+    v05 = json.loads((ROOT / 'vendor/SOURCES.json').read_text())['sha256']
+    v05_hashes = {(n.split('/')[1], n.split('/')[2], n.split('/')[-1][0]): h for n, h in v05.items()
+                  if n.startswith('model_validation/') and n.count('/') == 3}
+    same = []
+    for key in [k for k in report if '-' in k]:
+        gpu, fmt = key.split('-')
+        names = {r: f'model_validation/{gpu}/{fmt}/{r}_{gpu}_' + (fmt if r in 'ab' else 'fp32') + '.txt'
+                 for r in 'abcd'}
+        if all(v05_hashes.get((gpu, fmt, r)) == pins['sha256'][n] for r, n in names.items()):
+            same.append(key)
     report['fp8_decoders'] = decoders
     report['totals'] = dict(totals, fp16_bf16_tf32=sum(v['vectors'] for k, v in report.items()
                                                        if k.split('-')[-1] in ('fp16', 'bf16', 'tf32')),
                             fp8=sum(v['vectors'] for k, v in report.items()
                                     if k.split('-')[-1] in ('E4M3', 'E5M2')),
-                            distinct_rows={fmt: len(rows) for fmt, rows in distinct.items()})
+                            distinct_rows={fmt: len(rows) for fmt, rows in distinct.items()},
+                            identical_to_v0_5=same)
     report['notes'] = ['The L40S files are byte-identical to the Ada files.',
                        'H100 and H200 share their FP8 inputs and, with c = 0, their FP8 outputs.',
                        'distinct_rows counts the rows that differ in inputs, c, output or c convention.',

@@ -630,7 +630,12 @@
       "tf32": 20000,
       "E4M3": 15000,
       "E5M2": 15000
-    }
+    },
+    "identical_to_v0_5": [
+      "H100-fp16",
+      "H100-bf16",
+      "H100-tf32"
+    ]
   },
   "notes": [
     "The L40S files are byte-identical to the Ada files.",
