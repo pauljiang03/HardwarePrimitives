@@ -59,13 +59,35 @@ theorem supported_eq_spec (variant : Variant) (x : BlockInput (implementationMod
   `machine_eq_spec` extends it to fixed-width accumulators of adequate
   width.
 
+## Block outputs narrower than binary32
+
+On Ada and Hopper FP8 the block output keeps 13 mantissa bits. The
+specification covers this with `RoundsM m`, the same ordering of finite
+binary32 values restricted to the words whose low `23 − m` mantissa bits are
+zero, and the selector `bitsM`. These definitions sit in the specification's
+own module, so the audit below covers them.
+
+```lean
+theorem evalBlock_eq_specM {p : Model} (x : BlockInput p) :
+    (evalBlock x).toOption.map (fun t => t.output.bits) =
+      bitsM (parametersOf p) p.outputMantissaBits (inputOf x)
+```
+
+[`IndependentSpec.evalBlock_eq_specM`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L115) holds on every encoded input of every
+model, with no hypothesis on the output width; [`IndependentSpec.fp8_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L189)
+states the Ada and Hopper FP8 instances, and `machine_eq_specM` and
+`runBlocks_eq_specM` extend it to fixed-width accumulators and to chains. For
+`m ≥ 23` the two specifications select the same word
+([`IndependentSpec.bitsM_eq_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L136)), so `evalBlock_eq_spec` is the binary32
+case.
+
 ## Checking independence
 
 Independence is checked mechanically. The audit in
 [`tests/TensorCoreTests/Specification/Audit.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/tests/TensorCoreTests/Specification/Audit.lean)
 walks every constant used by the specification's types **and proof terms**,
 transitively, and fails if any comes from the implementation rather than
-`Init`, `Std`, or `Lean`. The recorded run audited 181 specification
+`Init`, `Std`, or `Lean`. The recorded run audited 184 specification
 declarations and found no implementation dependencies. A negative control
 confirms that the audit rejects a deliberately contaminated definition.
 

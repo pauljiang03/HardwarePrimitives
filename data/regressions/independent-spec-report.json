@@ -2,8 +2,13 @@
   "status": "passed",
   "theorem": "TensorCore.IndependentSpec.supported_eq_spec",
   "generic_theorem": "TensorCore.IndependentSpec.evalBlock_eq_spec",
+  "output_width_theorem": "TensorCore.IndependentSpec.evalBlock_eq_specM",
+  "fp8_theorems": [
+    "TensorCore.IndependentSpec.blackwell_fp8_eq_spec",
+    "TensorCore.IndependentSpec.fp8_eq_spec"
+  ],
   "supported_paths": 8,
-  "scope": "FP16/BF16/packed-TF32 inputs; FP32 c/output; finite reference domain; one block FMA and ordered lists of block FMAs",
+  "scope": "FP16/BF16/packed-TF32 inputs; FP32 c/output; finite reference domain; one block FMA and ordered lists of block FMAs; every model with any block-output width (RoundsM), FP8 block FMAs included",
   "all_encoded_inputs_including_rejections": true,
   "independent_validity_success_proved": true,
   "signed_zero_bit_uniqueness_proved": true,
@@ -11,7 +16,7 @@
   "adequate_machine_accumulator_bridge": true,
   "all_intermediate_schedule_bits_proved": true,
   "scalar_dependency_negative_control_rejected": true,
-  "specification_declarations_audited": 181,
+  "specification_declarations_audited": 184,
   "theorem_roots_audited": 72,
   "dependency_negative_control_rejected": true,
   "semantic_negative_controls": [
@@ -33,8 +38,9 @@
   ],
   "source_sha256": {
     "TensorCore/TC/Specification/Composition.lean": "f0771433d9a2e38730ad5ee99f21aaeca05676bd525728d0a7927f513ace250b",
-    "TensorCore/TC/Specification/Defs.lean": "1514f6077eb7e5d44bad598ace13f0d77d1db66241f3115eea6171bf7b446cba",
+    "TensorCore/TC/Specification/Defs.lean": "4d9485364571c2e6a0747adc73145c8a0df2ac15dc153a98d4f88fd0ef7f352c",
     "TensorCore/TC/Specification/Equivalence.lean": "78ef4a829f3eccdaaf12cf7941345adf655910633e8a59260f3eb78a8fd4b572",
+    "TensorCore/TC/Specification/OutputWidth.lean": "122b8963a82ce45a96aaa2b9cd94ebf87db7e443da98016f1da74c5442075ad2",
     "TensorCore/TC/Specification/Rounding.lean": "44f0c5f8fb9424a0f5874c9c4f096f9c7e1be2d722c0a8c9832ae5b6f279f702",
     "TensorCore/TC/Specification/Schedule.lean": "4dec9a0111ed1d378231a60bca4d04b9cdcb4ce972d602f36b7865f1ca08aad5",
     "TensorCore/TC/Specification/Stages.lean": "48165422e5283d8f0da2cc18902090276b27f77736186d1aafb7e8fe83175aaa",
@@ -44,13 +50,13 @@
     "tests/TensorCoreTests/Specification/NegativeControls.lean": "8805b0ae54270faaf5d32515c1e5c15d1753f2309707f868c851b73a349a8cbc",
     "scripts/lean/IndependentSpecAudit.lean": "c9a6896917135ba8d477194d0e14bab0219391b1cab262e4f252be09db783cfe",
     "examples/IndependentSpecification.lean": "55161367838ce544b02ffd78014533eb871d00c0ef3bf50f834a2f4164782e68",
-    "scripts/check_independent_spec.py": "e20be88b83d7f48f410e49fea507c464a8eafad8b5b3a912ab53a3b1a1abd0f6"
+    "scripts/check_independent_spec.py": "bf6281c1a8ce32f941273e9d9f3e377de579a2df4df426ade001632ca7ce6ab9"
   },
   "limitations": [
     "Paper-to-formula correspondence remains a human review obligation",
     "Specification output selection is mathematical/noncomputable",
     "No physical GPU conformance or full encoded hardware pipeline theorem",
-    "No FP16-output stage-order resolution or independent FP8 path",
+    "No FP16-output stage-order resolution; the FP8 mma.sync path is covered through the FP16 block FMAs it composes, not as a whole",
     "Rejections agree as none; implementation-specific error tags are not part of the independent specification"
   ]
 }

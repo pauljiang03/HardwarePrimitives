@@ -10,7 +10,8 @@ computes the same block FMA with **bitvector operations only**, in registers
 whose widths come from the model. Lean proves it returns the same FP32
 word as `evalBlock`, or the same error, for **every** input on all eight
 FP16/BF16/TF32 variants (whose parameters are also those of Ada, H200 and
-B200).
+B200), and a second datapath does the same for the six FP8 block FMAs
+([below](#the-fp8-block-fmas)).
 
 The integer model is still the definition that all other theorems are about.
 The datapath is a second implementation next to it.
@@ -139,7 +140,7 @@ does not depend on the model.
 - **The eight supported variants.** `evalBlock` is defined for any model; the
   datapath covers V100 FP16, A100 FP16/BF16/TF32 and H100 FP16/BF16/TF32
   (both TF32 modes), and so Ada, H200 and B200 with those formats. The FP8
-  variants and the FP64 DMMA variant have no datapath.
+  block FMAs have their own datapath (below); the FP64 DMMA variant has none.
 - **The definitions are bitvectors; the proof is not.** The equivalence is
   proved by reading registers as integers (`toNat`, `toInt`), so one proof
   covers every input and every register width.
@@ -147,6 +148,30 @@ does not depend on the model.
 Because the output words are equal, every theorem about `evalBlock`'s output
 (the error bound, non-monotonicity, the accepted inputs, agreement with the
 independent specification) holds for the datapath too.
+
+## The FP8 block FMAs
+
+The datapath above shifts each significand left by `F − 23`, so it needs
+`F ≥ 23` mantissa bits after alignment. The FP8 block FMAs of Ada and Hopper
+keep `F = 13`, fewer than `C`'s 23. [`Datapath.FP8.evalBlock8`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L106) first places
+every significand on `L = max F 23` bits after the binary point, shifts it right
+by the exponent gap, and then drops `L − F` more bits; for `F ≥ 23` the extra
+shift is zero and this is the alignment above. The accumulator has `F + 2`
+integer and mantissa bits, the carry bits and a sign bit: 21 bits on Ada
+(`N_FMA = 16`) and 22 on Hopper (`N_FMA = 32`), *Accurate Models*' Table 3
+widths plus the sign. It is sign-extended for the same normalizer, and on Ada
+and Hopper the ten low mantissa bits of the binary32 word are then cleared
+(the 13-bit block output). B200's FP8 block FMA (`F = 25`) uses the same code
+with no extra shift and no output stage.
+
+```lean
+theorem evalBlock8_eq (v : FP8Variant) (x : BlockInput v.model) :
+    evalBlock8 v x = (TensorCore.evalBlock x).map (·.output.bits)
+```
+
+[`Datapath.FP8.evalBlock8_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L480) holds on every input of the six FP8 models
+(Ada, Hopper and B200; E4M3 in the 9-bit `e4m3x` layout, and E5M2), every
+rejection included.
 
 ## Comparison with the SMT model of Valpey et al.
 

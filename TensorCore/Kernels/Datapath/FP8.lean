@@ -139,7 +139,7 @@ theorem zeroExtend_eq_ofNat {w : ℕ} (x : BitVec w) : x.zeroExtend 32 = BitVec.
   apply BitVec.eq_of_toNat_eq
   rw [BitVec.toNat_setWidth, BitVec.toNat_ofNat]
 
-theorem decodeInput8_e4m3x' (w : BitVec 9) :
+theorem decodeInput8_e4m3x_word (w : BitVec 9) :
     (decodeInput8 true (w.zeroExtend 32)).map Input.decoded = (classify e4m3x w).finite := by
   have h := decodeInput8_e4m3x w.toNat w.isLt
   have h1 : BitVec.ofNat 9 w.toNat = w := by apply BitVec.eq_of_toNat_eq; simp
@@ -147,7 +147,7 @@ theorem decodeInput8_e4m3x' (w : BitVec 9) :
   rw [zeroExtend_eq_ofNat]
   exact h
 
-theorem decodeInput8_e5m2' (w : BitVec 8) :
+theorem decodeInput8_e5m2_word (w : BitVec 8) :
     (decodeInput8 false (w.zeroExtend 32)).map Input.decoded = (classify e5m2 w).finite := by
   have h := decodeInput8_e5m2 w.toNat w.isLt
   have h1 : BitVec.ofNat 8 w.toNat = w := by apply BitVec.eq_of_toNat_eq; simp
@@ -158,12 +158,12 @@ theorem decodeInput8_e5m2' (w : BitVec 8) :
 theorem decodeInput8_model (v : FP8Variant) (word : v.model.Word) :
     (decodeInput8 v.e4m3 (word.zeroExtend 32)).map Input.decoded = v.model.decode word := by
   cases v
-  · exact decodeInput8_e4m3x' word
-  · exact decodeInput8_e5m2' word
-  · exact decodeInput8_e4m3x' word
-  · exact decodeInput8_e5m2' word
-  · exact decodeInput8_e4m3x' word
-  · exact decodeInput8_e5m2' word
+  · exact decodeInput8_e4m3x_word word
+  · exact decodeInput8_e5m2_word word
+  · exact decodeInput8_e4m3x_word word
+  · exact decodeInput8_e5m2_word word
+  · exact decodeInput8_e4m3x_word word
+  · exact decodeInput8_e5m2_word word
 
 theorem decodeInput8_bounds {v : FP8Variant} {word : v.model.Word} {a : Input}
     (h : decodeInput8 v.e4m3 (word.zeroExtend 32) = some a) :

@@ -7,13 +7,7 @@
         "build"
       ],
       "exit_code": 0,
-      "warnings": [
-        "ld64.lld: warning: directory not found for option -L/usr/local/lib",
-        "ld64.lld: warning: directory not found for option -L/usr/local/lib",
-        "ld64.lld: warning: directory not found for option -L/usr/local/lib",
-        "ld64.lld: warning: directory not found for option -L/usr/local/lib",
-        "ld64.lld: warning: directory not found for option -L/usr/local/lib"
-      ]
+      "warnings": []
     },
     {
       "command": [
@@ -23,7 +17,7 @@
         "scripts/lean/Audit.lean"
       ],
       "exit_code": 0,
-      "audit": "tc_audit: 1467 theorem roots (919 written in source, the rest generated)"
+      "audit": "tc_audit: 1543 theorem roots (982 written in source, the rest generated)"
     },
     {
       "command": [
@@ -54,7 +48,7 @@
       "exit_code": 0
     }
   ],
-  "scanned_lean_sources": 154,
+  "scanned_lean_sources": 158,
   "bounded_scope": "Complete eight-variant encoded EFT: bounded decoding, signed extraction/overlap, guards, scalar and 576-bit exact consolidation, direct FP32 rounding; universal finite-input correctness, success/range, reference refinement, and source-level operation counts",
   "bounded_checks": {
     "status": "passed",

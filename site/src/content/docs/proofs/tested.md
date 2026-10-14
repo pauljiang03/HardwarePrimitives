@@ -14,7 +14,7 @@ hypotheses stated in each theorem (see [What is
 proven](/MMAlgebra/proofs/theorems/)). The development uses no `sorry` and no
 custom axioms. `scripts/check_axioms.py` audits every public theorem under
 the `TensorCore` namespace and allows only `propext`, `Classical.choice`, and
-`Quot.sound`. The recorded run audited 1,467 theorem roots.
+`Quot.sound`. The recorded run audited 1,543 theorem roots.
 
 Every named declaration is also re-checked outside Lean's kernel by
 [con-leche](https://github.com/leanprover/con-leche), an external checker
@@ -29,14 +29,21 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
 
 - **Agreement with GPUs**: on the recorded measurements only (35,000 rows of
   V100, A100 and H100; 125,000 rows of Ada, L40S, H100, H200 and B200 with
-  FP16, BF16, TF32, E4M3 and E5M2 inputs), with the
+  FP16, BF16, TF32, E4M3 and E5M2 inputs; 20,000 H100 and H200 FP8 rows of
+  the toolbox's release v0.1), with the
   [coverage gaps](/MMAlgebra/model/validation/#what-the-rows-dont-cover) noted
   there.
 - **The accumulator input of the recorded FP8 outputs**: Ada and L40S
-  accumulate `C` in the block FMA; the H100 and H200 recordings use `C = 0`;
-  the B200 recordings add `C` after the block FMA, in binary32 with
-  round-to-nearest-even, and the replay follows them. A nonzero `C` inside the
-  FP8 block FMA of Hopper or B200 is therefore untested.
+  accumulate `C` in the block FMA; the H100 and H200 outputs of commit 79143bd
+  agree with `C = 0`; the B200 outputs and the H100 and H200 outputs of
+  release v0.1, recorded with the toolbox's `mma.sync` harness, agree with the
+  FP8 `mma.sync` model, which adds `C` after two FP16 block FMAs. A nonzero
+  `C` inside `wgmma` or `tcgen05.mma` has no recorded data.
+- **Agreement with MMA-Sim**: a simulator, not hardware. 850,000 cases on 31
+  instructions of V100 to B200 and the RTX PRO 6000 (581,052 identical with a
+  nonzero `C`, `wgmma` and `tcgen05.mma` included) and 80,000 FP8 `mma.sync`
+  cases composed from MMA-Sim's FP16 `mma.sync`, 0 mismatches
+  ([details](/MMAlgebra/model/validation/#cross-check-against-mma-sim)).
 - **FP8 decoding**: proved for every E4M3 and E5M2 word in Lean, and also
   compared with an independent Python decoder on all 512 words.
 - **Agreement with Python oracles**: exact-rational reimplementations of

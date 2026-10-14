@@ -10,7 +10,8 @@ import TensorCore.TC.GPUs
 `Rounds` selects the output word by ordering all finite binary32 values: the one of largest
 magnitude between zero and the accumulated value, with the accumulated value's sign. With a block
 output of `m < 23` mantissa bits (Ada and Hopper FP8, `m = 13`), the same ordering runs over the
-words whose low `23 − m` mantissa bits are zero (`RoundsM`). `evalBlock_eq_specM` proves that the
+words whose low `23 − m` mantissa bits are zero (`RoundsM`, defined with the rest of the
+specification in `Specification/Defs.lean`, so the independence audit covers it). `evalBlock_eq_specM` proves that the
 model's output word, and every rejection, agree with this specification on every encoded input of
 every model, with no hypothesis on the output width; `machine_eq_specM` and `runBlocks_eq_specM`
 extend it to modular accumulator widths and to every finite schedule of blocks. `bitsM_eq_bits`
@@ -20,26 +21,6 @@ case of a binary32 block output. -/
 namespace TensorCore.IndependentSpec
 
 set_option maxRecDepth 4096
-
-set_option maxRecDepth 4096
-
-/-- Truncation to an `m`-bit mantissa within binary32's exponent range, specified by ordering the
-finite binary32 words whose low `23 − m` mantissa bits are zero. -/
-def RoundsM (m : ℕ) (x : ℚ) (bits : BitVec 32) : Prop :=
-  (bits.toNat / 2147483648 != 0) = decide (x < 0) ∧ bits.toNat % 2 ^ (23 - m) = 0 ∧
-  ∃ d, IndependentSpec.value32 bits = some d ∧ Between x d ∧
-    ∀ other y, IndependentSpec.value32 other = some y → other.toNat % 2 ^ (23 - m) = 0 →
-      Between x y → magnitude y ≤ magnitude d
-
-def ResultM (p : Parameters) (m : ℕ) (x : Input p) (bits : BitVec 32) : Prop :=
-  x.products.length = p.nfma ∧ ∃ ts,
-    terms p x = some ts ∧ magnitude (accumulated p ts) ≤ maxFinite ∧
-      RoundsM m (accumulated p ts) bits
-
-/-- Mathematical output selector with an `m`-bit block output. -/
-noncomputable def bitsM (p : Parameters) (m : ℕ) (x : Input p) : Option (BitVec 32) := by
-  classical
-  exact if h : ∃ b, ResultM p m x b then some (Classical.choose h) else none
 
 theorem between_of_truncated {x d d' : ℚ} (h : Between x d)
     (h' : (0 ≤ d → 0 ≤ d' ∧ d' ≤ d) ∧ (d ≤ 0 → d ≤ d' ∧ d' ≤ 0)) : Between x d' := by

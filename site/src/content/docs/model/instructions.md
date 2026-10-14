@@ -61,8 +61,10 @@ proves that `K` products are one block FMA.
 
 `Model.dotThenAdd` runs the block FMAs from `C = 0` and adds `C` afterwards in
 binary32, rounded to nearest even (`addBinary32_nearestEven`). This is not
-how a block FMA adds `C`, but it is how the recorded B200 FP8 outputs add it,
-and the [replay](/MMAlgebra/model/validation/) follows the recording.
+how a block FMA adds `C`. On the recorded B200 FP8 outputs, from `mma.sync`,
+it agrees with the FP8 `mma.sync` model (`mmaSyncFP8Dot`: two interleaved
+FP16 block FMAs, then `C` added the same way), and the
+[replay](/MMAlgebra/model/validation/) checks both.
 
 ## Proved properties of chains
 

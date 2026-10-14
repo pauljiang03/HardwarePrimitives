@@ -109,4 +109,22 @@ noncomputable def bits (p : Parameters) (x : Input p) : Option (BitVec 32) := by
   classical
   exact if h : ∃ b, Result p x b then some (Classical.choose h) else none
 
+/-- Truncation to an `m`-bit mantissa within binary32's exponent range, specified by ordering the
+finite binary32 words whose low `23 − m` mantissa bits are zero. -/
+def RoundsM (m : ℕ) (x : ℚ) (bits : BitVec 32) : Prop :=
+  (bits.toNat / 2147483648 != 0) = decide (x < 0) ∧ bits.toNat % 2 ^ (23 - m) = 0 ∧
+  ∃ d, IndependentSpec.value32 bits = some d ∧ Between x d ∧
+    ∀ other y, IndependentSpec.value32 other = some y → other.toNat % 2 ^ (23 - m) = 0 →
+      Between x y → magnitude y ≤ magnitude d
+
+def ResultM (p : Parameters) (m : ℕ) (x : Input p) (bits : BitVec 32) : Prop :=
+  x.products.length = p.nfma ∧ ∃ ts,
+    terms p x = some ts ∧ magnitude (accumulated p ts) ≤ maxFinite ∧
+      RoundsM m (accumulated p ts) bits
+
+/-- Mathematical output selector with an `m`-bit block output. -/
+noncomputable def bitsM (p : Parameters) (m : ℕ) (x : Input p) : Option (BitVec 32) := by
+  classical
+  exact if h : ∃ b, ResultM p m x b then some (Classical.choose h) else none
+
 end TensorCore.IndependentSpec

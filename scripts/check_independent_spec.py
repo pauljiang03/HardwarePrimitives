@@ -59,8 +59,11 @@ run_cmd TensorCore.IndependentSpec.Audit.check ``contaminatedScalar
         status='passed',
         theorem='TensorCore.IndependentSpec.supported_eq_spec',
         generic_theorem='TensorCore.IndependentSpec.evalBlock_eq_spec',
+        output_width_theorem='TensorCore.IndependentSpec.evalBlock_eq_specM',
+        fp8_theorems=['TensorCore.IndependentSpec.blackwell_fp8_eq_spec', 'TensorCore.IndependentSpec.fp8_eq_spec'],
         supported_paths=8,
-        scope='FP16/BF16/packed-TF32 inputs; FP32 c/output; finite reference domain; one block FMA and ordered lists of block FMAs',
+        scope='FP16/BF16/packed-TF32 inputs; FP32 c/output; finite reference domain; one block FMA and ordered lists of block FMAs; '
+              'every model with any block-output width (RoundsM), FP8 block FMAs included',
         all_encoded_inputs_including_rejections=True,
         independent_validity_success_proved=True,
         signed_zero_bit_uniqueness_proved=True,
@@ -79,7 +82,7 @@ run_cmd TensorCore.IndependentSpec.Audit.check ``contaminatedScalar
         limitations=['Paper-to-formula correspondence remains a human review obligation',
                      'Specification output selection is mathematical/noncomputable',
                      'No physical GPU conformance or full encoded hardware pipeline theorem',
-                     'No FP16-output stage-order resolution or independent FP8 path',
+                     'No FP16-output stage-order resolution; the FP8 mma.sync path is covered through the FP16 block FMAs it composes, not as a whole',
                      'Rejections agree as none; implementation-specific error tags are not part of the independent specification'],
     )
     (ROOT / 'data/regressions/independent-spec-report.json').write_text(json.dumps(report, indent=2) + '\n')

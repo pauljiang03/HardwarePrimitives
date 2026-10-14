@@ -30,14 +30,19 @@ for what is tested rather than proved.
 **Yes, for every possible input.** The executable model and an independently
 written transcription of *Accurate Models* produce the same output bits, or
 both reject the input. This holds on all eight FP16/BF16/TF32 variants, which
-are also those of Ada, H200 and B200, and on every model with a binary32 block
-output, so on B200 FP8 too.
+are also those of Ada, H200 and B200, and on every model whatever the width of
+its block output: the specification truncates the accumulator to binary32 and
+then to the model's number of output mantissa bits, so Ada and Hopper FP8 are
+covered too. With at least 23 output mantissa bits it is the binary32
+specification.
 
-- **Assumes:** nothing beyond the input being one of these variants
-  (`evalBlock_eq_spec` takes any model with `23 ≤ outputMantissaBits`).
+- **Assumes:** nothing (`evalBlock_eq_spec` states the binary32 case, for any
+  model with `23 ≤ outputMantissaBits`; `evalBlock_eq_specM` drops that
+  hypothesis).
 - **Classification:** Core theorem. The transcription is mechanically checked not to reuse
   any model code, and a companion result shows it isn't vacuous.
-- **Lean:** [`IndependentSpec.supported_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L28), [`IndependentSpec.blackwell_fp8_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L42)
+- **Lean:** [`IndependentSpec.supported_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L28), [`IndependentSpec.blackwell_fp8_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L42),
+  [`IndependentSpec.evalBlock_eq_specM`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L115), [`IndependentSpec.bitsM_eq_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L136), [`IndependentSpec.fp8_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L189)
 
 ### Which inputs does the model accept?
 
@@ -64,10 +69,14 @@ dropped by alignment and by the final rounding.
 place of the output).** The first part is the alignment loss and the second
 is the rounding loss.
 
-- **Assumes:** the model accepted the input, and its block output is binary32
-  (every variant except Ada and Hopper FP8, whose 13-bit output is coarser).
+For a block output with `m` mantissa bits the second part is `2^(23 − m)`
+units in the last place of the binary32 output word: on Ada and Hopper FP8
+(`m = 13`) one unit in the last place of the 14-bit output significand.
+
+- **Assumes:** the model accepted the input (`evalBlock_error_bound` states
+  the binary32 case, for block outputs with at least 23 mantissa bits).
 - **Classification:** Core theorem.
-- **Lean:** [`evalBlock_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/ErrorBounds.lean#L98)
+- **Lean:** [`evalBlock_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/ErrorBounds.lean#L98), [`evalBlock_error_bound_any`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/OutputWidth.lean#L432), [`fp8_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/OutputWidth.lean#L442)
 
 ### Does modeling the adder as exact hide anything?
 
@@ -88,14 +97,16 @@ aligns, sums and normalizes using bitvector operations only. Its registers
 are sized from the model: `F + 2` bits per aligned term, an accumulator of
 28 to 32 magnitude bits plus a sign bit (30 and 32 on A100 and H100 FP16, the
 widths in *Accurate Models*), and 9-bit exponents. It returns the same output word as the model, or the same
-error, for every input on all eight FP16/BF16/TF32 variants.
+error, for every input on all eight FP16/BF16/TF32 variants. A second
+datapath covers the six FP8 block FMAs (Ada, Hopper and B200; E4M3 and E5M2):
+on Ada and Hopper it aligns on 23 mantissa bits, shifts, drops the ten low bits
+of each aligned term, and clears the ten low mantissa bits of the output.
 
-- **Assumes:** nothing beyond the input being one of the eight FP16/BF16/TF32
-  variants. The datapath does not cover FP8.
+- **Assumes:** nothing beyond the input being one of these variants.
 - **Classification:** Core theorem. The datapath shares no arithmetic with the
   model: it uses shifts, a leading-zero count and wrapping additions where the
   model uses rationals and floors.
-- **Lean:** [`Datapath.evalBlock_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L208)
+- **Lean:** [`Datapath.evalBlock_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L208), [`Datapath.FP8.evalBlock8_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L480)
 
 ### Chained block FMAs
 
@@ -121,7 +132,28 @@ output on the FP8 models.
 - **Classification:** Core theorems, checked by computation over every word
   for the encodings.
 - **Lean:** [`e4m3_specials`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L58), [`e5m2_specials`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L64), [`e4m3_decode_widen`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L43),
-  [`fp8_output_thirteen_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L97), [`fp8_eAlignMin_inactive`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L199)
+  [`fp8_output_thirteen_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L107), [`fp8_eAlignMin_inactive`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L209)
+
+### FP8 through `mma.sync`
+
+**The FP8 `mma.sync` path of H100, H200 and B200 is modeled, and its structure
+is pinned down by kernel-checked consequences.** FP8 operands convert exactly
+to FP16; the products at positions `k mod 4 ∈ {0, 1}` and `{2, 3}` go through
+two chained Hopper FP16 block FMAs from `+0`; `C` is added afterwards in
+binary32 with round-to-nearest-even. The model reproduces the interleaving
+pattern *Accurate Models* reports, and the alternatives (the other group
+order, one 32-product block, `C` inside the block, two independent blocks)
+each give a different word on an explicit input, one of them a recorded B200
+row.
+
+- **Assumes:** nothing; the consequences are evaluations of the model on
+  fixed inputs.
+- **Classification:** Core theorems (exact conversions over every word) and
+  kernel-checked witnesses. That GPUs follow the model is tested, not proved:
+  see [hardware validation](/MMAlgebra/model/validation/).
+- **Lean:** [`e4m3ToF16_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L110), [`e5m2ToF16_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L125), [`mmaSyncFP8`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L55),
+  [`interleave_test_e5m2`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L88), [`interleave_test_reversed`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L103),
+  [`interleave_test_single_block`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L109), [`late_c_witness`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L119), [`separate_groups_excluded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L147)
 
 ## Non-monotonicity
 

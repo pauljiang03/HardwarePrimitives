@@ -36,8 +36,11 @@ Ada (RTX 1000 Ada, L40S) uses the A100 models (`adaF16F32` is `ampereF16F32`, an
 | Ada, L40S (`mma.sync`) | 16 | 13, ten fewer than FP32 | 13 |
 | H100, H200 (`wgmma`) | 32 | 13, ten fewer than FP32 | 13 |
 | B200 (`tcgen05.mma`) | 32 | 25, with 2 padding bits | 23 |
+| RTX PRO 6000 (`mma.sync`) | 32 | 25, with 2 padding bits | 23 |
 
-E4M3 is the variant without infinities (largest value 448, NaN only at `S.1111.111`); the model takes it in the `e4m3x` layout, whose decoding `e4m3_decode_widen` proves identical on all 256 words. `Model.dot` chains block FMAs over longer inner products, and `Model.dotThenAdd` adds C after them in binary32 with round-to-nearest-even, as the recorded B200 FP8 outputs do.
+E4M3 is the variant without infinities (largest value 448, NaN only at `S.1111.111`); the model takes it in the `e4m3x` layout, whose decoding `e4m3_decode_widen` proves identical on all 256 words. `Model.dot` chains block FMAs over longer inner products, and `Model.dotThenAdd` adds C after them in binary32 with round-to-nearest-even.
+
+On H100, H200 and B200 an FP8 `mma.sync` runs on the FP16 block FMAs instead, as *Accurate Models* reports ([MmaSyncFP8.lean](../../TensorCore/TC/MmaSyncFP8.lean)): `mmaSyncFP8` converts the operands to FP16 (exactly: `e4m3ToF16_exact`, `e5m2ToF16_exact`), sums the products at positions `k mod 4 ∈ {0, 1}` with one Hopper FP16 block FMA from `+0` and those at `{2, 3}` with a second one chained on the first, and adds C afterwards in binary32 with round-to-nearest-even. The recorded B200 FP8 outputs and the H100 and H200 FP8 outputs of the toolbox's release v0.1 agree with it.
 
 The generic model constructors also permit other FMA sizes, numbers of padding bits, and minimum alignment exponents. The model contract states its width, range, and format premises explicitly; choosing a parameter does not establish physical GPU correspondence.
 

@@ -50,8 +50,11 @@ def hopperF16F32 : Model := fp16Fp32Model 16 2 (some (-133))
 ```
 
 Most theorems are stated for **arbitrary** `K`, `p`, and minimum alignment
-exponent, and the named models are instances. Those that need a binary32
-block output state it as a hypothesis, `23 ≤ p.outputMantissaBits`. Choosing parameters does not by itself establish that
+exponent, and the named models are instances. The error bound and the
+independent specification also hold for every block-output width
+([`evalBlock_error_bound_any`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/OutputWidth.lean#L432), [`IndependentSpec.evalBlock_eq_specM`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L115)); the
+results that need a binary32 block output (block contracts, exact alignment,
+non-monotonicity) state it as a hypothesis, `23 ≤ p.outputMantissaBits`. Choosing parameters does not by itself establish that
 a GPU behaves that way. That link comes from the
 [hardware replay](/MMAlgebra/model/validation/).
 
@@ -70,11 +73,20 @@ truncate, and Table 3 lists no minimum alignment exponent for them:
 | Ada, L40S | `mma.sync` (QMMA) | `adaE4M3F32`, `adaE5M2F32` | 16 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
 | H100, H200 | `wgmma` (QGMMA) | `hopperE4M3F32`, `hopperE5M2F32` | 32 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
 | B200 | `tcgen05.mma` (UTCQMMA) | `blackwellE4M3F32`, `blackwellE5M2F32` | 32 | 25: 23 plus 2 padding bits | binary32 |
+| RTX PRO 6000 | `mma.sync` (QMMA) | `rtxPro6000E4M3F32`, `rtxPro6000E5M2F32` (= B200's) | 32 | 25: 23 plus 2 padding bits | binary32 |
+
+The evidence differs by row. Ada's and L40S's recorded FP8 outputs, from
+`mma.sync` with `C`, agree with Ada's block FMA. For Hopper's and B200's block
+FMAs with `C` accumulated inside `wgmma` or `tcgen05.mma` there is no recorded
+data; the recorded H100 and H200 rows of the toolbox's commit 79143bd agree
+with Hopper's block FMA from `C = 0`, and the models agree with the MMA-Sim
+simulator on 581,052 cases with a nonzero `C`. The RTX PRO 6000 row rests on
+*Accurate Models* and MMA-Sim alone ([hardware validation](/MMAlgebra/model/validation/)).
 
 On Ada and Hopper the block output is truncated to a 13-bit mantissa, as the
 *Accurate Models* toolbox's `GEMM.m` sets: the model truncates the binary32
 output further, clearing its ten low mantissa bits ([`truncateMantissa32`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Defs.lean#L32),
-[`fp8_output_thirteen_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L97)). Every other variant keeps the default 23.
+[`fp8_output_thirteen_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L107)). Every other variant keeps the default 23.
 
 The two formats decode differently at the top of their range:
 
@@ -91,20 +103,57 @@ packed `tf19` layout. The FP8 descriptors decode E4M3 words directly.
 
 The toolbox keeps its default minimum alignment exponents (−132 and −133) for
 FP8. They are inactive: with FP8 products and a binary32 `C`, no nonzero term
-has an exponent below −126, and [`fp8_eAlignMin_inactive`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L199) proves that either
+has an exponent below −126, and [`fp8_eAlignMin_inactive`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L209) proves that either
 choice gives the same output word, or the same error, on every input.
 
-Longer inner products use [`Model.dot`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L248), which pads the products with zero pairs
+Longer inner products use [`Model.dot`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L258), which pads the products with zero pairs
 to a multiple of N_FMA and chains the block FMAs through `C`, as the toolbox's
 `GEMM.m` does: a row of 32 FP8 products is two block FMAs on Ada and one on
-Hopper and Blackwell. [`Model.dotThenAdd`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L288) instead runs the block FMAs from
-`C = 0` and adds `C` afterwards in binary32 with round-to-nearest-even; that
-is how the recorded B200 FP8 outputs add `C` (see [hardware
-validation](/MMAlgebra/model/validation/)).
+Hopper and Blackwell. [`Model.dotThenAdd`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L298) instead runs the block FMAs from
+`C = 0` and adds `C` afterwards in binary32 with round-to-nearest-even. On the
+recorded B200 FP8 rows it agrees with the `mma.sync` model below.
 
-Not modeled: FP4 and FP6, the FP8 `mma.sync` path of H100 and H200 (FP8
-converted to FP16 for HMMA, with `C` added late), and the Blackwell
-instructions *Accurate Models* does not characterize.
+### FP8 through `mma.sync`
+
+On H100, H200 and B200 an FP8 `mma.sync` does not run on an FP8 block FMA.
+*Accurate Models* (Sections 4.1.6 to 4.1.8) reports that the operands are
+converted to FP16 and the instruction runs as FP16 `HMMA.16816` instructions,
+with the products split by alternating pairs of positions and `C` added after
+the products. [`mmaSyncFP8`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L55) models one instruction:
+
+1. every FP8 operand is converted to FP16, exactly ([`e4m3ToF16_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L110),
+   [`e5m2ToF16_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L125));
+2. the products at positions `k mod 4 ∈ {0, 1}` go through one Hopper FP16
+   block FMA (`N_FMA = 16`, `F = 25`, `e_align^min = −133`) from `+0`;
+3. the products at positions `k mod 4 ∈ {2, 3}` go through a second one, whose
+   accumulator input is the first block's output;
+4. `C` is added to the second block's output in binary32 with
+   round-to-nearest-even.
+
+[`mmaSyncFP8Dot`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L64) chains instructions of `k = 32` (or `k = 16`) products
+through `C`. The paper does not state that the second block takes the first
+block's output, nor the order of the groups; kernel-checked consequences pin
+them down:
+
+- the paper's interleaving experiment (E5M2, `1`, `2^-24` and one more
+  `2^-24` at position `k`) gives `1 + 2^-23` exactly when `k mod 4 < 2`
+  ([`interleave_test_e5m2`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L88)); the order with the second group first, and a
+  single 32-product block, give `1 + 2^-23` at every position
+  ([`interleave_test_reversed`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L103), [`interleave_test_single_block`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L109));
+- `C` added after the products is rounded to nearest, not truncated: one
+  input separates the path from a block FMA that holds `C` ([`late_c_witness`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L119));
+- on a recorded B200 E5M2 row the model returns the recorded word, while two
+  independent FP16 blocks added in binary32 return the next word
+  ([`separate_groups_excluded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MmaSyncFP8.lean#L147)).
+
+The recorded B200 FP8 rows and the H100 and H200 FP8 outputs of the toolbox's
+release v0.1 agree with this model bit for bit (30,000 rows with `C`); the
+toolbox's FP8 harness, the same file in both, issues `mma.sync`. See [hardware
+validation](/MMAlgebra/model/validation/). The RTX PRO 6000 runs FP8 `mma.sync`
+as `QMMA.16832` on B200's FP8 block FMA, with `C` inside.
+
+Not modeled: FP4 and FP6, and the Blackwell instructions *Accurate Models*
+does not characterize.
 
 ## Beyond one block: `InvocationSpec`
 
