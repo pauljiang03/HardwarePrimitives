@@ -1,4 +1,4 @@
-# Differential testing against the MATLAB models
+# Differential testing against the MATLAB models and MMA-Sim
 
 `scripts/matlab_diff.py` compares the Lean model with the authors' MATLAB Tensor Core v0.6
 matrix-core models (`MI100MC.m`, `MI210MC.m`, `MI300AMC.m`, and the generalized model
@@ -73,3 +73,72 @@ With the two MATLAB defects corrected, the Lean model and the MATLAB model agree
 random inner products on every CDNA variant the MATLAB model implements (it has no fp32 SFMA and no
 mixed fp8 formats), and the Lean model alone matches the paper's hardware results on the two
 normalization vectors.
+
+## Targeted binary8 inputs
+
+Random sampling rarely reaches the parts of Algorithm 2 that set binary8 apart: two groups with
+different exponents, cancellation across the groups, `c` at the binary8 cutoff. `scripts/fp8_cases.py`
+draws inner products (`k = 16` and `k = 32`, two chained blocks) from six regimes, cycled case
+by case:
+
+0. random bits: uniformly random words and a random binary32 `c`;
+1. operands of magnitude `2^2`–`2^7` in the odd slots and `2^-9`–`2^-3` in the even slots, so the
+   two groups have different exponents and the smaller sum is rounded down to the common grid;
+2. `c` near the cutoff, where `e_max − e_c` is about 22 to 28;
+3. pairs `x·y` and `−x·y` in adjacent slots, which cancel across the groups, with three small
+   products;
+4. two or three nonzero products in random slots;
+5. `c` larger than every product (the shifted-sum path).
+
+`scripts/matlab_fp8.py` compares the Lean model with the MATLAB model on these inputs, run as
+above (`MI300AMC.m` parameters, commit `79143bd`, GNU Octave):
+
+```sh
+python3 scripts/matlab_fp8.py --cases 10000 --seed 2026
+```
+
+The MATLAB model takes one input format, so only E4M3 × E4M3 and E5M2 × E5M2 are compared:
+10,000 inner products each, 1,666 or 1,667 per regime.
+
+| Model | `shipped` | `rdfix` |
+| --- | --- | --- |
+| CDNA 3 fp8 E4M3 | 2 / 10,000 (both random bits) | 0 / 10,000 |
+| CDNA 3 fp8 E5M2 | 0 / 10,000 | 0 / 10,000 |
+
+The two `shipped` mismatches are the RD of `S_acc` that v0.6 does not execute, as above; with
+`rdfix` the two models agree on all 20,000 targeted inner products.
+
+## MMA-Sim
+
+[MMA-Sim](https://github.com/microsoft/MMA-Sim) (Microsoft, MIT licence) is a bit-accurate
+simulator of the matrix multiply-accumulate units of NVIDIA and AMD GPUs, described in
+[arXiv:2511.10909](https://arxiv.org/abs/2511.10909). For CDNA 3 `float8_e4m3fnuz` and
+`float8_e5m2fnuz` inputs it selects `MMA_GTR_FDPA(F=24, F2=31, rho="RNE-FP32", L_max=16)`
+(`src/mmasim/mmasim/amd/sim.py`): blocks of 16 products, the products of the two groups of slots
+each truncated relative to the group's largest exponent, the group sums rounded down to the
+larger exponent, `c` added, and the sum rounded to nearest even binary32 (`gtr_fdpa`,
+`src/mmasim/mmasim/arithmetic/fdpa.py`). Its groups are indexed from 0, so its even group is the
+paper's odd slots.
+
+`scripts/mmasim_fp8.py` transcribes `gtr_fdpa` at commit `aab7f2a` step by step in exact
+rational arithmetic, with MMA-Sim's licence notice, and compares it with `mc_eval` on the cases of
+`scripts/fp8_cases.py`. MMA-Sim's code (which evaluates in PyTorch `float64`) is neither run nor
+vendored. Each operand is normalized with its own format's subnormal exponent, as MMA-Sim's
+`frexp_and_normalize` does, so the comparison also covers mixed formats, which the MATLAB model
+does not have.
+
+```sh
+python3 scripts/mmasim_fp8.py --cases 30000 --seed 1
+```
+
+| Inputs | Inner products | Mismatches |
+| --- | --- | --- |
+| E4M3 × E4M3 FNUZ | 30,000 (5,000 per regime) | 0 |
+| E5M2 × E5M2 FNUZ | 30,000 | 0 |
+| E4M3 × E5M2 FNUZ | 30,000 | 0 |
+
+All 90,000 outputs are the same binary32 word (the exact transcription has no `−0`, so a zero
+would be compared by value; none occurred). The script writes `.lake/mmasim-fp8/report.json` with
+the counts and MMA-Sim's commit. MMA-Sim's model of CDNA 3 comes from its authors' experiments,
+the Lean model from Khattak, Mikaitis and Graziani's: the two agree on every binary8 inner product
+tested.

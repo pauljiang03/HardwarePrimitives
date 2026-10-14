@@ -6,7 +6,8 @@
 4. [The independent specification](guide/04-specification.md): what it transcribes and how it is
    connected to the model.
 5. [Tests](../tests/README.md): the paper's test vectors and the trust audit.
-6. [Differential testing](differential.md): comparison with the authors' MATLAB models.
+6. [Differential testing](differential.md): comparison with the authors' MATLAB models and, on
+   binary8, with MMA-Sim.
 7. [FloatLib implementation](../floatlib-port/README.md): a second implementation on FloatLib
    and its equivalence proof.
 
