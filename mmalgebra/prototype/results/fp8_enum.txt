@@ -1,0 +1,15 @@
+Terms over 3 products, 800 random inputs per model
+Blackwell e4m3             mode=rigid  n=3 terms=  327 normal forms=  28 classes=  27 unsound normal forms=0 unseparated pairs=1
+   unseparated: ('A', ('B', ('L', 2), (1,)), ('L', 0))  vs  ('A', ('B', None, (1, 2)), ('L', 0))
+      separated after 535 targeted inputs: products -44*5, 1/512*-11/512, -26*-120; 0x45354000 vs 0x45353fff
+Hopper e4m3                mode=trunc  n=3 terms=  327 normal forms=  43 classes=  43 unsound normal forms=0 unseparated pairs=0
+Ada e4m3                   mode=trunc  n=3 terms=  327 normal forms=  43 classes=  43 unsound normal forms=0 unseparated pairs=0
+Hopper e4m3                mode=rigid  n=3 terms=  327 normal forms=  28 classes=  43 unsound normal forms=12 unseparated pairs=0
+CDNA3 e4m3fnuz             mode=parity n=3 terms= 2616 normal forms=  40 classes=  40 unsound normal forms=0 unseparated pairs=0
+CDNA3 e5m2fnuz             mode=parity n=3 terms= 2616 normal forms=  40 classes=  40 unsound normal forms=0 unseparated pairs=0
+CDNA3 e4m3fnuz x e5m2fnuz  mode=parity n=3 terms= 2616 normal forms=  40 classes=  38 unsound normal forms=0 unseparated pairs=2
+   unseparated: ('B', ('A', ('L', 0), ('L', 1)), ((), (2,)))  vs  ('B', ('B', ('L', 0), ((), (1,))), ((), (2,)))
+      separated after 169 targeted inputs: products -15/256*-56, -240*-28672, -120*-1280; 0x4ad6b007 vs 0x4ad6b006
+   unseparated: ('A', ('A', ('L', 0), ('L', 1)), ('L', 2))  vs  ('A', ('B', ('L', 0), ((), (1,))), ('L', 2))
+      separated after 79 targeted inputs: products 15/4*5/512, -5*-5120, -104*-32; 0x46e20013 vs 0x46e20012
+CDNA3 e4m3fnuz             mode=rigid  n=3 terms= 2616 normal forms=  28 classes=  40 unsound normal forms=10 unseparated pairs=0

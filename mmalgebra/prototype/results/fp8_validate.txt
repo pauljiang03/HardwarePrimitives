@@ -1,0 +1,13 @@
+  Ada   E4M3: 5000 recorded outputs
+  L40S  E4M3: 5000 recorded outputs
+  H100  E4M3: 5000 recorded outputs
+  H200  E4M3: 5000 recorded outputs
+  B200  E4M3: 5000 recorded outputs
+  Ada   E5M2: 5000 recorded outputs
+  L40S  E5M2: 5000 recorded outputs
+  H100  E5M2: 5000 recorded outputs
+  H200  E5M2: 5000 recorded outputs
+  B200  E5M2: 5000 recorded outputs
+recorded GPU outputs: 50000, mismatches 0
+sparse evaluators against full blocks: 3000 random blocks, mismatches 0
+CDNA 3 binary8 against the Lean model (mc_eval): 6000 inner products, mismatches 0

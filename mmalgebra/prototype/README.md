@@ -39,9 +39,10 @@ with accumulator input `t`, each slot a product index or `None` for a zero pair)
 
 From `mmalgebra/`, `python3 scripts/check.py --prototype` reruns the fast scripts and compares
 their output with the recorded files; `--slow` adds `terms4.py`, `classes.py`, `terms.py`,
-`divergence.py`, `blas_programs.py`, `anchor_sim.py`, `pinned_sim.py`, `pinned_acc.py` and
-`pinned3.py`, which take from a few seconds to a few minutes each; the divergence and BLAS studies
-use up to twelve processes.
+`divergence.py`, `blas_programs.py`, `anchor_sim.py`, `pinned_sim.py`, `pinned_acc.py`,
+`pinned3.py` and `fp8_enum.py`, which take from a few seconds to a few minutes each (`fp8_enum.py`
+about twenty); the divergence and BLAS studies use up to twelve processes, the FP8 enumeration
+six. `fp8_validate.py` needs `mc_eval`, built in `../amd`.
 
 The programs of `blas_programs.py` are modeled: the internals of cuBLAS and rocBLAS are not
 public, and which program a library runs for a given shape would have to be probed on GPUs.
@@ -64,6 +65,31 @@ against `models.py` on 3,600 random blocks.
 | [`find_demo.py`](find_demo.py), [`amd_cex.py`](amd_cex.py) | Search for the 28-product demonstration and the AMD cases that the Lean files check | [`results/find_demo.txt`](results/find_demo.txt), [`results/amd_cex.txt`](results/amd_cex.txt) |
 | [`subnormal_gamma.py`](subnormal_gamma.py) | Search for blocks with a subnormal factor that exceed the classical `γ_n` bound | [`results/subnormal_gamma.txt`](results/subnormal_gamma.txt) |
 
+## The FP8 models
+
+[`fp8models.py`](fp8models.py) is a bit-exact port of the FP8 block FMAs: `TensorCore.evalBlock`
+with the models of Ada, Hopper and Blackwell (E4M3 and E5M2) and `MatrixCore.blockBits` for
+CDNA 3 binary8 (E4M3 FNUZ and E5M2 FNUZ, any mix). [`fp8_validate.py`](fp8_validate.py) replays
+the 50,000 recorded FP8 outputs of Ada, L40S, H100, H200 and B200 through it, and compares the
+CDNA 3 port with the Lean model (`mc_eval`, built in `../amd`) on 6,000 random and targeted inner
+products; on 2026-10-13 both agreed on every case.
+
+| Script | What it checks | Recorded output |
+| --- | --- | --- |
+| [`fp8_validate.py`](fp8_validate.py) | The port against the recorded GPU outputs and the Lean CDNA 3 model, and its sparse block evaluators against full blocks | [`results/fp8_validate.txt`](results/fp8_validate.txt) |
+| [`fp8_enum.py`](fp8_enum.py) | Every term over 3 products (up to 3 nonempty blocks, 2 additions and 1 empty block) on each FP8 model, its class of equal outputs on 800 random inputs, and conjectured normal forms: rigid on Blackwell, rigid with truncation nodes on Ada and Hopper, parity-rigid on CDNA 3 (the plain rigid forms are unsound there). Pairs left unseparated by the random inputs are separated by a targeted search | [`results/fp8_enum.txt`](results/fp8_enum.txt) |
+| [`fp8_laws.py`](fp8_laws.py) | An empty block: `c` truncated to a 13-bit mantissa on Ada and Hopper, `c` itself on Blackwell and CDNA 3; absorbed by the next nonempty block; the identity on block outputs | [`results/fp8_laws.txt`](results/fp8_laws.txt) |
+| [`fp8_crossvendor.py`](fp8_crossvendor.py) | Search for a short input with four different results on Ada, Hopper, Blackwell and CDNA 3 (the one checked in Lean) | [`results/fp8_crossvendor.txt`](results/fp8_crossvendor.txt) |
+| [`fp8_pinned.py`](fp8_pinned.py) | Pinned accumulation on CDNA 3 FP8 with the pins in one or in both parity groups, and pinned FP8 on Ada, Hopper and CDNA 3 against each other and against the sum of the truncated products | [`results/fp8_pinned.txt`](results/fp8_pinned.txt) |
+
+The enumeration gives the three FP8 algebras. Blackwell: 28 normal forms, every class separated (one
+pair needs the targeted search). Ada and Hopper: 43 normal forms with truncation nodes, all
+separated; the 28 rigid normal forms are unsound there. CDNA 3: 40 parity-rigid normal forms on
+E4M3, E5M2 and mixed E4M3 × E5M2 operands, all separated (two pairs on the mixed formats need the
+targeted search); the rigid normal forms are unsound there. The Tensor Core inputs use E4M3
+operands of magnitude at most 240, the values E4M3 shares with E4M3 FNUZ; `fp8_enum.py` takes about
+an hour of CPU time in six processes, and `check.py --prototype --slow` reruns it.
+
 ## Variants and families
 
 | Family | Variants | Normal form |
@@ -71,6 +97,9 @@ against `models.py` on 3,600 random blocks.
 | Rigid | V100, A100 and H100 (fp16, bf16), CDNA 3 (fp16, bf16), CDNA 1 bf16, SFMA | Each block keeps its accumulator input and the set of its products; additions are unordered pairs |
 | Correctly rounded nodes | CDNA 1 fp16 | A tree whose nodes round the exact sum of their children; one-child nodes vanish |
 | Summation trees | CDNA 2 (fp16, bf16, bf16 `_1k`) | An unordered binary tree of binary32 additions |
+| Rigid | Blackwell FP8 (E4M3) | As above |
+| Rigid with truncation nodes | Ada and Hopper FP8 (E4M3) | Rigid, and an empty block over an addition is a truncation node, absorbed by a following nonempty block |
+| Parity-rigid | CDNA 3 FP8 (E4M3, E5M2, E4M3 × E5M2 FNUZ) | Rigid, but each block keeps the unordered pair of the multisets of its odd and of its even slots |
 
 CDNA 1 bf16 follows the correctly rounded algebra while every product is representable in
 binary32, but a bf16 product can fall below binary32's range, and over all inputs its chains are

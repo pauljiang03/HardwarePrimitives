@@ -1,0 +1,3 @@
+CDNA 3 E4M3, pins in different parity groups: 200/200 multisets give one result under 8 random schedules
+CDNA 3 E4M3, pins in one parity group: 0/200 multisets give one result under 8 random schedules
+pinned E4M3 on Ada, Hopper and CDNA 3 (pins straddling the parity groups), random schedules: one result in 200/200 cases, equal to the sum of trunc_(2^-10)(p_i) in 200/200

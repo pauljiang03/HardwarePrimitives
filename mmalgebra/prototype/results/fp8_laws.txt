@@ -1,0 +1,9 @@
+Ada e4m3           empty block = c: 2/3000; = trunc13(c): 3000/3000; absorbed by the next block: 3000/3000; identity on block outputs: 3000/3000
+Hopper e4m3        empty block = c: 3/3000; = trunc13(c): 3000/3000; absorbed by the next block: 3000/3000; identity on block outputs: 3000/3000
+Blackwell e4m3     empty block = c: 3000/3000; = trunc13(c): 3/3000; absorbed by the next block: 3000/3000; identity on block outputs: 3000/3000
+Ada e5m2           empty block = c: 3/3000; = trunc13(c): 3000/3000; absorbed by the next block: 3000/3000; identity on block outputs: 3000/3000
+Hopper e5m2        empty block = c: 1/3000; = trunc13(c): 3000/3000; absorbed by the next block: 3000/3000; identity on block outputs: 3000/3000
+Blackwell e5m2     empty block = c: 3000/3000; = trunc13(c): 3/3000; absorbed by the next block: 3000/3000; identity on block outputs: 3000/3000
+CDNA3 e4m3fnuz     empty block = c: 3000/3000
+CDNA3 e5m2fnuz     empty block = c: 3000/3000
+CDNA3 e4m3fnuz x e5m2fnuz empty block = c: 3000/3000

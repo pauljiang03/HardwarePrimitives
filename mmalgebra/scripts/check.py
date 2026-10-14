@@ -42,7 +42,11 @@ FAST = [('examples.py', [], 'examples.txt'),
         ('portable_cmp.py', [], 'portable_cmp.txt'),
         ('amd_cex.py', [], 'amd_cex.txt'),
         ('find_demo.py', [], 'find_demo.txt'),
-        ('subnormal_gamma.py', [], 'subnormal_gamma.txt')]
+        ('subnormal_gamma.py', [], 'subnormal_gamma.txt'),
+        ('fp8_laws.py', [], 'fp8_laws.txt'),
+        ('fp8_crossvendor.py', [], 'fp8_crossvendor.txt'),
+        ('fp8_pinned.py', [], 'fp8_pinned.txt'),
+        ('fp8_validate.py', [], 'fp8_validate.txt')]
 SLOW = [('terms4.py', [], 'terms4.txt'),
         ('classes.py', ['300'], 'classes.txt'),
         ('terms.py', ['300'], 'terms.txt'),
@@ -51,7 +55,8 @@ SLOW = [('terms4.py', [], 'terms4.txt'),
         ('anchor_sim.py', [], 'anchor_sim.txt'),
         ('pinned_sim.py', [], 'pinned_sim.txt'),
         ('pinned_acc.py', [], 'pinned_acc.txt'),
-        ('pinned3.py', [], 'pinned3.txt')]
+        ('pinned3.py', [], 'pinned3.txt'),
+        ('fp8_enum.py', ['800'], 'fp8_enum.txt')]
 
 
 def run(cmd, what, cwd=ROOT):

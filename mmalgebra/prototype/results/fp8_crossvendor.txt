@@ -1,0 +1,14 @@
+e4m3: 238 nonzero values common to both encodings, magnitudes 1/512 to 240
+e5m2: 246 nonzero values common to both encodings, magnitudes 1/65536 to 57344
+search (seed 1, 20000 inputs): the best input has four different results with 3 products and 4 distinct values with RN(exact); found at input 2340
+  slots (from 0): [11, 13, 21]
+  products: (-7/16)*(13/256), (-9/4)*(-36), (-96)*(128)
+  E4M3 words: (0xae, 0x15), (0xc1, 0xe1), (0xec, 0x70)
+  E4M3 FNUZ words: (0xb6, 0x1d), (0xc9, 0xe9), (0xf4, 0x78)
+  exact sum: -49999963/4096 = -12207.022216796875
+  Ada        0xc63ec000 = -12208.0
+  Hopper     0xc63ebc00 = -12207.0
+  Blackwell  0xc63ebc16 = -12207.021484375
+  CDNA3      0xc63ebc17 = -12207.0224609375
+  RN(exact)  0xc63ebc17 = -12207.0224609375
+this is the input checked in Lean
