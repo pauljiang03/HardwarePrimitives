@@ -1,6 +1,6 @@
 ---
 title: 1. Formats and decoding
-description: How encoded FP16, BF16, TF32, and FP32 words become exact values with exponent metadata.
+description: How encoded FP16, BF16, TF32, FP8, and FP32 words become exact values with exponent metadata.
 ---
 
 The model starts from bit patterns, not real numbers. Decoding has two jobs:
@@ -24,6 +24,9 @@ def bf16 : Format := ⟨7, 8, 127⟩
 def tf19 : Format := ⟨10, 8, 127⟩    -- TF32's 19 value bits
 def fp32 : Format := ⟨23, 8, 127⟩
 def fp64 : Format := ⟨52, 11, 1023⟩
+def e5m2 : Format := ⟨2, 5, 15⟩      -- FP8 E5M2
+def e4m3 : Format := ⟨3, 4, 7⟩       -- FP8 E4M3 layout (decoded by its own rule)
+def e4m3x : Format := ⟨3, 5, 7⟩      -- E4M3 values, one more exponent bit
 ```
 
 The width is `1 + exponentBits + mantissaBits`, so a word of format `f` has
@@ -111,10 +114,35 @@ ignored. The model separates the two concerns:
   `tf32Unpack` extracts the 19 value bits.
 
 The theorem
-[`tf32_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L47)
+[`tf32_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L57)
 proves that, on register words whose low 13 bits are zero, the register-level
 invocation gives the same bits as the *Accurate Models* specification (`IndependentSpec`). Words whose low
 bits are not zero are rejected rather than silently masked.
+
+## FP8: E5M2 and E4M3
+
+The two FP8 formats differ at the top of their range.
+
+- **E5M2** follows IEEE 754, so `classifyNat e5m2` decodes it: exponent
+  `11111` is `±∞` (`0x7c`, `0xfc`) or NaN (`0x7d`–`0x7f`, `0xfd`–`0xff`), and
+  the largest value is 57344 (`0x7b`).
+- **E4M3** is the variant without infinities. Its all-ones exponent `1111`
+  holds finite values (256 to 448, the largest at `0x7e`), and its only NaNs
+  are `S.1111.111` (`0x7f`, `0xff`). The IEEE rule would make `0x78` an
+  infinity, so E4M3 is decoded by the `finiteTopNaN` rule of
+  [`ValueFormat`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Format.lean#L13),
+  as the operand encoding `e4m3Encoding`.
+
+[`e4m3_specials`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L58), [`e4m3_max`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L71), [`e5m2_specials`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L64) and [`e5m2_max`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L78) prove these facts by computation over all 256 words of each format, and the
+replay compares both decoders with an independent Python decoder on all 512
+words.
+
+The block model decodes its operands with the IEEE rule, so it takes E4M3
+values in `e4m3x`, a 9-bit layout with one more exponent bit and E4M3's bias:
+E4M3's top binade is then an ordinary binade, and subnormals keep the minimum
+exponent −6. `widenE4M3` maps each E4M3 word to its `e4m3x` word (the NaNs to
+NaNs), and the decodings agree on all 256
+words ([`e4m3_decode_widen`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L43)), as `tf32Unpack` does for TF32.
 
 ## Proved properties of the encoding layer
 

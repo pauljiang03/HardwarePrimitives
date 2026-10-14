@@ -88,9 +88,9 @@ integer up to `2^24`:
 
 | Fact | Lean |
 | --- | --- |
-| A block of integer operands with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L185) |
-| So does a chain of blocks. | [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L336) |
-| The matrix multiplier is exact on `b`-bit vectors whose products total at most `2^24`, on any variant with `2b ≤ F` whose input format holds `b`-bit integers. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L195) |
+| A block of integer operands with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L188) |
+| So does a chain of blocks. | [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L339) |
+| The matrix multiplier is exact on `b`-bit vectors whose products total at most `2^24`, on any variant with `F ≥ 23`, `2b ≤ F` and a binary32 block output whose input format holds `b`-bit integers. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L195) |
 | This holds on all eight GPU variants, with `b = 11` for fp16 and tf32 and `b = 8` for bf16. | [`v100_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
 
 ```lean
@@ -156,7 +156,7 @@ its exponent is in range, so the scaling is exact
 | Ozaki-I adds exactly the scaled exact slice products. | [`ozaki1_eq_sumWith`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Ozaki1.lean#L173), [`tcOzaki1_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L49) |
 | The result is within the addition bound plus the slicing bound of `x · y`. | [`ozaki1_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Ozaki1.lean#L372), [`tcOzaki1_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L56), [`mcOzaki1_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Schemes.lean#L56) |
 | The result is never Inf or NaN when the inputs are within a stated range. | [`ozaki1_isSome`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Success.lean#L113), [`tcOzaki1_isSome`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Success.lean#L35) |
-| The Z3 configuration runs exactly on V100. | [`v100_ozaki1_z3`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L105) |
+| The Z3 configuration runs exactly on V100. | [`v100_ozaki1_z3`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L106) |
 
 ```lean
 theorem tcOzaki1_error {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)

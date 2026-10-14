@@ -297,10 +297,11 @@ those are finite (`Ozaki.nativeDotIEEE_fin`, `Ozaki.ozaki1IEEE_fin`).
 ## On the Tensor Core model
 
 The Tensor Core aligns every product to the largest exponent of the block FMA, keeps `F` bits below it
-(`F = 23` on V100, `24` on A100, `25` on H100), adds exactly, and truncates to binary32. For
+(`F = 23` on V100, `24` on A100, `25` on H100), adds exactly, and truncates to binary32 (the
+exactness theorems take a binary32 block output, `IntExact.output`). For
 integer operands this loses nothing when `2b ≤ F` and `|c| + Σ|aᵢbᵢ| ≤ 2^24`
 (`Ozaki.TC.evalBlock_int`), also across chained block FMAs (`Ozaki.TC.runBlocks_int`). With fp16 or
-tf32 operands `b = 11`, with bf16 `b = 8`, and every variant satisfies `2b ≤ F`
+tf32 operands `b = 11`, with bf16 `b = 8`, and every FP16, BF16 and TF32 variant satisfies `2b ≤ F`
 (`Ozaki.TC.v100_exactOn` and seven more). The Z3 models' `4 × 4` configuration therefore runs
 exactly on V100: four `11`-bit slices for Ozaki-I, moduli `{4096, 4095, 4093, 4091}` with `P = 22`
 for Ozaki-II (`Ozaki.TC.v100_ozaki1_z3`, `Ozaki.TC.v100_ozaki2_z3`). On the Z3 models' own test

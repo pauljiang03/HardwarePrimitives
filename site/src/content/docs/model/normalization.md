@@ -28,10 +28,18 @@ truncates the significand to 24 bits (final rounding):
 def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate b.accumulator with
   | none => .error .accumulatorOutOfRange
-  | some bits => match finite32 bits with
+  | some bits => match finite32 (truncateFraction32 b.model.outputFracBits bits) with
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 ```
+
+`truncateFraction32 m` keeps the leading `m` fraction bits of the FP32 word and
+clears the others, a truncation to `m` fraction bits for normal and subnormal
+words alike. Every variant has `m = 23`, which changes nothing, except the FP8
+block FMAs of Ada and Hopper: their block output keeps 13 fraction bits, as
+the *Accurate Models* toolbox's `GEMM.m` sets (`NoManBitsOut = 23 + n_eab` for
+`n_eab = −10`). Truncating to 24 bits and then to 14 is the same as truncating
+to 14 once, so the FP8 output is still a single truncation of the exact sum.
 
 ## `round32`: normalize and round an exact rational to FP32
 

@@ -49,10 +49,11 @@ These are its definitions, unchanged apart from omitted comments:
 
 ```lean
 structure Model where
-  input : Format          -- input format: fp16, bf16, or tf19 (packed TF32)
+  input : Format          -- input format: fp16, bf16, tf19 (packed TF32), e5m2, e4m3x
   nfma : ℕ                -- K, the FMA size N_FMA
   alignFracBits : ℤ       -- F = 23 + p, fractional bits kept after alignment
   eAlignMin : Option ℤ    -- the minimum alignment exponent, if any
+  outputFracBits : ℕ := 23  -- fraction bits of the block output
 
 structure BlockInput (p : Model) where
   products : List (p.Word × p.Word)   -- encoded (aᵢ, bᵢ) pairs
@@ -77,7 +78,7 @@ def PreparedBlock.accumulator (b : PreparedBlock) : ℚ :=
 def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate b.accumulator with
   | none => .error .accumulatorOutOfRange
-  | some bits => match finite32 bits with
+  | some bits => match finite32 (truncateFraction32 b.model.outputFracBits bits) with
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 
@@ -100,20 +101,22 @@ def evalBlock {p : Model} (x : BlockInput p) : Except ModelError BlockTrace :=
 | `alignFracBits` (F) | Fractional bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `n_eab` |
 | `alignGridExponent` | Exponent of the alignment grid step, `η − F` | |
 | `outputUlpExponent` | Exponent of one unit in the last place of the FP32 output | |
+| `outputFracBits` | Fraction bits of the block output: 23 (binary32), or 13 on the FP8 block FMAs of Ada and Hopper | `NoManBitsOut` (`23 + n_eab` when `n_eab < 0`) |
 
 Three design choices run through the model:
 
 - **Exact arithmetic everywhere.** Values are `ℤ` and `ℚ`. Neither Lean's
   `Float` nor a floating-point library is used. The only lossy steps are the
   two the hardware performs: the alignment truncation (`truncBits`) and the
-  final rounding (`round32 .truncate`).
+  final rounding (`round32 .truncate`, then `truncateFraction32` to the block
+  output's fraction bits, which changes nothing for a binary32 output).
 - **Bits in, bits out.** Inputs are `BitVec` words and the output is an
   `F32 = BitVec 32`. Theorems can therefore state facts about exact bit
   patterns, including signed zero.
 - **Failure is explicit.** `evalBlock` returns `Except ModelError BlockTrace`.
   It rejects inputs with the wrong number of products, NaN or infinity
   operands, and sums that overflow FP32. The proved theorem
-  [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L35)
+  [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
   gives the exact accepted domain, so no input is rejected silently.
 
 ## A worked trace
@@ -159,7 +162,7 @@ Each stage has its own page:
 3. [Alignment](/MMAlgebra/model/alignment/): `η`, the minimum alignment exponent, the grid, and truncation.
 4. [Accumulation](/MMAlgebra/model/accumulation/): the exact sum and fixed-width registers.
 5. [Normalization and final rounding](/MMAlgebra/model/normalization/): `round32`, range, signed zero.
-6. [Variants and their numerical features](/MMAlgebra/model/variants/): V100/A100/H100 models and the general `InvocationSpec`.
+6. [Variants and their numerical features](/MMAlgebra/model/variants/): the models of V100 to B200, FP8 included, and the general `InvocationSpec`.
 7. [Instructions and chaining](/MMAlgebra/model/instructions/): instructions made of several block FMAs, and passing `C` between them.
 8. [Independent specification](/MMAlgebra/model/specification/): `IndependentSpec` (a transcription of *Accurate Models*) and the equality proof.
 9. [Bitvector datapath](/MMAlgebra/model/datapath/): the model in fixed-width registers, proved to give the same output word.

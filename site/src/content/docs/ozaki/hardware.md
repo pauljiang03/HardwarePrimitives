@@ -30,7 +30,7 @@ integer up to `2^24`.
 
 | Fact | Lean |
 | --- | --- |
-| A block of `b`-bit integers with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ`; so does a chain of blocks. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L185), [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L336) |
+| A block of `b`-bit integers with `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ`; so does a chain of blocks. | [`Ozaki.TC.evalBlock_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L188), [`Ozaki.TC.runBlocks_int`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Exactness.lean#L339) |
 | The matrix multiplier is exact on all eight NVIDIA variants (`b = 11` for fp16 and tf32, `8` for bf16). | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/MatrixMultiplier.lean#L195), [`v100_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Models.lean#L31) and seven more |
 | The same on the AMD SFMA and the CDNA 1, 2 and 3 fp16, bf16 and XF32 variants. | [`mcMultiplier_exactOn`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/MatrixMultiplier.lean#L326), [`cdna3F16_exactMultiplier`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Models.lean#L92) |
 
@@ -47,12 +47,12 @@ model a block of `b`-bit integers with `2b ≤ F` and an integer `c` with
 `|c| < 2^(F+1)` returns the exact sum whenever that sum is a binary32 value,
 however large the products are ([`Ozaki.TC.evalBlock_cancel`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L70)). The
 condition on the sum is also necessary
-([`evalBlock_exact_needs_binary32`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L118)). For example:
+([`evalBlock_exact_needs_binary32`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L119)). For example:
 
 - eight products `±2^22` on A100 total `2^25` and return `0` exactly
-  ([`a100_cancel_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L349));
+  ([`a100_cancel_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L350));
 - a full H100 block FMA of sixteen products does the same
-  ([`h100_cancel_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L368)).
+  ([`h100_cancel_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Cancellation.lean#L369)).
 
 The AMD architectures differ:
 
@@ -136,11 +136,11 @@ normwise rule ([`slicesFor`](https://github.com/pauljiang03/MMAlgebra/blob/main/
 | H100 tf32 `mma` | `b = 10`, 2688 | 3840 | 3840 | `b = 10`, 768 |
 | CDNA 3 fp16 | `b = 10`, 2688 | 3840 | — | `b = 10`, 768 |
 
-The theorems are [`h100F16_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L186), [`cdna3F16_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L92) and the others in
+The theorems are [`h100F16_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L187), [`cdna3F16_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L92) and the others in
 [`OzakiTC/SplitChoice.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean)
 and [`OzakiMC/SplitChoice.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean).
 The chosen configurations are proved exact and correctly rounded
-([`h100F16_fp64CR10`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L247), [`cdna3F16_fp64CR10`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L113)).
+([`h100F16_fp64CR10`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/SplitChoice.lean#L248), [`cdna3F16_fp64CR10`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/SplitChoice.lean#L113)).
 
 Two findings:
 
@@ -162,12 +162,12 @@ rule ([`moduliFor_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozak
 ([`ozaki2Candidates_ok`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L61), [`mcRunCandidates_exact`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L77)). In FP64 Ozaki-II is
 cheaper than Ozaki-I on every variant, by `1.4×` to `2×` in block FMAs
 (H100 fp16 at `k = 1024`: 768 against 1344; CDNA 3 fp16: 1536 against 2688;
-[`h100F16_best2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L110), [`cdna3F16_best12`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L135)); in binary32 they mostly tie. Two
+[`h100F16_best2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L111), [`cdna3F16_best12`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L135)); in binary32 they mostly tie. Two
 passes win only on the SFMA, for Ozaki-I. For ADP-style slicing the remap
 encoding is never worse than naive signed bytes ([`adpCost_remap_le_naive`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChoice.lean#L70)),
 but when the fixed-point width is `7` mod `8` the floor encoding saves a slice
 ([`adp_best`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChoice.lean#L82)). The chosen configurations are correctly rounded
-([`h100F16_fp64CR2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L147), [`cdna3F16_fp64CR2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L158), [`sfma_fp64CR2pass`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L172),
+([`h100F16_fp64CR2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Ozaki2Choice.lean#L148), [`cdna3F16_fp64CR2`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L158), [`sfma_fp64CR2pass`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiMC/Ozaki2Choice.lean#L172),
 [`adp_fp64CR_esc0`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/ADPChoice.lean#L96)).
 
 The cost counts model instructions, not time: it leaves out slicing,

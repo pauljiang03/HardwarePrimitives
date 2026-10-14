@@ -57,6 +57,7 @@ A successful module may print nothing. Lean elaborates and checks its definition
 | [TC/Cases.lean](TensorCoreTests/TC/Cases.lean) | Named denormalized-product/alignment traces and snapshot observations |
 | [TC/Monotonicity.lean](TensorCoreTests/TC/Monotonicity.lean) | V100/Ampere/Hopper family theorems, thresholds, and witness-range boundaries |
 | [TC/Features.lean](TensorCoreTests/TC/Features.lean) | Canonical alignment, minimum alignment exponents, extra alignment bits and machine-refinement witnesses |
+| [TC/FP8.lean](TensorCoreTests/TC/FP8.lean) | Every special and boundary E4M3 and E5M2 encoding, the widened E4M3 layout, the 13-bit block output of Ada FP8, two-block sums and the B200 recording convention |
 | [TC/Instruction.lean](TensorCoreTests/TC/Instruction.lean) | Instruction variants with their block FMAs in order, input width, and block-order examples |
 | [TC/Composition.lean](TensorCoreTests/TC/Composition.lean) | Encoded residual ledger of chained block FMAs and cancellation correction |
 | [TC/Datapath.lean](TensorCoreTests/TC/Datapath.lean) | Bitvector datapath words: alignment loss, overflow, subnormal output, −0, and input errors |
@@ -141,6 +142,7 @@ The [executable reference](../docs/reference.md) specifies word widths, variant 
 python3 scripts/validate.py
 python3 scripts/check_features.py
 python3 scripts/check_device_formats.py
+python3 scripts/check_device_replay.py
 python3 scripts/check_eft.py
 python3 scripts/check_lean_eft.py
 python3 scripts/check_axioms.py
@@ -150,6 +152,8 @@ python3 scripts/check_docs.py
 `validate.py` and the feature scripts compare traces/rounding with independent exact arithmetic and recorded GPU words. `check_eft.py` runs scalar coverage, instruction-variant comparisons, pinned paper generators, and the bounded EFT comparisons. `check_lean_eft.py` compares native scalar folds with an ordered-encoding rounding oracle.
 
 The Accurate Models paper's recorded inputs and expected outputs are under [`vendor/matlab-tensor-core-v0.5/model_validation/`](../vendor/matlab-tensor-core-v0.5/model_validation/), with hashes in [`vendor/SOURCES.json`](../vendor/SOURCES.json). Both implementations replay all 35,000 rows: V100/A100/H100 FP16 and A100/H100 BF16/TF32, 5,000 per variant. The files contain the published A/B/C inputs and D outputs.
+
+The toolbox's later recordings, at commit 79143bd, are under [`vendor/matlab-tensor-core-79143bd/model_validation/`](../vendor/matlab-tensor-core-79143bd/model_validation/), with hashes and conventions in [its `SOURCES.json`](../vendor/matlab-tensor-core-79143bd/SOURCES.json): Ada, L40S, H100, H200 and B200 with FP16, BF16, TF32, E4M3 and E5M2 inputs, 5,000 rows each. [check_device_replay.py](../scripts/check_device_replay.py) checks the hashes, compares an independent Python decoder of E4M3 and E5M2 with the Lean decoders on all 512 words, and replays the 125,000 rows through the models (`tc_features dot`) and the invocation descriptors (`tc_features block` and `chain`). FP8 rows hold 32 products: two block FMAs on Ada and L40S, chained through `c` (`Model.dot`), one on H100, H200 and B200. Each row takes its accumulator input as recorded: in the block FMA, except H100 and H200 FP8 (`wgmma` from `c = 0`) and B200 FP8, whose recorded outputs add `c` after the block FMA in binary32 with round-to-nearest-even (`tc_features dot-then-add`, `Model.dotThenAdd`). As a negative control, Ada and Hopper FP8 with a binary32 block output must disagree with the recordings. The report is [`data/regressions/device-replay-report.json`](../data/regressions/device-replay-report.json).
 
 Follow one recorded V100 row through the implementation:
 

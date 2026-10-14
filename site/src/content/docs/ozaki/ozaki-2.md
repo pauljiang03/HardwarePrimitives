@@ -64,7 +64,7 @@ can reach `M` itself, whose residues are all zero, so it reconstructs as `0`
 | With an exact matrix multiplier, Ozaki-II is one rounding of the truncated product. | [`ozaki2_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Ozaki2.lean#L281) |
 | Its error: one rounding plus the truncation bound. | [`ozaki2_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Ozaki2.lean#L333), [`tcOzaki2_error`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L82) |
 | It returns a value (never Inf or NaN) when the product is within range. | [`ozaki2_isSome`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/Ozaki/Success.lean#L161) |
-| The Z3 configuration runs exactly on V100. | [`v100_ozaki2_z3`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L113) |
+| The Z3 configuration runs exactly on V100. | [`v100_ozaki2_z3`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/OzakiTC/Schemes.lean#L114) |
 
 On the Z3 models' test matrices the Lean pipeline returns the same binary32
 words as the Z3 model on every fp16 and tf32 variant and on the AMD variants.

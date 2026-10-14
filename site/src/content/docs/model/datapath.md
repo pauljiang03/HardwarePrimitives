@@ -9,7 +9,8 @@ registers need to be. The bitvector datapath, `Datapath.evalBlock`,
 computes the same block FMA with **bitvector operations only**, in registers
 whose widths come from the model. Lean proves it returns the same FP32
 word as `evalBlock`, or the same error, for **every** input on all eight
-supported GPU variants.
+FP16/BF16/TF32 variants (whose parameters are also those of Ada, H200 and
+B200).
 
 The integer model is still the definition that all other theorems are about.
 The datapath is a second implementation next to it.
@@ -138,7 +139,8 @@ does not depend on the model.
   the word. Each stage is still proved to match internally.
 - **The eight supported variants.** `evalBlock` is defined for any model; the
   datapath covers V100 FP16, A100 FP16/BF16/TF32 and H100 FP16/BF16/TF32
-  (both TF32 modes). The FP64 DMMA variant has no datapath.
+  (both TF32 modes), and so Ada, H200 and B200 with those formats. The FP8
+  variants and the FP64 DMMA variant have no datapath.
 - **The definitions are bitvectors; the proof is not.** The equivalence is
   proved by reading registers as integers (`toNat`, `toInt`), so one proof
   covers every input and every register width.

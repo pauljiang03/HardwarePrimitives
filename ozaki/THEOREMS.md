@@ -188,7 +188,7 @@ inputs' exponents, and each integer form is proved equal to its rational counter
 | What it says | Z3 | Lean name | File |
 | --- | --- | --- | --- |
 | Alignment loses nothing when every nonzero term is a multiple of `2^g` with exponent at most `g + F`. | | `Ozaki.TC.accumulator_eq_exactDot_of_grid` | [OzakiTC/Exactness.lean](OzakiTC/Exactness.lean) |
-| A block of `b`-bit integers (`2b ≤ F`, `F ≥ 23`) with an integer `c` and `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | `I:[Z.4]`, `I:[E.4]` | `Ozaki.TC.evalBlock_int` | [OzakiTC/Exactness.lean](OzakiTC/Exactness.lean) |
+| A block of `b`-bit integers (`2b ≤ F`, `F ≥ 23`, a binary32 block output) with an integer `c` and `\|c\| + Σ\|aᵢbᵢ\| ≤ 2^24` returns `c + Σ aᵢbᵢ` exactly. | `I:[Z.4]`, `I:[E.4]` | `Ozaki.TC.evalBlock_int` | [OzakiTC/Exactness.lean](OzakiTC/Exactness.lean) |
 | The same for a chain of blocks through their binary32 outputs. | | `Ozaki.TC.runBlocks_int` | [OzakiTC/Exactness.lean](OzakiTC/Exactness.lean) |
 | Every integer of magnitude at most `2^(m+1)` is encoded exactly in a format with `m` stored bits. | `I:[Z.2]`, `I:[S1.11]` | `Ozaki.TC.encodeInt_spec` | [OzakiTC/MatrixMultiplier.lean](OzakiTC/MatrixMultiplier.lean) |
 | The Tensor Core matrix multiplier is exact on `b`-bit vectors whose products total at most `2^24`. | `I:[S2.1]`, `II:[S3.1]` | `Ozaki.TC.tcMultiplier_exactOn` | [OzakiTC/MatrixMultiplier.lean](OzakiTC/MatrixMultiplier.lean) |

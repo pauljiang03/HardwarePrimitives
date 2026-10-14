@@ -47,8 +47,22 @@ def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F
 | Variant | Lowering | Block FMAs × K |
 | --- | --- | --- |
 | `v100Wmma16` | `HMMA.844` | 4 × 4 |
-| `ampereWmma16` | `HMMA.1688` | 2 × 8 |
-| `hopperWmma16` | `HMMA.16816` | 1 × 16 |
+| `ampereWmma16` (A100, Ada) | `HMMA.1688` | 2 × 8 |
+| `hopperWmma16` (H100, H200, B200) | `HMMA.16816` | 1 × 16 |
+
+## Inner products of any length
+
+`Model.dot` sums any number of products the way the *Accurate Models*
+toolbox's `GEMM.m` does: the products, in increasing `k`, are padded with
+zero pairs to a multiple of `K` and cut into consecutive block FMAs, chained
+through `C`. A recorded FP8 row of 32 products is two block FMAs on Ada
+(`K = 16`) and one on Hopper and B200 (`K = 32`). `Model.dot_one_block`
+proves that `K` products are one block FMA.
+
+`Model.dotThenAdd` runs the block FMAs from `C = 0` and adds `C` afterwards in
+binary32, rounded to nearest even (`addBinary32_nearestEven`). This is not
+how a block FMA adds `C`, but it is how the recorded B200 FP8 outputs add it,
+and the [replay](/MMAlgebra/model/validation/) follows the recording.
 
 ## Proved properties of chains
 

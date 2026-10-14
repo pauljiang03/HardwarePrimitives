@@ -29,21 +29,24 @@ for what is tested rather than proved.
 
 **Yes, for every possible input.** The executable model and an independently
 written transcription of *Accurate Models* produce the same output bits, or
-both reject the input. This holds on all eight supported GPU variants.
+both reject the input. This holds on all eight FP16/BF16/TF32 variants, which
+are also those of Ada, H200 and B200, and on every model with a binary32 block
+output, so on B200 FP8 too.
 
-- **Assumes:** nothing beyond the input being one of the eight supported variants.
+- **Assumes:** nothing beyond the input being one of these variants
+  (`evalBlock_eq_spec` takes any model with `23 ≤ outputFracBits`).
 - **Classification:** Core theorem. The transcription is mechanically checked not to reuse
   any model code, and a companion result shows it isn't vacuous.
-- **Lean:** [`IndependentSpec.supported_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L27)
+- **Lean:** [`IndependentSpec.supported_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L28), [`IndependentSpec.blackwell_fp8_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L42)
 
 ### Which inputs does the model accept?
 
 **Exactly those with the right number of products, no NaN or infinity, and a
 sum that fits in FP32.** Anything else is rejected with a named error.
 
-- **Assumes:** nothing.
+- **Assumes:** nothing; it holds for every model, FP8 included.
 - **Classification:** Core theorem. It is an exact "if and only if".
-- **Lean:** [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L35)
+- **Lean:** [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
 
 ### Is all the lost precision accounted for?
 
@@ -61,9 +64,10 @@ dropped by alignment and by the final rounding.
 place of the output).** The first part is the alignment loss and the second
 is the rounding loss.
 
-- **Assumes:** the model accepted the input.
+- **Assumes:** the model accepted the input, and its block output is binary32
+  (every variant except Ada and Hopper FP8, whose 13-bit output is coarser).
 - **Classification:** Core theorem.
-- **Lean:** [`evalBlock_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/ErrorBounds.lean#L81)
+- **Lean:** [`evalBlock_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/ErrorBounds.lean#L98)
 
 ### Does modeling the adder as exact hide anything?
 
@@ -84,9 +88,10 @@ aligns, sums and normalizes using bitvector operations only. Its registers
 are sized from the model: `F + 2` bits per aligned term, an accumulator of
 28 to 32 magnitude bits plus a sign bit (30 and 32 on A100 and H100 FP16, the
 widths in *Accurate Models*), and 9-bit exponents. It returns the same output word as the model, or the same
-error, for every input on all eight supported GPU variants.
+error, for every input on all eight FP16/BF16/TF32 variants.
 
-- **Assumes:** nothing beyond the input being one of the eight supported variants.
+- **Assumes:** nothing beyond the input being one of the eight FP16/BF16/TF32
+  variants. The datapath does not cover FP8.
 - **Classification:** Core theorem. The datapath shares no arithmetic with the
   model: it uses shifts, a leading-zero count and wrapping additions where the
   model uses rationals and floors.
@@ -101,6 +106,23 @@ across the whole chain.**
 - **Classification:** Core theorem.
 - **Lean:** [`runBlocks_residual_ledger`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Composition.lean#L95)
 
+### FP8 encodings and the FP8 block FMAs
+
+**E4M3 and E5M2 decode as specified, and the FP8 models need no minimum
+alignment exponent.** E4M3 has no infinities, its only NaNs are `0x7f` and
+`0xff`, and its largest value is 448; E5M2 has infinities at `0x7c` and
+`0xfc`, six NaNs, and largest value 57344. The block model's 9-bit E4M3
+layout decodes all 256 words as E4M3 does. On Ada and Hopper FP8 the output is
+the binary32 truncation of the accumulator with its ten low fraction bits
+cleared. The toolbox's minimum alignment exponents (−132, −133) change no
+output on the FP8 models.
+
+- **Assumes:** nothing.
+- **Classification:** Core theorems, checked by computation over every word
+  for the encodings.
+- **Lean:** [`e4m3_specials`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L58), [`e5m2_specials`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L64), [`e4m3_decode_widen`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/FP8.lean#L43),
+  [`fp8_output_thirteen_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L97), [`fp8_eAlignMin_inactive`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L199)
+
 ## Non-monotonicity
 
 ### Can a smaller C give a larger result?
@@ -109,11 +131,12 @@ across the whole chain.**
 the GPU's number of extra alignment bits. The proof uses a specific family:
 K equal tiny products, with `C` lowered from 1 to the next FP32 value below 1.
 
-- **Assumes:** that construction (products of exactly `2^-(24+p)`) and a
-  minimum alignment exponent, if any, of at most −1.
+- **Assumes:** that construction (products of exactly `2^-(24+p)`), a
+  minimum alignment exponent, if any, of at most −1, and a binary32 block
+  output.
 - **Classification:** Core theorem. It is an exact threshold, and every GPU model has
   a checked concrete example.
-- **Lean:** [`nonmonotone_encoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Monotonicity.lean#L273)
+- **Lean:** [`nonmonotone_encoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Monotonicity.lean#L274)
 
 ### How large can the effect be?
 
@@ -122,7 +145,7 @@ formula for the output, and its maximum,** for `C = 1 − j·2^-24`.
 
 - **Assumes:** the same construction, with `1 ≤ j ≤ 2^23`.
 - **Classification:** Core theorem.
-- **Lean:** [`nonmonotone_range_encoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MonotonicityRange.lean#L265)
+- **Lean:** [`nonmonotone_range_encoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/MonotonicityRange.lean#L266)
 
 ### When does it happen in general?
 
@@ -133,7 +156,7 @@ when both sums are exactly representable in FP32.
 - **Assumes:** both evaluations succeed; FP32 representability for the
   "sufficient" direction.
 - **Classification:** Core theorem.
-- **Lean:** [`flowback_necessary`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Flowback.lean#L200), [`flowback_sufficient`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Flowback.lean#L219)
+- **Lean:** [`flowback_necessary`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Flowback.lean#L201), [`flowback_sufficient`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Flowback.lean#L220)
 
 ## TC-EFT correction
 

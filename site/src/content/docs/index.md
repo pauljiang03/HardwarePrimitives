@@ -116,8 +116,10 @@ example : ((evalBlock ones).toOption.map fun t => t.output.bits) =
 The proofs are about the **formal model**, under each theorem's stated
 hypotheses. The link from the model to real GPUs comes from replaying
 recorded measurements and from *Accurate Models*, which the definitions follow.
-It is evidence, not a proof. The supported variants have FP16, BF16, or TF32
-input formats and FP32 `C` and output. See [Modeling scope and
+It is evidence, not a proof. The variants run from Volta to Blackwell (V100,
+A100, Ada, H100, H200, B200) with FP16, BF16 or TF32 inputs, and on Ada,
+Hopper and Blackwell also with FP8 (E4M3, E5M2) inputs; all have FP32 `C` and
+output. See [Modeling scope and
 limits](/MMAlgebra/model/scope/) and [What is tested](/MMAlgebra/proofs/tested/).
 
 ## Start exploring

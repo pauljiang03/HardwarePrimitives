@@ -27,7 +27,7 @@ input words directly (`exactDot`), not from the model's intermediate values.
 
 ```lean
 theorem evalBlock_error_bound {p : Model} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) :
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits)
@@ -41,8 +41,10 @@ So the error is less than
 ```
 
 Each of the `K + 1` terms loses less than one grid step, and truncation to FP32
-loses less than one output ulp. The bound uses only quantities in the trace,
-and [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L35)
+loses less than one output ulp. The hypothesis `hw` asks for a binary32 block
+output, which every variant has except the FP8 block FMAs of Ada and Hopper;
+the theorem does not cover their 13-bit output. The bound uses only quantities in the trace,
+and [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
 says exactly when it applies.
 
 The alignment term depends on η, the **largest** exponent in the block FMA, not

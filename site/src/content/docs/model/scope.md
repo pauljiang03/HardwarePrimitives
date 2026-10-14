@@ -6,9 +6,12 @@ description: What the Lean Tensor Core model covers and what it deliberately lea
 ## Covered
 
 - One block FMA of FMA size `K` with FP32 `C`, for the eight
-  FP16/BF16/TF32 → FP32 variants of V100, A100, and H100, plus arbitrary
-  `K`, `p`, and minimum alignment exponent through the generic model
-  constructors.
+  FP16/BF16/TF32 → FP32 variants of V100, A100, and H100, which are also the
+  variants of Ada (A100's), H200 and B200 (H100's), plus arbitrary `K`, `p`,
+  and minimum alignment exponent through the generic model constructors.
+- The E4M3 and E5M2 → FP32 block FMAs of Ada and L40S, of H100 and H200
+  through `wgmma`, and of B200 through `tcgen05.mma`, including the 13-bit
+  block output of Ada and Hopper FP8.
 - Every finite input encoding, including subnormals and signed zeros.
 - Exact products in denormalized form, alignment to the maximum exponent
   capped from below by the minimum alignment exponent, truncation
@@ -27,9 +30,17 @@ description: What the Lean Tensor Core model covers and what it deliberately lea
   of producing infinity. This is also true of the round-to-nearest helper
   used by EFT: IEEE RNE would still round values slightly above
   `maxFinite32` down to it.
-- **FP16 or BF16 output.** The validated variants all produce FP32.
-- **FP8 and newer formats** (Blackwell and later) are not part of the
-  supported variants.
+- **FP16 or BF16 output.** The validated variants all produce FP32. The
+  13-bit block output of Ada and Hopper FP8 is a binary32 word with its ten
+  low fraction bits zero.
+- **FP4 and FP6**, the FP8 `mma.sync` path of H100 and H200 (FP8 converted
+  to FP16 for HMMA, with `C` added late), and the Blackwell instructions
+  *Accurate Models* does not characterize are not modeled. GPUs after
+  Blackwell B200 are not covered.
+- **A nonzero `C` inside the FP8 block FMA of Hopper or B200** is modeled
+  (`C` aligned and accumulated with the products, as on Ada) but has no
+  recorded data: the recorded H100 and H200 FP8 outputs start from `C = 0`,
+  and the recorded B200 FP8 outputs add `C` after the block FMA.
 - **Tiles, GEMMs, and scheduling.** The model covers single block FMAs and
   explicitly chained block FMAs. How a full GEMM is split across warps and
   instructions is outside the model.
