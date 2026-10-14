@@ -12,7 +12,7 @@ Lean names describe what each result states; docstrings cite the paper and numbe
 
 Start with the [guide](docs/README.md). It follows a calculation from encoded input words through alignment and correction, then explains how to run the Lean tests and add cases.
 
-[Website](https://pauljiang03.github.io/MMAlgebra/) · [Reviewer guide](ARTIFACT.md) · [Test walkthrough](tests/README.md) · [What is proven](TensorCore/THEOREMS.md) · [AMD matrix cores](amd/README.md) · [Ozaki schemes](ozaki/README.md) · [FloatLib implementation](floatlib-port/README.md)
+[Website](https://pauljiang03.github.io/MMAlgebra/) · [Status and roadmap](STATUS.md) · [Reviewer guide](ARTIFACT.md) · [Test walkthrough](tests/README.md) · [What is proven](TensorCore/THEOREMS.md) · [AMD matrix cores](amd/README.md) · [Ozaki schemes](ozaki/README.md) · [FloatLib implementation](floatlib-port/README.md)
 
 ## Build and run
 
