@@ -64,9 +64,9 @@ recorded outputs and an exact-arithmetic oracle by kernel evaluation, and audit 
 **Independent re-check.** [`scripts/conleche.sh`](scripts/conleche.sh) exports every module of
 `TensorCore`, `MatrixCore` and the Ozaki libraries, with their tests, and re-checks every
 declaration with [con-leche](https://github.com/leanprover/con-leche), an external Lean checker
-proved never to accept a proof of `False`. On 2026-10-12, con-leche at revision `3b37939`, in
-`--verified` mode, accepted every declaration: 168,717 for `TensorCore` and its tests, 166,049 for
-`MatrixCore` and its tests, 175,760 for the Ozaki core with the Tensor Core side and its tests,
+proved never to accept a proof of `False`. On 2026-10-13, con-leche at revision `3b37939`, in
+`--verified` mode, accepted every declaration: 168,810 for `TensorCore` and its tests, 166,049 for
+`MatrixCore` and its tests, 175,851 for the Ozaki core with the Tensor Core side and its tests,
 and 171,967 with the AMD side (each count includes Lean's own library). Lean does not record
 `example`s as declarations, so the kernel-checked regression examples are checked by Lean's kernel
 only; every named theorem, including the kernel-computed tables, is re-checked. The test
