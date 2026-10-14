@@ -1,0 +1,643 @@
+{
+  "Ada-fp16": {
+    "model": "dot ada-f16",
+    "descriptor": "block a100-f16",
+    "products_per_row": 8,
+    "nfma": 8,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 1,
+      "top": 0,
+      "normal": 79999
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "L40S-fp16": {
+    "model": "dot ada-f16",
+    "descriptor": "block a100-f16",
+    "products_per_row": 8,
+    "nfma": 8,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 1,
+      "top": 0,
+      "normal": 79999
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "H100-fp16": {
+    "model": "dot hopper-f16",
+    "descriptor": "block hopper-f16",
+    "products_per_row": 16,
+    "nfma": 16,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 5,
+      "top": 0,
+      "normal": 159995
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "H200-fp16": {
+    "model": "dot hopper-f16",
+    "descriptor": "block hopper-f16",
+    "products_per_row": 16,
+    "nfma": 16,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 5,
+      "top": 0,
+      "normal": 159995
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "B200-fp16": {
+    "model": "dot blackwell-f16",
+    "descriptor": "block hopper-f16",
+    "products_per_row": 16,
+    "nfma": 16,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 5,
+      "top": 0,
+      "normal": 159995
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "Ada-bf16": {
+    "model": "dot ada-bf16",
+    "descriptor": "block a100-bf16",
+    "products_per_row": 8,
+    "nfma": 8,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 80000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "L40S-bf16": {
+    "model": "dot ada-bf16",
+    "descriptor": "block a100-bf16",
+    "products_per_row": 8,
+    "nfma": 8,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 80000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "H100-bf16": {
+    "model": "dot hopper-bf16",
+    "descriptor": "block hopper-bf16",
+    "products_per_row": 16,
+    "nfma": 16,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 160000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "H200-bf16": {
+    "model": "dot hopper-bf16",
+    "descriptor": "block hopper-bf16",
+    "products_per_row": 16,
+    "nfma": 16,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 160000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "B200-bf16": {
+    "model": "dot blackwell-bf16",
+    "descriptor": "block hopper-bf16",
+    "products_per_row": 16,
+    "nfma": 16,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 160000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "Ada-tf32": {
+    "model": "dot ada-tf32",
+    "descriptor": "block a100-tf32",
+    "products_per_row": 4,
+    "nfma": 4,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 40000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "L40S-tf32": {
+    "model": "dot ada-tf32",
+    "descriptor": "block a100-tf32",
+    "products_per_row": 4,
+    "nfma": 4,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 40000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "H100-tf32": {
+    "model": "dot hopper-tf32-wmma",
+    "descriptor": "block hopper-tf32-wmma",
+    "products_per_row": 4,
+    "nfma": 4,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 40000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "H200-tf32": {
+    "model": "dot hopper-tf32-wmma",
+    "descriptor": "block hopper-tf32-wmma",
+    "products_per_row": 4,
+    "nfma": 4,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 40000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "B200-tf32": {
+    "model": "dot blackwell-tf32-wmma",
+    "descriptor": "block hopper-tf32-wmma",
+    "products_per_row": 4,
+    "nfma": 4,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 0,
+      "top": 0,
+      "normal": 40000
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "Ada-E4M3": {
+    "model": "dot ada-e4m3",
+    "descriptor": "chain ada-e4m3",
+    "products_per_row": 32,
+    "nfma": 16,
+    "block_fmas_per_row": 2,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 523,
+      "subnormal": 3373,
+      "top": 0,
+      "normal": 316104
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 1055
+  },
+  "L40S-E4M3": {
+    "model": "dot ada-e4m3",
+    "descriptor": "chain ada-e4m3",
+    "products_per_row": 32,
+    "nfma": 16,
+    "block_fmas_per_row": 2,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 523,
+      "subnormal": 3373,
+      "top": 0,
+      "normal": 316104
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 1055
+  },
+  "H100-E4M3": {
+    "model": "dot hopper-e4m3",
+    "descriptor": "chain hopper-e4m3",
+    "products_per_row": 32,
+    "nfma": 32,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 523,
+      "subnormal": 3373,
+      "top": 0,
+      "normal": 316104
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 5000,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 1415
+  },
+  "H200-E4M3": {
+    "model": "dot hopper-e4m3",
+    "descriptor": "chain hopper-e4m3",
+    "products_per_row": 32,
+    "nfma": 32,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 523,
+      "subnormal": 3373,
+      "top": 0,
+      "normal": 316104
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 5000,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 1415
+  },
+  "B200-E4M3": {
+    "model": "dot-then-add blackwell-e4m3",
+    "descriptor": "chain blackwell-e4m3-then-add",
+    "products_per_row": 32,
+    "nfma": 32,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "block FMA from c = 0, then c added in binary32 with round-to-nearest-even (Model.dotThenAdd)",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 523,
+      "subnormal": 3373,
+      "top": 0,
+      "normal": 316104
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "Ada-E5M2": {
+    "model": "dot ada-e5m2",
+    "descriptor": "chain ada-e5m2",
+    "products_per_row": 32,
+    "nfma": 16,
+    "block_fmas_per_row": 2,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 12,
+      "top": 0,
+      "normal": 319988
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 962
+  },
+  "L40S-E5M2": {
+    "model": "dot ada-e5m2",
+    "descriptor": "chain ada-e5m2",
+    "products_per_row": 32,
+    "nfma": 16,
+    "block_fmas_per_row": 2,
+    "accumulator_input": "c accumulated in the block FMA",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 12,
+      "top": 0,
+      "normal": 319988
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 962
+  },
+  "H100-E5M2": {
+    "model": "dot hopper-e5m2",
+    "descriptor": "chain hopper-e5m2",
+    "products_per_row": 32,
+    "nfma": 32,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 12,
+      "top": 0,
+      "normal": 319988
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 5000,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 841
+  },
+  "H200-E5M2": {
+    "model": "dot hopper-e5m2",
+    "descriptor": "chain hopper-e5m2",
+    "products_per_row": 32,
+    "nfma": 32,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "c = 0: wgmma with a zero accumulator; the c file is not used",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 12,
+      "top": 0,
+      "normal": 319988
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 5000,
+      "subnormal": 0
+    },
+    "binary32_output_control_mismatches": 841
+  },
+  "B200-E5M2": {
+    "model": "dot-then-add blackwell-e5m2",
+    "descriptor": "chain blackwell-e5m2-then-add",
+    "products_per_row": 32,
+    "nfma": 32,
+    "block_fmas_per_row": 1,
+    "accumulator_input": "block FMA from c = 0, then c added in binary32 with round-to-nearest-even (Model.dotThenAdd)",
+    "vectors": 5000,
+    "model_errors": 0,
+    "bit_mismatches": 0,
+    "descriptor_bit_mismatches": 0,
+    "descriptor_model_disagreements": 0,
+    "operands": {
+      "zero": 0,
+      "subnormal": 12,
+      "top": 0,
+      "normal": 319988
+    },
+    "rows_where_eAlignMin_binds": 0,
+    "c": {
+      "zero": 0,
+      "subnormal": 0
+    }
+  },
+  "fp8_decoders": {
+    "words": 512,
+    "mismatches": 0,
+    "nonfinite": {
+      "E4M3": 2,
+      "E5M2": 8
+    },
+    "largest": {
+      "E4M3": "448",
+      "E5M2": "57344"
+    }
+  },
+  "totals": {
+    "vectors": 125000,
+    "mismatches": 0,
+    "fp16_bf16_tf32": 75000,
+    "fp8": 50000,
+    "distinct_rows": {
+      "fp16": 20000,
+      "bf16": 20000,
+      "tf32": 20000,
+      "E4M3": 15000,
+      "E5M2": 15000
+    }
+  },
+  "notes": [
+    "The L40S files are byte-identical to the Ada files.",
+    "H100 and H200 share their FP8 inputs and, with c = 0, their FP8 outputs.",
+    "distinct_rows counts the rows that differ in inputs, c, output or c convention.",
+    "The TF32 inputs are the V100 FP16 inputs of v0.5: FP16 values.",
+    "No recorded E4M3 operand lies in the top binade (256 to 448); the decoder comparison covers it."
+  ],
+  "method": "One model and one descriptor evaluation per row, bitwise comparison with the recorded output and with each other; no new GPU measurements"
+}

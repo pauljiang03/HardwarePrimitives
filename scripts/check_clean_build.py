@@ -46,6 +46,7 @@ if (repository_before != repository_manifest(root) or
 commands = [['lake', 'build'], [sys.executable, 'scripts/check_axioms.py'],
             [sys.executable, 'scripts/check_features.py'],
             [sys.executable, 'scripts/check_device_formats.py'],
+            [sys.executable, 'scripts/check_device_replay.py'],
             [sys.executable, 'scripts/validate.py'],
             [sys.executable, 'scripts/check_device.py'],
             [sys.executable, 'scripts/check_eft.py'],
@@ -71,6 +72,7 @@ report = {'preexisting_build_cache': False,
           'targets_built': int(targets[-1][1]) if targets else None,
           'audit': logs[1].strip().splitlines()[-1] if logs[1].strip() else None,
           'feature_checks': json.loads(logs[2]), 'format_evidence': json.loads(logs[3]),
+          'device_replay': json.loads(logs[4])['totals'],
           'success': True, 'all_standalone_examples': True,
           'axiom_audit_regression_passed': True,
           'lean_warnings': len(re.findall(r'^warning:', logs[0], re.M)),
@@ -90,7 +92,8 @@ if not report['snapshot_stable'] or not report['workspace_matches_snapshot']:
 # Publish reports from the same fresh source run.
 generated = ['docs/axioms.txt']
 generated += ['data/regressions/' + name for name in [
-    'feature-report.json', 'device-formats-report.json', 'device-report.json', 'validation-report.json',
+    'feature-report.json', 'device-formats-report.json', 'device-replay-report.json', 'device-report.json',
+    'validation-report.json',
     'eft-checks.json', 'eft-coverage.json', 'eft-coverage-cases.json', 'eft-paper-report.json',
     'eft-paper-cases.json', 'eft-paper-original.json', 'eft-paper-second-pass.json',
     'independent-spec-report.json', 'bounded-eft-report.json', 'lean-eft-report.json',
