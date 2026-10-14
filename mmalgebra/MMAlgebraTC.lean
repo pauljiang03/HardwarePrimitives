@@ -15,6 +15,7 @@ import MMAlgebraTC.Anchored
 import MMAlgebraTC.PinnedDemo
 import MMAlgebraTC.SubnormalGamma
 import MMAlgebraTC.Bridge
+import MMAlgebraTC.FP8
 
 /-! # The reduction algebra on the NVIDIA Tensor Core model
 
@@ -33,4 +34,6 @@ demonstration on V100, A100 and H100; a remark shows that a subnormal factor bre
 `γ_n` bound of a block FMA. The bridge to the Ozaki schemes: every schedule is an exact matrix
 multiplier, so Ozaki-I, Ozaki-II and their correctly rounded versions give the same bits under every
 schedule; and the three ways to make a result schedule-independent (the exact region, pinning,
-correct rounding). -/
+correct rounding). On the FP8 models of Ada and Hopper an empty block FMA truncates its accumulator
+input to a 13-bit mantissa, so their algebra adds truncation nodes to the rigid one; Blackwell FP8
+is rigid; a kernel-checked input gives three different results on Ada, Hopper and Blackwell. -/

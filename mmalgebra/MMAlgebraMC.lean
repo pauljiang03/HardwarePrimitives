@@ -16,6 +16,7 @@ import MMAlgebraMC.Contracts
 import MMAlgebraMC.SFMA
 import MMAlgebraMC.AllInputs
 import MMAlgebraMC.ParityLaw
+import MMAlgebraMC.FP8
 
 /-! # The reduction algebra on the AMD matrix-core model
 
@@ -31,4 +32,5 @@ accumulation on CDNA 3, and kernel-checked cases where pinning and anchoring fai
 (and anchoring on CDNA 3), and the bridge to the Ozaki schemes: every schedule is an exact matrix
 multiplier on every exact configuration. On CDNA 3 binary8 a block depends on its slots only
 through the unordered pair {odd-slot multiset, even-slot multiset} (the parity law), and a slot
-permutation preserves the output on every input exactly when it preserves the parity partition. -/
+permutation preserves the output on every input exactly when it preserves the parity partition;
+pinned accumulation there needs one pin in each parity group. -/
