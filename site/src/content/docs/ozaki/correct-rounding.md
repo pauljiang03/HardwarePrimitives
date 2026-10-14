@@ -172,7 +172,7 @@ in [`data/targeted-validation.md`](https://github.com/pauljiang03/MMAlgebra/blob
 cases, 85 for NVIDIA and 55 for AMD, whose predicted outputs distinguish the
 models' numerical features: full block FMAs, cancellation, two passes,
 non-monotonicity, minimum alignment exponents, signed zeros, subnormals, TF32
-and extra alignment bits. Each case gives the input words, a suggested
+and padding bits. Each case gives the input words, a suggested
 instruction, the predicted output word and what a mismatch would mean. Of the
 cases, 56 come from theorems, whose values the script re-checks. The suite has
 not yet been run on hardware.

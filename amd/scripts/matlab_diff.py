@@ -47,7 +47,7 @@ SPECIAL_NEW = """        if isnan(c) || (any(prd >= thr) && any(prd <= -thr))
             d = -Inf;  % overflow only on the negative side
         end"""
 
-# (exponent bits, fraction bits, bias, fnuz)
+# (exponent bits, mantissa bits, bias, fnuz)
 FP16 = (5, 10, 15, False)
 BF16 = (8, 7, 127, False)
 FP32 = (8, 23, 127, False)

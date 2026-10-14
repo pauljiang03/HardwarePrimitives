@@ -35,7 +35,7 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
     (hops : ∀ q ∈ x.products, IntWord p b q.1 ∧ IntWord p b q.2) (g : ℕ)
     (hpg : ∀ q ∈ x.products, ∃ k : ℤ, wordValue p q.1 * wordValue p q.2 = k * pow2 g)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ)) (hcg : ∃ k : ℤ, (zc : ℚ) = k * pow2 g)
-    (hcF : Rat.abs (zc : ℚ) < 2 ^ ((g : ℤ) + p.alignFracBits + 1))
+    (hcF : Rat.abs (zc : ℚ) < 2 ^ ((g : ℤ) + p.alignMantissaBits + 1))
     (hfin : absQ ((zc : ℚ) + wordProducts p x.products) ≤ maxFinite32) :
     ∃ t, evalBlock x = .ok t ∧
       t.output.value = signedRounded .truncate ((zc : ℚ) + wordProducts p x.products) := by
@@ -54,7 +54,7 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
     unfold PreparedBlock.exactDot; rw [hprods, ← hblk]; simp only; rw [hdcv]
   -- every product term: exponent at most `F`, value a multiple of `2^g`
   have hprod : ∀ q ∈ x.products, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
-      (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignFracBits ∧
+      (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignMantissaBits ∧
       ∃ k : ℤ, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 g := by
     intro q hq hnz
     obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hops q hq
@@ -94,10 +94,10 @@ theorem evalBlock_int_grid {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockI
       rcases List.mem_cons.mp ht with rfl | ht
       · refine ⟨?_, ?_⟩
         · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc
-            (E := (g : ℤ) + p.alignFracBits)
+            (E := (g : ℤ) + p.alignMantissaBits)
             (by have := hp.wide; show (1 : ℤ) - 127 ≤ _; omega)
             (by rw [hdcv]; exact hcF) hnz
-          show dc.exponent ≤ (g : ℤ) + blk.model.alignFracBits
+          show dc.exponent ≤ (g : ℤ) + blk.model.alignMantissaBits
           rw [hprof]; exact this
         · obtain ⟨k, hk⟩ := hcg
           exact ⟨k, by change dc.value = _; rw [hdcv, hk]⟩
@@ -254,17 +254,17 @@ theorem maxFinite32_ge : (2 : ℚ) ^ (27 : ℤ) ≤ maxFinite32 := by decide +ke
 variant with `2b ≤ F ≤ 25` and `K · 2^(2b) ≤ 2^(F+1)`, the two passes succeed and
 `D1 + D2 = Σ aᵢbᵢ`. -/
 theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
-    (hF : p.alignFracBits ≤ 25)
-    (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignFracBits + 1))
+    (hF : p.alignMantissaBits ≤ 25)
+    (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignMantissaBits + 1))
     {ps : List (p.Word × p.Word)} (hlen : ps.length = p.nfma)
     (hops : ∀ q ∈ ps, IntWord p b q.1 ∧ IntWord p b q.2) :
     twoPass p ps = some (wordProducts p ps) := by
   obtain ⟨S, hS, hSb⟩ := wordProducts_int ps hops
   have hbud := wordDotAbs_le_length hops
   rw [hlen] at hbud
-  have hSF : Rat.abs (S : ℚ) ≤ 2 ^ (p.alignFracBits + 1) :=
+  have hSF : Rat.abs (S : ℚ) ≤ 2 ^ (p.alignMantissaBits + 1) :=
     Rat.le_trans hSb (Rat.le_trans hbud hK)
-  have hF26 : (2 : ℚ) ^ (p.alignFracBits + 1) ≤ 2 ^ (26 : ℤ) := two_pow_le (by omega)
+  have hF26 : (2 : ℚ) ^ (p.alignMantissaBits + 1) ≤ 2 ^ (26 : ℤ) := two_pow_le (by omega)
   have hS26 : S.natAbs ≤ 2 ^ 26 := by
     have h1 : ((S.natAbs : ℕ) : ℚ) ≤ ((2 ^ 26 : ℕ) : ℚ) := by
       rw [← abs_intCast, ← two_pow_natCast]; exact Rat.le_trans hSF hF26
@@ -311,21 +311,21 @@ theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
       intro t2 h
       rw [h, hS, ← Rat.intCast_add, show -D + S = S - D by omega]
       exact signedRounded_trunc_of_finite _ (int_finiteValue32 _ hSDsmall)
-    by_cases hlt : Rat.abs (D : ℚ) < 2 ^ (p.alignFracBits + 1)
+    by_cases hlt : Rat.abs (D : ℚ) < 2 ^ (p.alignMantissaBits + 1)
     · obtain ⟨t2, ht2, hv2⟩ := evalBlock_int_grid hp (x := ⟨ps, word32 (-t1.output.value)⟩) hlen
         hops 0 hpg0 hc2 ⟨-D, by simp [pow2_zero]⟩
         (by rw [Rat.intCast_neg, abs_neg]; simpa using hlt) hfin2
       exact ⟨t2, ht2, hout t2 hv2⟩
     · -- `|D1| = 2^(F+1)`: then `S = D1` and every product is `±2^(2b)`
-      have heq : Rat.abs (D : ℚ) = 2 ^ (p.alignFracBits + 1) := by
+      have heq : Rat.abs (D : ℚ) = 2 ^ (p.alignMantissaBits + 1) := by
         have := Rat.le_trans hDabs hSF; grind
-      have hFnat : p.alignFracBits + 1 = (((p.alignFracBits + 1).toNat : ℕ) : ℤ) := by omega
-      have hDnat : D.natAbs = 2 ^ (p.alignFracBits + 1).toNat := by
-        have h1 : ((D.natAbs : ℕ) : ℚ) = ((2 ^ (p.alignFracBits + 1).toNat : ℕ) : ℚ) := by
+      have hFnat : p.alignMantissaBits + 1 = (((p.alignMantissaBits + 1).toNat : ℕ) : ℤ) := by omega
+      have hDnat : D.natAbs = 2 ^ (p.alignMantissaBits + 1).toNat := by
+        have h1 : ((D.natAbs : ℕ) : ℚ) = ((2 ^ (p.alignMantissaBits + 1).toNat : ℕ) : ℚ) := by
           rw [← abs_intCast, heq, ← two_pow_natCast, ← hFnat]
         exact_mod_cast h1
       have hSnat : S.natAbs = D.natAbs := by
-        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignFracBits + 1) := by grind
+        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignMantissaBits + 1) := by grind
         have h2 : ((S.natAbs : ℕ) : ℚ) = ((D.natAbs : ℕ) : ℚ) := by
           rw [← abs_intCast, ← abs_intCast, h1, heq]
         exact_mod_cast h2
@@ -337,7 +337,7 @@ theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
         apply eq_of_sum_ge (fun q hq => abs_word_product_le (hops q hq))
         rw [hlen]
         have : Rat.abs (S : ℚ) ≤ wordDotAbs p ps := hSb
-        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignFracBits + 1) := by grind
+        have h1 : Rat.abs (S : ℚ) = 2 ^ (p.alignMantissaBits + 1) := by grind
         unfold wordDotAbs at this
         grind
       have hpg1 : ∀ q ∈ ps, ∃ k : ℤ, wordValue p q.1 * wordValue p q.2 = k * pow2 1 := by
@@ -358,7 +358,7 @@ theorem twoPass_exact {p : Model} {b : ℕ} (hp : IntExact p b) (hb1 : 1 ≤ b)
       have hcg1 : ∃ k : ℤ, (((-D : ℤ)) : ℚ) = k * pow2 1 := by
         have h3 : D.natAbs % 2 = 0 := by
           rw [hDnat]
-          obtain ⟨c, hc⟩ : ∃ c, (p.alignFracBits + 1).toNat = c + 1 :=
+          obtain ⟨c, hc⟩ : ∃ c, (p.alignMantissaBits + 1).toNat = c + 1 :=
             ⟨_, (Nat.succ_pred_eq_of_pos (by omega)).symm⟩
           rw [hc]; simp [Nat.pow_succ]
         refine ⟨-D / 2, ?_⟩
@@ -402,8 +402,8 @@ theorem wordProducts_flatten (p : Model) :
 `2b ≤ F ≤ 25` and `K · 2^(2b) ≤ 2^(F+1)`, whose input format holds `b`-bit integers (`1 ≤ b`), it
 returns `Σ xᵢyᵢ` exactly for `b`-bit vectors of any length, whatever their total. -/
 theorem tcMultiplier2_exactOn {p : Model} {b : ℕ} (hp : IntExact p b) (hh : HoldsInts p b)
-    (hb1 : 1 ≤ b) (hF : p.alignFracBits ≤ 25) (hK0 : 0 < p.nfma)
-    (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignFracBits + 1))
+    (hb1 : 1 ≤ b) (hF : p.alignMantissaBits ≤ 25) (hK0 : 0 < p.nfma)
+    (hK : (p.nfma : ℚ) * (2 ^ (b : ℤ) * 2 ^ (b : ℤ)) ≤ 2 ^ (p.alignMantissaBits + 1))
     (B : ℕ) : (tcMultiplier2 p).ExactOn b B := by
   intro x y hlen hx hy _
   have henc : ∀ z : ℤ, z.natAbs ≤ 2 ^ b → ∃ w, encodeInt p.input z = some w ∧

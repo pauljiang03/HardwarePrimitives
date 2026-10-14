@@ -30,15 +30,15 @@ theorem tc_perm (p : Model) (d : F32) {ps qs : List (Option (p.Word × p.Word))}
   unfold slotPairs
   rw [evalBlock_bits_perm (h.map _)]
 
-theorem tc_pass (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (d : F32)
+theorem tc_pass (K padding : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (d : F32)
     (hd : Good d) :
-    (tcMachine (fp16Fp32Model K neab eAlignMin)).block d (List.replicate K none) = some d := by
+    (tcMachine (fp16Fp32Model K padding eAlignMin)).block d (List.replicate K none) = some d := by
   obtain ⟨hfs, hneg⟩ := hd
   obtain ⟨f, hf⟩ := Option.isSome_iff_exists.mp hfs
-  obtain ⟨t, ht, hbits⟩ := zero_products_passthrough K neab eAlignMin hfl d f hf hneg
-  show (blockOut (p := fp16Fp32Model K neab eAlignMin)
+  obtain ⟨t, ht, hbits⟩ := zero_products_passthrough K padding eAlignMin hfl d f hf hneg
+  show (blockOut (p := fp16Fp32Model K padding eAlignMin)
     ⟨slotPairs _ (List.replicate K none), d⟩).toOption = some d
-  have : slotPairs (fp16Fp32Model K neab eAlignMin) (List.replicate K none) =
+  have : slotPairs (fp16Fp32Model K padding eAlignMin) (List.replicate K none) =
       List.replicate K (0, 0) := by
     simp [slotPairs, List.map_replicate]
   rw [this]
@@ -48,18 +48,18 @@ theorem tc_pass (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignM
   rw [hbits]; rfl
 
 /-- The laws of a rigid matrix multiplier, for the fp16 Tensor Core models. -/
-def fp16Laws (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126) :
-    MMAlgebra.RigidLaws (tcMachine (fp16Fp32Model K neab eAlignMin)) K where
+def fp16Laws (K padding : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126) :
+    MMAlgebra.RigidLaws (tcMachine (fp16Fp32Model K padding eAlignMin)) K where
   z := (0, 0)
   good := Good
   slot := tc_slotZero _
   perm := tc_perm _
   zero_good := by show Good 0; decide
-  pass := tc_pass K neab eAlignMin hfl
+  pass := tc_pass K padding eAlignMin hfl
 
 /-- Every fp16 block output is a finite value other than `−0`. -/
-theorem blockOut_good {K neab : ℕ} {eAlignMin : Option ℤ}
-    {x : BlockInput (fp16Fp32Model K neab eAlignMin)} {d : F32} (h : blockOut x = .ok d) :
+theorem blockOut_good {K padding : ℕ} {eAlignMin : Option ℤ}
+    {x : BlockInput (fp16Fp32Model K padding eAlignMin)} {d : F32} (h : blockOut x = .ok d) :
     Good d := by
   refine ⟨?_, blockOut_ne_negZero h⟩
   unfold blockOut at h
@@ -71,11 +71,11 @@ theorem blockOut_good {K neab : ℕ} {eAlignMin : Option ℤ}
     subst h
     rw [finite32_self]; rfl
 
-theorem fp16_block_good (K neab : ℕ) (eAlignMin : Option ℤ) (d : F32)
-    (ps : List (Option ((fp16Fp32Model K neab eAlignMin).Word × (fp16Fp32Model K neab eAlignMin).Word)))
-    (o : F32) (h : (tcMachine (fp16Fp32Model K neab eAlignMin)).block d ps = some o) : Good o := by
-  have h' : (blockOut (p := fp16Fp32Model K neab eAlignMin) ⟨slotPairs _ ps, d⟩).toOption = some o := h
-  cases hb : blockOut (p := fp16Fp32Model K neab eAlignMin) ⟨slotPairs _ ps, d⟩ with
+theorem fp16_block_good (K padding : ℕ) (eAlignMin : Option ℤ) (d : F32)
+    (ps : List (Option ((fp16Fp32Model K padding eAlignMin).Word × (fp16Fp32Model K padding eAlignMin).Word)))
+    (o : F32) (h : (tcMachine (fp16Fp32Model K padding eAlignMin)).block d ps = some o) : Good o := by
+  have h' : (blockOut (p := fp16Fp32Model K padding eAlignMin) ⟨slotPairs _ ps, d⟩).toOption = some o := h
+  cases hb : blockOut (p := fp16Fp32Model K padding eAlignMin) ⟨slotPairs _ ps, d⟩ with
   | error e => rw [hb] at h'; simp [Except.toOption] at h'
   | ok o' =>
     rw [hb] at h'

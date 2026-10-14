@@ -21,7 +21,7 @@ theorem Format.emin_le_emax (f : Format) (hf : f.WellFormed) : f.emin ≤ f.emax
 theorem classifyNat_finiteValue (f : Format) (hf : f.WellFormed) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) : f.FiniteValue d.value := by
   have hemin := f.emin_le_emax hf
-  have hfrac := Nat.mod_lt n (Nat.two_pow_pos f.mantissaBits)
+  have hmant := Nat.mod_lt n (Nat.two_pow_pos f.mantissaBits)
   have hexp := Nat.mod_lt (n / 2 ^ f.mantissaBits) (Nat.two_pow_pos f.exponentBits)
   have hpow : 2 ^ (f.mantissaBits + 1) = 2 ^ f.mantissaBits * 2 := Nat.pow_succ 2 _
   unfold classifyNat at h
@@ -216,9 +216,9 @@ theorem encodeBinary_value (f : Format) (hf : f.WellFormed) (negative : Bool) (e
       exact ⟨rfl, rfl, rfl⟩
   by_cases hk : k < (P : ℤ)
   · rw [if_pos hk] at hpaylt ⊢
-    obtain ⟨hfrac, hexpf, hneg⟩ := hsgn k.toNat hpaylt
+    obtain ⟨hmant, hexpf, hneg⟩ := hsgn k.toNat hpaylt
     have hkP : k.toNat < P := by omega
-    rw [hfrac, hexpf, hneg, Nat.mod_eq_of_lt hkP, Nat.div_eq_of_lt hkP, Nat.zero_mod]
+    rw [hmant, hexpf, hneg, Nat.mod_eq_of_lt hkP, Nat.div_eq_of_lt hkP, Nat.zero_mod]
     have he : e = f.emin := by
       rcases hsub with h | h
       · exfalso; omega
@@ -235,12 +235,12 @@ theorem encodeBinary_value (f : Format) (hf : f.WellFormed) (negative : Bool) (e
       cases negative <;> simp [Decoded.value]
   · rw [if_neg hk] at hpaylt ⊢
     have hP' : (P : ℤ) ≤ k := by omega
-    obtain ⟨hfrac, hexpf, hneg⟩ := hsgn _ hpaylt
+    obtain ⟨hmant, hexpf, hneg⟩ := hsgn _ hpaylt
     have hr : (k - (P : ℕ)).toNat < P := by omega
     have hfield : (e + f.bias).toNat < W := by omega
     have hfield1 : (e + f.bias).toNat ≠ 0 := by omega
     have hfieldtop : (e + f.bias).toNat ≠ W - 1 := by omega
-    rw [hfrac, hexpf, hneg, Nat.mul_comm _ P, Nat.mul_add_mod, Nat.mul_add_div hP,
+    rw [hmant, hexpf, hneg, Nat.mul_comm _ P, Nat.mul_add_mod, Nat.mul_add_div hP,
       Nat.div_eq_of_lt hr, Nat.add_zero, Nat.mod_eq_of_lt hr, Nat.mod_eq_of_lt hfield]
     have hsig : ((P + (k - (P : ℕ)).toNat : ℕ) : ℤ) = k := by omega
     have hexp : (((e + f.bias).toNat : ℕ) : ℤ) - f.bias = e := by omega

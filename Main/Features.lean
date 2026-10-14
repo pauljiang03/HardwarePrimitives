@@ -92,14 +92,14 @@ private def modelJson (p : Model) (ps : List (p.Word × p.Word)) (c : ℕ) : Jso
     ("ideal", toJson (qText t.block.exactDot)), ("residual", toJson (qText t.residual)),
     ("accumulated", toJson (qText t.block.accumulator))]
 
-private def bf16Json (K neab : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
+private def bf16Json (K padding : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
   let c ← ns.getLast?
   if c ≥ 2 ^ 32 then none else do
-    let ps ← parseModelPairs (bf16Fp32Model K neab eAlignMin) ns.dropLast
-    return modelJson (bf16Fp32Model K neab eAlignMin) ps c
+    let ps ← parseModelPairs (bf16Fp32Model K padding eAlignMin) ns.dropLast
+    return modelJson (bf16Fp32Model K padding eAlignMin) ps c
 
 /-- TF32 register words: the thirteen low bits must be zero, then the value word is used. -/
-private def tf32Json (K neab : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
+private def tf32Json (K padding : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
   let c ← ns.getLast?
   if c ≥ 2 ^ 32 then none else do
     let words ← parseFp32Words ns.dropLast
@@ -107,7 +107,7 @@ private def tf32Json (K neab : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : O
       return Json.mkObj [("error", toJson "invalidPadding")]
     else
       let ps := tf32UnpackPairs (pairUp words)
-      return modelJson (tf19Fp32Model K neab eAlignMin) ps c
+      return modelJson (tf19Fp32Model K padding eAlignMin) ps c
 where
   parseFp32Words : List ℕ → Option (List tf32Register.Word)
     | [] => some []
@@ -150,10 +150,10 @@ private def replayModel : String → Option ReplayModel
   | "blackwell-e4m3" => some ⟨blackwellE4M3F32, e4m3Word⟩
   | "blackwell-e5m2" => some ⟨blackwellE5M2F32, plainWord _⟩
   -- Negative controls: Ada and Hopper FP8 with a binary32 block output.
-  | "ada-e4m3-binary32-output" => some ⟨{adaE4M3F32 with outputFracBits := 23}, e4m3Word⟩
-  | "ada-e5m2-binary32-output" => some ⟨{adaE5M2F32 with outputFracBits := 23}, plainWord _⟩
-  | "hopper-e4m3-binary32-output" => some ⟨{hopperE4M3F32 with outputFracBits := 23}, e4m3Word⟩
-  | "hopper-e5m2-binary32-output" => some ⟨{hopperE5M2F32 with outputFracBits := 23}, plainWord _⟩
+  | "ada-e4m3-binary32-output" => some ⟨{adaE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
+  | "ada-e5m2-binary32-output" => some ⟨{adaE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
+  | "hopper-e4m3-binary32-output" => some ⟨{hopperE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
+  | "hopper-e5m2-binary32-output" => some ⟨{hopperE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
   | _ => none
 
 private def pairs {α : Type} : List α → Option (List (α × α))
@@ -221,21 +221,21 @@ private def command (args : List String) : Option Json := do
     let p ← getModel name
     let ns ← words.mapM String.toNat?
     invocationJson p ns
-  | "canonical" :: k :: neab :: eAlignMinText :: words =>
+  | "canonical" :: k :: padding :: eAlignMinText :: words =>
     let K ← k.toNat?
-    let E ← neab.toNat?
+    let E ← padding.toNat?
     let eAlignMin ← if eAlignMinText = "none" then some none else eAlignMinText.toInt? |>.map some
     let ns ← words.mapM String.toNat?
     invocationJson (fp16Fp32Invocation K E eAlignMin) ns
-  | "bf16" :: k :: neab :: eAlignMinText :: words =>
+  | "bf16" :: k :: padding :: eAlignMinText :: words =>
     let K ← k.toNat?
-    let E ← neab.toNat?
+    let E ← padding.toNat?
     let eAlignMin ← if eAlignMinText = "none" then some none else eAlignMinText.toInt? |>.map some
     let ns ← words.mapM String.toNat?
     bf16Json K E eAlignMin ns
-  | "tf32" :: k :: neab :: eAlignMinText :: words =>
+  | "tf32" :: k :: padding :: eAlignMinText :: words =>
     let K ← k.toNat?
-    let E ← neab.toNat?
+    let E ← padding.toNat?
     let eAlignMin ← if eAlignMinText = "none" then some none else eAlignMinText.toInt? |>.map some
     let ns ← words.mapM String.toNat?
     if ns.dropLast.length % 2 != 0 then none else tf32Json K E eAlignMin ns

@@ -47,9 +47,9 @@ theorem bitVec_add_toInt (x y : BitVec w) (hw : 0 < w)
   apply BitVec.toInt_ofInt_eq_self hw <;> omega
 
 /-- The exact sum of the aligned products is the integer sum placed on the alignment grid. -/
-theorem sumQ_truncFrac_eq (neab : ℕ) (e : ℤ) (ps : List Unpacked) :
-    sumQ (ps.map fun p => truncFrac p.value e (23 + neab)) =
-      (sumZ (alignedBits neab e ps) : ℚ) * pow2 (e - (23 + neab : ℕ)) := by
+theorem sumQ_truncMantissa_eq (padding : ℕ) (e : ℤ) (ps : List Unpacked) :
+    sumQ (ps.map fun p => truncMantissa p.value e (23 + padding)) =
+      (sumZ (alignedBits padding e ps) : ℚ) * pow2 (e - (23 + padding : ℕ)) := by
   rw [← sumQ_map_intCast_mul, alignedBits, List.map_map]
   congr 1
   apply List.map_congr_left

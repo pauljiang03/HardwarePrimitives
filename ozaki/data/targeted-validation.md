@@ -33,8 +33,8 @@ python3 scripts/targeted_validation.py > data/targeted-validation.json
 | `signed-zero` | 18 (new) | `−0` products and `c = −0` on the FP16 variants of every architecture |
 | `subnormal` | 34 (new) | subnormal fp16/bf16/TF32 operands, subnormal outputs, subnormal `c` |
 | `tf32-exponent-range` | 12 (new) | products from `2^-126` to `2^127`; partial sums above FP32's range |
-| `h100-tf32-mma` | 8 (new) | full block FMA, two passes, cancellation, an FMA-size probe, an extra-alignment-bits probe, the `c`-family below its threshold |
-| `extra-alignment-bits` | 4 (new) | the extra-alignment-bits probe on the BF16 and TF32 variants |
+| `h100-tf32-mma` | 8 (new) | full block FMA, two passes, cancellation, an FMA-size probe, an padding-bits probe, the `c`-family below its threshold |
+| `padding-bits` | 4 (new) | the padding-bits probe on the BF16 and TF32 variants |
 
 Sixteen cases use the H100 TF32 MMA model `hopperTF32MmaF32` across these categories.
 
@@ -50,7 +50,7 @@ Each case records:
 
 Cases marked `(new)` were constructed for this suite. Where it helps localise a mismatch,
 `alternatives` gives the model's output for the same input under a nearby hypothesis: a minimum
-alignment exponent one higher or one lower, none at all, `p ± 1` extra alignment bits, or block
+alignment exponent one higher or one lower, none at all, `p ± 1` padding bits, or block
 FMAs of size 4 instead of 8.
 
 Some cases are probes, built so that the measured word identifies a model parameter:
@@ -65,8 +65,8 @@ Some cases are probes, built so that the measured word identifies a model parame
 * **FMA-size probe (`nv-tf32-k8-fma-size-probe`).** The inputs are
   `2^23 + 2^23 + 1 | −2^23 − 2^23` with `k = 8`. One block FMA of size 8 returns `1.0`. Two
   chained block FMAs of size 4 lose the `1` in the FP32 output of the first and return `0`.
-* **Extra-alignment-bits probe (`*-align-bits-probe`).** With `c = 1` and products of
-  `1.5·2^-25`, the output word gives the number of extra alignment bits `p`. On H100 TF32 MMA:
+* **Padding-bits probe (`*-align-bits-probe`).** With `c = 1` and products of
+  `1.5·2^-25`, the output word gives the number of padding bits `p`. On H100 TF32 MMA:
   `p = 1` gives `0x3F800000`, `p = 2` (the model) `0x3F800002`, and `p = 3` `0x3F800003`.
 
 ## Running on hardware (pseudo-steps)

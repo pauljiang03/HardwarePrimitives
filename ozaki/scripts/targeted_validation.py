@@ -158,7 +158,7 @@ FAMILIES = [
      "bits, so the FP32 output truncates it to 29331462.",
      "Ozaki.TC.a100_full_blockFMA (ozaki/OzakiTC/Limits.lean:51)",
      "0x4BDFC804 (29331464) means the final conversion rounds to nearest rather than truncating; "
-     "any other value means that the FMA size, the alignment to F = 24 fraction bits or the exact "
+     "any other value means that the FMA size, the alignment to F = 24 mantissa bits or the exact "
      "sum inside the block FMA is wrong. This is the case that limits Ozaki slices to fewer bits on "
      "A100."),
     (r"^nv-h100-f16-full-block$", "full-block-exactness",
@@ -283,7 +283,7 @@ FAMILIES = [
      "threshold of TC-EFT Theorem III.4, so the model predicts no inversion (both outputs 1.0).",
      "constructed; TensorCore.nonmonotone_encoded (TensorCore/TC/Monotonicity.lean:273), "
      "below_threshold_monotone (tests/TensorCoreTests/TC/Monotonicity.lean:113)",
-     "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer extra alignment "
+     "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer padding "
      "bits on the TF32 MMA variant."),
     (r"^amd-cdna2-f16-nonmonotone$", "non-monotonicity",
      "CDNA 2 fp16: raising p1 from -2^-10 (subnormal operand, flushed) to -2^-11 (normal) lowers "
@@ -410,16 +410,16 @@ FAMILIES = [
      "constructed; TensorCore.runBlocks (TensorCore/TC/Composition.lean)",
      "0 on mma.sync.m16n8k8.tf32 means the FMA size of H100's TF32 MMA is 4, not 8."),
     (r"^nv-h100-tf32mma-align-bits-probe$", "h100-tf32-mma",
-     "Extra-alignment-bits probe: c = 1 and eight products 1.5 * 2^-25. With F = 23 + p each "
+     "Padding-bits probe: c = 1 and eight products 1.5 * 2^-25. With F = 23 + p each "
      "product keeps floor(1.5 * 2^(p - 2)) grid units: p = 1 gives 1.0, p = 2 (model) 0x3F800002, "
      "p = 3 0x3F800003.",
      "constructed",
      "The output identifies p: see alternatives."),
-    (r"-align-bits-probe$", "extra-alignment-bits",
-     "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products "
+    (r"-align-bits-probe$", "padding-bits",
+     "The same padding-bits probe on another BF16 / TF32 variant (c = 1, products "
      "1.5 * 2^-25).",
      "constructed",
-     "The output identifies the number of extra alignment bits p (see alternatives)."),
+     "The output identifies the number of padding bits p (see alternatives)."),
 ]
 
 
@@ -550,7 +550,7 @@ def build(tc_lines, mc_lines):
     check_theorems(cases, raw)
     order = ["full-block-exactness", "cancellation", "two-pass", "non-monotonicity",
              "min-alignment-exponent", "signed-zero", "subnormal", "tf32-exponent-range",
-             "h100-tf32-mma", "extra-alignment-bits"]
+             "h100-tf32-mma", "padding-bits"]
     cases.sort(key=lambda c: order.index(c["category"]))
     return cases
 
@@ -604,7 +604,7 @@ def main():
                          "unchanged when c is finite and not -0); signed-zero cases need k equal "
                          "to the vector length.",
             "alternatives": "the same input evaluated by the model under a nearby hypothesis "
-                            "(another minimum alignment exponent, number of extra alignment bits or "
+                            "(another minimum alignment exponent, number of padding bits or "
                             "FMA size): which one the hardware matches localises a mismatch.",
         },
         "predictions": {"NVIDIA": f"{TC_EVAL}; models in {TC_MODELS}",

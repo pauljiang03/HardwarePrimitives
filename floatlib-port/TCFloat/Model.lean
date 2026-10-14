@@ -31,12 +31,12 @@ def truncGrid (x : ℚ) (e : Int) : ℚ := truncCoeff x e * pow2 e
 structure TCModel where
   format : FloatFormat
   nfma : Nat
-  neab : Nat
+  padding : Nat
   eAlignMin : Option Int
 
-def fp16 (k neab : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.binary16, k, neab, eAlignMin⟩
-def bf16 (k neab : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.bfloat16, k, neab, eAlignMin⟩
-def tf32 (k neab : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.tf32, k, neab, eAlignMin⟩
+def fp16 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.binary16, k, padding, eAlignMin⟩
+def bf16 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.bfloat16, k, padding, eAlignMin⟩
+def tf32 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.tf32, k, padding, eAlignMin⟩
 def v100 := fp16 4 0
 def a100 := fp16 8 1 (some (-132))
 def h100 := fp16 16 2 (some (-133))
@@ -82,7 +82,7 @@ def maxTermExp : List Term → Option Int
     else some (rest.map (max t.exponent) |>.getD t.exponent)
 def Block.alignExp (b : Block) : Option Int :=
   (maxTermExp b.terms).map fun e => b.model.eAlignMin.map (max e) |>.getD e
-def Block.q (b : Block) : Int := b.alignExp.getD 0 - (23 + b.model.neab : Nat)
+def Block.q (b : Block) : Int := b.alignExp.getD 0 - (23 + b.model.padding : Nat)
 def Block.aligned (b : Block) : List ℚ := b.terms.map fun t => truncGrid t.value b.q
 def Block.accumulator (b : Block) : ℚ := b.aligned.sum
 def Block.residuals (b : Block) : List ℚ := b.terms.map fun t => t.value - truncGrid t.value b.q

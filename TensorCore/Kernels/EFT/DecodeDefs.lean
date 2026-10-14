@@ -31,12 +31,12 @@ def decodeFactor (kind : InputKind) (bits : F32) : Option Factor :=
   let negative := (bits >>> (f.mantissaBits + f.exponentBits)) != 0
   let bias : Grid := match kind with | .fp16 => 241 | _ => 129
   let top : Grid := match kind with | .fp16 => 31 | _ => 255
-  let frac : Grid := match kind with | .bf16 => 7 | _ => 10
+  let mant : Grid := match kind with | .bf16 => 7 | _ => 10
   if e == top then none
   else if e == 0 then
     if m == 0 then some ⟨negative, 0, 256, 0⟩
-    else some ⟨negative, m, bias + 1, frac⟩
-  else some ⟨negative, ((1 : BitVec 11) <<< f.mantissaBits) + m, e + bias, frac⟩
+    else some ⟨negative, m, bias + 1, mant⟩
+  else some ⟨negative, ((1 : BitVec 11) <<< f.mantissaBits) + m, e + bias, mant⟩
 
 structure Term where
   word : Word

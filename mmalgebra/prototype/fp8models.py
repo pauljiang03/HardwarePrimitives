@@ -155,7 +155,7 @@ def rne32(x):
 
 
 def trunc_word(m, w):
-    """The binary32 word with its mantissa truncated to its leading m bits (truncateFraction32)."""
+    """The binary32 word with its mantissa truncated to its leading m bits (truncateMantissa32)."""
     return (w >> (23 - m)) << (23 - m)
 
 
@@ -233,7 +233,7 @@ class MCModel:
     def __init__(self, name, fa, fb):
         self.name, self.fa, self.fb = name, fa, fb
         self.K = 16
-        self.neab = 1
+        self.padding = 1
         self.cutoff = 25
 
 
@@ -253,13 +253,13 @@ def umul(a, b):
     return (a[0] != b[0], a[1] * b[1], a[2] + b[2], a[3] + b[3])
 
 
-def aligned_sum(neab, ps):
-    """One group: aligned to its own maximum exponent, each product truncated to 23 + neab bits."""
+def aligned_sum(padding, ps):
+    """One group: aligned to its own maximum exponent, each product truncated to 23 + padding bits."""
     nz = [p for p in ps if p[1] != 0]
     if not nz:
         return (None, Q(0))
     e = max(p[2] for p in nz)
-    return (e, sum((trunc_grid(uval(p), e - (23 + neab)) for p in ps), Q(0)))
+    return (e, sum((trunc_grid(uval(p), e - (23 + padding)) for p in ps), Q(0)))
 
 
 def join_exp(a, b):
@@ -291,9 +291,9 @@ def mc_block(P, prods, c):
     ps = [umul(a, b) for a, b in zip(A, B)]
     if any(abs(uval(p)) >= p2(128) for p in ps):
         raise ModelError('productOverflow')
-    k = 23 + P.neab
-    oe, osum = aligned_sum(P.neab, ps[0::2])
-    ee, esum = aligned_sum(P.neab, ps[1::2])
+    k = 23 + P.padding
+    oe, osum = aligned_sum(P.padding, ps[0::2])
+    ee, esum = aligned_sum(P.padding, ps[1::2])
     e = join_exp(oe, ee)
     if e is None:
         emax, psum = None, Q(0)

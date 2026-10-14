@@ -108,19 +108,19 @@ theorem pairwise_contract {P : Model} (hacc : P.accumulation = .pairWiseSum) (hn
 /-- The error bounds of `alignedAccumulation_error` for a prepared block. -/
 def AlignedErrorBounds (P : Model) (x : Prepared) : Prop :=
   let s := productSum P x.p
-  let F : ℕ := 23 + P.neab
+  let F : ℕ := 23 + P.padding
   let D := x.exact - alignedAccumulation P x
   (cExp P x.c = none → ∀ e, s.1 = some e → absQ D ≤ (x.p.length + 2) * pow2 (e - F)) ∧
   (∀ e eC, s.1 = some e → cExp P x.c = some eC → eC ≤ e →
-    absQ D < (x.p.length + 2) * pow2 (e - F) + pow2 (e - P.late.cFracBits)) ∧
+    absQ D < (x.p.length + 2) * pow2 (e - F) + pow2 (e - P.late.cMantissaBits)) ∧
   (∀ e eC, s.1 = some e → cExp P x.c = some eC → e < eC →
-    let T := rdGrid s.2 (eC - P.late.sumFracBits) + x.c.value
+    let T := rdGrid s.2 (eC - P.late.sumMantissaBits) + x.c.value
     0 ≤ D + (x.p.length + 2) * pow2 (e - F) ∧
-      D < (x.p.length + 2) * pow2 (e - F) + pow2 (eC - P.late.sumFracBits) +
-        pow2 (normExp (absQ T) - P.late.accFracBits)) ∧
+      D < (x.p.length + 2) * pow2 (e - F) + pow2 (eC - P.late.sumMantissaBits) +
+        pow2 (normExp (absQ T) - P.late.accMantissaBits)) ∧
   (∀ eC, s.1 = none → cExp P x.c = some eC →
-    let T := rdGrid s.2 (eC - P.late.sumFracBits) + x.c.value
-    0 ≤ D ∧ D < pow2 (eC - P.late.sumFracBits) + pow2 (normExp (absQ T) - P.late.accFracBits))
+    let T := rdGrid s.2 (eC - P.late.sumMantissaBits) + x.c.value
+    0 ≤ D ∧ D < pow2 (eC - P.late.sumMantissaBits) + pow2 (normExp (absQ T) - P.late.accMantissaBits))
 
 structure AlignedContract {P : Model} (x : BlockInput P) (t : BlockTrace P) (w : ℕ) : Prop
     extends BlockContract x t where
@@ -141,11 +141,11 @@ structure AlignedContract {P : Model} (x : BlockInput P) (t : BlockTrace P) (w :
 theorem aligned_contract {P : Model}
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     (hL : LateModel P) (hsub : P.subnormals = true) (w carryBits : ℕ) (hcount : P.nfma ≤ 2 ^ carryBits)
-    (hw : P.alignFracBits + 2 + carryBits + 1 ≤ w)
+    (hw : P.alignMantissaBits + 2 + carryBits + 1 ≤ w)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) : AlignedContract x t w := by
   have hb := evalBlock_contract h
-  have hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n := fun n h => by
-    rw [hL.cFrac]; exact hL.cut n h
+  have hcut : ∀ n, P.late.cCutoff = some n → P.late.cMantissaBits ≤ n := fun n h => by
+    rw [hL.cMantissa]; exact hL.cut n h
   have hcz : P.cZeroExp ≠ none := by rw [hL.cZero]; simp
   have hsum : t.sAcc = alignedAccumulation P t.prepared := accumulate_aligned hacc hb.accumulated
   refine ⟨hb, hsum, ?_, aligned_error hacc hcut hcz h, ?_, aligned_apriori hL hacc hsub h⟩
@@ -193,7 +193,7 @@ theorem cdna3XF32_contract {x : BlockInput cdna3XF32} {t : BlockTrace cdna3XF32}
 theorem cdna3FP8_contract (fa fb : Format) {x : BlockInput (cdna3FP8 fa fb)}
     {t : BlockTrace (cdna3FP8 fa fb)} (h : evalBlock x = .ok t) : AlignedContract x t 31 :=
   aligned_contract (.inr rfl) (lateModel_cdna3FP8 fa fb) rfl 31 4 (by simp [cdna3FP8])
-    (by simp [cdna3FP8, Model.alignFracBits]) h
+    (by simp [cdna3FP8, Model.alignMantissaBits]) h
 
 /-! ## Inner products -/
 

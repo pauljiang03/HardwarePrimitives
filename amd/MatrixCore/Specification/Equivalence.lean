@@ -17,7 +17,7 @@ structure Supported (P : Model) (S : Params) : Prop where
   nfma : S.nfma = P.nfma
   limit : S.productLimit = P.productOverflow
   subnormals : P.subnormals = true
-  cFrac : 23 ≤ P.late.sumFracBits
+  cMantissa : 23 ≤ P.late.sumMantissaBits
   kind : (P.accumulation = .correctRounding ∧ S.kind = .exact) ∨
     (P.accumulation = .globalAlignment ∧ S.kind = .algorithm1 (lateOf P)) ∨
     (P.accumulation = .oddEvenGrouping ∧ S.kind = .algorithm2 (lateOf P))
@@ -43,7 +43,7 @@ theorem accumulated_eq {P : Model} {S : Params} (hS : Supported P S) (x : Prepar
       match P.accumulation with
       | .correctRounding => x.exact
       | _ => alignedAccumulation P x := by
-  have hct : x.c.t ≤ P.late.sumFracBits := by rw [hc]; exact hS.cFrac
+  have hct : x.c.t ≤ P.late.sumMantissaBits := by rw [hc]; exact hS.cMantissa
   unfold accumulated
   rw [zipWith_mul_map]
   rcases hS.kind with ⟨hP, hK⟩ | ⟨hP, hK⟩ | ⟨hP, hK⟩ <;> rw [hP, hK] <;> simp only

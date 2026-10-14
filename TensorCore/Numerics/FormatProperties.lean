@@ -29,7 +29,7 @@ theorem decoded_zero_bounded : (Decoded.mk 0 0 0).Bounded := by
 
 theorem classifyNat_bounded (f : Format) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) : d.Bounded := by
-  have hfrac := Nat.mod_lt n (Nat.two_pow_pos f.mantissaBits)
+  have hmant := Nat.mod_lt n (Nat.two_pow_pos f.mantissaBits)
   have hpow : 2 ^ (f.mantissaBits + 1) = 2 ^ f.mantissaBits * 2 := by rw [Nat.pow_succ]
   unfold classifyNat at h
   dsimp only at h

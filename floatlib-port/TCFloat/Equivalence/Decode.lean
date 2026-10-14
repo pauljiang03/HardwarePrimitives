@@ -42,15 +42,15 @@ theorem decode_project (f : FloatFormat) (hf : f.isIEEE = true)
     expField_eq f n hn,fracField_eq f n hn,signBit_eq f n hn,
     TensorCore.classifyNat,format,FloatFormat.expAllOnesNat]
   by_cases hall : n / 2^f.fracWidth % 2^f.expWidth = 2^f.expWidth-1
-  · by_cases hfrac : n % 2^f.fracWidth = 0 <;>
-      simp [hall,hfrac,TensorCore.Classification.finite]
+  · by_cases hmant : n % 2^f.fracWidth = 0 <;>
+      simp [hall,hmant,TensorCore.Classification.finite]
   · have hz : (0:Nat) ≠ 2^f.expWidth-1 := by
       intro h
       have hh : 1 < 2^f.expWidth := Nat.one_lt_two_pow_iff.mpr (by have := f.expWidth_ge_two; omega)
       omega
     by_cases he : n / 2^f.fracWidth % 2^f.expWidth = 0
-    · by_cases hfrac : n % 2^f.fracWidth = 0 <;>
-        simp [he,hfrac,hz,project,FloatLib.Numerics.Dyadic.signedSignificand,
+    · by_cases hmant : n % 2^f.fracWidth = 0 <;>
+        simp [he,hmant,hz,project,FloatLib.Numerics.Dyadic.signedSignificand,
           TensorCore.Classification.finite]
     · have hs : max (1:Int) ((n / 2^f.fracWidth % 2^f.expWidth : Nat) : Int) =
           (n / 2^f.fracWidth % 2^f.expWidth : Nat) := by omega
@@ -73,10 +73,10 @@ theorem decode_value (f : FloatFormat) (hf : f.isIEEE = true)
       · split at ht
         · simp at ht; subst t
           simp [Term.value,project,TensorCore.Decoded.value,FloatLib.Numerics.Dyadic.signedSignificand]
-        · rename_i hfrac
+        · rename_i hmant
           dsimp only [Bind.bind, Pure.pure, Option.bind] at ht
           simp only [beq_iff_eq] at *
-          simp only [ite_eq_right hfrac,Option.some.injEq] at ht
+          simp only [ite_eq_right hmant,Option.some.injEq] at ht
           subst t
           simp only [Term.value,project,TensorCore.Decoded.value,FloatLib.Numerics.Dyadic.toRat,
             Rat.ofInt_eq_cast,pow2_eq,TCFloat.pow2]

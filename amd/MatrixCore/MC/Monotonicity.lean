@@ -16,7 +16,7 @@ configuration of the paper the output is monotone in `c`: for the same `a` and `
 * CDNA 3: `c` is aligned *after* the products (late addition), so `e_max` and `S_{p_i,sum}` do
   not depend on `c`; each branch of the late addition is monotone, and so is the switch between
   them: when `e_c` passes `e_max`, the RD of `S_{p_i,sum}` to 32 and of `S_acc` to 31
-  fractional bits loses less than the step of `c`.
+  mantissa bits loses less than the step of `c`.
 
 Monotonicity in the *products* is different: see `MatrixCore.MC.ProductMonotonicity`. -/
 
@@ -203,9 +203,9 @@ theorem absQ_rdGrid_le (x : ℚ) (g : ℤ) : absQ (rdGrid x g) ≤ absQ x + pow2
   have := (hx.mp (by unfold absQ; split <;> grind))
   rw [absQ_le_iff]; constructor <;> grind
 
-theorem alignedSum_facts {neab : ℕ} {ps : List Unpacked} {e : ℤ} {S : ℚ}
-    (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) (h : alignedSum neab ps = (some e, S)) :
-    OnGrid S (e - (23 + neab : ℕ)) ∧ absQ S ≤ ps.length * pow2 (e + 2) := by
+theorem alignedSum_facts {padding : ℕ} {ps : List Unpacked} {e : ℤ} {S : ℚ}
+    (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) (h : alignedSum padding ps = (some e, S)) :
+    OnGrid S (e - (23 + padding : ℕ)) ∧ absQ S ≤ ps.length * pow2 (e + 2) := by
   unfold alignedSum at h
   split at h
   · simp at h
@@ -223,11 +223,11 @@ theorem alignedSum_facts {neab : ℕ} {ps : List Unpacked} {e : ℤ} {S : ℚ}
       apply sumQ_map_le
       intro p hp
       simp only [Function.comp_apply]
-      have h1 := (truncGrid_bounds p.value (e' - ((23 + neab : ℕ) : ℤ))).1
+      have h1 := (truncGrid_bounds p.value (e' - ((23 + padding : ℕ) : ℤ))).1
       have hp2 := pow2_pos (e' + 2)
       by_cases hm : p.m = 0
       · rw [(Unpacked.value_eq_zero_iff p).mpr hm,
-          show truncFrac (0 : ℚ) e' (23 + neab) = 0 from truncGrid_zero _]
+          show truncMantissa (0 : ℚ) e' (23 + padding) = 0 from truncGrid_zero _]
         exact Rat.le_of_lt (show absQ (0 : ℚ) < pow2 (e' + 2) from hp2)
       · have h2 := Unpacked.absQ_value_lt2 (hb p hp)
         have h3 := pow2_le_of_le (show p.e + 2 ≤ e' + 2 by have := maxExp_le he p hp hm; omega)
@@ -238,8 +238,8 @@ steps. -/
 theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
     ((productSum P ps).1 = none → (productSum P ps).2 = 0) ∧
     (∀ e, (productSum P ps).1 = some e →
-      OnGrid (productSum P ps).2 (e - (23 + P.neab : ℕ)) ∧
-      absQ (productSum P ps).2 ≤ ps.length * pow2 (e + 2) + 2 * pow2 (e - (23 + P.neab : ℕ))) := by
+      OnGrid (productSum P ps).2 (e - (23 + P.padding : ℕ)) ∧
+      absQ (productSum P ps).2 ≤ ps.length * pow2 (e + 2) + 2 * pow2 (e - (23 + P.padding : ℕ))) := by
   have hq := pow2_pos (0 : ℤ)
   unfold productSum
   split
@@ -247,8 +247,8 @@ theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.
     obtain ⟨_, hlen⟩ := sumQ_odd_even Unpacked.value ps
     have hbo : ∀ p ∈ oddIndexed ps, p.m < 2 ^ (p.t + 2) := fun p hp => hb p (oddIndexed_subset ps p hp)
     have hbe : ∀ p ∈ evenIndexed ps, p.m < 2 ^ (p.t + 2) := fun p hp => hb p (evenIndexed_subset ps p hp)
-    generalize hO : alignedSum P.neab (oddIndexed ps) = O
-    generalize hE : alignedSum P.neab (evenIndexed ps) = E
+    generalize hO : alignedSum P.padding (oddIndexed ps) = O
+    generalize hE : alignedSum P.padding (evenIndexed ps) = E
     obtain ⟨eo, So⟩ := O
     obtain ⟨ee, Se⟩ := E
     simp only
@@ -258,9 +258,9 @@ theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.
       refine ⟨fun h => by simp at h, fun e' he' => ?_⟩
       simp only [Option.some.injEq] at he'
       subst he'
-      have hg := pow2_pos (e - ((23 + P.neab : ℕ) : ℤ))
+      have hg := pow2_pos (e - ((23 + P.padding : ℕ) : ℤ))
       have group : ∀ (l : List Unpacked) (eg : Option ℤ) (Sg : ℚ),
-          (∀ p ∈ l, p.m < 2 ^ (p.t + 2)) → alignedSum P.neab l = (eg, Sg) →
+          (∀ p ∈ l, p.m < 2 ^ (p.t + 2)) → alignedSum P.padding l = (eg, Sg) →
           (∀ v, eg = some v → v ≤ e) → absQ Sg ≤ l.length * pow2 (e + 2) := by
         intro l eg Sg hbl hl hle
         cases eg with
@@ -280,10 +280,10 @@ theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.
         intro v hv; subst hv; cases eo <;> simp [joinExp] at hj <;> omega
       have go := group _ eo So hbo hO hjo
       have ge := group _ ee Se hbe hE hje
-      have ro := absQ_rdGrid_le So (e - ((23 + P.neab : ℕ) : ℤ))
-      have re := absQ_rdGrid_le Se (e - ((23 + P.neab : ℕ) : ℤ))
-      have tri := absQ_add_le (rdGrid So (e - ((23 + P.neab : ℕ) : ℤ)))
-        (rdGrid Se (e - ((23 + P.neab : ℕ) : ℤ)))
+      have ro := absQ_rdGrid_le So (e - ((23 + P.padding : ℕ) : ℤ))
+      have re := absQ_rdGrid_le Se (e - ((23 + P.padding : ℕ) : ℤ))
+      have tri := absQ_add_le (rdGrid So (e - ((23 + P.padding : ℕ) : ℤ)))
+        (rdGrid Se (e - ((23 + P.padding : ℕ) : ℤ)))
       have hl : ((oddIndexed ps).length : ℚ) + (evenIndexed ps).length = ps.length := by
         exact_mod_cast hlen
       refine ⟨(rdGrid_onGrid _ _).add (rdGrid_onGrid _ _), ?_⟩
@@ -291,26 +291,26 @@ theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.
           ps.length * pow2 (e + 2) := by rw [← Rat.add_mul, hl]
       grind
   · -- global alignment
-    cases hs : alignedSum P.neab ps with
+    cases hs : alignedSum P.padding ps with
     | mk o S =>
       simp only
       refine ⟨fun ho => by subst ho; exact alignedSum_none hs, fun e he => ?_⟩
       subst he
       obtain ⟨hg, hS⟩ := alignedSum_facts hb hs
       refine ⟨hg, ?_⟩
-      have := pow2_pos (e - ((23 + P.neab : ℕ) : ℤ))
+      have := pow2_pos (e - ((23 + P.padding : ℕ) : ℤ))
       grind
 
 /-! ## The late addition of `c` -/
 
-/-- The CDNA 3 late-addition parameters: `n_eab = 1`, `e_{c=0} = −126`, `(24, 32, RD)` and 31
-fractional bits after normalization, a cutoff (if any) beyond 24, and at most 16 products. -/
+/-- The CDNA 3 late-addition parameters: one padding bit, `e_{c=0} = −126`, `(24, 32, RD)` and 31
+mantissa bits after normalization, a cutoff (if any) beyond 24, and at most 16 products. -/
 structure LateModel (P : Model) : Prop where
-  neab : P.neab = 1
+  padding : P.padding = 1
   cZero : P.cZeroExp = some (-126)
-  cFrac : P.late.cFracBits = 24
-  sumFrac : P.late.sumFracBits = 32
-  accFrac : P.late.accFracBits = 31
+  cMantissa : P.late.cMantissaBits = 24
+  sumMantissa : P.late.sumMantissaBits = 32
+  accMantissa : P.late.accMantissaBits = 31
   cut : ∀ n, P.late.cCutoff = some n → 24 ≤ n
   nfma : P.nfma ≤ 16
 
@@ -338,7 +338,7 @@ theorem shiftedC_bounds {P : Model} (hL : LateModel P) {e eC : ℤ} {c : Unpacke
     have := pow2_pos (e - 23)
     exact ⟨OnGrid.zero _, by grind, by grind⟩
   unfold shiftedC
-  rw [hL.cFrac]
+  rw [hL.cMantissa]
   split
   · split
     · exact zero
@@ -349,7 +349,7 @@ theorem shiftedC_mono {P : Model} (hL : LateModel P) {e eC eC' : ℤ} {c c' : Un
     (hc : C32 c.value eC) (hc' : C32 c'.value eC') (hv : c.value ≤ c'.value) :
     shiftedC P e eC c ≤ shiftedC P e eC' c' := by
   unfold shiftedC
-  rw [hL.cFrac]
+  rw [hL.cMantissa]
   have hlt := hc.lt
   have hlt' := hc'.lt
   have := hc.emin
@@ -387,11 +387,11 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
     (h32 : C32 c.value eC) (h32' : C32 c'.value eC') (hv : c.value ≤ c'.value) :
     lateSum P eMax pSum c ≤ lateSum P eMax pSum c' := by
   unfold lateSum shiftedSum
-  rw [hc, hc', hL.accFrac, hL.sumFrac]
+  rw [hc, hc', hL.accMantissa, hL.sumMantissa]
   simp only
   cases eMax with
   | none =>
-    rw [hpn rfl, show rdFrac 0 eC 32 = 0 from rdGrid_zero _, show rdFrac 0 eC' 32 = 0 from rdGrid_zero _]
+    rw [hpn rfl, show rdMantissa 0 eC 32 = 0 from rdGrid_zero _, show rdMantissa 0 eC' 32 = 0 from rdGrid_zero _]
     exact normalizeRD_mono 31 (by grind)
   | some e =>
     obtain ⟨hgrid, hbound⟩ := hps e rfl
@@ -467,7 +467,7 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
           grind
         · grind
       rw [absQ_of_neg hvneg] at hge
-      have := normalizeRD_le 31 (rdFrac pSum eC 32 + c.value)
+      have := normalizeRD_le 31 (rdMantissa pSum eC 32 + c.value)
       have := (rdGrid_bounds pSum (eC - ((32 : ℕ) : ℤ))).1
       show normalizeRD 31 (rdGrid pSum (eC - ((32 : ℕ) : ℤ)) + c.value) ≤ _
       grind
@@ -616,7 +616,7 @@ theorem accumulate_c_mono {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     apply lateSum_mono hL hn _ hce hce' h32 h32' hv
     intro e he
     obtain ⟨hg, hbd⟩ := hsome e he
-    have h24 : e - ((23 + P.neab : ℕ) : ℤ) = e - 24 := by rw [hL.neab]; rfl
+    have h24 : e - ((23 + P.padding : ℕ) : ℤ) = e - 24 := by rw [hL.padding]; rfl
     rw [h24] at hg hbd
     refine ⟨hg, ?_⟩
     have hq := pow2_pos (e - 24)

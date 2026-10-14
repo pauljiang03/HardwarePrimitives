@@ -59,9 +59,9 @@ def best2 (p : Model) (bmax t k : ℕ) : Option SliceRun :=
 length, its moduli are at most `2^(b+1)`, and they meet the reconstruction condition for every
 length up to `k`. -/
 theorem ozaki2Candidates_ok {p : Model} {bmax : ℕ}
-    (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits) (hwide : 23 ≤ p.alignFracBits)
+    (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignMantissaBits) (hwide : 23 ≤ p.alignMantissaBits)
     (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma)
-    (hout : 23 ≤ p.outputFracBits) {t k : ℕ} :
+    (hout : 23 ≤ p.outputMantissaBits) {t k : ℕ} :
     ∀ r ∈ candidates p bmax, (∀ B, (r.multiplier p).ExactOn r.width B) ∧
       (∀ m ∈ (moduliBasis r.width (moduliFor r.width t k)).moduli, m ≤ 2 ^ (r.width + 1)) ∧
       (0 < moduliFor r.width t k → ∀ L ≤ k,

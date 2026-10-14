@@ -11,7 +11,7 @@ binary32 with RNE. This file shows that for integer operands nothing is lost on 
 * `pair_wise_sum` (CDNA 2): every `fl{·}` of the pairwise sum rounds an integer partial sum, and
   flushing subnormals leaves integer operands unchanged;
 * `global_alignment` (CDNA 3 fp16, bf16, XF32): products of exponent at most `24` are aligned to
-  `24` fractional bits, and both RD steps of the late addition of `c` act on integers.
+  `24` mantissa bits, and both RD steps of the late addition of `c` act on integers.
 
 `evalBlock_int`: integer operands and an integer `c` with `|c| + Σ|aᵢbᵢ| ≤ 2^24` give
 `c + Σ aᵢbᵢ` exactly; `runBlocks_int` chains blocks through their binary32 outputs. As on the
@@ -408,14 +408,14 @@ theorem maxExp_upper {ps : List Unpacked} {U : ℤ} (hps : ∀ p ∈ ps, p.m ≠
 
 /-- CDNA 3 (`global_alignment` with the paper's late-`c` parameters): integer blocks are exact. -/
 theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlignment)
-    (hneab : 1 ≤ P.neab) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
+    (hpadding : 1 ≤ P.padding) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
     (h : IntPrepared x) : alignedAccumulation P x = x.exact := by
   have hprod := h.p
   have he24 : ∀ q ∈ x.p, q.m ≠ 0 → q.e ≤ 24 := fun q hq hm => (hprod q hq).exp_le hm (h.p_le q hq)
   obtain ⟨zs, hzs, hzb⟩ := h.ints
   have hS : sumQ (x.p.map Unpacked.value) = ((zs.sum : ℤ) : ℚ) := by rw [hzs, sumQ_cast]
-  -- the product sum: truncation to `23 + n_eab ≥ 24` fractional bits is exact
-  have hal : productSum P x.p = alignedSum P.neab x.p := by unfold productSum; rw [hacc]
+  -- the product sum: truncation to `23 + padding ≥ 24` mantissa bits is exact
+  have hal : productSum P x.p = alignedSum P.padding x.p := by unfold productSum; rw [hacc]
   have hps : productSum P x.p = (maxExp x.p, sumQ (x.p.map Unpacked.value)) := by
     rw [hal]
     unfold alignedSum
@@ -438,7 +438,7 @@ theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlig
     · rw [hcz] at he; cases he; omega
     · rename_i hm; cases he; exact h.c.exp_le hm h.c_le
   obtain ⟨zc, hzc⟩ := h.c_int
-  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normalizeRD P.late.accFracBits (T : ℚ) = T := by
+  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normalizeRD P.late.accMantissaBits (T : ℚ) = T := by
     intro T hT
     unfold normalizeRD
     split
@@ -448,7 +448,7 @@ theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlig
       have hlog : log2Floor (absQ (T : ℚ)) ≤ 24 :=
         pow2_le_iff.mp (Rat.le_trans (log2Floor_spec hpos).1 hT)
       have hn : normExp (absQ (T : ℚ)) ≤ 24 := by unfold normExp; omega
-      have hacc31 : P.late.accFracBits = 31 := by rw [hlate]
+      have hacc31 : P.late.accMantissaBits = 31 := by rw [hlate]
       exact rdGrid_of_onGrid (OnGrid.mono ⟨T, by rw [pow2_zero, Rat.mul_one]⟩ (by omega))
   have hsumbound : absQ ((zs.sum + zc : ℤ) : ℚ) ≤ pow2 24 := by
     have h1 := natAbs_sum_le zs
@@ -482,7 +482,7 @@ theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlig
     have hle := hcE eC hce
     unfold shiftedSum
     rw [hS, hlate]
-    simp only [rdFrac]
+    simp only [rdMantissa]
     rw [rdGrid_of_onGrid (OnGrid.mono ⟨zs.sum, by rw [pow2_zero, Rat.mul_one]⟩ (by omega)), hzc,
       ← Rat.intCast_add]
     have := hT (zs.sum + zc) hsumbound
@@ -495,7 +495,7 @@ theorem alignedAccumulation_int {P : Model} (hacc : P.accumulation = .globalAlig
 pairwise sum (CDNA 2), and global alignment with the paper's CDNA 3 parameters. -/
 def ExactConfig (P : Model) : Prop :=
   P.accumulation = .correctRounding ∨ P.accumulation = .pairWiseSum ∨
-    (P.accumulation = .globalAlignment ∧ 1 ≤ P.neab ∧ P.late = {} ∧ P.cZeroExp = some (-126))
+    (P.accumulation = .globalAlignment ∧ 1 ≤ P.padding ∧ P.late = {} ∧ P.cZeroExp = some (-126))
 
 /-- **Exact accumulation.** On an exact configuration, `S_acc` of an integer block is its exact
 sum `Σ p_ℓ + c`. -/

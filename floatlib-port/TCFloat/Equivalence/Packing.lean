@@ -103,7 +103,7 @@ theorem normal_pack (s : Bool) (overflow : Model .binary32) (e k : Int)
     exact h
   · have hcN : k.toNat ≠ 2^24 := by omega
     have hex : (e+127).toNat ≤ 254 := by omega
-    have hfrac : k.toNat-2^23 ≤ 8388607 := by omega
+    have hmant : k.toNat-2^23 ≤ 8388607 := by omega
     simp only [Model.packRoundedNormal,hf,hb,hm,hme,hmf,Model.pow2_eq_two_pow,
       beq_iff_eq,hcN,ite_false,not_lt.mpr he',TensorCore.carry,hc,show Int.ofNat 127=(127:Int) from rfl]
     simp only [show ¬(e+127).toNat > 254 by omega,decide_false,

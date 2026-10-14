@@ -34,7 +34,7 @@ are also those of Ada, H200 and B200, and on every model with a binary32 block
 output, so on B200 FP8 too.
 
 - **Assumes:** nothing beyond the input being one of these variants
-  (`evalBlock_eq_spec` takes any model with `23 ≤ outputFracBits`).
+  (`evalBlock_eq_spec` takes any model with `23 ≤ outputMantissaBits`).
 - **Classification:** Core theorem. The transcription is mechanically checked not to reuse
   any model code, and a companion result shows it isn't vacuous.
 - **Lean:** [`IndependentSpec.supported_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L28), [`IndependentSpec.blackwell_fp8_eq_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Specification/Supported.lean#L42)
@@ -113,7 +113,7 @@ alignment exponent.** E4M3 has no infinities, its only NaNs are `0x7f` and
 `0xff`, and its largest value is 448; E5M2 has infinities at `0x7c` and
 `0xfc`, six NaNs, and largest value 57344. The block model's 9-bit E4M3
 layout decodes all 256 words as E4M3 does. On Ada and Hopper FP8 the output is
-the binary32 truncation of the accumulator with its ten low fraction bits
+the binary32 truncation of the accumulator with its ten low mantissa bits
 cleared. The toolbox's minimum alignment exponents (−132, −133) change no
 output on the FP8 models.
 
@@ -128,7 +128,7 @@ output on the FP8 models.
 ### Can a smaller C give a larger result?
 
 **Yes, and exactly when the FMA size is at least 3·2^p.** Here p is
-the GPU's number of extra alignment bits. The proof uses a specific family:
+the GPU's number of padding bits. The proof uses a specific family:
 K equal tiny products, with `C` lowered from 1 to the next FP32 value below 1.
 
 - **Assumes:** that construction (products of exactly `2^-(24+p)`), a

@@ -45,7 +45,7 @@ def check_reference_preparation():
             assert (port/'reference-compat'/name).read_bytes()==(PORT/'reference-compat'/name).read_bytes(),name
         block=root/'TensorCore/TC/Block.lean'
         original=block.read_text()
-        expression='b.alignExp.getD 0 - b.model.alignFracBits'
+        expression='b.alignExp.getD 0 - b.model.alignMantissaBits'
         assert original.count(expression)==1
         block.write_text('-- Archive regression\n'+original.replace(expression,expression.replace(' - ','   -   ')))
         prepare('comments_and_whitespace')

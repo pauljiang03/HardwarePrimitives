@@ -11,7 +11,7 @@ open MatrixCore Ozaki Ozaki.MC
 
 The matrix multiplier writes each integer as an exact fp16 word, pads to whole blocks of `N_FMA`,
 and runs `dotBits` from `c = +0`. CDNA 1 sums exactly and rounds once, CDNA 2 rounds every pairwise
-sum, and CDNA 3 aligns the products to `24` fractional bits; on `11`-bit integers with
+sum, and CDNA 3 aligns the products to `24` mantissa bits; on `11`-bit integers with
 `Σ|aᵢbᵢ| ≤ 2^24` all three are exact. -/
 
 def xs : List ℤ := [2047, -2048, 5, 7, 1024, -3]

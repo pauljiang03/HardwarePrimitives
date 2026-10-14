@@ -78,7 +78,9 @@ def pinned_spelling(tokens, name):
 
 
 # Parent modules renamed after the pinned revision: current name -> pinned name.
-RENAMED_MODULES = {}
+RENAMED_MODULES = {
+    'TensorCore.TC.Padding': 'TensorCore.TC.ExtraAlignmentBits',
+}
 
 
 def legacy_module(module):

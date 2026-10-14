@@ -24,7 +24,7 @@ theorem v100_block_boundary :
       .ok 0x34800000 := by
   decide +kernel
 
-/-- A100: with one extra alignment bit, the second block aligns to `2^(1 − 24)` and keeps both
+/-- A100: with one padding bit, the second block aligns to `2^(1 − 24)` and keeps both
 small products, so the two-block chain also returns `2.25 + 2^-22`. -/
 theorem a100_block_boundary :
     blockOut (p := ampereF16F32) ⟨(0x3e00, 0x3e00) :: (0x0c00, 0x1000) :: (0x0c00, 0x1000) ::

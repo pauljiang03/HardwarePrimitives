@@ -4,7 +4,7 @@ import OzakiMC.LongDot
 
 The binary64 cases of [`data/correct-reference.json`](../../data/correct-reference.json) (random
 `4 × 8` by `8 × 4` binary64 products), against the exact-fraction oracle. `MatrixCore` has no
-binary64 decoding, so `val64` below decodes the words (sign, 11-bit exponent, 52-bit fraction,
+binary64 decoding, so `val64` below decodes the words (sign, 11-bit exponent, 52-bit mantissa,
 subnormals included). With `k = 8` and `11`-bit slices the matrix multiplier needs split-K (chunks
 of four). `mcOzaki1CRD` on CDNA 3 fp16 returns exactly the oracle's values (CDNA 2 fp16 does too,
 but takes another fifty seconds of kernel time), the same as on the

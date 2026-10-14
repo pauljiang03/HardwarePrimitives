@@ -44,8 +44,8 @@ theorem trace_evaluated {s : TensorCore.BlockTrace} {t : Trace} (h : TraceRel s 
       have he : d=s.output.decoded := Option.some.inj (hd.symm.trans s.output.valid)
       subst d
       rfl
-  have hw : s.block.model.outputFracBits = 23 := by rw [h.block_eq]; rfl
-  simp only [TensorCore.evalPrepared,hbits,hw,TensorCore.truncateFraction32_23,hd]
+  have hw : s.block.model.outputMantissaBits = 23 := by rw [h.block_eq]; rfl
+  simp only [TensorCore.evalPrepared,hbits,hw,TensorCore.truncateMantissa32_23,hd]
 
 /-- Two-part error bound: the model's error is below (number of terms)·(alignment quantum) plus the output quantum (TC-EFT paper, Theorem III.1). -/
 theorem floatlib_error_bound (t : Trace) (hb : ValidBlock t.block) (hw : t.bits<2^32)
@@ -176,7 +176,7 @@ theorem belowTerm_project (j : Nat) : project (belowTerm j)=TensorCore.belowDeco
 
 /-- Non-monotonicity over the family `C = 1 − j·2^-24`: exact output increase, threshold on j, and maximal output, for arbitrary p and K (TC-EFT paper, Theorem III.5). -/
 theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
-    (hp : M.neab=p) (ha : ValidTerm a) (hb : ValidTerm b)
+    (hp : M.padding=p) (ha : ValidTerm a) (hb : ValidTerm b)
     (hf : ∀ f ∈ M.eAlignMin, f≤ -1)
     (hv : (a.mul b).value=TCFloat.pow2 (-(24+(p:Int))))
     (hs : (a.mul b).exponent≤ -1) (hK : K<2^(24+p)) (hj : 1≤j) (hj' : j≤2^23) :

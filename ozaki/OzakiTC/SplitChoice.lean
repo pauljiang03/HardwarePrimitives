@@ -99,14 +99,14 @@ def SliceRun.exactFallbackCost (K k : ℕ) (r : SliceRun) : ℕ :=
 
 /-- Split-K with `b`-bit slices is exact on variant `p`: `1 ≤ b`, `2b ≤ 24`, `2b ≤ F`. -/
 def splitOK (p : Model) (b : ℕ) : Bool :=
-  decide (1 ≤ b) && decide (2 * b ≤ 24) && decide (2 * (b : ℤ) ≤ p.alignFracBits)
+  decide (1 ≤ b) && decide (2 * b ≤ 24) && decide (2 * (b : ℤ) ≤ p.alignMantissaBits)
 
 /-- Two passes with `b`-bit slices are exact on variant `p`: `1 ≤ b`, `2b ≤ F ≤ 25`, and
 `K · 2^(2b) ≤ 2^(F+1)`. -/
 def twoPassOK (p : Model) (b : ℕ) : Bool :=
-  decide (1 ≤ b) && decide (2 * (b : ℤ) ≤ p.alignFracBits) &&
-    decide (p.alignFracBits ≤ 25) &&
-    decide (p.nfma * 2 ^ (2 * b) ≤ 2 ^ (p.alignFracBits.toNat + 1))
+  decide (1 ≤ b) && decide (2 * (b : ℤ) ≤ p.alignMantissaBits) &&
+    decide (p.alignMantissaBits ≤ 25) &&
+    decide (p.nfma * 2 ^ (2 * b) ≤ 2 ^ (p.alignMantissaBits.toNat + 1))
 
 /-- **Every configuration the exactness theorems allow** on variant `p` with slices of at most
 `bmax` bits, widest first: split-K, then two passes. -/
@@ -116,11 +116,11 @@ def candidates (p : Model) (bmax : ℕ) : List SliceRun :=
 
 /-- **Every candidate is exact**, on vectors of every length. -/
 theorem candidates_exact {p : Model} {bmax : ℕ}
-    (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits) (hwide : 23 ≤ p.alignFracBits)
+    (hfloor : ∀ f ∈ p.eAlignMin, f ≤ p.alignMantissaBits) (hwide : 23 ≤ p.alignMantissaBits)
     (hemin : 1 - p.input.bias ≤ 1) (hh : HoldsInts p bmax) (hK : 0 < p.nfma)
-    (hout : 23 ≤ p.outputFracBits) :
+    (hout : 23 ≤ p.outputMantissaBits) :
     ∀ r ∈ candidates p bmax, ∀ B, (r.multiplier p).ExactOn r.width B := by
-  have hint : ∀ b : ℕ, 1 ≤ b → 2 * (b : ℤ) ≤ p.alignFracBits → IntExact p b :=
+  have hint : ∀ b : ℕ, 1 ≤ b → 2 * (b : ℤ) ≤ p.alignMantissaBits → IntExact p b :=
     fun b hb1 hb => ⟨hb, hwide, hfloor, by omega, hout⟩
   have hholds : ∀ b : ℕ, b ≤ bmax → HoldsInts p b :=
     fun b hb => ⟨hh.wellFormed, Nat.le_trans hb hh.bits, hh.emin, hh.emax⟩
@@ -138,12 +138,12 @@ theorem candidates_exact {p : Model} {bmax : ℕ}
     simp only [twoPassOK, Bool.and_eq_true, decide_eq_true_eq] at hok
     obtain ⟨⟨⟨h1, hF⟩, hF25⟩, hKn⟩ := hok
     refine tcMultiplier2_exactOn (hint b h1 hF) (hholds b (by omega)) h1 hF25 hK ?_ B
-    have hc : ((p.nfma * 2 ^ (2 * b) : ℕ) : ℚ) ≤ ((2 ^ (p.alignFracBits.toNat + 1) : ℕ) : ℚ) :=
+    have hc : ((p.nfma * 2 ^ (2 * b) : ℕ) : ℚ) ≤ ((2 ^ (p.alignMantissaBits.toNat + 1) : ℕ) : ℚ) :=
       Rat.natCast_le_natCast.mpr hKn
     rw [Rat.natCast_mul, ← two_pow_natCast, ← two_pow_natCast] at hc
     have e1 : (2 : ℚ) ^ (b : ℤ) * 2 ^ (b : ℤ) = 2 ^ (((2 * b : ℕ)) : ℤ) := by
       rw [← two_pow_add]; congr 1; push_cast; omega
-    have e2 : (((p.alignFracBits.toNat + 1 : ℕ)) : ℤ) = p.alignFracBits + 1 := by
+    have e2 : (((p.alignMantissaBits.toNat + 1 : ℕ)) : ℤ) = p.alignMantissaBits + 1 := by
       push_cast; omega
     rw [e1]; rw [e2] at hc; exact hc
 

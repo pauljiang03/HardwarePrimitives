@@ -39,12 +39,12 @@ private def parsePairs (p : Model) : List ℕ → Option (List (p.Word × p.Word
     else return (BitVec.ofNat _ a, BitVec.ofNat _ b) :: (← parsePairs p rest)
   | _ => none
 
-private def blockJson (f : TensorCore.Format) (k neab : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
+private def blockJson (f : TensorCore.Format) (k padding : ℕ) (eAlignMin : Option ℤ) (ns : List ℕ) : Option Json := do
   if ns.length != 2 * k + 2 then none else do
     let c := ns[k * 2]!
     let D := ns[k * 2 + 1]!
     if c ≥ 2 ^ 32 || D ≥ 2 ^ 32 then none else do
-      let p : Model := ⟨f, k, 23 + neab, eAlignMin, 23⟩
+      let p : Model := ⟨f, k, 23 + padding, eAlignMin, 23⟩
       let ps ← parsePairs p (ns.take (2 * k))
       let x : BlockInput p := ⟨ps, BitVec.ofNat 32 c⟩
       return Json.mkObj [
@@ -64,12 +64,12 @@ private def familyJson (p k j : ℕ) : Option Json := do
 
 private def command (args : List String) : Option Json := do
   match args with
-  | "block" :: fmt :: k :: neab :: fl :: words =>
+  | "block" :: fmt :: k :: padding :: fl :: words =>
     let f ← match fmt with | "fp16" => some fp16 | "bf16" => some bf16 | "tf32" => some tf19 | _ => none
     let k ← k.toNat?
-    let neab ← neab.toNat?
+    let padding ← padding.toNat?
     let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
-    blockJson f k neab eAlignMin (← words.mapM String.toNat?)
+    blockJson f k padding eAlignMin (← words.mapM String.toNat?)
   | ["family", p, k, j] => familyJson (← p.toNat?) (← k.toNat?) (← j.toNat?)
   | ["round", n, d] =>
     let n ← n.toInt?

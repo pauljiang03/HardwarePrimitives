@@ -66,7 +66,7 @@ Every mismatch is accounted for:
   the two lines are corrected.
 * **The two remaining cases** are the paper's bf16 vectors that test the subnormal-aware
   normalization (`c = 2^-127 − 2^-140, p₁ + ⋯ = 2^-140 + 2^-150 + 2^-158` and
-  `c = 0, p₁ = 2^-150, p₂ = 2^-158`). There the MATLAB model keeps 32 fractional bits below
+  `c = 0, p₁ = 2^-150, p₂ = 2^-158`). There the MATLAB model keeps 32 mantissa bits below
   `2^-126`, and the Lean model returns the outputs the paper reports for the hardware.
 
 With the two MATLAB defects corrected, the Lean model and the MATLAB model agree on all 600,000

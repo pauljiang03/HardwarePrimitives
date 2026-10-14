@@ -38,42 +38,42 @@ def pairwiseSum (P : Model) (x : Prepared) : Option ℚ := do
 
 /-! ## `global_alignment` and `odd_even_grouping` (CDNA 3) -/
 
-/-- Align the significands to `e_max`, truncate them to `23 + n_eab` fractional bits, and
+/-- Align the significands to `e_max`, truncate them to `23 + padding` mantissa bits, and
 accumulate (exactly) into `S_{p_i,sum}`. Returns `(e_max, S_{p_i,sum})` as an exact value. -/
-def alignedSum (neab : ℕ) (ps : List Unpacked) : Option ℤ × ℚ :=
+def alignedSum (padding : ℕ) (ps : List Unpacked) : Option ℤ × ℚ :=
   match maxExp ps with
   | none => (none, 0)
-  | some e => (some e, sumQ (ps.map fun p => truncFrac p.value e (23 + neab)))
+  | some e => (some e, sumQ (ps.map fun p => truncMantissa p.value e (23 + padding)))
 
 /-- `(e_max, S_{p_i,sum})` of the configuration. With odd/even grouping, the odd and even sums
 are each aligned to their own maximum exponent, then the one with the smaller exponent is shifted
-to the common `e_max` and RD to `23 + n_eab` fractional bits (Algorithm 2 lines 1–6). -/
+to the common `e_max` and RD to `23 + padding` mantissa bits (Algorithm 2 lines 1–6). -/
 def productSum (P : Model) (ps : List Unpacked) : Option ℤ × ℚ :=
   match P.accumulation with
   | .oddEvenGrouping =>
-    let odd := alignedSum P.neab (oddIndexed ps)
-    let even := alignedSum P.neab (evenIndexed ps)
+    let odd := alignedSum P.padding (oddIndexed ps)
+    let even := alignedSum P.padding (evenIndexed ps)
     match joinExp odd.1 even.1 with
     | none => (none, 0)
-    | some e => (some e, rdFrac odd.2 e (23 + P.neab) + rdFrac even.2 e (23 + P.neab))
-  | _ => alignedSum P.neab ps
+    | some e => (some e, rdMantissa odd.2 e (23 + P.padding) + rdMantissa even.2 e (23 + P.padding))
+  | _ => alignedSum P.padding ps
 
-/-- `s'_c`: `s_c` shifted right by `e_max − e_c` and RD to `24` fractional bits; zero once the
+/-- `s'_c`: `s_c` shifted right by `e_max − e_c` and RD to `24` mantissa bits; zero once the
 shift exceeds the cutoff (binary8). -/
 def shiftedC (P : Model) (eMax eC : ℤ) (c : Unpacked) : ℚ :=
   match P.late.cCutoff with
-  | some n => if eMax - eC > n then 0 else rdFrac c.value eMax P.late.cFracBits
-  | none => rdFrac c.value eMax P.late.cFracBits
+  | some n => if eMax - eC > n then 0 else rdMantissa c.value eMax P.late.cMantissaBits
+  | none => rdMantissa c.value eMax P.late.cMantissaBits
 
-/-- Subnormal-aware normalization followed by RD to `k` fractional bits: the leading bit is
+/-- Subnormal-aware normalization followed by RD to `k` mantissa bits: the leading bit is
 moved to the binary point, but never below exponent `−126`. -/
-def normalizeRD (k : ℕ) (x : ℚ) : ℚ := if x = 0 then 0 else rdFrac x (normExp (absQ x)) k
+def normalizeRD (k : ℕ) (x : ℚ) : ℚ := if x = 0 then 0 else rdMantissa x (normExp (absQ x)) k
 
 /-- `S_acc` when `e_c > e_max`: `S'_{p_i,sum}` is `S_{p_i,sum}` shifted right by `e_c − e_max` and
-RD to `32` fractional bits; `S_acc = S'_{p_i,sum} + s_c` is normalized and RD to `31`
-fractional bits (Algorithm 1 lines 8–11). -/
+RD to `32` mantissa bits; `S_acc = S'_{p_i,sum} + s_c` is normalized and RD to `31`
+mantissa bits (Algorithm 1 lines 8–11). -/
 def shiftedSum (P : Model) (eC : ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=
-  normalizeRD P.late.accFracBits (rdFrac pSum eC P.late.sumFracBits + c.value)
+  normalizeRD P.late.accMantissaBits (rdMantissa pSum eC P.late.sumMantissaBits + c.value)
 
 /-- `S_acc` after the late addition of `c` (Algorithm 1 lines 3–11). -/
 def lateSum (P : Model) (eMax : Option ℤ) (pSum : ℚ) (c : Unpacked) : ℚ :=

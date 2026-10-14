@@ -41,15 +41,15 @@ theorem prepareProducts_origin (p : Model) (xs : List (p.Word × p.Word))
       subst y
       exact ⟨rfl, rfl⟩
 
-theorem prepare_fp16_terms_lower (K neab : ℕ) (eAlignMin : Option ℤ)
-    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
+theorem prepare_fp16_terms_lower (K padding : ℕ) (eAlignMin : Option ℤ)
+    (x : BlockInput (fp16Fp32Model K padding eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
     ∀ t ∈ b.terms, t.significand ≠ 0 → -126 ≤ t.exponent := by
   unfold prepare at h
   cases hc : decode32 x.c with
   | none => simp [hc] at h
   | some c =>
-    cases hp : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
+    cases hp : prepareProducts (fp16Fp32Model K padding eAlignMin) x.products with
     | none => simp [hc, hp] at h
     | some ps =>
       simp [hc, hp] at h
@@ -89,19 +89,19 @@ theorem maxTermExp_lower (ts : List DenormalizedProduct) (lower e : ℤ)
   omega
 
 /-- Any minimum alignment exponent of at most -126 is inactive on a prepared canonical invocation. -/
-theorem canonical_alignExp_eAlignMin_inactive (K neab : ℕ) (eAlignMin : Option ℤ)
+theorem canonical_alignExp_eAlignMin_inactive (K padding : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ -126)
-    (x : BlockInput (fp16Fp32Model K neab eAlignMin)) (b : PreparedBlock)
+    (x : BlockInput (fp16Fp32Model K padding eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) : b.alignExp = maxTermExp b.terms := by
-  have hprof : b.model = fp16Fp32Model K neab eAlignMin := by
+  have hprof : b.model = fp16Fp32Model K padding eAlignMin := by
     unfold prepare at h
     cases hc : decode32 x.c with
     | none => simp [hc] at h
     | some c =>
-      cases hp : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
+      cases hp : prepareProducts (fp16Fp32Model K padding eAlignMin) x.products with
       | none => simp [hc, hp] at h
       | some ps => simp [hc, hp] at h; subst b; rfl
-  have hl := prepare_fp16_terms_lower K neab eAlignMin x b h
+  have hl := prepare_fp16_terms_lower K padding eAlignMin x b h
   unfold PreparedBlock.alignExp
   rw [hprof]
   cases he : maxTermExp b.terms with

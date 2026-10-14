@@ -3,10 +3,10 @@ import MatrixCore.Numerics.Exact
 /-! # Fixed-point alignment operations
 
 The paper describes every lossy alignment step in fixed point: a significand is shifted to a
-reference exponent `e` and kept to `k` *fractional bits*. On exact values this is a projection
+reference exponent `e` and kept to `k` *mantissa bits*. On exact values this is a projection
 onto the grid of multiples of `2^(e-k)`. Two projections occur:
 
-* truncation of the magnitude (multi-term alignment of products, "truncate to 24 fractional bits");
+* truncation of the magnitude (multi-term alignment of products, truncation to 24 mantissa bits);
 * RD, rounding toward −∞ (two-operand alignment of `s_c` and `S_{p_i,sum}` on CDNA 3). -/
 
 namespace MatrixCore
@@ -18,11 +18,11 @@ def rdGrid (x : ℚ) (g : ℤ) : ℚ := ((x / pow2 g).floor : ℚ) * pow2 g
 def truncGrid (x : ℚ) (g : ℤ) : ℚ :=
   if x < 0 then -(((-x / pow2 g).floor : ℚ) * pow2 g) else ((x / pow2 g).floor : ℚ) * pow2 g
 
-/-- Shift to exponent `e` and RD to `k` fractional bits. -/
-abbrev rdFrac (x : ℚ) (e : ℤ) (k : ℕ) : ℚ := rdGrid x (e - k)
+/-- Shift to exponent `e` and RD to `k` mantissa bits. -/
+abbrev rdMantissa (x : ℚ) (e : ℤ) (k : ℕ) : ℚ := rdGrid x (e - k)
 
-/-- Shift to exponent `e` and truncate to `k` fractional bits. -/
-abbrev truncFrac (x : ℚ) (e : ℤ) (k : ℕ) : ℚ := truncGrid x (e - k)
+/-- Shift to exponent `e` and truncate to `k` mantissa bits. -/
+abbrev truncMantissa (x : ℚ) (e : ℤ) (k : ℕ) : ℚ := truncGrid x (e - k)
 
 /-- `x` is an integer multiple of `2^g`. -/
 def OnGrid (x : ℚ) (g : ℤ) : Prop := ∃ k : ℤ, x = (k : ℚ) * pow2 g

@@ -8,7 +8,7 @@ namespace TensorCore.IndependentSpec
 set_option maxRecDepth 4096
 
 theorem result_of_eval {p : Model} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputMantissaBits) :
     Result (parametersOf p) (inputOf x) t.output.bits := by
   have hp := evalBlock_prepared h
   have hv := (evalBlock_success_iff p x).mp ⟨t, h⟩
@@ -28,7 +28,7 @@ theorem result_unique {p : Parameters} {x : Input p} {a b : F32}
   cases Option.some.inj htb
   exact rounds_unique _ _ _ hra hrb
 
-theorem result_iff_eval {p : Model} (x : BlockInput p) (b : F32) (hw : 23 ≤ p.outputFracBits) :
+theorem result_iff_eval {p : Model} (x : BlockInput p) (b : F32) (hw : 23 ≤ p.outputMantissaBits) :
     Result (parametersOf p) (inputOf x) b ↔
       ∃ t, evalBlock x = .ok t ∧ t.output.bits = b := by
   constructor
@@ -50,7 +50,7 @@ theorem bits_eq_of_result {p : Parameters} {x : Input p} {b : F32}
 
 /-- Every encoded input of a model with a binary32 block output: successful output bits and all
 rejection cases agree. -/
-theorem evalBlock_eq_spec {p : Model} (x : BlockInput p) (hw : 23 ≤ p.outputFracBits) :
+theorem evalBlock_eq_spec {p : Model} (x : BlockInput p) (hw : 23 ≤ p.outputMantissaBits) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parametersOf p) (inputOf x) := by
   classical
@@ -66,15 +66,15 @@ theorem evalBlock_eq_spec {p : Model} (x : BlockInput p) (hw : 23 ≤ p.outputFr
 
 /-- The theorem is nonvacuous on the independently specified valid domain. -/
 theorem valid_success {p : Model} (x : BlockInput p)
-    (hv : Valid (parametersOf p) (inputOf x)) (hw : 23 ≤ p.outputFracBits) :
+    (hv : Valid (parametersOf p) (inputOf x)) (hw : 23 ≤ p.outputMantissaBits) :
     ∃ t, evalBlock x = .ok t ∧ bits (parametersOf p) (inputOf x) = some t.output.bits := by
   obtain ⟨t, ht⟩ := (valid_iff x).mp hv
   exact ⟨t, ht, bits_eq_of_result (result_of_eval ht hw)⟩
 
 /-- Adequate modular accumulator widths inherit the independent-specification theorem. -/
 theorem machine_eq_spec {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
-    (hF : p.alignFracBits = F) (hc : p.nfma + 1 ≤ 2 ^ carryBits)
-    (hw : F + 3 + carryBits ≤ w) (hout : 23 ≤ p.outputFracBits) :
+    (hF : p.alignMantissaBits = F) (hc : p.nfma + 1 ≤ 2 ^ carryBits)
+    (hw : F + 3 + carryBits ≤ w) (hout : 23 ≤ p.outputMantissaBits) :
     (evalBlockMachine w x).toOption.map (fun t => t.output.bits) =
       bits (parametersOf p) (inputOf x) := by
   rw [evalBlockMachine_eq x w F carryBits hF hc (by omega)]

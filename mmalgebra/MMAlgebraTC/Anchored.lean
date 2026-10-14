@@ -24,7 +24,7 @@ def floorGrid (x : ℚ) (u : ℤ) : ℚ := ((x / pow2 u).floor : ℚ) * pow2 u
 
 /-- The increment of one anchored block. -/
 def anchorIncrement (p : Model) (α : ℤ) (ps : List (p.Word × p.Word)) : ℚ :=
-  floorGrid (truncSum p (α - p.alignFracBits) ps) (α - 23)
+  floorGrid (truncSum p (α - p.alignMantissaBits) ps) (α - 23)
 
 theorem floorGrid_shift (K : ℤ) (X : ℚ) (u : ℤ) :
     floorGrid ((K : ℚ) * pow2 u + X) u = (K : ℚ) * pow2 u + floorGrid X u := by
@@ -47,11 +47,11 @@ theorem trunc_binade {y : ℚ} {α : ℤ} (hα : -126 ≤ α) (h1 : pow2 α ≤ 
 
 /-- Model and range conditions of an anchored chain at `α`, with a binary32 block output. -/
 structure AnchorModel (p : Model) (α : ℤ) : Prop where
-  wide : 23 ≤ p.alignFracBits
+  wide : 23 ≤ p.alignMantissaBits
   eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ α
   lo : -126 ≤ α
   hi : α ≤ 127
-  output : 23 ≤ p.outputFracBits
+  output : 23 ≤ p.outputMantissaBits
 
 /-- Products of a block: finite words, none with exponent above `α`. -/
 structure AnchorBlock (p : Model) (α : ℤ) (ps : List (p.Word × p.Word)) : Prop where
@@ -64,8 +64,8 @@ exponent at most `α`, and `c + Σ trunc_{α−F}(aᵢbᵢ)` still in the binade
 theorem evalBlock_anchored {p : Model} {α : ℤ} (hm : AnchorModel p α) {x : BlockInput p}
     (hb : AnchorBlock p α x.products) {v : ℚ} (hc : value32 x.c = some v)
     (hcg : ∃ K : ℤ, v = K * pow2 (α - 23)) (hc1 : pow2 α ≤ v) (hc2 : v < pow2 (α + 1))
-    (hs1 : pow2 α ≤ v + truncSum p (α - p.alignFracBits) x.products)
-    (hs2 : v + truncSum p (α - p.alignFracBits) x.products < pow2 (α + 1))
+    (hs1 : pow2 α ≤ v + truncSum p (α - p.alignMantissaBits) x.products)
+    (hs2 : v + truncSum p (α - p.alignMantissaBits) x.products < pow2 (α + 1))
     {t : BlockTrace} (ht : evalBlock x = .ok t) :
     t.output.value = v + anchorIncrement p α x.products := by
   obtain ⟨dc, hdc, hdcv⟩ := decode32_isSome_of_value32 hc
@@ -106,7 +106,7 @@ theorem evalBlock_anchored {p : Model} {α : ℤ} (hm : AnchorModel p α) {x : B
     · exact hcle
     · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp hu
       exact hb.le q hq hnz
-  have hg : blk.alignGridExponent = α - p.alignFracBits := by
+  have hg : blk.alignGridExponent = α - p.alignMantissaBits := by
     unfold PreparedBlock.alignGridExponent
     have hpin : ∃ u ∈ blk.terms, u.significand ≠ 0 ∧ u.exponent = α :=
       ⟨_, by rw [hterms]; exact List.mem_cons_self .., hcnz, by show dc.exponent = α; omega⟩
@@ -115,13 +115,13 @@ theorem evalBlock_anchored {p : Model} {α : ℤ} (hm : AnchorModel p α) {x : B
     have hup := alignExp_upper blk α (by rw [hmodel]; exact hm.eAlignMin) hle e (by simp [hbe])
     rw [hbe, hmodel]; simp only [Option.getD_some]; omega
   -- the accumulator is c plus the truncated products
-  have hacc : blk.accumulator = v + truncSum p (α - p.alignFracBits) x.products := by
+  have hacc : blk.accumulator = v + truncSum p (α - p.alignMantissaBits) x.products := by
     rw [accumulator_value, hg, hterms, sumQ_eq]
     simp only [List.map_cons, List.sum_cons, List.map_map, Function.comp_def]
     obtain ⟨K, hK⟩ := hcg
     have hcv : (⟨dc.significand, dc.exponent, dc.mantissaBits⟩ : DenormalizedProduct).value = v := by
       change dc.value = v; exact hdcv
-    rw [hcv, hK, truncGrid_exact_of_grid K (α - 23) (α - p.alignFracBits) (by have := hm.wide; omega)]
+    rw [hcv, hK, truncGrid_exact_of_grid K (α - 23) (α - p.alignMantissaBits) (by have := hm.wide; omega)]
     rfl
   have hout := evalPrepared_output_value hev (by rw [hmodel]; exact hm.output)
   rw [hacc, trunc_binade hm.lo hs1 hs2] at hout
@@ -138,8 +138,8 @@ def anchoredChainValue (p : Model) (α : ℤ) (v : ℚ) (blocks : List (List (p.
 def InBinade (p : Model) (α : ℤ) (v : ℚ) : List (List (p.Word × p.Word)) → Prop
   | [] => pow2 α ≤ v ∧ v < pow2 (α + 1)
   | g :: rest => pow2 α ≤ v ∧ v < pow2 (α + 1) ∧
-      pow2 α ≤ v + truncSum p (α - p.alignFracBits) g ∧
-      v + truncSum p (α - p.alignFracBits) g < pow2 (α + 1) ∧
+      pow2 α ≤ v + truncSum p (α - p.alignMantissaBits) g ∧
+      v + truncSum p (α - p.alignMantissaBits) g < pow2 (α + 1) ∧
       InBinade p α (v + anchorIncrement p α g) rest
 
 theorem anchorIncrement_grid (p : Model) (α : ℤ) (ps : List (p.Word × p.Word)) :

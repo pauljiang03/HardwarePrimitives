@@ -43,7 +43,7 @@ theorem gridOK_zero (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩) : GridOK 
 output. -/
 theorem blockOut_ne_negZero_of {p : Model} {x : BlockInput p} {d : F32}
     (hg : ∀ b, prepare x = some b → OnGridQ b.accumulator (-149)) (h : blockOut x = .ok d)
-    (hw : 23 ≤ p.outputFracBits) :
+    (hw : 23 ≤ p.outputMantissaBits) :
     d ≠ 0x80000000 := by
   unfold blockOut at h
   cases ht : evalBlock x with
@@ -104,7 +104,7 @@ theorem terms_onGridQ_of {p : Model}
 
 /-- **On operand pairs with products on the binary32 grid, Tensor Core blocks return good words.** -/
 theorem tc_sub_block_good (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
-    (hw : 23 ≤ p.outputFracBits) (d : F32)
+    (hw : 23 ≤ p.outputMantissaBits) (d : F32)
     (ps : List (Option {q : p.Word × p.Word // GridOK p q})) (o : F32)
     (h : (tcMachine p).block d (ps.map (Option.map Subtype.val)) = some o) : Good o := by
   have h' : (blockOut (p := p) ⟨slotPairs p (ps.map (Option.map Subtype.val)), d⟩).toOption = some o := h
@@ -138,16 +138,16 @@ theorem tc_sub_block_good (p : Model) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
 
 /-- The laws of a rigid multiplier on a Tensor Core model, on operand pairs with products on the
 binary32 grid. -/
-def tcSubAlg (p : Model) (hF : 23 ≤ p.alignFracBits)
-    (hout : 23 ≤ p.outputFracBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
+def tcSubAlg (p : Model) (hF : 23 ≤ p.alignMantissaBits)
+    (hout : 23 ≤ p.outputMantissaBits) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
     (hz : p.decode 0 = some ⟨0, 0, 0⟩) : MMAlgebra.RigidAlg ((tcMachine p).sub (GridOK p)) p.nfma :=
   MMAlgebra.RigidAlg.sub (tcLaws p hF hout hmin hz) (GridOK p) (gridOK_zero p hz) (tc_add_comm p)
     (fun x hx => tc_add_zero p x hx) (tc_sub_block_good p hz hout) (tc_add_good p)
 
 /-- **Completeness for terms on a Tensor Core model, on inputs with products on the binary32
 grid**, from fingerprint tables. -/
-theorem tc_sub_term_complete (p : Model) (hF : 23 ≤ p.alignFracBits)
-    (hout : 23 ≤ p.outputFracBits)
+theorem tc_sub_term_complete (p : Model) (hF : 23 ≤ p.alignMantissaBits)
+    (hout : 23 ≤ p.outputMantissaBits)
     (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
     (ins2 ins3 : List (ℕ → {q : p.Word × p.Word // GridOK p q}))
     (hnd2 : ((MMAlgebra.codes2All.filter fun κ => MMAlgebra.rvalid (MMAlgebra.LTree.realize2 κ 0 1)).map
@@ -171,8 +171,8 @@ theorem tc_sub_term_complete (p : Model) (hF : 23 ≤ p.alignFracBits)
 
 /-- **On inputs with products on the binary32 grid, terms are equivalent exactly when their normal
 forms agree**, from fingerprint tables. -/
-theorem tc_sub_term_equiv_iff (p : Model) (hF : 23 ≤ p.alignFracBits)
-    (hout : 23 ≤ p.outputFracBits)
+theorem tc_sub_term_equiv_iff (p : Model) (hF : 23 ≤ p.alignMantissaBits)
+    (hout : 23 ≤ p.outputMantissaBits)
     (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
     (ins2 ins3 : List (ℕ → {q : p.Word × p.Word // GridOK p q}))
     (hnd2 : ((MMAlgebra.codes2All.filter fun κ => MMAlgebra.rvalid (MMAlgebra.LTree.realize2 κ 0 1)).map

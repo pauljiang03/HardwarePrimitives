@@ -61,28 +61,28 @@ Product conversion and every pairwise sum can overflow to an infinity, which
 
 ```text
 e_max = max{e_{p_i}}  over nonzero products
-S_{p_i,sum} = Σ s_{p_i} aligned to e_max, truncated to 24 fractional bits
+S_{p_i,sum} = Σ s_{p_i} aligned to e_max, truncated to 24 mantissa bits
 e_c = −126 if c = 0
 if e_max ≥ e_c:
-    s′_c = s_c shifted right by e_max − e_c, rounded down to 24 fractional bits
+    s′_c = s_c shifted right by e_max − e_c, rounded down to 24 mantissa bits
     S_acc = S_{p_i,sum} + s′_c
 else:
-    S′_{p_i,sum} = S_{p_i,sum} shifted right by e_c − e_max, rounded down to 32 fractional bits
-    S_acc = S′_{p_i,sum} + s_c, normalized (subnormal-aware), rounded down to 31 fractional bits
+    S′_{p_i,sum} = S_{p_i,sum} shifted right by e_c − e_max, rounded down to 32 mantissa bits
+    S_acc = S′_{p_i,sum} + s_c, normalized (subnormal-aware), rounded down to 31 mantissa bits
 d = fl{S_acc}
 ```
 
 Products are kept denormalized (`s_p ∈ [0, 4)`), and a product with
 `|p_ℓ| ≥ 2^128` is an infinity before accumulation. XF32 truncates each
-binary32 input to ten fraction bits and uses `N_FMA = 4`. In Lean:
+binary32 input to ten mantissa bits and uses `N_FMA = 4`. In Lean:
 `productSum` (with `alignedSum`), `cExp`, `shiftedC`, `shiftedSum`,
 `normalizeRD` and `lateSum`; `alignedAccumulation` composes them.
 
 ### binary8: Algorithm 2 (`odd_even_grouping`)
 
 Odd- and even-indexed products (`p₁, p₃, …` and `p₂, p₄, …`) are aligned to
-their own maximum exponents and truncated to 24 fractional bits. The sum with
-the smaller exponent is shifted to `e_max` and rounded down to 24 fractional
+their own maximum exponents and truncated to 24 mantissa bits. The sum with
+the smaller exponent is shifted to `e_max` and rounded down to 24 mantissa
 bits, and the two are added without normalization. `c` is then added as in
 Algorithm 1, except that `s′_c = 0` once `e_max − e_c > 25`. Any combination
 of fp8-E4M3 and fp8-E5M2 FNUZ operands is allowed; `N_FMA = 16`.

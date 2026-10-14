@@ -32,7 +32,7 @@ def ValueFormat.classifyNat (f : ValueFormat) (n : ℕ) : Classification :=
 def ValueFormat.decode (f : ValueFormat) (bits : BitVec f.layout.width) : Option Decoded :=
   (f.classifyNat bits.toNat).finite
 
-/-- A value word with required zero low padding. -/
+/-- A value word whose low bits must be zero. -/
 structure OperandEncoding where
   valueFormat : ValueFormat
   lowPadding : ℕ := 0

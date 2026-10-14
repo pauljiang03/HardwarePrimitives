@@ -30,7 +30,7 @@ example : (evalBlock cdna2Pairwise).toOption.map (fun t =>
         pairwiseBound cdna2F16 t.prepared + flBound true t.sAcc))) =
     some (-pow2 (-23), true) := by decide +kernel
 
-/-- CDNA 3: RD to 31 fractional bits drops `2^-32` and RNE ties `1 + 2^-24` to `1`; the error
+/-- CDNA 3: RD to 31 mantissa bits drops `2^-32` and RNE ties `1 + 2^-24` to `1`; the error
 `2^-24 + 2^-32` is within the bound, half an ulp of `S_acc` plus the RD and alignment terms. -/
 def cdna3Late : BlockInput cdna3F16 :=
   ⟨0x0C04 :: List.replicate 7 0, 0x0C00 :: List.replicate 7 0, 0x3F800000⟩

@@ -9,7 +9,7 @@ operands, an integer `c` and every product at most `2^24` in magnitude (true for
 
 * **SFMA, CDNA 1** (`correct_rounding`): `S_acc` is the exact sum, so the block is exact whenever
   the exact sum `c + Σ aᵢbᵢ` is within `2^24`, whatever the products' total magnitude;
-* **CDNA 3** (`global_alignment`): products of exponent at most `24` align to `24` fractional bits
+* **CDNA 3** (`global_alignment`): products of exponent at most `24` align to `24` mantissa bits
   without loss, and the late addition of `c` rounds an integer down to an integer; exact whenever
   `|c| ≤ 2^24` and the exact sum is within `2^24`;
 * **CDNA 2** (`pair_wise_sum`): every pairwise sum is rounded to binary32, so every pairwise sum
@@ -163,14 +163,14 @@ theorem pairwiseSum_cancel (P : Model) {x : Prepared} (h : IntPreparedC x)
 /-- **CDNA 3 with cancellation**: global alignment of integer products within `2^24` and an integer
 `c` within `2^24` is exact whenever the exact sum is within `2^24`. -/
 theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalAlignment)
-    (hneab : 1 ≤ P.neab) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
+    (hpadding : 1 ≤ P.padding) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
     (h : IntPreparedC x) : alignedAccumulation P x = x.exact := by
   have hprod := h.p
   have he24 : ∀ q ∈ x.p, q.m ≠ 0 → q.e ≤ 24 := fun q hq hm => (hprod q hq).exp_le hm (h.p_le q hq)
   obtain ⟨zs, hzs⟩ := h.ints
   have hS : sumQ (x.p.map Unpacked.value) = ((zs.sum : ℤ) : ℚ) := by rw [hzs, sumQ_cast]
-  -- the product sum: truncation to `23 + n_eab ≥ 24` fractional bits is exact
-  have hal : productSum P x.p = alignedSum P.neab x.p := by unfold productSum; rw [hacc]
+  -- the product sum: truncation to `23 + padding ≥ 24` mantissa bits is exact
+  have hal : productSum P x.p = alignedSum P.padding x.p := by unfold productSum; rw [hacc]
   have hps : productSum P x.p = (maxExp x.p, sumQ (x.p.map Unpacked.value)) := by
     rw [hal]
     unfold alignedSum
@@ -193,7 +193,7 @@ theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalA
     · rw [hcz] at he; cases he; omega
     · rename_i hm; cases he; exact h.c.exp_le hm h.c_le
   obtain ⟨zc, hzc⟩ := h.c_int
-  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normalizeRD P.late.accFracBits (T : ℚ) = T := by
+  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 24 → normalizeRD P.late.accMantissaBits (T : ℚ) = T := by
     intro T hT
     unfold normalizeRD
     split
@@ -203,7 +203,7 @@ theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalA
       have hlog : log2Floor (absQ (T : ℚ)) ≤ 24 :=
         pow2_le_iff.mp (Rat.le_trans (log2Floor_spec hpos).1 hT)
       have hn : normExp (absQ (T : ℚ)) ≤ 24 := by unfold normExp; omega
-      have hacc31 : P.late.accFracBits = 31 := by rw [hlate]
+      have hacc31 : P.late.accMantissaBits = 31 := by rw [hlate]
       exact rdGrid_of_onGrid (OnGrid.mono ⟨T, by rw [pow2_zero, Rat.mul_one]⟩ (by omega))
   have hsumbound : absQ ((zs.sum + zc : ℤ) : ℚ) ≤ pow2 24 := by
     have := h.sum_le
@@ -227,7 +227,7 @@ theorem alignedAccumulation_cancel {P : Model} (hacc : P.accumulation = .globalA
     have hle := hcE eC hce
     unfold shiftedSum
     rw [hS, hlate]
-    simp only [rdFrac]
+    simp only [rdMantissa]
     rw [rdGrid_of_onGrid (OnGrid.mono ⟨zs.sum, by rw [pow2_zero, Rat.mul_one]⟩ (by omega)), hzc,
       ← Rat.intCast_add]
     have := hT (zs.sum + zc) hsumbound

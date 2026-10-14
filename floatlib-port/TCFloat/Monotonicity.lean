@@ -54,7 +54,7 @@ theorem belowOneTerm_value : belowOneTerm.value = 1-pow2 (-24) := by decide +ker
 
 /-- With C=1 all products of the family fall below the alignment quantum. -/
 theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1) :
     Block.accumulator ⟨M,oneTerm,List.replicate K (a,b)⟩ = 1 := by
   have he := construction_alignExp M K a b oneTerm (by decide) (by exact le_trans hs (by decide))
@@ -62,7 +62,7 @@ theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
   have hq : Block.q ⟨M,oneTerm,List.replicate K (a,b)⟩ = -(23+(p:Int)) := by
     unfold Block.q
     rw [he]
-    change 0 - ((23+M.neab:Nat):Int) = _
+    change 0 - ((23+M.padding:Nat):Int) = _
     rw [hp]
     omega
   have hone : truncGrid 1 (-(23+(p:Int))) = 1 := by
@@ -81,7 +81,7 @@ theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
 
 /-- Lowering C by one FP32 step exposes all K product contributions. -/
 theorem construction_accumulator_below (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1) :
     Block.accumulator ⟨M,belowOneTerm,List.replicate K (a,b)⟩ =
       1-pow2 (-24)+(K:ℚ)*pow2 (-(24+(p:Int))) := by
@@ -89,7 +89,7 @@ theorem construction_accumulator_below (M : TCModel) (p K : Nat) (a b : Term)
   have hq : Block.q ⟨M,belowOneTerm,List.replicate K (a,b)⟩ = -(24+(p:Int)) := by
     unfold Block.q
     rw [he]
-    change -1 - ((23+M.neab:Nat):Int) = _
+    change -1 - ((23+M.padding:Nat):Int) = _
     rw [hp]
     omega
   have hcval : belowOneTerm.value = ((16777215*2^p:Nat):ℚ)*pow2 (-(24+(p:Int))) := by
@@ -153,7 +153,7 @@ theorem round32_rtz_above_one (x : ℚ) (hx : (1:ℚ)/2 ≤ x) (hx2 : x < 2) :
 
 /-- General TC-EFT nonmonotonicity threshold (Theorem III.4), for all natural p and K. -/
 theorem nonmonotone_perturbation (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1)
     (hK : K < 2^(24+p)) :
     ∃ bits y,
@@ -214,7 +214,7 @@ def MonotoneInAccumulator (M : TCModel) (products : List (Term × Term)) : Prop 
 
 /-- An explicit failure of monotonicity whenever the general family's threshold is met. -/
 theorem construction_not_monotone (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.neab = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1)
     (hK : K < 2^(24+p)) (hthreshold : 3*2^p ≤ K) :
     ¬ MonotoneInAccumulator M (List.replicate K (a,b)) := by

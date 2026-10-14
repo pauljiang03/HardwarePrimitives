@@ -174,13 +174,13 @@ theorem cdna3_pass (d : F32) (hd : GoodW d) :
     rfl
   have hsum : lateSum cdna3F16 none 0 C = C.value := by
     have hl : ∀ eC, cExp cdna3F16 C = some eC →
-        lateSum cdna3F16 none 0 C = normalizeRD 31 (rdFrac 0 eC 32 + C.value) := by
+        lateSum cdna3F16 none 0 C = normalizeRD 31 (rdMantissa 0 eC 32 + C.value) := by
       intro eC he; unfold lateSum; rw [he]; rfl
     obtain ⟨eC, he⟩ : ∃ eC, cExp cdna3F16 C = some eC := by
       unfold cExp; split
       · exact ⟨-126, rfl⟩
       · exact ⟨_, rfl⟩
-    rw [hl eC he, show rdFrac (0 : ℚ) eC 32 = 0 from rdGrid_zero _, Rat.zero_add]
+    rw [hl eC he, show rdMantissa (0 : ℚ) eC 32 = 0 from rdGrid_zero _, Rat.zero_add]
     unfold normalizeRD
     split
     · rename_i h; rw [h]

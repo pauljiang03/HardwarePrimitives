@@ -19,7 +19,7 @@ binary32's minimum normal exponent `−126` (gradual underflow). Also the paper'
 def normExp (a : ℚ) : ℤ := max (log2Floor a) (-126)
 
 /-- binary32 word from a sign, an exponent `−126 ≤ e ≤ 127`, and an integer significand
-`m < 2^24` with `23` fractional bits (`m < 2^23` only for `e = −126`). -/
+`m < 2^24` with `23` mantissa bits (`m < 2^23` only for `e = −126`). -/
 def encode32 (negative : Bool) (e : ℤ) (m : ℕ) : F32 :=
   BitVec.ofNat 32 ((if negative then 2147483648 else 0) +
     (if m < 8388608 then m else (e + 127).toNat * 8388608 + (m - 8388608)))

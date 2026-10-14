@@ -84,11 +84,11 @@ theorem truncGrid_signed_ten (s : Bool) (K : ℕ) (g : ℤ) :
 
 /-- Clearing the ten low mantissa bits of a finite binary32 word truncates its value toward zero
 to a 13-bit mantissa. -/
-theorem value32_truncateFraction32_13 {d : F32} {dc : Decoded} (h : decode32 d = some dc) :
-    value32 (truncateFraction32 13 d) = some (truncGrid dc.value (dc.exponent - 13)) := by
+theorem value32_truncateMantissa32_13 {d : F32} {dc : Decoded} (h : decode32 d = some dc) :
+    value32 (truncateMantissa32 13 d) = some (truncGrid dc.value (dc.exponent - 13)) := by
   have hlt := d.isLt
-  have hn : (truncateFraction32 13 d).toNat = d.toNat / 1024 * 1024 := by
-    rw [truncateFraction32_toNat]
+  have hn : (truncateMantissa32 13 d).toNat = d.toNat / 1024 * 1024 := by
+    rw [truncateMantissa32_toNat]
   have hs : d.toNat / 1024 * 1024 / 2147483648 = d.toNat / 2147483648 := by omega
   unfold value32
   rw [decode32_eq, hn, classifyNat_fp32, hs]
@@ -121,7 +121,7 @@ theorem value32_truncateFraction32_13 {d : F32} {dc : Decoded} (h : decode32 d =
 /-- `c` truncated toward zero to a 13-bit mantissa (the ten low bits of its mantissa cleared), with
 a zero result `+0`. -/
 def trunc13 (c : F32) : F32 :=
-  if truncateFraction32 13 c = 0x80000000 then 0 else truncateFraction32 13 c
+  if truncateMantissa32 13 c = 0x80000000 then 0 else truncateMantissa32 13 c
 
 /-- A word of value zero is `+0` or `−0`. -/
 theorem value32_eq_zero {w : F32} (h : value32 w = some 0) : w = 0 ∨ w = 0x80000000 := by
@@ -148,10 +148,10 @@ theorem value32_eq_zero {w : F32} (h : value32 w = some 0) : w = 0 ∨ w = 0x800
         else ((8388608 + w.toNat % 8388608 : ℕ) : ℤ)) ≠ 0
       split <;> omega
 
-theorem truncateFraction32_13_idem (w : F32) :
-    truncateFraction32 13 (truncateFraction32 13 w) = truncateFraction32 13 w := by
+theorem truncateMantissa32_13_idem (w : F32) :
+    truncateMantissa32 13 (truncateMantissa32 13 w) = truncateMantissa32 13 w := by
   apply BitVec.eq_of_toNat_eq
-  rw [truncateFraction32_toNat, truncateFraction32_toNat]
+  rw [truncateMantissa32_toNat, truncateMantissa32_toNat]
   omega
 
 /-- **An empty block FMA truncates `c` to a 13-bit mantissa**, on any Tensor Core model that keeps a
@@ -159,8 +159,8 @@ theorem truncateFraction32_13_idem (w : F32) :
 of Ada and Hopper), with a minimum alignment exponent at most `−126` and a zero word that decodes
 to zero: for every finite accumulator input, the output is `c` with the ten low bits of its
 mantissa cleared, or `+0` when that is zero. -/
-theorem tc_empty_block_trunc13 (p : Model) (hF : p.alignFracBits = 13)
-    (hout : p.outputFracBits = 13) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
+theorem tc_empty_block_trunc13 (p : Model) (hF : p.alignMantissaBits = 13)
+    (hout : p.outputMantissaBits = 13) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
     (hz : p.decode 0 = some ⟨0, 0, 0⟩) (d : F32) (hd : (finite32 d).isSome) :
     (tcMachine p).block d (List.replicate p.nfma none) = some (trunc13 d) := by
   obtain ⟨f, hf⟩ := Option.isSome_iff_exists.mp hd
@@ -207,7 +207,7 @@ theorem tc_empty_block_trunc13 (p : Model) (hF : p.alignFracBits = 13)
       rw [hexp]
       simp only [Option.getD_some]
       rw [hF]
-  have hval := value32_truncateFraction32_13 hc
+  have hval := value32_truncateMantissa32_13 hc
   show (blockOut (p := p) ⟨slotPairs p (List.replicate p.nfma none), d⟩).toOption = some (trunc13 d)
   rw [hslot]
   unfold blockOut evalBlock
@@ -219,7 +219,7 @@ theorem tc_empty_block_trunc13 (p : Model) (hF : p.alignFracBits = 13)
   by_cases h0 : truncGrid f.decoded.value (f.decoded.exponent - 13) = 0
   · rw [h0] at hval ⊢
     have hr : round32 .truncate 0 = some (0 : F32) := by decide +kernel
-    have hz13 : truncateFraction32 13 (0 : F32) = 0 := by decide
+    have hz13 : truncateMantissa32 13 (0 : F32) = 0 := by decide
     obtain ⟨g, hg, hgb, _⟩ := finite32_of_value32 (0 : F32) 0 (by decide +kernel)
     rw [hr]
     simp only [hz13, hg]
@@ -229,7 +229,7 @@ theorem tc_empty_block_trunc13 (p : Model) (hF : p.alignFracBits = 13)
     rcases value32_eq_zero hval with h1 | h1 <;> rw [h1] <;> decide
   · rw [value32_round32 .truncate _ _ hval h0]
     obtain ⟨g, hg, hgb, _⟩ := finite32_of_value32 _ _ hval
-    simp only [truncateFraction32_13_idem, hg]
+    simp only [truncateMantissa32_13_idem, hg]
     show some g.bits = some (trunc13 d)
     rw [hgb]
     unfold trunc13

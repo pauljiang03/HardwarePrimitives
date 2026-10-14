@@ -53,7 +53,7 @@ def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
 
 /-- Grid exponent `eta - F`. -/
 def PreparedBlock.alignGridExponent (b : PreparedBlock) : ℤ :=
-  b.alignExp.getD 0 - b.model.alignFracBits
+  b.alignExp.getD 0 - b.model.alignMantissaBits
 
 def PreparedBlock.alignedBits (b : PreparedBlock) : List ℤ :=
   b.terms.map fun t => truncBits t.value b.alignGridExponent
@@ -86,11 +86,11 @@ inductive ModelError where
   | nonfiniteOutput
   deriving Repr, DecidableEq
 
-/-- The accumulator truncated to binary32, then to the model's block-output fraction bits. -/
+/-- The accumulator truncated to binary32, then to the model's block-output mantissa bits. -/
 def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate b.accumulator with
   | none => .error .accumulatorOutOfRange
-  | some bits => match finite32 (truncateFraction32 b.model.outputFracBits bits) with
+  | some bits => match finite32 (truncateMantissa32 b.model.outputMantissaBits bits) with
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 

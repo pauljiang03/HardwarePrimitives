@@ -2,8 +2,7 @@ import TensorCore
 
 /-! # Laws of one block FMA on the Tensor Core model
 
-Two laws of the reduction algebra that hold for every Tensor Core model (any FMA size, extra
-alignment bits and minimum alignment exponent):
+Two laws of the reduction algebra that hold for every Tensor Core model (any FMA size, padding bits and minimum alignment exponent):
 
 * `evalBlock_bits_perm`: a block FMA's output word depends on its products only as a multiset;
 * `evalBlock_bits_zero`: a product with a zero operand can replace, or be replaced by, a zero pair
@@ -73,7 +72,7 @@ def blockOut {p : Model} (x : BlockInput p) : Except ModelError F32 :=
   (evalBlock x).map fun t => t.output.bits
 
 theorem evalPrepared_bits_eq {b b' : PreparedBlock} (h : b.accumulator = b'.accumulator)
-    (hw : b.model.outputFracBits = b'.model.outputFracBits) :
+    (hw : b.model.outputMantissaBits = b'.model.outputMantissaBits) :
     (evalPrepared b).map (fun t => t.output.bits) = (evalPrepared b').map (fun t => t.output.bits) := by
   unfold evalPrepared
   rw [h, hw]

@@ -25,7 +25,7 @@ import TensorCore.TC.InvocationProperties
 import TensorCore.TC.MachineRefinement
 import TensorCore.TC.Monotonicity
 import TensorCore.TC.MonotonicityRange
-import TensorCore.TC.ExtraAlignmentBits
+import TensorCore.TC.Padding
 import TensorCore.TC.Models
 import TensorCore.TC.Specification.Composition
 import TensorCore.TC.Specification.Defs

@@ -22,10 +22,10 @@ example : blockBits ones = .ok 0x40800000 := by decide +kernel
 
 * CDNA 1 adds exactly: `1 + 2s = 1 + 2^-22 + 2^-23`;
 * CDNA 2 rounds each pair: `fl{fl{1 + s} + fl{s + 0}} = 1 + 2^-21`;
-* CDNA 3 aligns the products with 24 fractional bits, where `s` is exact: `1 + 2^-22 + 2^-23`.
+* CDNA 3 aligns the products with 24 mantissa bits, where `s` is exact: `1 + 2^-22 + 2^-23`.
 
 `c = 1, p₁ = 2^-24 + 2^-32` (`0x0C04 · 0x0C00`) separates CDNA 3: RD of `S_acc` to 31
-fractional bits drops `2^-32`, and RNE then ties to `1`, while CDNA 1 and CDNA 2 give
+mantissa bits drops `2^-32`, and RNE then ties to `1`, while CDNA 1 and CDNA 2 give
 `1 + 2^-23`. -/
 
 /-- `a` and `b` of the products `1, s, s, 0`. -/

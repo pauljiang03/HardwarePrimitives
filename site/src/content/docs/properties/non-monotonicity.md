@@ -38,7 +38,7 @@ theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f �
       t.output.value = 1 ∧ (1 < t'.output.value ↔ 3 * 2 ^ p ≤ K)
 ```
 
-In words: take any FP16 model with FMA size `K`, `p` extra alignment bits,
+In words: take any FP16 model with FMA size `K`, `p` padding bits,
 and a minimum alignment exponent, if any, of at most −1. Use `K` copies of a product whose exact value is
 `2^-(24+p)` and whose exponent is at most −1. With `C = 1` the output is
 exactly 1. Lowering `C` to its FP32 predecessor `1 − 2^-24` makes the output

@@ -7,15 +7,15 @@ import TensorCore.Numerics.Truncation
 namespace TensorCore
 
 /-- The output word is the binary32 truncation of the accumulator, truncated further to the
-model's block-output fraction bits. -/
-theorem evalPrepared_output_fraction {b : PreparedBlock} {t : BlockTrace}
+model's block-output mantissa bits. -/
+theorem evalPrepared_output_mantissa {b : PreparedBlock} {t : BlockTrace}
     (h : evalPrepared b = .ok t) : ∃ bits, round32 .truncate b.accumulator = some bits ∧
-      t.output.bits = truncateFraction32 b.model.outputFracBits bits := by
+      t.output.bits = truncateMantissa32 b.model.outputMantissaBits bits := by
   unfold evalPrepared at h
   cases hr : round32 .truncate b.accumulator with
   | none => simp [hr] at h
   | some bits =>
-    cases hd : finite32 (truncateFraction32 b.model.outputFracBits bits) with
+    cases hd : finite32 (truncateMantissa32 b.model.outputMantissaBits bits) with
     | none => simp [hr, hd] at h
     | some d =>
       simp [hr, hd] at h
@@ -28,14 +28,14 @@ theorem evalPrepared_output_fraction {b : PreparedBlock} {t : BlockTrace}
 
 /-- With a binary32 block output, the output word is the binary32 truncation of the accumulator. -/
 theorem evalPrepared_output {b : PreparedBlock} {t : BlockTrace}
-    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputFracBits) :
+    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputMantissaBits) :
     round32 .truncate b.accumulator = some t.output.bits := by
-  obtain ⟨bits, hr, ht⟩ := evalPrepared_output_fraction h
-  rw [hr, ht, truncateFraction32_of_le hw]
+  obtain ⟨bits, hr, ht⟩ := evalPrepared_output_mantissa h
+  rw [hr, ht, truncateMantissa32_of_le hw]
 
 /-- With a binary32 block output, a block's output word is the binary32 truncation of its accumulator. -/
 theorem evalBlock_output {p : Model} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputMantissaBits) :
     round32 .truncate t.block.accumulator = some t.output.bits :=
   evalPrepared_output (evalBlock_evalPrepared h) (by rw [evalBlock_model h]; exact hw)
 
@@ -84,7 +84,7 @@ theorem block_error_bound (b : PreparedBlock) (d : Finite32)
   rw [he]; grind
 
 theorem evalPrepared_error_bound {b : PreparedBlock} {t : BlockTrace}
-    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputFracBits) :
+    (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputMantissaBits) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits) := by
@@ -96,7 +96,7 @@ theorem evalPrepared_error_bound {b : PreparedBlock} {t : BlockTrace}
 /-- The model error is below (number of terms) · (alignment grid step) + (one output ulp), for a
 model with a binary32 block output. -/
 theorem evalBlock_error_bound {p : Model} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputMantissaBits) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits) :=

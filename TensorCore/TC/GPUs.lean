@@ -10,15 +10,15 @@ import TensorCore.TC.CanonicalFormats
 features of A100, and B200 those of H100; H200 is a Hopper GPU like H100. Its FP8 rows give the
 FP8 block FMAs:
 
-| GPU | Instruction | N_FMA | Fraction bits after alignment | Block output |
+| GPU | Instruction | N_FMA | Mantissa bits after alignment | Block output |
 | --- | --- | --- | --- | --- |
-| Ada, L40S | `mma.sync` (QMMA) | 16 | 13 (`p = -10`) | 13 fraction bits |
-| H100, H200 | `wgmma` (QGMMA) | 32 | 13 (`p = -10`) | 13 fraction bits |
-| B200 | `tcgen05.mma` (UTCQMMA) | 32 | 25 (`p = 2`) | binary32 |
+| Ada, L40S | `mma.sync` (QMMA) | 16 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
+| H100, H200 | `wgmma` (QGMMA) | 32 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
+| B200 | `tcgen05.mma` (UTCQMMA) | 32 | 25: the 23-bit mantissa plus 2 padding bits | binary32 |
 
-All truncate, and Table 3 lists no minimum alignment exponent for them. The 13-bit block output
-of Ada and Hopper is the Accurate Models toolbox's (`GEMM.m` keeps `23 + p` output fraction bits
-when `p < 0`). Not modeled: the FP8 `mma.sync` path of H100 and H200 (FP8 converted to FP16 for
+All truncate, and Table 3 lists no minimum alignment exponent for them. The block output of Ada
+and Hopper truncated to a 13-bit mantissa is the Accurate Models toolbox's (`GEMM.m` keeps as many
+output mantissa bits as the alignment keeps when that is fewer than 23). Not modeled: the FP8 `mma.sync` path of H100 and H200 (FP8 converted to FP16 for
 HMMA), FP4 and FP6, and the other Blackwell instructions.
 
 The toolbox's FP8 models keep their default minimum alignment exponents, −132 on Ada and −133 on
@@ -85,20 +85,20 @@ theorem prepareProducts_widenE4M3 (K : ℕ) (F : ℤ) (e : Option ℤ) (m : ℕ)
 
 /-! ## The block output -/
 
-/-- The block outputs: 13 fraction bits on Ada and Hopper FP8, binary32 elsewhere. -/
-theorem fp8_outputFracBits :
-    adaE4M3F32.outputFracBits = 13 ∧ adaE5M2F32.outputFracBits = 13 ∧
-    hopperE4M3F32.outputFracBits = 13 ∧ hopperE5M2F32.outputFracBits = 13 ∧
-    blackwellE4M3F32.outputFracBits = 23 ∧ blackwellE5M2F32.outputFracBits = 23 :=
+/-- The block outputs: 13 mantissa bits on Ada and Hopper FP8, binary32 elsewhere. -/
+theorem fp8_outputMantissaBits :
+    adaE4M3F32.outputMantissaBits = 13 ∧ adaE5M2F32.outputMantissaBits = 13 ∧
+    hopperE4M3F32.outputMantissaBits = 13 ∧ hopperE5M2F32.outputMantissaBits = 13 ∧
+    blackwellE4M3F32.outputMantissaBits = 23 ∧ blackwellE5M2F32.outputMantissaBits = 23 :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
 /-- On Ada and Hopper FP8 a block returns the binary32 truncation of its accumulator with the ten
-low fraction bits cleared. -/
-theorem fp8_output_thirteen_bits {p : Model} (hp : p.outputFracBits = 13) {x : BlockInput p}
+low mantissa bits cleared. -/
+theorem fp8_output_thirteen_bits {p : Model} (hp : p.outputMantissaBits = 13) {x : BlockInput p}
     {t : BlockTrace} (h : evalBlock x = .ok t) :
     ∃ bits, round32 .truncate t.block.accumulator = some bits ∧
       t.output.bits = BitVec.ofNat 32 (bits.toNat / 2 ^ 10 * 2 ^ 10) := by
-  obtain ⟨bits, hr, ht⟩ := evalPrepared_output_fraction (evalBlock_evalPrepared h)
+  obtain ⟨bits, hr, ht⟩ := evalPrepared_output_mantissa (evalBlock_evalPrepared h)
   refine ⟨bits, hr, ?_⟩
   rw [ht, evalBlock_model h, hp]
   rfl
@@ -138,7 +138,7 @@ theorem prepare_terms_lower (p : Model) (hbias : p.input.bias ≤ 64) (x : Block
 /-- Two prepared blocks with the same accumulator and the same block-output width return the same
 output word, or the same error. -/
 theorem evalPrepared_bits_of_accumulator {b b' : PreparedBlock}
-    (h : b.accumulator = b'.accumulator) (hw : b.model.outputFracBits = b'.model.outputFracBits) :
+    (h : b.accumulator = b'.accumulator) (hw : b.model.outputMantissaBits = b'.model.outputMantissaBits) :
     (evalPrepared b).toOption.map (fun t => t.output.bits) =
       (evalPrepared b').toOption.map (fun t => t.output.bits) := by
   unfold evalPrepared
@@ -291,16 +291,16 @@ def Model.dotThenAdd (p : Model) (c : F32) (ps : List (p.Word × p.Word)) : Opti
 /-! ## Invocation descriptors
 
 The same FP8 block FMAs as descriptors: E4M3 decoded by its own encoding rather than `e4m3x`, the
-13-bit block output as a truncation stage to a format with 13 fraction bits, and the B200 recording
+13-bit block output as a truncation stage to a format with 13 mantissa bits, and the B200 recording
 convention as an accumulator input added after the block (`CPlacement.late`) with a
 round-to-nearest-even output stage. The replay checks the descriptors against the models. -/
 
-/-- Binary32's exponent range with 13 fraction bits: the block output of Ada and Hopper FP8. -/
-@[implicit_reducible] def binary32Frac13 : Format := ⟨13, 8, 127⟩
+/-- Binary32's exponent range with 13 mantissa bits: the block output of Ada and Hopper FP8. -/
+@[implicit_reducible] def binary32Mantissa13 : Format := ⟨13, 8, 127⟩
 
 /-- An FP8 descriptor with a 13-bit block output. -/
 @[implicit_reducible] def narrowInvocation (input : OperandEncoding) (K : ℕ) : InvocationSpec :=
-  ⟨input, fp32, K, .aligned 13 none .early, [⟨binary32Frac13, .truncate⟩], ⟨fp32, .truncate⟩⟩
+  ⟨input, fp32, K, .aligned 13 none .early, [⟨binary32Mantissa13, .truncate⟩], ⟨fp32, .truncate⟩⟩
 
 def adaE4M3Invocation : InvocationSpec := narrowInvocation e4m3Encoding 16
 def adaE5M2Invocation : InvocationSpec := narrowInvocation e5m2Encoding 16

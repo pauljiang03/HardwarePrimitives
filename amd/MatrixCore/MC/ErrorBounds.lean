@@ -240,20 +240,20 @@ theorem pairwise_error {P : Model} (hacc : P.accumulation = .pairWiseSum)
 /-- Error bound of `S_acc` in Algorithms 1 and 2, by branch (`alignedAccumulation_error`). -/
 def alignedBound (P : Model) (x : Prepared) : ℚ :=
   let s := productSum P x.p
-  let F : ℕ := 23 + P.neab
+  let F : ℕ := 23 + P.padding
   let n : ℚ := x.p.length + 2
   match s.1, cExp P x.c with
   | some e, some eC =>
-    if eC ≤ e then n * pow2 (e - F) + pow2 (e - P.late.cFracBits)
-    else n * pow2 (e - F) + pow2 (eC - P.late.sumFracBits) +
-      pow2 (normExp (absQ (rdGrid s.2 (eC - P.late.sumFracBits) + x.c.value)) - P.late.accFracBits)
-  | none, some eC => pow2 (eC - P.late.sumFracBits) +
-      pow2 (normExp (absQ (rdGrid s.2 (eC - P.late.sumFracBits) + x.c.value)) - P.late.accFracBits)
+    if eC ≤ e then n * pow2 (e - F) + pow2 (e - P.late.cMantissaBits)
+    else n * pow2 (e - F) + pow2 (eC - P.late.sumMantissaBits) +
+      pow2 (normExp (absQ (rdGrid s.2 (eC - P.late.sumMantissaBits) + x.c.value)) - P.late.accMantissaBits)
+  | none, some eC => pow2 (eC - P.late.sumMantissaBits) +
+      pow2 (normExp (absQ (rdGrid s.2 (eC - P.late.sumMantissaBits) + x.c.value)) - P.late.accMantissaBits)
   | some e, none => n * pow2 (e - F)
   | none, none => 0
 
 theorem alignedAccumulation_abs_error (P : Model) (x : Prepared)
-    (hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n)
+    (hcut : ∀ n, P.late.cCutoff = some n → P.late.cMantissaBits ≤ n)
     (hc : ∀ eC, cExp P x.c = some eC → absQ x.c.value < pow2 (eC + 1))
     (hcz : P.cZeroExp ≠ none) :
     absQ (x.exact - alignedAccumulation P x) ≤ alignedBound P x := by
@@ -274,7 +274,7 @@ theorem alignedAccumulation_abs_error (P : Model) (x : Prepared)
       obtain ⟨l, r⟩ := h4 eC hs hce
       simp only [hs]
       rw [absQ_le_iff]
-      have := pow2_pos (eC - P.late.sumFracBits)
+      have := pow2_pos (eC - P.late.sumMantissaBits)
       constructor <;> grind
     | some e =>
       simp only [hs]
@@ -284,10 +284,10 @@ theorem alignedAccumulation_abs_error (P : Model) (x : Prepared)
       · simp only [hle, ↓reduceIte]
         obtain ⟨l, r⟩ := h3 e eC hs hce (by omega)
         rw [absQ_le_iff]
-        have := pow2_pos (eC - P.late.sumFracBits)
-        have := pow2_pos (normExp (absQ (rdGrid (productSum P x.p).2 (eC - P.late.sumFracBits) +
-          x.c.value)) - P.late.accFracBits)
-        have := Rat.mul_nonneg hn (Rat.le_of_lt (pow2_pos (e - ((23 + P.neab : ℕ) : ℤ))))
+        have := pow2_pos (eC - P.late.sumMantissaBits)
+        have := pow2_pos (normExp (absQ (rdGrid (productSum P x.p).2 (eC - P.late.sumMantissaBits) +
+          x.c.value)) - P.late.accMantissaBits)
+        have := Rat.mul_nonneg hn (Rat.le_of_lt (pow2_pos (e - ((23 + P.padding : ℕ) : ℤ))))
         constructor <;> grind
 
 theorem accumulate_aligned {P : Model}
@@ -301,7 +301,7 @@ theorem accumulate_aligned {P : Model}
 
 theorem aligned_error {P : Model}
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
-    (hcut : ∀ n, P.late.cCutoff = some n → P.late.cFracBits ≤ n) (hcz : P.cZeroExp ≠ none)
+    (hcut : ∀ n, P.late.cCutoff = some n → P.late.cMantissaBits ≤ n) (hcz : P.cZeroExp ≠ none)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     absQ (t.prepared.exact - wordValue t.d) ≤
       alignedBound P t.prepared + flBound (!P.subnormals) t.sAcc := by

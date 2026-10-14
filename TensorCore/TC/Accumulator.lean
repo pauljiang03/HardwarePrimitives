@@ -17,7 +17,7 @@ def PreparedBlock.machineAccumulator (b : PreparedBlock) (w : ℕ) : ℚ :=
 def evalPreparedMachine (w : ℕ) (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate (b.machineAccumulator w) with
   | none => .error .accumulatorOutOfRange
-  | some bits => match finite32 (truncateFraction32 b.model.outputFracBits bits) with
+  | some bits => match finite32 (truncateMantissa32 b.model.outputMantissaBits bits) with
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 

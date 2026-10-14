@@ -61,7 +61,7 @@ theorem evalPrepared_block {b : PreparedBlock} {t : BlockTrace}
   cases hr : round32 .truncate b.accumulator with
   | none => simp [hr] at h
   | some bits =>
-    cases hd : finite32 (truncateFraction32 b.model.outputFracBits bits) with
+    cases hd : finite32 (truncateMantissa32 b.model.outputMantissaBits bits) with
     | none => simp [hr, hd] at h
     | some d =>
       simp [hr, hd] at h

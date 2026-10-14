@@ -185,7 +185,7 @@ theorem cdna3_block_le (d : F32) (ps : List (Option (cdna3F16.a.Word × cdna3F16
       rw [hp, List.length_map, mapM_length_option hL]; simp [slotPairs]
     have hgrid : gridTerm (productSum cdna3F16 t.prepared.p).1 ≤
         pow2 (-24) * ((slotPairs cdna3F16 ps).map (expMagMC cdna3F16)).sum := by
-      have hps : productSum cdna3F16 t.prepared.p = alignedSum cdna3F16.neab t.prepared.p := rfl
+      have hps : productSum cdna3F16 t.prepared.p = alignedSum cdna3F16.padding t.prepared.p := rfl
       rw [hps]
       unfold alignedSum
       have hsum0 : 0 ≤ ((slotPairs cdna3F16 ps).map (expMagMC cdna3F16)).sum := by

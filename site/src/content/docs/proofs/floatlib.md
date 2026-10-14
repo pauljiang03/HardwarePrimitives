@@ -13,7 +13,7 @@ runtime.
 
 [`floatlib_eq_reference`](https://github.com/pauljiang03/MMAlgebra/blob/main/floatlib-port/TCFloat/Equivalence/Representations.lean#L149)
 and its inverse cover every model with FP16, BF16, or TF32 input (any FMA
-size `K`, extra alignment bits, and minimum alignment exponent), every encoded input, and every `D`. They prove that
+size `K`, padding bits, and minimum alignment exponent), every encoded input, and every `D`. They prove that
 the two implementations produce corresponding **complete observations**:
 TC results, EFT results, error kinds, and branch tags. The correspondence is
 stated through explicit `Equiv`s.

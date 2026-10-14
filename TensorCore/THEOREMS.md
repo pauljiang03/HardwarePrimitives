@@ -15,7 +15,7 @@ for the Tensor Core model, and *the TC-EFT paper* for non-monotonicity and the T
 | The model accepts an input exactly when it has the right number of products, no NaN or infinity, and a sum that fits in FP32, whatever the width of its block output. | `evalBlock_success_iff` | [TC/AcceptedDomain.lean](TC/AcceptedDomain.lean) |
 | The exact sum of the inputs equals the output plus everything lost to alignment and rounding. | `evalBlock_residual_identity` | [TC/StageResiduals.lean](TC/StageResiduals.lean) |
 | With a binary32 block output, the error is less than (number of terms) × (alignment grid step) + (one output ulp). | `evalBlock_error_bound` | [TC/ErrorBounds.lean](TC/ErrorBounds.lean) |
-| The output word is the accumulator truncated to binary32 and then to the model's block-output fraction bits (23 except on Ada and Hopper FP8). | `evalPrepared_output_fraction`, `evalBlock_output` | [TC/ErrorBounds.lean](TC/ErrorBounds.lean) |
+| The output word is the accumulator truncated to binary32 and then to the model's block-output mantissa bits (23 except on Ada and Hopper FP8). | `evalPrepared_output_mantissa`, `evalBlock_output` | [TC/ErrorBounds.lean](TC/ErrorBounds.lean) |
 | A fixed-width wrapping accumulator gives the same output for every input when it is wide enough (29/31/33 bits for V100/A100/H100 FP16, a sign bit included). | `evalBlockMachine_eq` | [TC/MachineRefinement.lean](TC/MachineRefinement.lean) |
 | Every partial sum in that accumulator is exact, in any order. | `evalBlock_machinePrefix` | [TC/AlignmentExponent.lean](TC/AlignmentExponent.lean) |
 | A bitvector datapath (9-bit exponents, aligned terms of F + 2 bits, an accumulator of 28 to 32 magnitude bits plus a sign bit, shifts and a leading-zero count) returns the same output word, or the same error, as the model for every input on all 8 FP16/BF16/TF32 variants. | `Datapath.evalBlock_eq` | [Kernels/Datapath/Correctness.lean](Kernels/Datapath/Correctness.lean) |
@@ -32,7 +32,7 @@ FP8 models are `adaE4M3F32`, `adaE5M2F32`, `hopperE4M3F32`, `hopperE5M2F32` (wgm
 | --- | --- | --- |
 | E4M3 has no infinities, its only NaNs are `0x7f` and `0xff`, and its largest value is 448; E5M2 has the infinities `0x7c`, `0xfc`, six NaNs, and largest value 57344. | `e4m3_specials`, `e4m3_max`, `e5m2_specials`, `e5m2_max` | [Numerics/FP8.lean](Numerics/FP8.lean) |
 | The block model's 9-bit E4M3 layout decodes every one of the 256 E4M3 words as E4M3 does. | `e4m3_decode_widen`, `prepareProducts_widenE4M3` | [Numerics/FP8.lean](Numerics/FP8.lean), [TC/GPUs.lean](TC/GPUs.lean) |
-| On Ada and Hopper FP8 the output is the binary32 truncation of the accumulator with its ten low fraction bits cleared. | `fp8_output_thirteen_bits` | [TC/GPUs.lean](TC/GPUs.lean) |
+| On Ada and Hopper FP8 the output is the binary32 truncation of the accumulator with its ten low mantissa bits cleared. | `fp8_output_thirteen_bits` | [TC/GPUs.lean](TC/GPUs.lean) |
 | A minimum alignment exponent of at most −126 changes no output when the input format's bias is at most 64; so the toolbox's −132 and −133 change nothing on the FP8 models, which follow Table 3 in having none. | `evalBlock_eAlignMin_inactive`, `fp8_eAlignMin_inactive` | [TC/GPUs.lean](TC/GPUs.lean) |
 | Recursive summation of N_FMA-product block FMAs is one block FMA for N_FMA products; adding `c` afterwards in binary32 rounds to nearest even. | `Model.dot_one_block`, `addBinary32_nearestEven` | [TC/GPUs.lean](TC/GPUs.lean) |
 | The FP8 invocation descriptors are well formed. | `fp8_descriptors_valid` | [TC/GPUs.lean](TC/GPUs.lean) |
@@ -41,7 +41,7 @@ The results that hold for any model hold for the FP8 models: the residual identi
 domain, the chain ledger and the fixed-width accumulator. B200 FP8 has a binary32 block output, so
 the error bound and the specification equality cover it. Results that need a binary32 block output
 (the error bound and contracts, exact alignment, the specification equality) state it as a
-hypothesis `23 ≤ p.outputFracBits`, which the Ada and Hopper FP8 models do not meet; so do the
+hypothesis `23 ≤ p.outputMantissaBits`, which the Ada and Hopper FP8 models do not meet; so do the
 non-monotonicity theorems, which also need `F ≥ 23`. The bitvector datapath covers only the
 FP16, BF16 and TF32 variants.
 | For chained block FMAs, the loss accounting holds across the whole chain. | `runBlocks_residual_ledger` | [TC/Composition.lean](TC/Composition.lean) |
@@ -105,7 +105,7 @@ open TensorCore
 #check evalBlock_machinePrefix
 #check Datapath.evalBlock_eq
 #check model_contract
-#check evalPrepared_output_fraction
+#check evalPrepared_output_mantissa
 #check evalBlock_output
 #check IndependentSpec.evalBlock_eq_spec
 #check IndependentSpec.blackwell_fp8_eq_spec

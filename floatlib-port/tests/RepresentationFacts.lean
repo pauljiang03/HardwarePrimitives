@@ -45,7 +45,7 @@ theorem checked_trace_consistent :
     (trace inconsistentTrace.block 0).map Trace.output = some 0 := by
   decide +kernel
 
-/-- The `23 + neab` family of models cannot keep F = 22 fractional bits after alignment. -/
-theorem model_subset (neab : Nat) : (23 + neab : Int) ≠ 22 := by omega
+/-- The `23 + padding` family of models cannot keep F = 22 mantissa bits after alignment. -/
+theorem model_subset (padding : Nat) : (23 + padding : Int) ≠ 22 := by omega
 
 end TCFloat.Comparison

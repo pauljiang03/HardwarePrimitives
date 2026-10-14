@@ -26,7 +26,7 @@ d = Σ_{ℓ=1}^{N_FMA} a_ℓ b_ℓ + c
 
 with binary32 `c` and `d`. Longer inner products chain blocks, each block's
 `d` becoming the next block's `c`. The paper describes four configurations
-for how a block accumulates, the constructors of [`MatrixCore.Accumulation`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Defs.lean#L25):
+for how a block accumulates, the constructors of [`MatrixCore.Accumulation`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Defs.lean#L26):
 
 | Architecture | Inputs | Configuration | `N_FMA` |
 | --- | --- | --- | --- |

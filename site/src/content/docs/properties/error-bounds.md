@@ -27,7 +27,7 @@ input words directly (`exactDot`), not from the model's intermediate values.
 
 ```lean
 theorem evalBlock_error_bound {p : Model} {x : BlockInput p} {t : BlockTrace}
-    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputFracBits) :
+    (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputMantissaBits) :
     absQ (t.block.exactDot - t.output.value) <
       (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent +
         pow2 (outputUlpExponent t.output.bits)

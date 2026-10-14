@@ -22,7 +22,7 @@ They do not, by themselves, make the schemes faster; see
 ## Exact slice products, derived
 
 A Tensor Core block FMA aligns the significands of its products relative to
-the largest exponent, keeps `F` fractional bits below it (`F = 23` on V100,
+the largest exponent, keeps `F` mantissa bits below it (`F = 23` on V100,
 `24` on A100, `25` on H100), adds them exactly in a single multi-term addition
 and truncates to binary32. For integer operands of `b` bits with
 `2b ≤ F`, alignment loses nothing, and the binary32 output holds every
@@ -191,7 +191,7 @@ no case-by-case check.
 ## What is not modeled
 
 - **FP8 and FP4 matrix multipliers**, deferred. FP8 accumulation keeps about `13`
-  fractional bits on H100, so conservative assumptions there are likely wrong
+  mantissa bits on H100, so conservative assumptions there are likely wrong
   and exact semantics would decide which configurations are possible.
 - **INT8 instructions**, out of scope for now on both vendors
   ([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)). ADP runs on

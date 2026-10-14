@@ -4,8 +4,8 @@ import MatrixCore.MC.Prepared
 /-! # Fixed-width and exact accumulation give the same output
 
 Every decoded operand has a significand below 2, so every product is below 4: a product aligned
-to `e_max` with `23 + n_eab` fractional bits fits in `23 + n_eab + 2` bits. With
-`N_FMA ≤ 2^carryBits` products and a sign bit, a register of `23 + n_eab + 2 + carryBits + 1`
+to `e_max` with `23 + padding` mantissa bits fits in `23 + padding + 2` bits. With
+`N_FMA ≤ 2^carryBits` products and a sign bit, a register of `23 + padding + 2 + carryBits + 1`
 bits never wraps, on any prefix of the sum and in either grouping. -/
 
 namespace MatrixCore
@@ -24,10 +24,10 @@ theorem truncBits_zero (g : ℤ) : truncBits 0 g = 0 := by
     · exact absurd h hp
   exact_mod_cast this
 
-/-- An aligned product fits in `23 + n_eab + 2` bits. -/
-theorem alignedBits_bound {neab : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxExp ps = some e)
+/-- An aligned product fits in `23 + padding + 2` bits. -/
+theorem alignedBits_bound {padding : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxExp ps = some e)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
-    ∀ z ∈ alignedBits neab e ps, z.natAbs < 2 ^ (23 + neab + 2) := by
+    ∀ z ∈ alignedBits padding e ps, z.natAbs < 2 ^ (23 + padding + 2) := by
   intro z hz
   simp only [alignedBits, List.mem_map] at hz
   obtain ⟨p, hp, rfl⟩ := hz
@@ -35,7 +35,7 @@ theorem alignedBits_bound {neab : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxE
   · rw [(Unpacked.value_eq_zero_iff p).mpr hm, truncBits_zero]
     exact Nat.two_pow_pos _
   · have hle := maxExp_le he p hp hm
-    generalize hg : e - ((23 + neab : ℕ) : ℤ) = g
+    generalize hg : e - ((23 + padding : ℕ) : ℤ) = g
     have h1 := truncBits_natAbs_le p.value g
     rw [Unpacked.absQ_value] at h1
     have hmq : (p.m : ℚ) < pow2 ((p.t + 2 : ℕ) : ℤ) := by
@@ -44,21 +44,21 @@ theorem alignedBits_bound {neab : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxE
       have := Rat.mul_lt_mul_of_pos_right hmq (pow2_pos (p.e - p.t))
       rwa [← pow2_add, show ((p.t + 2 : ℕ) : ℤ) + (p.e - p.t) = p.e + 2 by omega] at this
     have h3 : pow2 (p.e + 2) ≤ pow2 (e + 2) := pow2_le_of_le (by omega)
-    have h4 : pow2 (e + 2) = ((2 ^ (23 + neab + 2) : ℕ) : ℚ) * pow2 g := by
+    have h4 : pow2 (e + 2) = ((2 ^ (23 + padding + 2) : ℕ) : ℚ) * pow2 g := by
       rw [← pow2_natCast, ← pow2_add]; congr 1; omega
     have h5 : ((truncBits p.value g).natAbs : ℚ) * pow2 g <
-        ((2 ^ (23 + neab + 2) : ℕ) : ℚ) * pow2 g := by
+        ((2 ^ (23 + padding + 2) : ℕ) : ℚ) * pow2 g := by
       rw [← h4]; grind
-    have h6 : ((truncBits p.value g).natAbs : ℚ) < ((2 ^ (23 + neab + 2) : ℕ) : ℚ) := by
+    have h6 : ((truncBits p.value g).natAbs : ℚ) < ((2 ^ (23 + padding + 2) : ℕ) : ℚ) := by
       apply Rat.not_le.mp
       intro hc
       exact Rat.not_le.mpr h5 (Rat.mul_le_mul_of_nonneg_right hc (Rat.le_of_lt (pow2_pos g)))
     exact_mod_cast h6
 
-theorem alignedBits_magnitude {neab : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxExp ps = some e)
+theorem alignedBits_magnitude {padding : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxExp ps = some e)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
-    magnitudeSum (alignedBits neab e ps) ≤ ps.length * (2 ^ (23 + neab + 2) - 1) := by
-  have := magnitudeSum_le_length_mul (alignedBits neab e ps) (2 ^ (23 + neab + 2) - 1)
+    magnitudeSum (alignedBits padding e ps) ≤ ps.length * (2 ^ (23 + padding + 2) - 1) := by
+  have := magnitudeSum_le_length_mul (alignedBits padding e ps) (2 ^ (23 + padding + 2) - 1)
     (fun z hz => by have := alignedBits_bound he hb z hz; omega)
   simpa [alignedBits] using this
 
@@ -75,29 +75,29 @@ theorem count_mul_lt (n B c : ℕ) (h : n ≤ 2 ^ c) : n * (2 ^ B - 1) < 2 ^ (B 
 
 /-- A group register holds the group's aligned sum exactly, and its magnitude is bounded by the
 group size. -/
-theorem machineAlignedSum_spec (w neab : ℕ) (ps : List Unpacked) (hw : 0 < w)
+theorem machineAlignedSum_spec (w padding : ℕ) (ps : List Unpacked) (hw : 0 < w)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2))
-    (hcap : ps.length * (2 ^ (23 + neab + 2) - 1) < 2 ^ (w - 1)) :
-    alignedSum neab ps = ((machineAlignedSum w neab ps).1,
-      ((machineAlignedSum w neab ps).2.toInt : ℚ) *
-        pow2 ((machineAlignedSum w neab ps).1.getD 0 - (23 + neab : ℕ))) ∧
-    ((machineAlignedSum w neab ps).2.toInt).natAbs ≤ ps.length * (2 ^ (23 + neab + 2) - 1) ∧
-    ((machineAlignedSum w neab ps).1 = none → (machineAlignedSum w neab ps).2.toInt = 0) := by
+    (hcap : ps.length * (2 ^ (23 + padding + 2) - 1) < 2 ^ (w - 1)) :
+    alignedSum padding ps = ((machineAlignedSum w padding ps).1,
+      ((machineAlignedSum w padding ps).2.toInt : ℚ) *
+        pow2 ((machineAlignedSum w padding ps).1.getD 0 - (23 + padding : ℕ))) ∧
+    ((machineAlignedSum w padding ps).2.toInt).natAbs ≤ ps.length * (2 ^ (23 + padding + 2) - 1) ∧
+    ((machineAlignedSum w padding ps).1 = none → (machineAlignedSum w padding ps).2.toInt = 0) := by
   unfold alignedSum machineAlignedSum
   cases he : maxExp ps with
   | none => simp
   | some e =>
-    have hm := alignedBits_magnitude (neab := neab) he hb
-    have hx := machineAccumulate_exact w (alignedBits neab e ps) hw (by omega)
+    have hm := alignedBits_magnitude (padding := padding) he hb
+    have hx := machineAccumulate_exact w (alignedBits padding e ps) hw (by omega)
     simp only [Option.getD_some, reduceCtorEq, false_implies, and_true]
-    rw [hx, sumQ_truncFrac_eq]
-    exact ⟨rfl, by have := sumZ_natAbs_le (alignedBits neab e ps); omega⟩
+    rw [hx, sumQ_truncMantissa_eq]
+    exact ⟨rfl, by have := sumZ_natAbs_le (alignedBits padding e ps); omega⟩
 
 /-- Moving a register to a coarser exponent by an arithmetic right shift is the RD of the
 model. -/
 theorem shiftRegister_spec {w : ℕ} (F : ℕ) (e : ℤ) (s : Option ℤ × BitVec w)
     (hle : ∀ v, s.1 = some v → v ≤ e) (hz : s.1 = none → s.2.toInt = 0) :
-    rdFrac ((s.2.toInt : ℚ) * pow2 (s.1.getD 0 - F)) e F =
+    rdMantissa ((s.2.toInt : ℚ) * pow2 (s.1.getD 0 - F)) e F =
         ((shiftRegister e s).toInt : ℚ) * pow2 (e - F) ∧
       ((shiftRegister e s).toInt).natAbs ≤ (s.2.toInt).natAbs := by
   obtain ⟨o, r⟩ := s
@@ -113,7 +113,7 @@ theorem shiftRegister_spec {w : ℕ} (F : ℕ) (e : ℤ) (s : Option ℤ × BitV
     have hv := hle v rfl
     simp only [Option.getD_some]
     have hg : e - (F : ℤ) = (v - F) + (((e - v).toNat : ℕ) : ℤ) := by omega
-    rw [show rdFrac ((r.toInt : ℚ) * pow2 (v - F)) e F =
+    rw [show rdMantissa ((r.toInt : ℚ) * pow2 (v - F)) e F =
         rdGrid ((r.toInt : ℚ) * pow2 (v - F)) (e - F) from rfl, hg, rdGrid_eq_rdBits,
       rdBits_intCast_mul, Int.shiftRight_eq_div_pow]
 
@@ -123,12 +123,12 @@ theorem shiftRegister_spec {w : ℕ} (F : ℕ) (e : ℤ) (s : Option ℤ × BitV
 `(e_max, S_{p_i,sum})` in both groupings. -/
 theorem machineProductSum_eq (w carryBits : ℕ) (P : Model) (ps : List Unpacked)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) (hcount : ps.length ≤ 2 ^ carryBits)
-    (hw : P.alignFracBits + 2 + carryBits + 1 ≤ w) :
+    (hw : P.alignMantissaBits + 2 + carryBits + 1 ≤ w) :
     machineProductSum w P ps = productSum P ps := by
   have hw0 : 0 < w := by omega
-  have hcap : ps.length * (2 ^ (23 + P.neab + 2) - 1) < 2 ^ (w - 1) :=
+  have hcap : ps.length * (2 ^ (23 + P.padding + 2) - 1) < 2 ^ (w - 1) :=
     Nat.lt_of_lt_of_le (count_mul_lt _ _ _ hcount)
-      (Nat.pow_le_pow_right (by decide) (by simp only [Model.alignFracBits] at hw; omega))
+      (Nat.pow_le_pow_right (by decide) (by simp only [Model.alignMantissaBits] at hw; omega))
   unfold machineProductSum productSum
   cases hacc : P.accumulation
   case oddEvenGrouping =>
@@ -136,13 +136,13 @@ theorem machineProductSum_eq (w carryBits : ℕ) (P : Model) (ps : List Unpacked
     obtain ⟨hsum, hlen⟩ := sumQ_odd_even Unpacked.value ps
     have hbo : ∀ p ∈ oddIndexed ps, p.m < 2 ^ (p.t + 2) := fun p hp => hb p (oddIndexed_subset ps p hp)
     have hbe : ∀ p ∈ evenIndexed ps, p.m < 2 ^ (p.t + 2) := fun p hp => hb p (evenIndexed_subset ps p hp)
-    have hmul := Nat.add_mul (oddIndexed ps).length (evenIndexed ps).length (2 ^ (23 + P.neab + 2) - 1)
+    have hmul := Nat.add_mul (oddIndexed ps).length (evenIndexed ps).length (2 ^ (23 + P.padding + 2) - 1)
     rw [hlen] at hmul
-    obtain ⟨ho, hmo, hzo⟩ := machineAlignedSum_spec w P.neab (oddIndexed ps) hw0 hbo (by omega)
-    obtain ⟨he, hme, hze⟩ := machineAlignedSum_spec w P.neab (evenIndexed ps) hw0 hbe (by omega)
+    obtain ⟨ho, hmo, hzo⟩ := machineAlignedSum_spec w P.padding (oddIndexed ps) hw0 hbo (by omega)
+    obtain ⟨he, hme, hze⟩ := machineAlignedSum_spec w P.padding (evenIndexed ps) hw0 hbe (by omega)
     rw [ho, he]
-    generalize machineAlignedSum w P.neab (oddIndexed ps) = O at *
-    generalize machineAlignedSum w P.neab (evenIndexed ps) = E at *
+    generalize machineAlignedSum w P.padding (oddIndexed ps) = O at *
+    generalize machineAlignedSum w P.padding (evenIndexed ps) = E at *
     simp only
     cases hj : joinExp O.1 E.1 with
     | none => rfl
@@ -152,14 +152,14 @@ theorem machineProductSum_eq (w carryBits : ℕ) (P : Model) (ps : List Unpacked
         intro v hv; rw [hv] at hj; cases hE : E.1 <;> rw [hE] at hj <;> simp [joinExp] at hj <;> omega
       have hlee : ∀ v, E.1 = some v → v ≤ e := by
         intro v hv; rw [hv] at hj; cases hO : O.1 <;> rw [hO] at hj <;> simp [joinExp] at hj <;> omega
-      obtain ⟨rdo, so⟩ := shiftRegister_spec (23 + P.neab) e O hleo hzo
-      obtain ⟨rde, se⟩ := shiftRegister_spec (23 + P.neab) e E hlee hze
+      obtain ⟨rdo, so⟩ := shiftRegister_spec (23 + P.padding) e O hleo hzo
+      obtain ⟨rde, se⟩ := shiftRegister_spec (23 + P.padding) e E hlee hze
       rw [rdo, rde, bitVec_add_toInt _ _ hw0 (by
         have := Int.natAbs_add_le (shiftRegister e O).toInt (shiftRegister e E).toInt; omega),
         Rat.intCast_add, Rat.add_mul]
   all_goals
     simp only
-    exact (machineAlignedSum_spec w P.neab ps hw0 hb hcap).1.symm
+    exact (machineAlignedSum_spec w P.padding ps hw0 hb hcap).1.symm
 
 theorem accumulateMachine_eq (w : ℕ) (P : Model) (x : Prepared)
     (h : machineProductSum w P x.p = productSum P x.p) :
@@ -172,9 +172,9 @@ theorem accumulateMachine_eq (w : ℕ) (P : Model) (x : Prepared)
 
 /-- **Fixed-width refinement.** For every model and every input, accumulating the products in
 `w`-bit registers gives the model's result, whenever `N_FMA ≤ 2^carryBits` and
-`23 + n_eab + 2 + carryBits + 1 ≤ w`. -/
+`23 + padding + 2 + carryBits + 1 ≤ w`. -/
 theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)
-    (hcount : P.nfma ≤ 2 ^ carryBits) (hw : P.alignFracBits + 2 + carryBits + 1 ≤ w) :
+    (hcount : P.nfma ≤ 2 ^ carryBits) (hw : P.alignMantissaBits + 2 + carryBits + 1 ≤ w) :
     evalBlockMachine w x = evalBlock x := by
   unfold evalBlockMachine evalBlock
   split
@@ -196,16 +196,16 @@ theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)
       | ok s => cases fl32 (!P.subnormals) s <;> rfl
 
 /-- Every prefix of the aligned products, in any order, is exact in the register. -/
-theorem machinePrefix_exact (w carryBits neab : ℕ) {ps : List Unpacked} {e : ℤ}
+theorem machinePrefix_exact (w carryBits padding : ℕ) {ps : List Unpacked} {e : ℤ}
     (he : maxExp ps = some e) (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2))
-    (hcount : ps.length ≤ 2 ^ carryBits) (hw : 23 + neab + 2 + carryBits + 1 ≤ w)
-    (xs ys : List ℤ) (hperm : (xs ++ ys).Perm (alignedBits neab e ps)) :
+    (hcount : ps.length ≤ 2 ^ carryBits) (hw : 23 + padding + 2 + carryBits + 1 ≤ w)
+    (xs ys : List ℤ) (hperm : (xs ++ ys).Perm (alignedBits padding e ps)) :
     (machineAccumulate w 0 xs).toInt = sumZ xs := by
   apply machineAccumulate_prefix_exact w xs ys (by omega)
   rw [magnitudeSum_perm hperm]
-  have := alignedBits_magnitude (neab := neab) he hb
-  have := count_mul_lt ps.length (23 + neab + 2) carryBits hcount
-  have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show 23 + neab + 2 + carryBits ≤ w - 1 by omega)
+  have := alignedBits_magnitude (padding := padding) he hb
+  have := count_mul_lt ps.length (23 + padding + 2) carryBits hcount
+  have := Nat.pow_le_pow_right (show 0 < 2 by decide) (show 23 + padding + 2 + carryBits ≤ w - 1 by omega)
   omega
 
 /-! ## CDNA 3 register widths -/
@@ -225,6 +225,6 @@ theorem cdna3XF32_machine_eq (x : BlockInput cdna3XF32) : evalBlockMachine 29 x 
 odd and even sums. -/
 theorem cdna3FP8_machine_eq (fa fb : Format) (x : BlockInput (cdna3FP8 fa fb)) :
     evalBlockMachine 31 x = evalBlock x :=
-  evalBlockMachine_eq x 31 4 (by simp [cdna3FP8]) (by simp [cdna3FP8, Model.alignFracBits])
+  evalBlockMachine_eq x 31 4 (by simp [cdna3FP8]) (by simp [cdna3FP8, Model.alignMantissaBits])
 
 end MatrixCore

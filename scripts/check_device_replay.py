@@ -39,7 +39,7 @@ NFMA = {('ada', 'fp16'): 8, ('ada', 'bf16'): 8, ('ada', 'tf32'): 4, ('hopper', '
         ('blackwell', 'E5M2'): 32}
 FP8 = {'E4M3': (3, 4, 7), 'E5M2': (2, 5, 15)}
 NAME = {'fp16': 'f16', 'bf16': 'bf16', 'tf32': 'tf32', 'E4M3': 'e4m3', 'E5M2': 'e5m2'}
-# (fraction bits, exponent bits, bias) of the operand words passed to Lean.
+# (mantissa bits, exponent bits, bias) of the operand words passed to Lean.
 LAYOUT = {'fp16': (10, 5, 15), 'bf16': (7, 8, 127), 'tf32': (23, 8, 127), 'E4M3': (3, 4, 7),
           'E5M2': (2, 5, 15)}
 # Minimum alignment exponents of the FP16, BF16 and TF32 models; FP8 has none (Table 3).

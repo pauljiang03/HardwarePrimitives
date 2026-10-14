@@ -127,7 +127,7 @@ rational arithmetic generate and check further cases:
   independent IEEE decoder, bit-level alignment, and binary search over
   encodings for the output. 0 mismatches.
 - `scripts/check_features.py`: 132 configurations of `K` and `p`, 2,033
-  cases, including edge cases of the extra alignment bits and of subnormals.
+  cases, including edge cases of the padding bits and of subnormals.
   0 mismatches.
 
 The oracles share no code with the Lean model. They agree with it by

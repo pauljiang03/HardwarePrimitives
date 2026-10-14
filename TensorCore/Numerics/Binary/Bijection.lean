@@ -91,14 +91,14 @@ theorem encodeBinary_fields (f : Format) (hf : f.WellFormed) (r : BinaryRep f) :
   by_cases hsub : r.significand < P
   · rw [if_pos (show (r.significand : ℤ) < (P : ℕ) by omega)] at hpay ⊢
     simp only [Int.toNat_natCast]
-    obtain ⟨hfrac, hexp, hsign⟩ := hsgn r.significand hpay
-    rw [hsign, hexp, hfrac, if_pos hsub, Nat.mod_eq_of_lt hsub, Nat.div_eq_of_lt hsub]
+    obtain ⟨hmant, hexp, hsign⟩ := hsgn r.significand hpay
+    rw [hsign, hexp, hmant, if_pos hsub, Nat.mod_eq_of_lt hsub, Nat.div_eq_of_lt hsub]
     simp [hsub]
   · rw [if_neg (show ¬(r.significand : ℤ) < (P : ℕ) by omega)] at hpay ⊢
     have hcast : ((r.significand : ℤ) - (P : ℕ)).toNat = r.significand - P := by omega
     rw [hcast] at hpay ⊢
-    obtain ⟨hfrac, hexp, hsign⟩ := hsgn _ hpay
-    rw [hsign, hexp, hfrac, if_neg hsub, Nat.mul_comm _ P,
+    obtain ⟨hmant, hexp, hsign⟩ := hsgn _ hpay
+    rw [hsign, hexp, hmant, if_neg hsub, Nat.mul_comm _ P,
       Nat.mul_add_mod, Nat.mul_add_div hP,
       Nat.mod_eq_of_lt (show r.significand - P < P by omega),
       Nat.div_eq_of_lt (show r.significand - P < P by omega), Nat.add_zero,
@@ -147,7 +147,7 @@ theorem encode_decodeBinaryRep (f : Format) (hf : f.WellFormed) (b : FiniteBinar
     have h3 := congrArg (fun z => z * P) h2
     rw [Nat.div_div_eq_div_mul] at h3
     grind
-  have hfrac := Nat.mod_lt n hP
+  have hmant := Nat.mod_lt n hP
   have hsign : (if (n / (P * W) != 0) then P * W else 0) = (n / (P * W) : ℕ) * (P * W) := by
     by_cases hz : n / (P * W) = 0
     · simp [hz]

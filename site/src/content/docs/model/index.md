@@ -49,11 +49,11 @@ These are its definitions, unchanged apart from omitted comments:
 
 ```lean
 structure Model where
-  input : Format          -- input format: fp16, bf16, tf19 (packed TF32), e5m2, e4m3x
-  nfma : ℕ                -- K, the FMA size N_FMA
-  alignFracBits : ℤ       -- F = 23 + p, fractional bits kept after alignment
-  eAlignMin : Option ℤ    -- the minimum alignment exponent, if any
-  outputFracBits : ℕ := 23  -- fraction bits of the block output
+  input : Format                -- input format: fp16, bf16, tf19 (packed TF32), e5m2, e4m3x
+  nfma : ℕ                      -- K, the FMA size N_FMA
+  alignMantissaBits : ℤ         -- F = 23 + p, mantissa bits kept after alignment
+  eAlignMin : Option ℤ          -- the minimum alignment exponent, if any
+  outputMantissaBits : ℕ := 23  -- mantissa bits of the block output
 
 structure BlockInput (p : Model) where
   products : List (p.Word × p.Word)   -- encoded (aᵢ, bᵢ) pairs
@@ -67,7 +67,7 @@ def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
   b.model.applyEAlignMin (maxTermExp b.terms)
 
 def PreparedBlock.alignGridExponent (b : PreparedBlock) : ℤ :=
-  b.alignExp.getD 0 - b.model.alignFracBits
+  b.alignExp.getD 0 - b.model.alignMantissaBits
 
 def PreparedBlock.alignedBits (b : PreparedBlock) : List ℤ :=
   b.terms.map fun t => truncBits t.value b.alignGridExponent
@@ -78,7 +78,7 @@ def PreparedBlock.accumulator (b : PreparedBlock) : ℚ :=
 def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate b.accumulator with
   | none => .error .accumulatorOutOfRange
-  | some bits => match finite32 (truncateFraction32 b.model.outputFracBits bits) with
+  | some bits => match finite32 (truncateMantissa32 b.model.outputMantissaBits bits) with
     | none => .error .nonfiniteOutput
     | some d => .ok ⟨b, d⟩
 
@@ -98,18 +98,18 @@ def evalBlock {p : Model} (x : BlockInput p) : Except ModelError BlockTrace :=
 | `mantissaBits` | Mantissa width: how many low bits of the significand lie after the binary point. For a format or an input value, the stored mantissa width (10 for FP16). For a product, the sum of both inputs' widths (20 for FP16 × FP16). value = `significand · 2^(exponent − mantissaBits)` | mantissa bits (`manBits`) |
 | `DenormalizedProduct`, `denormalizedMul` | An exact product kept in that denormalized form | `prod_sig`, `prod_exp` with `denorm_prd` |
 | `alignExp` (η) | Alignment exponent: largest `exponent` of a nonzero term, raised to the minimum alignment exponent | maximum exponent, "capped from below" by `e_align^min` |
-| `alignFracBits` (F) | Fractional bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `n_eab` |
+| `alignMantissaBits` (F) | Mantissa bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `n_eab` |
 | `alignGridExponent` | Exponent of the alignment grid step, `η − F` | |
 | `outputUlpExponent` | Exponent of one unit in the last place of the FP32 output | |
-| `outputFracBits` | Fraction bits of the block output: 23 (binary32), or 13 on the FP8 block FMAs of Ada and Hopper | `NoManBitsOut` (`23 + n_eab` when `n_eab < 0`) |
+| `outputMantissaBits` | Mantissa bits of the block output: 23 (binary32), or 13 on the FP8 block FMAs of Ada and Hopper | `NoManBitsOut` |
 
 Three design choices run through the model:
 
 - **Exact arithmetic everywhere.** Values are `ℤ` and `ℚ`. Neither Lean's
   `Float` nor a floating-point library is used. The only lossy steps are the
   two the hardware performs: the alignment truncation (`truncBits`) and the
-  final rounding (`round32 .truncate`, then `truncateFraction32` to the block
-  output's fraction bits, which changes nothing for a binary32 output).
+  final rounding (`round32 .truncate`, then `truncateMantissa32` to the block
+  output's mantissa bits, which changes nothing for a binary32 output).
 - **Bits in, bits out.** Inputs are `BitVec` words and the output is an
   `F32 = BitVec 32`. Theorems can therefore state facts about exact bit
   patterns, including signed zero.

@@ -210,11 +210,11 @@ accumulator has magnitude at most `A` is within
 `(K + 1)·2^-F·(A + 2^-125 + Σ expMag) + 2^-23·(A + Σ|aᵢbᵢ|) + 2^-149` of the exact sum of its
 inputs. -/
 theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
-    (hz : p.decode 0 = some ⟨0, 0, 0⟩) (hw : 23 ≤ p.outputFracBits) (d : F32)
+    (hz : p.decode 0 = some ⟨0, 0, 0⟩) (hw : 23 ≤ p.outputMantissaBits) (d : F32)
     (ps : List (Option (p.Word × p.Word))) (o : F32)
     (A : ℚ) (hA : Rat.abs ((tcMachine p).val d) ≤ A) (h : (tcMachine p).block d ps = some o) :
     Rat.abs ((tcMachine p).val o - ((tcMachine p).val d + (tcMachine p).slotVal ps)) ≤
-      ((ps.length : ℚ) + 1) * pow2 (-p.alignFracBits) *
+      ((ps.length : ℚ) + 1) * pow2 (-p.alignMantissaBits) *
           (A + pow2 (-125) + ((slotPairs p ps).map (expMag p)).sum) +
         pow2 (-23) * (A + (tcMachine p).slotAbs ps) + pow2 (-149) := by
   have h' : (blockOut (p := p) ⟨slotPairs p ps, d⟩).toOption = some o := h
@@ -297,13 +297,13 @@ theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
               have := (tcMachine p).slotAbs_nonneg ps; grind)
           have := Rat.mul_nonneg (Rat.mul_nonneg (show (0 : ℚ) ≤ (ps.length : ℚ) + 1 by
             have : (0 : ℚ) ≤ (ps.length : ℚ) := by exact_mod_cast Nat.zero_le _
-            grind) (Rat.le_of_lt (pow2_pos (-p.alignFracBits))))
+            grind) (Rat.le_of_lt (pow2_pos (-p.alignMantissaBits))))
             (show 0 ≤ A + pow2 (-125) + ((slotPairs p ps).map (expMag p)).sum by
               have := pow2_pos (-125); grind)
           have := pow2_pos (-149)
           grind
         · obtain ⟨η, hη⟩ := Option.ne_none_iff_exists'.mp hzero
-          have hgrid : t.block.alignGridExponent = η - p.alignFracBits := by
+          have hgrid : t.block.alignGridExponent = η - p.alignMantissaBits := by
             unfold PreparedBlock.alignGridExponent; rw [hη]; rw [← hprep]; rfl
           -- `2^η` is at most the magnitude terms
           have h2η : pow2 η ≤ A + pow2 (-125) + ((slotPairs p ps).map (expMag p)).sum := by
@@ -387,13 +387,13 @@ theorem tc_block_le (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126)
             grind
           have hulp := ulp_bound (value32_output t)
           have hlen' : (t.block.terms.length : ℚ) * pow2 t.block.alignGridExponent ≤
-              ((ps.length : ℚ) + 1) * pow2 (-p.alignFracBits) *
+              ((ps.length : ℚ) + 1) * pow2 (-p.alignMantissaBits) *
                 (A + pow2 (-125) + ((slotPairs p ps).map (expMag p)).sum) := by
-            rw [← hlen, hgrid, show η - p.alignFracBits = η + (-p.alignFracBits) by omega, pow2_add]
+            rw [← hlen, hgrid, show η - p.alignMantissaBits = η + (-p.alignMantissaBits) by omega, pow2_add]
             have hn : (0 : ℚ) ≤ (ps.length : ℚ) + 1 := by
               have : (0 : ℚ) ≤ (ps.length : ℚ) := by exact_mod_cast Nat.zero_le _
               grind
-            have := Rat.mul_le_mul_of_nonneg_right h2η (Rat.le_of_lt (pow2_pos (-p.alignFracBits)))
+            have := Rat.mul_le_mul_of_nonneg_right h2η (Rat.le_of_lt (pow2_pos (-p.alignMantissaBits)))
             have := Rat.mul_le_mul_of_nonneg_left this hn
             grind
           have hulp' : pow2 (outputUlpExponent t.output.bits) ≤
@@ -476,9 +476,9 @@ theorem tc_add_le (p : Model) (x y o : F32) (h : (tcMachine p).add x y = some o)
 /-- The error contract of a Tensor Core model with a binary32 block output: the block contract
 `tc_block_le` and binary32 round-to-nearest addition. -/
 def tcContract (p : Model) (hmin : ∀ f ∈ p.eAlignMin, f ≤ -126) (hz : p.decode 0 = some ⟨0, 0, 0⟩)
-    (hw : 23 ≤ p.outputFracBits) :
+    (hw : 23 ≤ p.outputMantissaBits) :
     MMAlgebra.Contract (tcMachine p) where
-  blockErr A ps := ((ps.length : ℚ) + 1) * pow2 (-p.alignFracBits) *
+  blockErr A ps := ((ps.length : ℚ) + 1) * pow2 (-p.alignMantissaBits) *
       (A + pow2 (-125) + ((slotPairs p ps).map (expMag p)).sum) +
     pow2 (-23) * (A + (tcMachine p).slotAbs ps) + pow2 (-149)
   block_le d ps o A hA h := tc_block_le p hmin hz hw d ps o A hA h
@@ -511,8 +511,8 @@ theorem expMag_le_of_normal (p : Model) (q : p.Word × p.Word) {a b : Decoded}
     have h2 := Rat.mul_le_mul_of_nonneg_left hnb (absQ_nonneg a.value)
     exact Rat.le_trans h1 h2
 
-theorem fp16_decode_zero (K neab : ℕ) (e : Option ℤ) :
-    (fp16Fp32Model K neab e).decode 0 = some ⟨0, 0, 0⟩ := by
+theorem fp16_decode_zero (K padding : ℕ) (e : Option ℤ) :
+    (fp16Fp32Model K padding e).decode 0 = some ⟨0, 0, 0⟩ := by
   show (classify fp16 0).finite = some _; decide +kernel
 
 /-- **Divergence on V100.** Any two reduction terms over the same products and `c` on the V100 fp16

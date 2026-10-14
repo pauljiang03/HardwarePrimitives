@@ -4,7 +4,7 @@ import MatrixCore.Numerics.Grid
 
 The formats of the paper's Table 1, their bit layouts, and decoding of words into exact values.
 A finite value is kept *unpacked*, as the paper writes it: `x = (−1)^σ · s · 2^e`, where the
-significand `s = m / 2^t` is held as the integer `m` with `t` fractional bits, and `e` is the
+significand `s = m / 2^t` is held as the integer `m` with `t` mantissa bits, and `e` is the
 exponent (the minimum normal exponent for subnormals and zero). -/
 
 namespace MatrixCore
@@ -19,7 +19,7 @@ inductive Specials where
   deriving Repr, DecidableEq
 
 /-- A binary interchange layout: sign, `exponentBits`-bit biased exponent, `mantissaBits` stored
-fraction bits. -/
+mantissa bits. -/
 structure Format where
   exponentBits : ℕ
   mantissaBits : ℕ
@@ -31,7 +31,7 @@ namespace Format
 
 @[implicit_reducible] def width (f : Format) : ℕ := 1 + f.exponentBits + f.mantissaBits
 
-/-- Precision `f` of Table 1: stored fraction bits plus the hidden bit. -/
+/-- Precision `f` of Table 1: stored mantissa bits plus the hidden bit. -/
 def precision (f : Format) : ℕ := f.mantissaBits + 1
 
 /-- Minimum normal exponent. -/
@@ -51,7 +51,7 @@ end Format
 @[implicit_reducible] def binary16 : Format := ⟨5, 10, 15, .ieee⟩
 /-- bfloat16 (bf16). -/
 @[implicit_reducible] def bfloat16 : Format := ⟨8, 7, 127, .ieee⟩
-/-- tf19 (TensorFloat-32 values; AMD XF32): binary32's exponent with 10 fraction bits. -/
+/-- tf19 (TensorFloat-32 values; AMD XF32): binary32's exponent with 10 mantissa bits. -/
 @[implicit_reducible] def tf19 : Format := ⟨8, 10, 127, .ieee⟩
 /-- fp8-E4M3 FNUZ: precision 4, minimum normal `2^-7`, maximum `240`. -/
 @[implicit_reducible] def e4m3fnuz : Format := ⟨4, 3, 8, .fnuz⟩
@@ -68,7 +68,7 @@ structure Unpacked where
   m : ℕ
   /-- Exponent `e`; the minimum normal exponent for subnormals and zero. -/
   e : ℤ
-  /-- Fractional bits of the significand. -/
+  /-- Mantissa bits of the significand. -/
   t : ℕ
   deriving Repr, DecidableEq
 
@@ -186,7 +186,7 @@ def value32 (w : F32) : Option ℚ := (binary32.decode w).toFinite.map Unpacked.
 inductive InputFormat where
   /-- The word is a value of the format (fp32, fp16, bf16, fp8 FNUZ). -/
   | packed (f : Format)
-  /-- CDNA 3 XF32: a binary32 word whose significand is reduced to tf19's ten fraction bits by
+  /-- CDNA 3 XF32: a binary32 word whose significand is reduced to tf19's ten mantissa bits by
   truncation. -/
   | xf32
   deriving Repr, DecidableEq
@@ -204,7 +204,7 @@ def format : InputFormat → Format
   | .packed f => f
   | .xf32 => tf19
 
-/-- Truncate a binary32 significand to `10` fractional bits, toward zero. -/
+/-- Truncate a binary32 significand to `10` mantissa bits, toward zero. -/
 def truncateXF32 (x : Unpacked) : Unpacked := ⟨x.negative, x.m / 2 ^ 13, x.e, 10⟩
 
 def read : (i : InputFormat) → i.Word → Datum

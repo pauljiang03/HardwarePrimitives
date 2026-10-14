@@ -3,7 +3,7 @@ import OzakiMC
 /-! # Pinned accumulation on CDNA 3
 
 CDNA 3 (`global_alignment`) aligns the products of a block to their largest exponent `e_max`,
-truncates each to `23 + n_eab` fractional bits, and then adds `c` late. If one nonzero product of
+truncates each to `23 + padding` mantissa bits, and then adds `c` late. If one nonzero product of
 every block has exponent exactly `α` and none exceeds it (a pin, for example `+2^α, −2^α`), then
 `e_max = α`; a `c` on the grid `2^(α−24)` with exponent at most `α` passes the late addition's
 rounding down unchanged; and a sum on that grid below `2^α` is a binary32 value, which round to
@@ -19,7 +19,7 @@ namespace MMAlgebra.MC
 
 
 /-- The truncated sum `Σ trunc_{α−24}(p_ℓ)` of the products of a prepared block. -/
-def truncSum (α : ℤ) (x : Prepared) : ℚ := sumQ (x.p.map fun p => truncFrac p.value α 24)
+def truncSum (α : ℤ) (x : Prepared) : ℚ := sumQ (x.p.map fun p => truncMantissa p.value α 24)
 
 theorem maxExp_eq {ps : List Unpacked} {α : ℤ} (hle : ∀ p ∈ ps, p.m ≠ 0 → p.e ≤ α)
     (hpin : ∃ p ∈ ps, p.m ≠ 0 ∧ p.e = α) : maxExp ps = some α := by
@@ -38,11 +38,11 @@ structure Pinned (α : ℤ) (x : Prepared) : Prop where
   cexp : x.c.m ≠ 0 → x.c.e ≤ α
   cgrid : OnGrid x.c.value (α - 24)
 
-/-- CDNA 3's parameters: global alignment, one extra alignment bit, the default late alignment,
+/-- CDNA 3's parameters: global alignment, one padding bit, the default late alignment,
 `e_{c=0} = −126`, and subnormals kept. -/
 structure CDNA3Like (P : Model) : Prop where
   acc : P.accumulation = .globalAlignment
-  neab : P.neab = 1
+  padding : P.padding = 1
   late : P.late = {}
   cz : P.cZeroExp = some (-126)
   sub : P.subnormals = true
@@ -53,7 +53,7 @@ theorem alignedAccumulation_pinned {P : Model} (hP : CDNA3Like P) {x : Prepared}
     alignedAccumulation P x = truncSum α x + x.c.value := by
   have hps : productSum P x.p = (some α, truncSum α x) := by
     unfold productSum; rw [hP.acc]; simp only
-    unfold alignedSum; rw [maxExp_eq hx.le hx.pin]; simp only [truncSum, hP.neab]
+    unfold alignedSum; rw [maxExp_eq hx.le hx.pin]; simp only [truncSum, hP.padding]
   unfold alignedAccumulation; simp only
   rw [hps]
   rcases lateSum_cases P (some α) (truncSum α x) x.c with
@@ -145,7 +145,7 @@ theorem evalBlock_pinned {P : Model} (hP : CDNA3Like P) {x : BlockInput P} {t : 
             induction ps with
             | nil => exact OnGrid.zero _
             | cons q qs ih =>
-              exact OnGrid.add (by simp only [truncFrac]; exact truncGrid_onGrid _ _) ih
+              exact OnGrid.add (by simp only [truncMantissa]; exact truncGrid_onGrid _ _) ih
           obtain ⟨w, hw, hv⟩ := fl32_finite (grid_finite hg hlo hhi hrange)
           rw [hP.sub] at hd; simp only [Bool.not_true] at hd
           rw [hw] at hd; cases hd; exact hv
@@ -186,7 +186,7 @@ theorem truncSum_onGrid (α : ℤ) (x : Prepared) : OnGrid (truncSum α x) (α -
   generalize x.p = ps
   induction ps with
   | nil => exact OnGrid.zero _
-  | cons q qs ih => exact OnGrid.add (by simp only [truncFrac]; exact truncGrid_onGrid _ _) ih
+  | cons q qs ih => exact OnGrid.add (by simp only [truncMantissa]; exact truncGrid_onGrid _ _) ih
 
 /-- **Pinned CDNA 3 chain.** From `c₀` on the grid `2^(α−24)`, with the products of every block
 pinned at `α` and the running value at every block boundary below `2^α`, the run returns

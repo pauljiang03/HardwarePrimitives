@@ -99,8 +99,8 @@ theorem productSum_none_exact (P : Model) {ps : List Unpacked}
   unfold productSum at h ⊢
   cases hacc : P.accumulation <;> simp only [hacc] at h ⊢
   case oddEvenGrouping =>
-    generalize hO : alignedSum P.neab (oddIndexed ps) = O at h ⊢
-    generalize hE : alignedSum P.neab (evenIndexed ps) = E at h ⊢
+    generalize hO : alignedSum P.padding (oddIndexed ps) = O at h ⊢
+    generalize hE : alignedSum P.padding (evenIndexed ps) = E at h ⊢
     obtain ⟨eo, So⟩ := O
     obtain ⟨ee, Se⟩ := E
     simp only at h ⊢
@@ -115,7 +115,7 @@ theorem productSum_none_exact (P : Model) {ps : List Unpacked}
         (alignedSum_none_exact hE).2]
       decide +kernel
   all_goals
-    cases hs : alignedSum P.neab ps with
+    cases hs : alignedSum P.padding ps with
     | mk o S =>
       rw [hs] at h
       change o = none at h
@@ -171,7 +171,7 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
     obtain ⟨h0, hz⟩ := productSum_none_exact P hs
     simp only [gridTerm]
     unfold shiftedSum
-    rw [h0, hL.accFrac, show rdFrac 0 eC P.late.sumFracBits = 0 from rdGrid_zero _, hex, hz]
+    rw [h0, hL.accMantissa, show rdMantissa 0 eC P.late.sumMantissaBits = 0 from rdGrid_zero _, hex, hz]
     have hN := normalizeRD_error (0 + x.c.value)
     rw [Rat.zero_add] at hN ⊢
     rw [c31] at hN
@@ -182,14 +182,14 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
     grind
   | some e =>
     have hpe := productSum_error P (show productSum P x.p = (some e, (productSum P x.p).2) by rw [← hs])
-    rw [show e - ((23 + P.neab : ℕ) : ℤ) = e - 24 by rw [hL.neab]; rfl] at hpe
+    rw [show e - ((23 + P.padding : ℕ) : ℤ) = e - 24 by rw [hL.padding]; rfl] at hpe
     simp only [gridTerm]
     have hG := pow2_pos (e - 24)
     by_cases hle : eC ≤ e
     · simp only [hle, ↓reduceIte]
-      have hsc := shiftedC_error P (eMax := e) x.c (fun n h => by rw [hL.cFrac]; exact hL.cut n h)
+      have hsc := shiftedC_error P (eMax := e) x.c (fun n h => by rw [hL.cMantissa]; exact hL.cut n h)
         (h32.lt)
-      rw [hL.cFrac] at hsc
+      rw [hL.cMantissa] at hsc
       have t := absQ_add_le (sumQ (x.p.map Unpacked.value) - (productSum P x.p).2)
         (x.c.value - shiftedC P e eC x.c)
       rw [show sumQ (x.p.map Unpacked.value) - (productSum P x.p).2 + (x.c.value - shiftedC P e eC x.c) =
@@ -199,7 +199,7 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
       grind
     · simp only [hle, ↓reduceIte]
       unfold shiftedSum
-      rw [hL.accFrac, hL.sumFrac]
+      rw [hL.accMantissa, hL.sumMantissa]
       show absQ (x.exact - normalizeRD 31 (rdGrid (productSum P x.p).2 (eC - ((32 : ℕ) : ℤ)) + x.c.value)) ≤ _
       generalize hS : (productSum P x.p).2 = S at hpe
       have ⟨r1, r2⟩ := rdGrid_bounds S (eC - ((32 : ℕ) : ℤ))

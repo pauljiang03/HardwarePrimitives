@@ -8,7 +8,7 @@ namespace TensorCore.IndependentSpec
 
 @[implicit_reducible] def layoutOf (f : Format) : Layout := ⟨f.mantissaBits, f.exponentBits, f.bias⟩
 def parametersOf (p : Model) : Parameters :=
-  ⟨layoutOf p.input, p.nfma, p.alignFracBits, p.eAlignMin⟩
+  ⟨layoutOf p.input, p.nfma, p.alignMantissaBits, p.eAlignMin⟩
 def inputOf {p : Model} (x : BlockInput p) : Input (parametersOf p) := ⟨x.products, x.c⟩
 def termOf (d : Decoded) : Term := ⟨d.value, d.exponent⟩
 def denormalizedTermOf (t : DenormalizedProduct) : Term := ⟨t.value, t.exponent⟩

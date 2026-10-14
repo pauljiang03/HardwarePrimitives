@@ -1,7 +1,7 @@
 import TensorCore.Numerics.CorrectRounding
 import TensorCore.TC.StageResiduals
 import TensorCore.TC.AlignmentExponent
-import TensorCore.TC.ExtraAlignmentBits
+import TensorCore.TC.Padding
 
 /-! Non-monotonicity of the model under a smaller C. -/
 
@@ -58,7 +58,7 @@ theorem denormalizedMul_significand_ne_zero (da db : Decoded) (p : ℕ)
 
 /-- Accumulator with `c = 1`: every product truncates to zero. -/
 theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
+    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) oneDecoded).accumulator = 1 := by
   have hu := denormalizedMul_significand_ne_zero da db p hval
@@ -69,7 +69,7 @@ theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded
       -(23 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change oneDecoded.exponent - prof.alignFracBits = _
+    change oneDecoded.exponent - prof.alignMantissaBits = _
     rw [hF]
     simp only [oneDecoded]
     omega
@@ -99,7 +99,7 @@ theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded
 
 /-- Accumulator with `c' = 1 − 2^-24`: every product is retained. -/
 theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
+    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) belowOneDecoded).accumulator =
       ((16777215 * 2 ^ p + K : ℕ) : ℚ) * pow2 (-(24 + p)) := by
@@ -109,7 +109,7 @@ theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decod
       -(24 + p) := by
     unfold PreparedBlock.alignGridExponent
     rw [heta]
-    change belowOneDecoded.exponent - prof.alignFracBits = _
+    change belowOneDecoded.exponent - prof.alignMantissaBits = _
     rw [hF]
     simp only [belowOneDecoded]
     omega
@@ -136,8 +136,8 @@ theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decod
 
 /-- TC-EFT Theorem III.4. -/
 theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
-    (hF : prof.alignFracBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
-    (hw : 23 ≤ prof.outputFracBits)
+    (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
+    (hw : 23 ≤ prof.outputMantissaBits)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
     (hK : K < 2 ^ (24 + p)) :
     ∃ t t' : BlockTrace,
@@ -182,8 +182,8 @@ theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
   obtain ⟨f2, hf2, _, hf2v⟩ := finite32_of_value32 _ _ hv2
   refine ⟨⟨⟨prof, List.replicate K (da, db), oneDecoded⟩, f1⟩,
     ⟨⟨prof, List.replicate K (da, db), belowOneDecoded⟩, f2⟩, ?_, ?_, hf1v, ?_⟩
-  · simp only [evalPrepared, hA1, hr1, truncateFraction32_of_le hw, hf1]
-  · simp only [evalPrepared, hA2, hb2, truncateFraction32_of_le hw, hf2]
+  · simp only [evalPrepared, hA1, hr1, truncateMantissa32_of_le hw, hf1]
+  · simp only [evalPrepared, hA2, hb2, truncateMantissa32_of_le hw, hf2]
   · change 1 < f2.value ↔ _
     rw [hf2v]
     unfold signedRounded
@@ -283,7 +283,7 @@ theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f �
       evalBlock (⟨List.replicate K (a, b), 0x3f7fffff⟩ : BlockInput (fp16Fp32Model K p eAlignMin)) =
         .ok t' ∧
       t.output.value = 1 ∧ (1 < t'.output.value ↔ 3 * 2 ^ p ≤ K) := by
-  have hF : (fp16Fp32Model K p eAlignMin).alignFracBits = 23 + p := by
+  have hF : (fp16Fp32Model K p eAlignMin).alignMantissaBits = 23 + p := by
     show ((23 + p : ℕ) : ℤ) = 23 + (p : ℤ)
     omega
   obtain ⟨t, t', h1, h2, hv, hiff⟩ :=

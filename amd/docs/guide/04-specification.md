@@ -7,9 +7,9 @@ paper's fixed-point language rather than the model's grid operations:
 * Table 1 layouts and IEEE/FNUZ field decoding (`Spec.decode`);
 * products by multiplying significands and adding exponents (`Spec.mul`);
 * `e_max` as the maximum over the nonzero products (`Spec.emax`);
-* "align to `e_max` and truncate to `F` fractional bits" as the integer
+* alignment to `e_max` with truncation to `F` mantissa bits as the integer
   `⌊M · 2^(e_p − f − (e_max − F))⌋` with the sign restored (`Spec.alignTrunc`);
-* "shift and RD to `k` fractional bits" as a floor division by a power of two (`Spec.shiftRD`);
+* a shift with RD to `k` mantissa bits as a floor division by a power of two (`Spec.shiftRD`);
 * the subnormal-aware normalization from the bit length of the integer `S_acc`
   (`Spec.shiftedBranch`);
 * Algorithms 1 and 2 (`Spec.algorithm1`, `Spec.algorithm2`, with `Spec.lateC` for lines 3–11);

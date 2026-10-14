@@ -252,7 +252,7 @@ and the Lean files in [`scripts/targeted/`](scripts/targeted/) produce
 [`data/targeted-validation.md`](data/targeted-validation.md)). It holds 140 cases, 85 for NVIDIA and
 55 for AMD, whose predicted outputs distinguish the models' numerical features: full block FMAs,
 cancellation, two passes, non-monotonicity, minimum alignment exponents, signed zeros, subnormals,
-TF32 and extra alignment bits. Each case gives the input words, a suggested instruction, the
+TF32 and padding bits. Each case gives the input words, a suggested instruction, the
 predicted output word and what a mismatch would mean. Of the cases, 56 come from theorems, whose
 values the script re-checks. The suite has not yet been run on hardware.
 
@@ -398,7 +398,7 @@ What changes from the Z3 models:
 
 A CDNA block computes `S_acc` by one of three configurations and rounds it once to binary32 with
 round to nearest: CDNA 1 sums exactly, CDNA 2 rounds pairwise sums of binary32 products in groups and
-flushes subnormals to zero, and CDNA 3 aligns the products to `24` fractional bits and adds `c` late with
+flushes subnormals to zero, and CDNA 3 aligns the products to `24` mantissa bits and adds `c` late with
 two rounding-down steps. For integer operands and an integer `c` with `|c| + Σ|aᵢbᵢ| ≤ 2^24`, all
 three return `c + Σ aᵢbᵢ` exactly (`Ozaki.MC.evalBlock_int`), across chained blocks and inner
 products of any length (`Ozaki.MC.runBlocks_int`, `Ozaki.MC.dotBits_int`). The matrix multiplier is

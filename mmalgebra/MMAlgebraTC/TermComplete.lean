@@ -111,12 +111,12 @@ theorem tc_add_good (p : Model) (x y o : F32) (h : (tcMachine p).add x y = some 
   round32_rne_good (onGridQ_add (value32D_onGridQ x) (value32D_onGridQ y)) h
 
 /-- The laws of a rigid multiplier, for the fp16 Tensor Core models. -/
-def fp16Alg (K neab : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126) :
-    MMAlgebra.RigidAlg (tcMachine (fp16Fp32Model K neab eAlignMin)) K :=
-  { fp16Laws K neab eAlignMin hfl with
+def fp16Alg (K padding : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126) :
+    MMAlgebra.RigidAlg (tcMachine (fp16Fp32Model K padding eAlignMin)) K :=
+  { fp16Laws K padding eAlignMin hfl with
     add_comm := tc_add_comm _
     add_zero := fun x hx => tc_add_zero _ x hx
-    block_good := fp16_block_good K neab eAlignMin
+    block_good := fp16_block_good K padding eAlignMin
     add_good := tc_add_good _ }
 
 /-! ## Fingerprint tables -/

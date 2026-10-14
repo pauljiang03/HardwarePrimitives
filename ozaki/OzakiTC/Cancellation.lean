@@ -37,7 +37,7 @@ namespace Ozaki.TC
 theorem int_product_term {p : Model} {b : ℕ} (hp : IntExact p b) {q : p.Word × p.Word}
     (hq : IntWord p b q.1 ∧ IntWord p b q.2)
     (hnz : (denormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0) :
-    (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignFracBits ∧
+    (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignMantissaBits ∧
       ∃ k : ℤ, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
   obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hq
   simp only [denormalizedMul] at hnz ⊢
@@ -71,7 +71,7 @@ theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInp
     (hlen : x.products.length = p.nfma)
     (hops : ∀ q ∈ x.products, IntWord p b q.1 ∧ IntWord p b q.2)
     {zc : ℤ} (hc : value32 x.c = some (zc : ℚ))
-    (hcF : Rat.abs (zc : ℚ) < 2 ^ (p.alignFracBits + 1))
+    (hcF : Rat.abs (zc : ℚ) < 2 ^ (p.alignMantissaBits + 1))
     (hfin : FiniteValue32 ((zc : ℚ) + wordProducts p x.products)) :
     ∃ t, evalBlock x = .ok t ∧ t.output.value = zc + wordProducts p x.products := by
   obtain ⟨dc, hdc, hdcv⟩ := decode32_isSome_of_value32 hc
@@ -91,7 +91,7 @@ theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInp
       x.products.map fun q => denormalizedMul (decodeD p q.1) (decodeD p q.2) := by
     rw [← hblk]; simp [PreparedBlock.terms, List.map_map, Function.comp_def]
   have hprof : blk.model = p := by rw [← hblk]
-  have hbias : (1 : ℤ) - fp32.bias ≤ p.alignFracBits := by
+  have hbias : (1 : ℤ) - fp32.bias ≤ p.alignMantissaBits := by
     have : fp32.bias = 127 := rfl
     have := hp.wide; omega
   have hacc : blk.accumulator = blk.exactDot := by
@@ -101,9 +101,9 @@ theorem evalBlock_cancel {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInp
       rw [hterms] at ht
       rcases List.mem_cons.mp ht with rfl | ht
       · refine ⟨?_, zc, ?_⟩
-        · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := p.alignFracBits)
+        · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := p.alignMantissaBits)
             hbias (by rw [hdcv]; exact hcF) hnz
-          show dc.exponent ≤ 0 + blk.model.alignFracBits
+          show dc.exponent ≤ 0 + blk.model.alignMantissaBits
           rw [hprof]; omega
         · change dc.value = _; rw [hdcv, pow2_zero, Rat.mul_one]
       · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht
@@ -122,7 +122,7 @@ theorem evalBlock_exact_needs_binary32 {p : Model} {x : BlockInput p} {t : Block
 
 /-- `2^24 ≤ 2^(F+1)` on every variant (`F ≥ 23`). -/
 theorem two_pow_24_le {p : Model} {b : ℕ} (hp : IntExact p b) :
-    (2 : ℚ) ^ (24 : ℤ) ≤ 2 ^ (p.alignFracBits + 1) :=
+    (2 : ℚ) ^ (24 : ℤ) ≤ 2 ^ (p.alignMantissaBits + 1) :=
   two_pow_le (by have := hp.wide; omega)
 
 /-- **Exact integer block with cancellation**: `|c| < 2^24` and `|c + Σ aᵢbᵢ| ≤ 2^24` suffice. -/

@@ -78,7 +78,7 @@ import MatrixCoreTests.Support
 open MatrixCore MatrixCoreTests
 
 -- CDNA 3 bf16: c = 0, p₁ = 2^-150, p₂ = 2^-153: aligned to e_c = −126 and rounded down to
--- 31 fractional bits, S_acc = 2^-150 + 2^-153 rounds up to 2^-149.
+-- 31 mantissa bits, S_acc = 2^-150 + 2^-153 rounds up to 2^-149.
 example : observeP cdna3BF16 [p2 (-150), p2 (-153)] (0 : ℚ) = some (.v (p2 (-149))) := by
   decide +kernel
 ```

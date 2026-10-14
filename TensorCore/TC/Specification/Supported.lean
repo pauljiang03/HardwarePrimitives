@@ -48,16 +48,16 @@ theorem blackwell_fp8_eq_spec :
 
 /-- The compatibility layer transfers the result to the public aligned invocation API. -/
 theorem invocation_eq_spec {p : Model} (x : BlockInput p) (F : ℕ)
-    (hf : p.input.WellFormed) (hF : p.alignFracBits = F) (hw : 23 ≤ p.outputFracBits) :
+    (hf : p.input.WellFormed) (hF : p.alignMantissaBits = F) (hw : 23 ≤ p.outputMantissaBits) :
     invocationBits (x.toInvocation F) = bits (parametersOf p) (inputOf x) := by
   rw [legacy_invocation_bits x F hf hF hw]
   exact evalBlock_eq_spec x hw
 
 /-- Register-level TF32 agreement on every correctly padded input. -/
-theorem tf32_eq_spec (K neab : ℕ) (eAlignMin : Option ℤ)
+theorem tf32_eq_spec (K padding : ℕ) (eAlignMin : Option ℤ)
     (ps : List (tf32Register.Word × tf32Register.Word)) (c : F32)
     (hp : ∀ pair ∈ ps, tf32Padded pair.1 = true ∧ tf32Padded pair.2 = true) :
-    tf32InvocationBits K (23 + neab) eAlignMin ps c = tf32Bits K neab eAlignMin ps c := by
+    tf32InvocationBits K (23 + padding) eAlignMin ps c = tf32Bits K padding eAlignMin ps c := by
   have hpad : paddedTF32 ps = true := by
     apply List.all_eq_true.mpr
     intro pair hpair
@@ -67,7 +67,7 @@ theorem tf32_eq_spec (K neab : ℕ) (eAlignMin : Option ℤ)
     change (pair.2.toNat % 8192 == 0) = true at hb
     rw [ha, hb]
     rfl
-  rw [tf32_invocation_bits K neab eAlignMin ps c hp, evalBlock_eq_spec _ (Nat.le_refl 23)]
+  rw [tf32_invocation_bits K padding eAlignMin ps c hp, evalBlock_eq_spec _ (Nat.le_refl 23)]
   simp only [tf32Bits, hpad, ↓reduceIte]
   rfl
 

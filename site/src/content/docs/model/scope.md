@@ -32,7 +32,7 @@ description: What the Lean Tensor Core model covers and what it deliberately lea
   `maxFinite32` down to it.
 - **FP16 or BF16 output.** The validated variants all produce FP32. The
   13-bit block output of Ada and Hopper FP8 is a binary32 word with its ten
-  low fraction bits zero.
+  low mantissa bits zero.
 - **FP4 and FP6**, the FP8 `mma.sync` path of H100 and H200 (FP8 converted
   to FP16 for HMMA, with `C` added late), and the Blackwell instructions
   *Accurate Models* does not characterize are not modeled. GPUs after

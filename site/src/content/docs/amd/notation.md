@@ -16,7 +16,7 @@ d = Σ_{ℓ=1}^{k} a_ℓ b_ℓ + c = Σ_{ℓ=1}^{k} p_ℓ + c,
 
 evaluated in blocks of `N_FMA` products. A finite value is written
 `x = s · 2^e`, with significand `s` and exponent `e`. In Lean an `Unpacked`
-value keeps the significand as an integer `m` with `t` fractional bits
+value keeps the significand as an integer `m` with `t` mantissa bits
 (`s = m / 2^t`), and gives subnormals and zero the minimum normal exponent.
 
 | Paper | Meaning | Lean |
@@ -25,17 +25,17 @@ value keeps the significand as an integer `m` with `t` fractional bits
 | `p_ℓ = a_ℓ b_ℓ` | full-precision, denormalized product: `s_p = s_a s_b ∈ [0, 4)`, `e_p = e_a + e_b` | `Unpacked.mul`, `Prepared.p` |
 | `Σ p_ℓ + c` exactly | | `Prepared.exact` |
 | `N_FMA` | FMA size: the number of products in a single multi-term addition | `Model.nfma` |
-| `n_eab` | extra alignment bits: products keep `23 + n_eab` fractional bits | `Model.neab` |
+| `n_eab` | the padding bits: products keep `23 + padding` mantissa bits | `Model.padding` |
 | `e_max` | largest exponent of the nonzero products | `maxExp` |
 | `S_{p_i,sum}` | sum of the aligned products | `productSum`, `alignedSum` |
 | `e_c` | exponent of `c` (`−126` for subnormal `c`) | `cExp` |
 | `e_{c=0}` | exponent given to `c = 0` (`−126`, or `−∞`) | `Model.cZeroExp` |
-| `s′_c` | `s_c` shifted right by `e_max − e_c`, rounded down to 24 fractional bits | `shiftedC` |
-| `S′_{p_i,sum}` | `S_{p_i,sum}` shifted right by `e_c − e_max`, rounded down to 32 fractional bits | `shiftedSum` |
+| `s′_c` | `s_c` shifted right by `e_max − e_c`, rounded down to 24 mantissa bits | `shiftedC` |
+| `S′_{p_i,sum}` | `S_{p_i,sum}` shifted right by `e_c − e_max`, rounded down to 32 mantissa bits | `shiftedSum` |
 | `S_acc` | the accumulated significand presented to the final rounding | `BlockTrace.sAcc`, `alignedAccumulation` |
 | `fl{·}` | normalize and round to binary32 with round to nearest even | `rne32`, `fl32` (with flush to zero), `flValue` |
-| RD | round toward `−∞` on a fixed-point grid | `rdGrid`, `rdFrac` |
-| truncation | magnitude truncation on a fixed-point grid | `truncGrid`, `truncFrac` |
+| RD | round toward `−∞` on a fixed-point grid | `rdGrid`, `rdMantissa` |
+| truncation | magnitude truncation on a fixed-point grid | `truncGrid`, `truncMantissa` |
 | SFMA | `(…((c + p₁) + p₂) + …)` | `sfmaF32` with `dotBits` |
 
 ## The feature table
@@ -50,7 +50,7 @@ row is a field or a derived property of `Model`:
 | `N_FMA` | `Model.nfma` | 8 (16 for binary8, 4 for XF32) |
 | `e_{c=0}` | `Model.cZeroExp` | `−126` |
 | `c` late or early | `Model.lateC` | late |
-| `align(c, S_{p_i-sum})` `(24, 32, RD)` | `LateAlignment.cFracBits`, `.sumFracBits` | 24, 32 |
+| `align(c, S_{p_i-sum})` `(24, 32, RD)` | `LateAlignment.cMantissaBits`, `.sumMantissaBits` | 24, 32 |
 | Output rounding | `fl{·}` is round to nearest even on every CDNA variant | round to nearest even |
 | `\|p_i\|` overflow | `Model.productOverflow` | `2^128` |
 
@@ -76,4 +76,4 @@ row is a field or a derived property of `Model`:
 
 FNUZ formats have no infinities and no negative zero; the negative-zero word
 is NaN. XF32 reads a binary32 word and truncates its significand to ten
-fraction bits.
+mantissa bits.

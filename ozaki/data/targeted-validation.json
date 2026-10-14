@@ -6,7 +6,7 @@
   "words": "hex; fp16/bf16 16-bit, tf32 the 19-bit tf19 word (a_fp32_register / b_fp32_register give the 32-bit register words, low 13 bits zero), binary32 and xf32 32-bit, fp8 8-bit FNUZ.",
   "blocks": "NVIDIA: k is split into contiguous block FMAs of size fma_size_K, the FP32 output of each block FMA the c of the next. AMD: blocks of N_FMA, chained the same way.",
   "zero_fill": "On an instruction with a larger k, place the vector in k = 0..len-1 and zeros elsewhere (a block FMA whose products are all zero returns c unchanged when c is finite and not -0); signed-zero cases need k equal to the vector length.",
-  "alternatives": "the same input evaluated by the model under a nearby hypothesis (another minimum alignment exponent, number of extra alignment bits or FMA size): which one the hardware matches localises a mismatch."
+  "alternatives": "the same input evaluated by the model under a nearby hypothesis (another minimum alignment exponent, number of padding bits or FMA size): which one the hardware matches localises a mismatch."
  },
  "predictions": {
   "NVIDIA": "computed by #eval of TensorCore.runBlocks in ozaki/scripts/targeted/TensorCoreCases.lean; models in TensorCore/TC/CanonicalDefs.lean, TensorCore/TC/CanonicalFormatDefs.lean",
@@ -22,7 +22,7 @@
   "subnormal": 34,
   "tf32-exponent-range": 12,
   "h100-tf32-mma": 8,
-  "extra-alignment-bits": 4
+  "padding-bits": 4
  },
  "cases": [
   {
@@ -48,7 +48,7 @@
    },
    "exact_sum": "29331463",
    "lean_source": "Ozaki.TC.a100_full_blockFMA (ozaki/OzakiTC/Limits.lean:51)",
-   "mismatch_means": "0x4BDFC804 (29331464) means the final conversion rounds to nearest rather than truncating; any other value means that the FMA size, the alignment to F = 24 fraction bits or the exact sum inside the block FMA is wrong. This is the case that limits Ozaki slices to fewer bits on A100.",
+   "mismatch_means": "0x4BDFC804 (29331464) means the final conversion rounds to nearest rather than truncating; any other value means that the FMA size, the alignment to F = 24 mantissa bits or the exact sum inside the block FMA is wrong. This is the case that limits Ozaki slices to fewer bits on A100.",
    "agrees_with_theorem": true
   },
   {
@@ -3589,7 +3589,7 @@
     "b_fp32_register": ["0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000"]
    },
    "category": "h100-tf32-mma",
-   "purpose": "Extra-alignment-bits probe: c = 1 and eight products 1.5 * 2^-25. With F = 23 + p each product keeps floor(1.5 * 2^(p - 2)) grid units: p = 1 gives 1.0, p = 2 (model) 0x3F800002, p = 3 0x3F800003.",
+   "purpose": "Padding-bits probe: c = 1 and eight products 1.5 * 2^-25. With F = 23 + p each product keeps floor(1.5 * 2^(p - 2)) grid units: p = 1 gives 1.0, p = 2 (model) 0x3F800002, p = 3 0x3F800003.",
    "architecture": "H100",
    "instruction": "H100: mma.sync.aligned.m16n8k8.row.col.f32.tf32.tf32.f32 (k = 8, one block FMA of size 8)",
    "predicted": {
@@ -3636,7 +3636,7 @@
    },
    "exact_sum": "8388609 * 2^-23",
    "lean_source": "constructed; TensorCore.nonmonotone_encoded (TensorCore/TC/Monotonicity.lean:273), below_threshold_monotone (tests/TensorCoreTests/TC/Monotonicity.lean:113)",
-   "mismatch_means": "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer extra alignment bits on the TF32 MMA variant.",
+   "mismatch_means": "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer padding bits on the TF32 MMA variant.",
    "family": "nv-h100-tf32mma-c-family"
   },
   {
@@ -3664,7 +3664,7 @@
    },
    "exact_sum": "16777217 * 2^-24",
    "lean_source": "constructed; TensorCore.nonmonotone_encoded (TensorCore/TC/Monotonicity.lean:273), below_threshold_monotone (tests/TensorCoreTests/TC/Monotonicity.lean:113)",
-   "mismatch_means": "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer extra alignment bits on the TF32 MMA variant.",
+   "mismatch_means": "0x3F800001 for c = 1 - 1ulp would mean an FMA size larger than 8 or fewer padding bits on the TF32 MMA variant.",
    "family": "nv-h100-tf32mma-c-family"
   },
   {
@@ -3681,8 +3681,8 @@
     "a_fp32_register": ["0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000"],
     "b_fp32_register": ["0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000"]
    },
-   "category": "extra-alignment-bits",
-   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "category": "padding-bits",
+   "purpose": "The same padding-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
    "architecture": "H100",
    "instruction": "H100: wmma.mma.sync.aligned.m16n16k8.f32.tf32.tf32.f32 (k = 8, two chained block FMAs of size 4); extend 4-term vectors with zeros",
    "predicted": {
@@ -3692,7 +3692,7 @@
    },
    "exact_sum": "8388611 * 2^-23",
    "lean_source": "constructed",
-   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives)."
+   "mismatch_means": "The output identifies the number of padding bits p (see alternatives)."
   },
   {
    "vendor": "NVIDIA",
@@ -3708,8 +3708,8 @@
     "a_fp32_register": ["0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000", "0x39C00000"],
     "b_fp32_register": ["0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000", "0x39000000"]
    },
-   "category": "extra-alignment-bits",
-   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "category": "padding-bits",
+   "purpose": "The same padding-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
    "architecture": "A100",
    "instruction": "A100: mma.sync.aligned.m16n8k4.row.col.f32.tf32.tf32.f32 (k = 4, one block FMA); 8-term vectors: m16n8k8 (two chained block FMAs of size 4)",
    "predicted": {
@@ -3719,7 +3719,7 @@
    },
    "exact_sum": "8388611 * 2^-23",
    "lean_source": "constructed",
-   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives).",
+   "mismatch_means": "The output identifies the number of padding bits p (see alternatives).",
    "alternatives": [
     {
      "hypothesis": "p2 (tf32 K=4 F=25 eAlignMin -132)",
@@ -3739,8 +3739,8 @@
     "a": ["0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0"],
     "b": ["0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900"]
    },
-   "category": "extra-alignment-bits",
-   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "category": "padding-bits",
+   "purpose": "The same padding-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
    "architecture": "A100",
    "instruction": "A100: mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32 (k = 8, one block FMA)",
    "predicted": {
@@ -3750,7 +3750,7 @@
    },
    "exact_sum": "8388611 * 2^-23",
    "lean_source": "constructed",
-   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives).",
+   "mismatch_means": "The output identifies the number of padding bits p (see alternatives).",
    "alternatives": [
     {
      "hypothesis": "p2 (bf16 K=8 F=25 eAlignMin -132)",
@@ -3770,8 +3770,8 @@
     "a": ["0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0", "0x39C0"],
     "b": ["0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900", "0x3900"]
    },
-   "category": "extra-alignment-bits",
-   "purpose": "The same extra-alignment-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
+   "category": "padding-bits",
+   "purpose": "The same padding-bits probe on another BF16 / TF32 variant (c = 1, products 1.5 * 2^-25).",
    "architecture": "H100",
    "instruction": "H100: mma.sync.aligned.m16n8k16.row.col.f32.bf16.bf16.f32 (k = 16, one block FMA)",
    "predicted": {
@@ -3781,7 +3781,7 @@
    },
    "exact_sum": "4194307 * 2^-22",
    "lean_source": "constructed",
-   "mismatch_means": "The output identifies the number of extra alignment bits p (see alternatives).",
+   "mismatch_means": "The output identifies the number of padding bits p (see alternatives).",
    "alternatives": [
     {
      "hypothesis": "p1 (bf16 K=16 F=24 eAlignMin -133)",

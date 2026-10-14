@@ -20,7 +20,7 @@ theorem nonmonotone_v100_family (K : ℕ) (hK : K < 2 ^ 24) :
     (by show (classify fp16 0x0c00).finite = some _; decide +kernel)
     (by decide +kernel) (by decide +kernel) hK
 
-/-- Ampere family: one extra alignment bit, minimum alignment exponent `−132`, products `2^-12 · 2^-13`. -/
+/-- Ampere family: one padding bit, minimum alignment exponent `−132`, products `2^-12 · 2^-13`. -/
 theorem nonmonotone_ampere_family (K : ℕ) (hK : K < 2 ^ 25) :
     ∃ t t' : BlockTrace,
       evalBlock (⟨List.replicate K (0x0c00, 0x0800), 0x3f800000⟩ :
@@ -33,7 +33,7 @@ theorem nonmonotone_ampere_family (K : ℕ) (hK : K < 2 ^ 25) :
     (by show (classify fp16 0x0800).finite = some _; decide +kernel)
     (by decide +kernel) (by decide +kernel) hK
 
-/-- Hopper family: two extra alignment bits, minimum alignment exponent `−133`, products `2^-12 · 2^-14`. -/
+/-- Hopper family: two padding bits, minimum alignment exponent `−133`, products `2^-12 · 2^-14`. -/
 theorem nonmonotone_hopper_family (K : ℕ) (hK : K < 2 ^ 26) :
     ∃ t t' : BlockTrace,
       evalBlock (⟨List.replicate K (0x0c00, 0x0400), 0x3f800000⟩ :

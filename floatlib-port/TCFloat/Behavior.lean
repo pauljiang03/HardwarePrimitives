@@ -90,13 +90,13 @@ theorem v100_nonmonotonic :
     evalWords v100 (List.replicate 4 (0x0c00,0x0c00)) 0x3f7fffff = some 0x3f800001 := by
   decide +kernel
 
-/-- The same phenomenon with the extra alignment bit of the A100 model. -/
+/-- The same phenomenon with the padding bit of the A100 model. -/
 theorem a100_nonmonotonic :
     evalWords a100 (List.replicate 8 (0x0c00,0x0800)) 0x3f800000 = some 0x3f800000 ∧
     evalWords a100 (List.replicate 8 (0x0c00,0x0800)) 0x3f7fffff = some 0x3f800001 := by
   decide +kernel
 
-/-- The same phenomenon with the two extra alignment bits of the H100 model. -/
+/-- The same phenomenon with the two padding bits of the H100 model. -/
 theorem h100_nonmonotonic :
     evalWords h100 (List.replicate 16 (0x0c00,0x0400)) 0x3f800000 = some 0x3f800000 ∧
     evalWords h100 (List.replicate 16 (0x0c00,0x0400)) 0x3f7fffff = some 0x3f800001 := by

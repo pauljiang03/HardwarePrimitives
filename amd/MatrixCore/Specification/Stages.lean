@@ -11,7 +11,7 @@ open MatrixCore
 
 /-- The specification's late-addition parameters of a model. -/
 def lateOf (P : Model) : Late :=
-  ⟨P.neab, P.late.cFracBits, P.late.sumFracBits, P.late.accFracBits, P.late.cCutoff, P.cZeroExp⟩
+  ⟨P.padding, P.late.cMantissaBits, P.late.sumMantissaBits, P.late.accMantissaBits, P.late.cCutoff, P.cZeroExp⟩
 
 theorem cExp_eq (P : Model) (c : Unpacked) : cExp (lateOf P) (numOf c) = MatrixCore.cExp P c := rfl
 
@@ -34,15 +34,15 @@ theorem c_onGrid (c : Unpacked) (ec : ℤ) (k : ℕ) (hc : c.t ≤ k)
   · rw [hec hm]; exact c.value_onGrid.mono (by omega)
 
 theorem shiftedBranch_eq (P : Model) (S : ℤ) (g : ℤ) (c : Unpacked) (ec : ℤ)
-    (hc : c.t ≤ P.late.sumFracBits) (hec : c.m ≠ 0 → ec = c.e) :
+    (hc : c.t ≤ P.late.sumMantissaBits) (hec : c.m ≠ 0 → ec = c.e) :
     shiftedBranch (lateOf P) S g (numOf c) ec = shiftedSum P ec ((S : ℚ) * pow2 g) c := by
   unfold shiftedBranch shiftedSum normalizeRD
   simp only [lateOf]
-  obtain ⟨A, hA⟩ : ∃ A, shiftRD S g (ec - P.late.sumFracBits) +
-      shiftRD (numOf c).int ((numOf c).e - (numOf c).f) (ec - P.late.sumFracBits) = A := ⟨_, rfl⟩
+  obtain ⟨A, hA⟩ : ∃ A, shiftRD S g (ec - P.late.sumMantissaBits) +
+      shiftRD (numOf c).int ((numOf c).e - (numOf c).f) (ec - P.late.sumMantissaBits) = A := ⟨_, rfl⟩
   simp only [hA]
-  have hT : (A : ℚ) * pow2 (ec - P.late.sumFracBits) =
-      rdFrac ((S : ℚ) * pow2 g) ec P.late.sumFracBits + c.value := by
+  have hT : (A : ℚ) * pow2 (ec - P.late.sumMantissaBits) =
+      rdMantissa ((S : ℚ) * pow2 g) ec P.late.sumMantissaBits + c.value := by
     rw [← hA, intCast_shiftRD_add]
     congr 1
     have hcv : ((numOf c).int : ℚ) * pow2 ((numOf c).e - (numOf c).f) = c.value := int_numOf_val c
@@ -51,14 +51,14 @@ theorem shiftedBranch_eq (P : Model) (S : ℤ) (g : ℤ) (c : Unpacked) (ec : �
   simp only [← hT]
   by_cases h0 : A = 0
   · simp [h0]
-  · have hA0 : (A : ℚ) * pow2 (ec - P.late.sumFracBits) ≠ 0 := by
+  · have hA0 : (A : ℚ) * pow2 (ec - P.late.sumMantissaBits) ≠ 0 := by
       intro h
       rcases Rat.mul_eq_zero.mp h with h | h
       · exact h0 (by exact_mod_cast h)
       · exact pow2_ne_zero _ h
     simp only [h0, ↓reduceIte, hA0, two_zpow]
-    have hlead : normExp (absQ ((A : ℚ) * pow2 (ec - P.late.sumFracBits))) =
-        max ((A.natAbs.log2 : ℤ) + (ec - P.late.sumFracBits)) (-126) := by
+    have hlead : normExp (absQ ((A : ℚ) * pow2 (ec - P.late.sumMantissaBits))) =
+        max ((A.natAbs.log2 : ℤ) + (ec - P.late.sumMantissaBits)) (-126) := by
       unfold normExp
       rw [absQ_mul_pos _ _ (pow2_pos _), absQ_intCast,
         log2Floor_mul_pow2 (by exact_mod_cast Nat.pos_of_ne_zero (by omega)),
@@ -74,9 +74,9 @@ theorem F_cast (n : ℕ) : ((23 + n : ℕ) : ℤ) = 23 + (n : ℤ) := by omega
 /-- The late addition of `c` (Algorithm 1 lines 3–11), for a product sum `S` on the grid
 `2^(e_max − F)`. -/
 theorem lateC_eq (P : Model) (e : Option ℤ) (S : ℤ) (c : Unpacked)
-    (hc : c.t ≤ P.late.sumFracBits) (hS : e = none → S = 0) :
+    (hc : c.t ≤ P.late.sumMantissaBits) (hS : e = none → S = 0) :
     lateC (lateOf P) e S (numOf c) =
-      lateSum P e ((S : ℚ) * pow2 (e.getD 0 - (23 + P.neab : ℕ))) c := by
+      lateSum P e ((S : ℚ) * pow2 (e.getD 0 - (23 + P.padding : ℕ))) c := by
   unfold lateC lateSum
   rw [cExp_eq]
   cases hce : MatrixCore.cExp P c with
@@ -98,8 +98,8 @@ theorem lateC_eq (P : Model) (e : Option ℤ) (S : ℤ) (c : Unpacked)
       · simp only [hle, ↓reduceIte, two_zpow, lateOf, F_cast]
         congr 1
         unfold shiftedC
-        have hsc : ((shiftRD (numOf c).int ((numOf c).e - (numOf c).f) (e - P.late.cFracBits) : ℤ) : ℚ) *
-            pow2 (e - P.late.cFracBits) = rdFrac c.value e P.late.cFracBits := by
+        have hsc : ((shiftRD (numOf c).int ((numOf c).e - (numOf c).f) (e - P.late.cMantissaBits) : ℤ) : ℚ) *
+            pow2 (e - P.late.cMantissaBits) = rdMantissa c.value e P.late.cMantissaBits := by
           rw [shiftRD_eq]; exact congrArg (rdGrid · _) (int_numOf_val c)
         obtain ⟨cut, hcut⟩ : ∃ x, P.late.cCutoff = x := ⟨_, rfl⟩
         simp only [hcut]
@@ -123,7 +123,7 @@ theorem sum_alignTrunc (ps : List Unpacked) (e : ℤ) (k : ℕ) :
 
 /-- Algorithm 1 computes the implementation's `S_acc` for `global_alignment`. -/
 theorem algorithm1_eq (P : Model) (hP : P.accumulation = .globalAlignment) (ps : List Unpacked)
-    (c : Unpacked) (hc : c.t ≤ P.late.sumFracBits) :
+    (c : Unpacked) (hc : c.t ≤ P.late.sumMantissaBits) :
     algorithm1 (lateOf P) (ps.map numOf) (numOf c) = lateSum P (productSum P ps).1 (productSum P ps).2 c := by
   unfold algorithm1 productSum alignedSum
   rw [emax_eq, hP]
@@ -137,7 +137,7 @@ theorem algorithm1_eq (P : Model) (hP : P.accumulation = .globalAlignment) (ps :
     simp only
     rw [lateC_eq P (some e) _ c hc (by simp)]
     simp only [Option.getD_some]
-    rw [show (lateOf P).neab = P.neab from rfl, sum_alignTrunc]
+    rw [show (lateOf P).padding = P.padding from rfl, sum_alignTrunc]
 
 /-! ## Algorithm 2 -/
 
@@ -233,9 +233,9 @@ theorem maxExp_odd_even : ∀ l : List Unpacked,
     cases x <;> cases y <;> cases u <;> cases v <;> simp [joinExp] <;> omega
 
 /-- One group's sum, shifted to the common `e_max` and RD. -/
-theorem part_eq (neab : ℕ) (qs : List Unpacked) (e : ℤ) :
-    ((groupPart (23 + neab) (qs.map numOf) e : ℤ) : ℚ) * pow2 (e - (23 + neab : ℕ)) =
-      rdFrac (alignedSum neab qs).2 e (23 + neab) := by
+theorem part_eq (padding : ℕ) (qs : List Unpacked) (e : ℤ) :
+    ((groupPart (23 + padding) (qs.map numOf) e : ℤ) : ℚ) * pow2 (e - (23 + padding : ℕ)) =
+      rdMantissa (alignedSum padding qs).2 e (23 + padding) := by
   unfold groupPart
   rw [emax_eq]
   unfold alignedSum
@@ -247,14 +247,14 @@ theorem part_eq (neab : ℕ) (qs : List Unpacked) (e : ℤ) :
 
 /-- Algorithm 2 computes the implementation's `S_acc` for `odd_even_grouping`. -/
 theorem algorithm2_eq (P : Model) (hP : P.accumulation = .oddEvenGrouping) (ps : List Unpacked)
-    (c : Unpacked) (hc : c.t ≤ P.late.sumFracBits) :
+    (c : Unpacked) (hc : c.t ≤ P.late.sumMantissaBits) :
     algorithm2 (lateOf P) (ps.map numOf) (numOf c) = lateSum P (productSum P ps).1 (productSum P ps).2 c := by
   unfold algorithm2 productSum
   rw [hP, emax_eq, maxExp_odd_even, odds_map, evens_map]
   simp only
-  have hO : (alignedSum P.neab (oddIndexed ps)).1 = maxExp (oddIndexed ps) := by
+  have hO : (alignedSum P.padding (oddIndexed ps)).1 = maxExp (oddIndexed ps) := by
     unfold alignedSum; cases maxExp (oddIndexed ps) <;> rfl
-  have hE : (alignedSum P.neab (evenIndexed ps)).1 = maxExp (evenIndexed ps) := by
+  have hE : (alignedSum P.padding (evenIndexed ps)).1 = maxExp (evenIndexed ps) := by
     unfold alignedSum; cases maxExp (evenIndexed ps) <;> rfl
   rw [hO, hE]
   cases joinExp (maxExp (oddIndexed ps)) (maxExp (evenIndexed ps)) with
@@ -266,6 +266,6 @@ theorem algorithm2_eq (P : Model) (hP : P.accumulation = .oddEvenGrouping) (ps :
     simp only
     rw [lateC_eq P (some e) _ c hc (by simp)]
     simp only [Option.getD_some, Rat.intCast_add, Rat.add_mul]
-    rw [show (lateOf P).neab = P.neab from rfl, part_eq, part_eq]
+    rw [show (lateOf P).padding = P.padding from rfl, part_eq, part_eq]
 
 end MatrixCore.Spec

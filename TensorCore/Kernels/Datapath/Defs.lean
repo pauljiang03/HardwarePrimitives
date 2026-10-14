@@ -9,7 +9,7 @@ open EFMachine
 /-- Exponent registers: 9 bits, enough for the alignment exponent from the minimum alignment exponent −133 up to 254. -/
 abbrev Exp := BitVec 9
 
-/-- F = 23 + p: the fractional bits each term keeps after alignment. -/
+/-- F = 23 + p: the mantissa bits each term keeps after alignment. -/
 def alignBits : Variant → BitVec 5
   | .v100F16 => 23
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 24
@@ -24,7 +24,7 @@ def eAlignMin : Variant → Exp
 /-- Carry bits for summing the K products and c: `K + 1 ≤ 2 ^ carryBits`. -/
 def carryBits (variant : Variant) : ℕ := variant.model.nfma.log2 + 1
 
-/-- An aligned term: two integer bits, the second for a product kept in denormalized form (whose significand can reach 2 or more), and F fractional bits. -/
+/-- An aligned term: two integer bits, the second for a product kept in denormalized form (whose significand can reach 2 or more), and F mantissa bits. -/
 def termWidth (variant : Variant) : ℕ := (alignBits variant).toNat + 2
 
 /-- The two's complement accumulator: an aligned term's width, the carry bits and a sign bit. -/
@@ -47,12 +47,12 @@ def decodeInput (kind : InputKind) (bits : F32) : Option Input :=
   -- converts the format's exponent bias to 128
   let offset : Exp := match kind with | .fp16 => 113 | _ => 1
   let top : Exp := match kind with | .fp16 => 31 | _ => 255
-  let frac : BitVec 5 := match kind with | .bf16 => 7 | _ => 10
+  let mant : BitVec 5 := match kind with | .bf16 => 7 | _ => 10
   if e == top then none
   else if e == 0 then
     if m == 0 then some ⟨negative, 0, 0, 128⟩
-    else some ⟨negative, m, frac, offset + 1⟩
-  else some ⟨negative, ((1 : BitVec 11) <<< f.mantissaBits) + m, frac, e + offset⟩
+    else some ⟨negative, m, mant, offset + 1⟩
+  else some ⟨negative, ((1 : BitVec 11) <<< f.mantissaBits) + m, mant, e + offset⟩
 
 /-- A product or c: sign, significand with `mantissaBits` bits after the binary point, and exponent biased by 256. -/
 structure Term where

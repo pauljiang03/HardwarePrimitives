@@ -131,8 +131,8 @@ theorem productSum_parityEquiv {P : Model} (hP : P.accumulation = .oddEvenGroupi
   rcases h with ⟨ho, he⟩ | ⟨ho, he⟩
   · rw [alignedSum_perm _ ho, alignedSum_perm _ he]
   · rw [alignedSum_perm _ ho, alignedSum_perm _ he]
-    generalize alignedSum P.neab (oddIndexed qs) = A
-    generalize alignedSum P.neab (evenIndexed qs) = B
+    generalize alignedSum P.padding (oddIndexed qs) = A
+    generalize alignedSum P.padding (evenIndexed qs) = B
     obtain ⟨a1, a2⟩ := A
     obtain ⟨b1, b2⟩ := B
     cases a1 <;> cases b1 <;> simp [joinExp, Int.max_comm, Rat.add_comm]

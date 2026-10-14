@@ -115,7 +115,7 @@ structure Corresponds (P : MCFloat.MCModel) (Q : MatrixCore.Model) : Prop where
   b : OperandAgree P.b Q.b
   nfma : P.nfma = Q.nfma
   rules : ProductRules P Q
-  neab : Q.neab = 1
+  padding : Q.padding = 1
   cZero : Q.cZeroExp = some (-126)
   kind : match P.kind with
     | .exact => Q.accumulation = .correctRounding ∧ Q.subnormals = true
@@ -163,7 +163,7 @@ theorem finiteBlock_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corr
       obtain ⟨hacc, hsub, hlate⟩ := hk
       simp only [hsub, Bool.not_true]
       rw [observe_fl, lateC_agree Q cut h.cZero hlate hc,
-        productSum_agree Q h.neab i hacc hp]
+        productSum_agree Q h.padding i hacc hp]
       cases i <;> simp only [hacc, ite_true, Bool.false_eq_true, ite_false] <;> rfl
 
 /-! ## Any input words -/

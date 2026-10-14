@@ -73,7 +73,7 @@ represents exactly, and `none` otherwise. The tests build every input this way
 | Topic | Declarations | File |
 | --- | --- | --- |
 | Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Numerics/Format.lean](../../MatrixCore/Numerics/Format.lean) |
-| Truncation and RD | `truncGrid`, `truncFrac`, `rdGrid`, `rdFrac` | [Numerics/Grid.lean](../../MatrixCore/Numerics/Grid.lean) |
+| Truncation and RD | `truncGrid`, `truncMantissa`, `rdGrid`, `rdMantissa` | [Numerics/Grid.lean](../../MatrixCore/Numerics/Grid.lean) |
 | `fl{·}` | `rne32`, `fl32`, `normExp` | [Numerics/Round32.lean](../../MatrixCore/Numerics/Round32.lean) |
 | Models | `Model`, `Accumulation`, `cdna1F16`, …, `Architecture.model` | [MC/Defs.lean](../../MatrixCore/MC/Defs.lean), [MC/Models.lean](../../MatrixCore/MC/Models.lean) |
 | Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [MC/Stages.lean](../../MatrixCore/MC/Stages.lean) |

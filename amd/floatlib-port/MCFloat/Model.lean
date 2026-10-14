@@ -75,7 +75,7 @@ inductive Operand where
   /-- A FloatLib format: binary32, binary16, bfloat16, e4m3fnuz, e5m2fnuz. -/
   | fmt (f : FloatFormat)
   /-- XF32: a binary32 word whose finite values are read as the tf32 word of its upper
-  nineteen bits (the significand truncated to ten fraction bits). -/
+  nineteen bits (the significand truncated to ten mantissa bits). -/
   | xf32
 
 def Operand.read : Operand → ℕ → Value
@@ -151,7 +151,7 @@ def maxExp : List Term → Option ℤ
     if t.isZero then maxExp ts
     else some (match maxExp ts with | none => t.exponent | some e => max t.exponent e)
 
-/-- `(e_max, S_{p_i,sum})`: each term truncated to 24 fractional bits of `e_max`, then summed. -/
+/-- `(e_max, S_{p_i,sum})`: each term truncated to 24 mantissa bits of `e_max`, then summed. -/
 def alignedSum (ps : List Term) : Option ℤ × ℚ :=
   match maxExp ps with
   | none => (none, 0)

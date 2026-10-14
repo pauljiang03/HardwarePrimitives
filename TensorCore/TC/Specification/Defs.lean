@@ -20,7 +20,7 @@ def binary32 : Layout := ⟨23, 8, 127⟩
 structure Parameters where
   input : Layout
   nfma : ℕ
-  alignFracBits : ℤ
+  alignMantissaBits : ℤ
   eAlignMin : Option ℤ
   deriving Repr, DecidableEq
 
@@ -77,7 +77,7 @@ def keptBits (v q : ℚ) : ℤ :=
   (if v < 0 then -1 else 1) * (magnitude v / q).floor
 
 def accumulated (p : Parameters) (ts : List Term) : ℚ :=
-  let q := (2 : ℚ) ^ ((exponent p ts).getD 0 - p.alignFracBits)
+  let q := (2 : ℚ) ^ ((exponent p ts).getD 0 - p.alignMantissaBits)
   ((ts.foldr (fun t z => keptBits t.value q + z) 0 : ℤ) : ℚ) * q
 
 def maxFinite : ℚ := (16777215 : ℚ) * (2 : ℚ) ^ (104 : ℤ)

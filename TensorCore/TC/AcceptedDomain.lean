@@ -20,8 +20,8 @@ theorem evalPrepared_total (b : PreparedBlock) (hr : absQ b.accumulator ≤ maxF
     ∃ t, evalPrepared b = .ok t := by
   obtain ⟨bits, d₀, hb, hd₀⟩ := round32_finite_exists .truncate b.accumulator hr
   obtain ⟨d, hd⟩ := Option.isSome_iff_exists.mp
-    (decode32_truncateFraction32 (m := b.model.outputFracBits) (by rw [hd₀]; rfl))
-  have hf : finite32 (truncateFraction32 b.model.outputFracBits bits) = some ⟨_, d, hd⟩ := by
+    (decode32_truncateMantissa32 (m := b.model.outputMantissaBits) (by rw [hd₀]; rfl))
+  have hf : finite32 (truncateMantissa32 b.model.outputMantissaBits bits) = some ⟨_, d, hd⟩ := by
     unfold finite32
     split
     · rename_i he
@@ -41,7 +41,7 @@ theorem evalBlock_success_iff (p : Model) (x : BlockInput p) :
   constructor
   · rintro ⟨t, ht⟩
     have hp := evalBlock_prepared ht
-    obtain ⟨_, hout, _⟩ := evalPrepared_output_fraction (evalBlock_evalPrepared ht)
+    obtain ⟨_, hout, _⟩ := evalPrepared_output_mantissa (evalBlock_evalPrepared ht)
     have hr := round32_range hout
     refine ⟨?_, t.block, hp, hr⟩
     unfold evalBlock at ht

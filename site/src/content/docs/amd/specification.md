@@ -11,9 +11,9 @@ rather than the model's grid operations:
 - the Table 1 layouts and IEEE/FNUZ field decoding (`Spec.decode`);
 - products by multiplying significands and adding exponents (`Spec.mul`);
 - `e_max` as the maximum over the nonzero products (`Spec.emax`);
-- "align to `e_max` and truncate to `F` fractional bits" as the integer
+- alignment to `e_max` with truncation to `F` mantissa bits as the integer
   `⌊M · 2^(e_p − f − (e_max − F))⌋` with the sign restored (`Spec.alignTrunc`);
-- "shift and round down to `k` fractional bits" as a floor division by a power
+- a shift with rounding down to `k` mantissa bits as a floor division by a power
   of two (`Spec.shiftRD`);
 - the subnormal-aware normalization from the bit length of the integer
   `S_acc`;

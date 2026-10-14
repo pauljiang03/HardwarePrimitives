@@ -98,10 +98,10 @@ chaining](/MMAlgebra/model/instructions/)). How a block forms its sum is what di
 
 | Variant | `K` (fp16) | How one block FMA adds |
 | --- | ---: | --- |
-| V100, A100, H100 Tensor Cores | 4, 8, 16 | Exact products in denormalized form; every term, `c` included, aligned to the largest exponent with `23 + n_eab` fractional bits (0, 1, 2 extra alignment bits) and truncated; one exact multi-term addition; truncation to binary32 ([the model](/MMAlgebra/model/), [variants](/MMAlgebra/model/variants/)) |
+| V100, A100, H100 Tensor Cores | 4, 8, 16 | Exact products in denormalized form; every term, `c` included, aligned to the largest exponent with the 23-bit mantissa plus 0, 1 or 2 padding bits and truncated; one exact multi-term addition; truncation to binary32 ([the model](/MMAlgebra/model/), [variants](/MMAlgebra/model/variants/)) |
 | CDNA 1 (MI100) | 4 | Exact sum of `c` and the products, rounded once to nearest ([correct rounding](/MMAlgebra/amd/architectures/#cdna-1-mi100-correct_rounding)) |
 | CDNA 2 (MI210, MI250) | 4 | Each product rounded to binary32, pairwise sums `fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, then `c` added last; subnormals flushed ([pairwise sums](/MMAlgebra/amd/architectures/#cdna-2-mi210-mi250-pair_wise_sum)) |
-| CDNA 3 (MI300) | 8 | Products aligned to their largest exponent with 24 fractional bits; `c` added late, with rounding down; final rounding to nearest ([global alignment](/MMAlgebra/amd/architectures/#cdna-3-mi300a-mi300x-algorithms-1-and-2)) |
+| CDNA 3 (MI300) | 8 | Products aligned to their largest exponent with 24 mantissa bits; `c` added late, with rounding down; final rounding to nearest ([global alignment](/MMAlgebra/amd/architectures/#cdna-3-mi300a-mi300x-algorithms-1-and-2)) |
 | SFMA (fp32 inputs, all CDNA) | 1 | A sequential FMA, each step rounded to nearest |
 
 Every variant above has a bit-level Lean model on this site, validated against recorded or
@@ -157,7 +157,7 @@ On V100 the single block aligns to the largest exponent among its terms, which i
 product `x` keeps the exponent sum `0 + 0` with significand `2.25`), so the grid is `2^-23` and
 both small products survive. In the two-block schedule, the first block returns `2.25`, which as a
 binary32 accumulator has exponent `1`; the second block aligns to `2^(1 − 23) = 2^-22`, and both
-products of `2^-23` are truncated away. A100 and H100 keep one or two extra alignment bits, so the
+products of `2^-23` are truncated away. A100 and H100 keep one or two padding bits, so the
 same input does not separate these schedules there (other inputs do). On CDNA 2 the order of
 events is reversed: the single block adds `y` to `x` first in its pairwise tree, and `2.25 + 2^-23`
 is a tie that rounds to even, `2.25`, twice; the chain adds `y + z = 2^-22` first.
@@ -202,14 +202,14 @@ symmetries of the tree (25 violations); the 101 inside them gave none.
 
 **Products act as a multiset** wherever a block adds its terms in one step after aligning them to
 a common exponent: the largest exponent and the exact sum of truncated terms do not depend on the
-order. In Lean this is [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L90) for every Tensor Core model, and
+order. In Lean this is [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) for every Tensor Core model, and
 [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L37) for the sum that CDNA 1 and CDNA 3 round at the end of a block. CDNA 2's block is a fixed tree
 `((p₁ + p₂) + (p₃ + p₄))` with a rounding at every node, so only the tree's own symmetries (swap
 within a pair, swap the pairs) preserve it ([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L53)).
 
 **Zero products are invisible**: a product with a zero factor adds nothing to the exact sum and
 is ignored when the alignment exponent is chosen, so it can replace an empty slot and the reverse
-([`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L231)). A block with no products returns its accumulator input
+([`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230)). A block with no products returns its accumulator input
 when that input is finite and not `−0` ([`zero_products_passthrough`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Instruction.lean#L147)). The exception is real: in
 the random tests, one SFMA block returned `−0` (a tiny negative product rounded to zero), and an
 empty block after it returned `+0`. On CDNA 2 a zero product prunes
@@ -454,7 +454,7 @@ blocks can, because the two products move to different blocks.
 | CDNA 1 | 4 × 4 | `487.12280…` | `487.12277…` | [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16) |
 | CDNA 2 | 4 × 4 | `239.79177…` | `239.79176…` | [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26) |
 | CDNA 3 | 2 × 8 | `−0.0011084491…` | `−0.0011084490…` | [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
-| H100 (`HMMA.16816`) | 1 × 16 | never changes | | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L90) |
+| H100 (`HMMA.16816`) | 1 × 16 | never changes | | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
 
 Each witness has two or three nonzero products and zeros elsewhere; the outputs differ in the last
 place.
@@ -674,7 +674,7 @@ Three observations stand out. First, nearly every program change alters nearly e
 few ulps on typical data and by up to about a thousand `u·M` on adversarial data; only the changes
 the algebra proves harmless (tile shapes, `BLOCK_K`, instruction shapes) leave every bit in place.
 Second, the bounds and the worst cases shrink from V100 to A100 to H100, with longer blocks and
-more extra alignment bits, and are smallest on the correctly rounded CDNA 1 and on CDNA 3, whose
+more padding bits, and are smallest on the correctly rounded CDNA 1 and on CDNA 3, whose
 late addition of `c` defeats the anchor-and-dust inputs; typical medians are a few ulps on every
 GPU. Third, CDNA 2 differs from
 every other GPU on LLM-like data by far more than elsewhere: about 0.24 percent of weights drawn
@@ -711,7 +711,7 @@ final truncation of the sum depends on the binade of the result. Both can be pin
   products. Every order, every grouping into blocks, and every split-K gives the same bits, since
   the partial results are on the grid and add exactly in binary32. With the same `g`, V100, A100
   and H100 compute the same function. So does CDNA 3: it aligns the products among themselves, to
-  their largest exponent with 24 fractional bits, which the pin fixes at `α`, and then adds a `c`
+  their largest exponent with 24 mantissa bits, which the pin fixes at `α`, and then adds a `c`
   on the grid without loss; there `g = α − 24`.
 - **Anchored accumulation.** Start the accumulator at `1.5·2^α` instead of `0`, and subtract it at
   the end. While the running value stays in `[2^α, 2^(α+1))`, every block aligns to `α`, the
@@ -1023,8 +1023,8 @@ for any two that do not, an input that shows it.
 
 | Claim | Evidence | Where |
 | --- | --- | --- |
-| Products in a block act as a multiset (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L90) |
-| Zero products are invisible (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L231) |
+| Products in a block act as a multiset (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L89) |
+| Zero products are invisible (every Tensor Core model) | Proved | [`MMAlgebra.TC.evalBlock_bits_zero`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Block.lean#L230) |
 | A chain on an input supported on `S` equals the chain restricted to `S` | Proved | [`MMAlgebra.TC.chain_restrict`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Chain.lean#L41) |
 | Chains with different patterns of two products differ (V100, A100, H100 fp16) | Proved, with kernel-checked base witnesses | [`MMAlgebra.TC.complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L377), [`MMAlgebra.TC.v100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L469), [`MMAlgebra.TC.a100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L485), [`MMAlgebra.TC.h100_complete_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Completeness.lean#L504) |
 | Completeness from laws and base witnesses, for any matrix multiplier: ordered partitions are determined by their pairwise patterns, labeled trees by their restrictions to triples of leaves | Proved | [`MMAlgebra.nf_eq_of_patterns`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Partition.lean#L193), [`MMAlgebra.chain_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/ChainComplete.lean#L456), [`MMAlgebra.LTree.eq_of_restrict3`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/LTree.lean#L601), [`MMAlgebra.term_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/TermComplete.lean#L463), [`MMAlgebra.rigid_term_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Rigid.lean#L810), [`MMAlgebra.cr_term_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Rounded.lean#L371), [`MMAlgebra.pair_term_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebra/Pairwise.lean#L418) |

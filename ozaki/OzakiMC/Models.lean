@@ -61,7 +61,7 @@ theorem bfloat16_small : smallSubnormals (.packed bfloat16) := by
 theorem binary32_small : smallSubnormals (.packed binary32) := by
   show binary32.emin ≤ 0; decide
 
-theorem cdna3_config (P : Model) (hacc : P.accumulation = .globalAlignment) (hn : P.neab = 1)
+theorem cdna3_config (P : Model) (hacc : P.accumulation = .globalAlignment) (hn : P.padding = 1)
     (hl : P.late = {}) (hc : P.cZeroExp = some (-126)) : ExactConfig P :=
   Or.inr (Or.inr ⟨hacc, by omega, hl, hc⟩)
 

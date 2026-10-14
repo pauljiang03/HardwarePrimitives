@@ -88,7 +88,7 @@ def main():
     for name, expected in pins['sha256'].items():
         assert hashlib.sha256((ROOT / 'vendor/matlab-tensor-core-v0.5' / name).read_bytes()).hexdigest() == expected, name
     cases = []
-    # Include arbitrary, non-hardware FMA sizes and numbers of extra alignment bits.
+    # Include arbitrary, non-hardware FMA sizes and numbers of padding bits.
     configs = [(0, 0, None), (0, 2, -133), (0, 0, 4), (4, 0, None), (8, 1, -132), (16, 2, -133)]
     configs += [(k, e, f) for k in [1, 3, 7, 17, 37, 64]
                 for e in [0, 1, 2, 5, 9, 24] for f in [None, -132, 4]]
@@ -114,7 +114,7 @@ def main():
             samples.append(words + [RNG.choice(boundary32)])
         for words in samples:
             cases.append((k, extra, floor, words))
-    # Distinguish extra alignment bits and preserve the products' denormalized factorization.
+    # Distinguish padding bits and preserve the products' denormalized factorization.
     for extra in [0, 1, 2, 9]:
         cases.append((4, extra, None, [0x3c00,0x3c00,0xc00,0xc00,0xc00,0xc00,0,0,0]))
     for extra in [104, 156, 253, 257]:
@@ -130,8 +130,8 @@ def main():
     got = run_rows(rows, 'canonical-features.txt')
     losses = dict(alignment=0, output=0, both=0)
     rejected = 0
-    exact_neab_checked = 0
-    source_neab_checked = 0
+    exact_padding_checked = 0
+    source_padding_checked = 0
     for args, result in zip(cases, got):
         expected = reference(args[3], *args[:3])
         if expected is None:
@@ -145,10 +145,10 @@ def main():
         alignment = expected['ideal'] != expected['accumulated']
         if args[1] >= 253 and (args[2] is None or args[2] <= 127):
             assert not alignment, (args, result)
-            exact_neab_checked += 1
+            exact_padding_checked += 1
         if args[1] >= 156 and (args[2] is None or args[2] <= 30):
             assert not alignment, (args, result)
-            source_neab_checked += 1
+            source_padding_checked += 1
         output = expected['accumulated'] != expected['value']
         losses['alignment'] += alignment
         losses['output'] += output
@@ -184,8 +184,8 @@ def main():
                   configurations=len({c[:3] for c in cases}), cases=len(cases), rejected=rejected, mismatches=0,
                   K=sorted({c[0] for c in cases}), extra_bits=sorted({c[1] for c in cases}),
                   exercised_losses=losses, published_device_comparisons=device_reports,
-                  exact_neab_accepted_cases=exact_neab_checked,
-                  source_neab_accepted_cases=source_neab_checked,
+                  exact_padding_accepted_cases=exact_padding_checked,
+                  source_padding_accepted_cases=source_padding_checked,
                   published_device_vectors=sum(r['vectors'] for r in device_reports),
                   new_gpu_measurements=False,
                   source_files_hash_checked=len(pins['sha256']),

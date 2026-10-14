@@ -91,11 +91,11 @@ theorem encode32_value (negative : Bool) (e k : ℤ)
     subst hsubn
     have hexp : (sgn + pay) / 8388608 % 256 = 0 := by
       rcases hsgn' with h | h <;> subst h <;> omega
-    have hfrac : (sgn + pay) % 8388608 = pay := by
+    have hmant : (sgn + pay) % 8388608 = pay := by
       rcases hsgn' with h | h <;> subst h <;> omega
     have hneg : ((sgn + pay) / 2147483648 != 0) = negative := by
       cases negative <;> simp at hsgn <;> subst hsgn <;> simp <;> omega
-    simp only [hexp, hfrac, hneg]
+    simp only [hexp, hmant, hneg]
     by_cases hz : pay = 0
     · have hk0' : k = 0 := by omega
       subst hk0'
@@ -113,11 +113,11 @@ theorem encode32_value (negative : Bool) (e k : ℤ)
       rcases hsgn' with h | h <;> subst h <;> omega
     have hexp1 : (e + 127).toNat ≠ 255 := by omega
     have hexp0 : (e + 127).toNat ≠ 0 := by omega
-    have hfrac : (sgn + pay) % 8388608 = (k - 8388608).toNat := by
+    have hmant : (sgn + pay) % 8388608 = (k - 8388608).toNat := by
       rcases hsgn' with h | h <;> subst h <;> omega
     have hneg : ((sgn + pay) / 2147483648 != 0) = negative := by
       cases negative <;> simp at hsgn <;> subst hsgn <;> simp <;> omega
-    simp only [hexp, hfrac, hneg, hexp1, hexp0, if_false]
+    simp only [hexp, hmant, hneg, hexp1, hexp0, if_false]
     simp [Decoded.value, Classification.finite]
     constructor
     · have he0 : 0 ≤ e + 127 := by omega

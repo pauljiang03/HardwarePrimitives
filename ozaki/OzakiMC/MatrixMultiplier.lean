@@ -8,7 +8,7 @@ whole blocks of `N_FMA`, each block's `d` the next block's `c`) from `c = +0`.
 
 * `encodeExact_int`: a format with `emin ≤ 0` and `p + 1 ≤ emax` (`p` stored mantissa bits)
   encodes every integer of magnitude at most `2^(p+1)`; XF32 operands, read by truncating a
-  binary32 word to ten fraction bits, keep every integer of magnitude at most `2^11`
+  binary32 word to ten mantissa bits, keep every integer of magnitude at most `2^11`
   (`xf32_encodesInts`).
 * `mcMultiplier_exactOn`: on an exact configuration (`ExactConfig`), the matrix multiplier is exact
   on `b`-bit vectors whose products total at most `2^24` in magnitude. -/
@@ -223,7 +223,7 @@ theorem packed_encodesInts (f : Format) (hmin : f.emin ≤ 0)
   exact ⟨w, hw, ⟨u, hr, z, hv⟩, by rw [wordValue_of_read hr, hv]⟩
 
 /-- XF32 operands keep every integer of magnitude at most `2^11`: its binary32 significand ends in
-at least thirteen zero bits, which the truncation to ten fraction bits drops. -/
+at least thirteen zero bits, which the truncation to ten mantissa bits drops. -/
 theorem xf32_encodesInts : EncodesInts .xf32 11 := by
   intro z hz
   obtain ⟨w, hw, u, hu, hv, hn⟩ := encodeExact_int binary32 (by decide) (by decide) (by decide)

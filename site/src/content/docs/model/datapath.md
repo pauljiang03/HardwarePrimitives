@@ -17,15 +17,14 @@ The datapath is a second implementation next to it.
 
 ## Register widths
 
-The widths follow from the model: the 23 FP32 fractional bits, the `p` extra
-alignment bits, and the FMA size `K`.
+The widths follow from the model: the 23 FP32 mantissa bits, the `p` padding bits, and the FMA size `K`.
 
 | Register | Width | Why |
 | --- | --- | --- |
 | Product significand | 24 bits | an 11-bit × 11-bit product is below `2^22` |
 | Exponents | 9 bits | see [exponents](#exponents) below |
 | Output exponent field | 8 bits | the FP32 exponent field |
-| Aligned term | `F + 2 = 25 + p` bits | two integer bits (the implicit bit and a second bit for a product in denormalized form) and `F = 23 + p` fractional bits |
+| Aligned term | `F + 2 = 25 + p` bits | two integer bits (the implicit bit and a second bit for a product in denormalized form) and `F = 23 + p` mantissa bits |
 | Accumulator | `F + 2 + c` magnitude bits and a sign bit, two's complement | `c = ⌊log₂ K⌋ + 1` extra carry bits, so the `K + 1` terms cannot overflow |
 
 | Variant | `F` | `K` | Accumulator |
@@ -161,7 +160,7 @@ normalization, and a final truncation.
 | | SMT model | This datapath |
 | --- | --- | --- |
 | Products | exact, in the SMT floating-point theory | exact, bitvector multiplication |
-| Extra alignment bits | none on Volta/Turing, one on Ampere | `p` = 0, 1, 2 on V100, A100, H100 |
+| Padding bits | none on Volta/Turing, one on Ampere | `p` = 0, 1, 2 on V100, A100, H100 |
 | Extra carry bits | ⌈log₂ N⌉ for N terms | ⌊log₂ K⌋ + 1 for K products and C: 3, 4, 5 |
 | Use | solver queries for discriminating inputs, then GPU runs | executable definition with proofs over every input |
 | Coverage | FP16 inputs on Volta, Turing, Ampere, including FP16 output | FP16, BF16, TF32 inputs with FP32 output on V100, A100, H100, including minimum alignment exponents and subnormals |

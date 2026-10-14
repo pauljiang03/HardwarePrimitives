@@ -179,7 +179,7 @@ credited here.
   vendors by simulation; MMA-Sim for ten architectures
   ([arXiv:2511.10909](https://arxiv.org/abs/2511.10909), abstract).
 - **FP8 accumulation**: Khattak and Mikaitis's model (v4) gives FP8
-  accumulation as `13` fractional bits on H100 `wgmma` and `25` on B200; the
+  accumulation as `13` mantissa bits on H100 `wgmma` and `25` on B200; the
   DeepSeek-V3 report ([arXiv:2412.19437](https://arxiv.org/abs/2412.19437),
   snippet) observed about 14 bits on H800. None of the bit-accurate model
   papers evaluates Ozaki or ADP slice exactness.

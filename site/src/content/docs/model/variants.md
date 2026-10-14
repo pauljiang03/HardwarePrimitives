@@ -8,11 +8,11 @@ numerical features, and a `Model` collects them:
 
 ```lean
 structure Model where
-  input : Format          -- input format: fp16, bf16, tf19, e5m2, or e4m3x
-  nfma : ℕ                -- K, the FMA size N_FMA
-  alignFracBits : ℤ       -- F = 23 + p
-  eAlignMin : Option ℤ    -- the minimum alignment exponent e_align^min
-  outputFracBits : ℕ := 23  -- fraction bits of the block output (23: binary32)
+  input : Format                -- input format: fp16, bf16, tf19, e5m2, or e4m3x
+  nfma : ℕ                      -- K, the FMA size N_FMA
+  alignMantissaBits : ℤ         -- F = 23 + p
+  eAlignMin : Option ℤ          -- the minimum alignment exponent e_align^min
+  outputMantissaBits : ℕ := 23  -- mantissa bits of the block output (23: binary32)
 ```
 
 ## The supported variants
@@ -22,7 +22,7 @@ All of them have FP32 `C` and FP32 output. The parameters follow Table 3 of
 those of the newer GPUs: Ada (RTX 1000 Ada, L40S) has A100's FP16, BF16 and
 TF32 features, and H200 and B200 have H100's.
 
-| Variant | Lean model | Input | K (N_FMA) | p = n_eab (F = 23 + p) | e_align^min |
+| Variant | Lean model | Input | K (N_FMA) | Padding bits p (F = 23 + p) | e_align^min |
 | --- | --- | --- | ---: | ---: | ---: |
 | V100 FP16 | `v100F16F32` | FP16 | 4 | 0 | none |
 | A100 FP16 | `ampereF16F32` | FP16 | 8 | 1 | −132 |
@@ -42,8 +42,8 @@ TF32 features, and H200 and B200 have H100's.
 They are built from generic constructors, for example:
 
 ```lean
-def fp16Fp32Model (K neab : ℕ) (eAlignMin : Option ℤ := none) : Model :=
-  ⟨fp16, K, (23 + neab : ℕ), eAlignMin, 23⟩
+def fp16Fp32Model (K padding : ℕ) (eAlignMin : Option ℤ := none) : Model :=
+  ⟨fp16, K, (23 + padding : ℕ), eAlignMin, 23⟩
 
 def ampereF16F32 : Model := fp16Fp32Model 8 1 (some (-132))
 def hopperF16F32 : Model := fp16Fp32Model 16 2 (some (-133))
@@ -51,7 +51,7 @@ def hopperF16F32 : Model := fp16Fp32Model 16 2 (some (-133))
 
 Most theorems are stated for **arbitrary** `K`, `p`, and minimum alignment
 exponent, and the named models are instances. Those that need a binary32
-block output state it as a hypothesis, `23 ≤ p.outputFracBits`. Choosing parameters does not by itself establish that
+block output state it as a hypothesis, `23 ≤ p.outputMantissaBits`. Choosing parameters does not by itself establish that
 a GPU behaves that way. That link comes from the
 [hardware replay](/MMAlgebra/model/validation/).
 
@@ -65,15 +65,15 @@ that the two transcriptions match.
 architectures, for E4M3 and E5M2 inputs with FP32 `C` and output. All three
 truncate, and Table 3 lists no minimum alignment exponent for them:
 
-| GPU | Instruction | Lean models | K (N_FMA) | p (F = 23 + p) | Block output |
+| GPU | Instruction | Lean models | K (N_FMA) | Mantissa bits after alignment (F) | Block output |
 | --- | --- | --- | ---: | ---: | --- |
-| Ada, L40S | `mma.sync` (QMMA) | `adaE4M3F32`, `adaE5M2F32` | 16 | −10 (13 fraction bits) | 13 fraction bits |
-| H100, H200 | `wgmma` (QGMMA) | `hopperE4M3F32`, `hopperE5M2F32` | 32 | −10 (13 fraction bits) | 13 fraction bits |
-| B200 | `tcgen05.mma` (UTCQMMA) | `blackwellE4M3F32`, `blackwellE5M2F32` | 32 | 2 (25 fraction bits) | binary32 |
+| Ada, L40S | `mma.sync` (QMMA) | `adaE4M3F32`, `adaE5M2F32` | 16 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
+| H100, H200 | `wgmma` (QGMMA) | `hopperE4M3F32`, `hopperE5M2F32` | 32 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
+| B200 | `tcgen05.mma` (UTCQMMA) | `blackwellE4M3F32`, `blackwellE5M2F32` | 32 | 25: 23 plus 2 padding bits | binary32 |
 
-On Ada and Hopper the block output keeps 13 fraction bits, as the *Accurate
-Models* toolbox's `GEMM.m` sets for `p < 0`: the model truncates the binary32
-output further, clearing its ten low fraction bits ([`truncateFraction32`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Defs.lean#L30),
+On Ada and Hopper the block output is truncated to a 13-bit mantissa, as the
+*Accurate Models* toolbox's `GEMM.m` sets: the model truncates the binary32
+output further, clearing its ten low mantissa bits ([`truncateMantissa32`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Defs.lean#L32),
 [`fp8_output_thirteen_bits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/GPUs.lean#L97)). Every other variant keeps the default 23.
 
 The two formats decode differently at the top of their range:
@@ -118,7 +118,7 @@ inductive CPlacement where
   | late (stages : List RoundingStage)     -- late accumulation: products rounded first, then C added exactly
 
 inductive AccumulationKind where
-  | aligned (alignFracBits : ℕ) (eAlignMin : Option ℤ) (cPlacement : CPlacement)
+  | aligned (alignMantissaBits : ℕ) (eAlignMin : Option ℤ) (cPlacement : CPlacement)
   | fused                                          -- exact single-product FMA (e.g. FP64 DMMA)
 
 structure InvocationSpec where
@@ -145,6 +145,6 @@ The headline theorems concern the eight aligned FP32-output variants of the
 first table, and so Ada, H200 and B200; the hardware validation covers those
 and the FP8 variants. The FP8 variants are also invocation descriptors
 (`adaE4M3Invocation`, …), with the 13-bit block output as a truncation stage
-to a format with 13 fraction bits and the B200 recording convention as a late
+to a format with 13 mantissa bits and the B200 recording convention as a late
 accumulator input (`blackwellE4M3ThenAddInvocation`). The general interface is
 there for experimenting with other configurations.

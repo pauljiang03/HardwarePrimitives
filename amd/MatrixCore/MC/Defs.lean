@@ -9,7 +9,8 @@ feature comparison table:
 
 * input formats of `a` and `b` (`c` and `d` are binary32);
 * `N_FMA`, the number of products in one multi-term addition;
-* product alignment `(2, 23 + n_eab)`: integer and fractional bits kept after alignment;
+* product alignment `(2, 23 + padding)`: the integer bits and the mantissa bits kept after
+  alignment, the 23-bit mantissa plus `padding` padding bits (`n_eab` in the paper);
 * `e_{c=0}`: the exponent given to `c = 0`;
 * late addition of `c`, and `align(c, S_{p_i,sum}) = (24, 32, RD)`;
 * the final rounding (RNE on every CDNA variant);
@@ -39,13 +40,13 @@ inductive Accumulation where
 
 /-- Two-operand alignment between `c` and the product sum (`align(c, S_{p_i,sum})`). -/
 structure LateAlignment where
-  /-- `s_c` shifted right by `e_max − e_c` and RD to this many fractional bits. -/
-  cFracBits : ℕ := 24
-  /-- `S_{p_i,sum}` shifted right by `e_c − e_max` and RD to this many fractional bits. -/
-  sumFracBits : ℕ := 32
-  /-- `S_acc` normalized (subnormal-aware) and RD to this many fractional bits; applied only
+  /-- `s_c` shifted right by `e_max − e_c` and RD to this many mantissa bits. -/
+  cMantissaBits : ℕ := 24
+  /-- `S_{p_i,sum}` shifted right by `e_c − e_max` and RD to this many mantissa bits. -/
+  sumMantissaBits : ℕ := 32
+  /-- `S_acc` normalized (subnormal-aware) and RD to this many mantissa bits; applied only
   when `S_{p_i,sum}` was shifted. -/
-  accFracBits : ℕ := 31
+  accMantissaBits : ℕ := 31
   /-- binary8: once `e_max − e_c` exceeds this shift, `s'_c = 0` (truncation instead of RD). -/
   cCutoff : Option ℕ := none
   deriving Repr, DecidableEq
@@ -59,9 +60,9 @@ structure Model where
   /-- `N_FMA`: products per multi-term addition (group size of a pairwise sum). -/
   nfma : ℕ
   accumulation : Accumulation
-  /-- `n_eab`: product significands are aligned to `e_max` and truncated to `23 + n_eab`
-  fractional bits. -/
-  neab : ℕ := 1
+  /-- The padding bits: product significands are aligned to `e_max` and truncated to
+  `23 + padding` mantissa bits. -/
+  padding : ℕ := 1
   /-- `e_{c=0}`: exponent of `c` when `c = 0`; `none` is `−∞` (a zero `c` is discarded). -/
   cZeroExp : Option ℤ := some (-126)
   late : LateAlignment := {}
@@ -72,12 +73,12 @@ structure Model where
   productOverflow : Bool := false
   deriving Repr, DecidableEq
 
-/-- Product alignment `(integer bits, fractional bits)` of the feature table. -/
+/-- Product alignment `(integer bits, mantissa bits)` of the feature table. -/
 def Model.productAlignment (P : Model) : ℕ × Option ℕ :=
   match P.accumulation with
   | .correctRounding => (1, none)
   | .pairWiseSum => (1, some 23)
-  | .globalAlignment | .oddEvenGrouping => (2, some (23 + P.neab))
+  | .globalAlignment | .oddEvenGrouping => (2, some (23 + P.padding))
 
 /-- Whether `c` is added after the product accumulation (late) or within it (early). -/
 def Model.lateC (P : Model) : Bool :=

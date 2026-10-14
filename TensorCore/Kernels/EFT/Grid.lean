@@ -53,11 +53,11 @@ theorem outputGrid_spec (D : F32) :
 /-- Exact qE=max(qA,qD), with qA obtained from exponents, not product magnitude. -/
 theorem selectedGrid_spec (variant : Variant) (ts : List Term) (D : F32) :
     ((selectedGrid variant ts D).toNat : ℤ) - 272 =
-      max ((maxBiasedExp ts variant.eAlignMin.toNat : ℤ) - 512 - variant.model.alignFracBits)
+      max ((maxBiasedExp ts variant.eAlignMin.toNat : ℤ) - 512 - variant.model.alignMantissaBits)
         (outputUlpExponent D) := by
-  have ho : (variant.alignmentBits + 240).toNat = variant.model.alignFracBits.toNat + 240 := by
+  have ho : (variant.alignmentBits + 240).toNat = variant.model.alignMantissaBits.toNat + 240 := by
     cases variant <;> decide
-  have hal : (variant.model.alignFracBits.toNat : ℤ) = variant.model.alignFracBits := by
+  have hal : (variant.model.alignMantissaBits.toNat : ℤ) = variant.model.alignMantissaBits := by
     cases variant <;> decide
   have hd := outputGrid_spec D
   unfold selectedGrid
@@ -74,7 +74,7 @@ theorem selectedGrid_spec (variant : Variant) (ts : List Term) (D : F32) :
   · have hle : variant.alignmentBits + 240 ≤ e := by
       change ¬ e.toNat < _ at hsmall; change _ ≤ e.toNat; omega
     have hsub : (e - (variant.alignmentBits + 240)).toNat =
-        maxBiasedExp ts variant.eAlignMin.toNat - (variant.model.alignFracBits.toNat + 240) := by
+        maxBiasedExp ts variant.eAlignMin.toNat - (variant.model.alignMantissaBits.toNat + 240) := by
       rw [BitVec.toNat_sub_of_le hle, hem, ho]
     rw [if_neg hsmall]
     split

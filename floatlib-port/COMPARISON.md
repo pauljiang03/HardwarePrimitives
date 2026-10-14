@@ -2,7 +2,7 @@
 
 **Kernel-checked universal equivalence** connects the first-principles and FloatLib implementations of the FP32-output TC model and reference EFT, including output bits, EFT branch choices, and distinct validation errors.
 
-The scope is the FP16, BF16 and packed TF32 inputs in the paper, FP32 output, and models that keep `F = 23 + p` fractional bits after alignment, where `p`, the number of extra alignment bits, is any natural number. The FMA size and the minimum alignment exponent are parameters. Other repository applications and backends are not part of this comparison.
+The scope is the FP16, BF16 and packed TF32 inputs in the paper, FP32 output, and models that keep `F = 23 + p` mantissa bits after alignment, where `p`, the number of padding bits, is any natural number. The FMA size and the minimum alignment exponent are parameters. Other repository applications and backends are not part of this comparison.
 
 ## Main theorem and the two-way correspondence
 

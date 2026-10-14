@@ -24,8 +24,8 @@ theorem exact_perm {x y : Prepared} (hp : x.p.Perm y.p) (hc : x.c = y.c) : x.exa
   unfold Prepared.exact
   rw [sumQ_perm (hp.map _), hc]
 
-theorem alignedSum_perm (neab : ℕ) {ps qs : List Unpacked} (h : ps.Perm qs) :
-    alignedSum neab ps = alignedSum neab qs := by
+theorem alignedSum_perm (padding : ℕ) {ps qs : List Unpacked} (h : ps.Perm qs) :
+    alignedSum padding ps = alignedSum padding qs := by
   unfold alignedSum
   rw [maxExp_perm h]
   split
@@ -41,7 +41,7 @@ theorem accumulate_perm {P : Model}
   rw [any_perm hp]
   rcases hP with h | h
   · simp only [h, exact_perm hp hc]
-  · simp only [h, alignedAccumulation, productSum, alignedSum_perm P.neab hp, hc]
+  · simp only [h, alignedAccumulation, productSum, alignedSum_perm P.padding hp, hc]
 
 /-! ## Order and sign witnesses
 

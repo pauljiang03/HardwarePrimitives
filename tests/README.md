@@ -56,7 +56,7 @@ A successful module may print nothing. Lean elaborates and checks its definition
 | --- | --- |
 | [TC/Cases.lean](TensorCoreTests/TC/Cases.lean) | Named denormalized-product/alignment traces and snapshot observations |
 | [TC/Monotonicity.lean](TensorCoreTests/TC/Monotonicity.lean) | V100/Ampere/Hopper family theorems, thresholds, and witness-range boundaries |
-| [TC/Features.lean](TensorCoreTests/TC/Features.lean) | Canonical alignment, minimum alignment exponents, extra alignment bits and machine-refinement witnesses |
+| [TC/Features.lean](TensorCoreTests/TC/Features.lean) | Canonical alignment, minimum alignment exponents, padding bits and machine-refinement witnesses |
 | [TC/FP8.lean](TensorCoreTests/TC/FP8.lean) | Every special and boundary E4M3 and E5M2 encoding, the widened E4M3 layout, the 13-bit block output of Ada FP8, two-block sums and the B200 recording convention |
 | [TC/Instruction.lean](TensorCoreTests/TC/Instruction.lean) | Instruction variants with their block FMAs in order, input width, and block-order examples |
 | [TC/Composition.lean](TensorCoreTests/TC/Composition.lean) | Encoded residual ledger of chained block FMAs and cancellation correction |

@@ -10,7 +10,7 @@ FMA size of the block FMAs it is split into (`TensorCore.runBlocks`: contiguous 
 increasing `k`, the FP32 output of each block FMA the `c` of the next), `output` the model's final
 output word (or `ERR <error>`), `value` its value and `exact` the exact `c + Σ aᵢbᵢ`. An id
 containing `@alt=` is the same input under an alternative hypothesis (another FMA size, number of
-extra alignment bits or minimum alignment exponent), which a hardware mismatch with the main
+padding bits or minimum alignment exponent), which a hardware mismatch with the main
 prediction would point to. -/
 
 open TensorCore
@@ -70,10 +70,10 @@ def tf (neg : Bool) (e : ℤ) : BitVec 19 := tfw neg (e + 127).toNat 0
 
 def zs {w : ℕ} (n : ℕ) : List (BitVec w × BitVec w) := List.replicate n (0, 0)
 
-/-- BF16 and TF32 models with a given FMA size, number of extra alignment bits and minimum
+/-- BF16 and TF32 models with a given FMA size, number of padding bits and minimum
 alignment exponent (the alternative hypotheses). -/
-def bfM (K neab : ℕ) (eAlignMin : Option ℤ) : Model := bf16Fp32Model K neab eAlignMin
-def tfM (K neab : ℕ) (eAlignMin : Option ℤ) : Model := tf19Fp32Model K neab eAlignMin
+def bfM (K padding : ℕ) (eAlignMin : Option ℤ) : Model := bf16Fp32Model K padding eAlignMin
+def tfM (K padding : ℕ) (eAlignMin : Option ℤ) : Model := tf19Fp32Model K padding eAlignMin
 
 #eval show IO Unit from do
   /- 1. Full block FMAs and two passes (ozaki/OzakiTC). -/
@@ -204,8 +204,8 @@ def tfM (K neab : ℕ) (eAlignMin : Option ℤ) : Model := tf19Fp32Model K neab 
   let _ ← run "nv-tf32-k8-fma-size-probe@alt=K4-chained (H100 WMMA)" "hopperTF32WmmaF32"
     hopperTF32WmmaF32 kProbe 0
   let _ ← run "nv-tf32-k8-fma-size-probe@alt=K4-chained (A100)" "a100TF32F32" a100TF32F32 kProbe 0
-  -- Extra-alignment-bits probe: `c = 1` and products `1.5·2^-25`, kept on the grid `2^-(23+p)` iff
-  -- `p ≥ 2`, with `p` extra alignment bits.
+  -- Padding-bits probe: `c = 1` and products `1.5·2^-25`, kept on the grid `2^-(23+p)` iff
+  -- `p ≥ 2`, with `p` padding bits.
   let tp : BitVec 19 × BitVec 19 := (tfw false 115 512, tf false (-13))
   let _ ← run "nv-h100-tf32mma-align-bits-probe" "hopperTF32MmaF32" hopperTF32MmaF32
     (List.replicate 8 tp) 0x3f800000

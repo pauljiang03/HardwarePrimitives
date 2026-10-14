@@ -13,7 +13,7 @@ theorem evalPreparedMachine_eq (b : PreparedBlock) (w : ℕ) (hw : 0 < w)
 
 /-- All encoded inputs have identical reference and machine results at any adequate width. -/
 theorem evalBlockMachine_eq {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
-    (hF : p.alignFracBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits)
+    (hF : p.alignMantissaBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits)
     (hw : F + 2 + carryBits + 1 ≤ w) : evalBlockMachine w x = evalBlock x := by
   unfold evalBlockMachine evalBlock
   split
@@ -29,11 +29,11 @@ theorem evalBlockMachine_eq {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
         Nat.pow_le_pow_right (by decide) (by omega)
       omega
 
-theorem fp16Fp32_machine_eq (K neab carryBits w : ℕ) (eAlignMin : Option ℤ)
-    (x : BlockInput (fp16Fp32Model K neab eAlignMin))
-    (hc : K + 1 ≤ 2 ^ carryBits) (hw : 26 + neab + carryBits ≤ w) :
+theorem fp16Fp32_machine_eq (K padding carryBits w : ℕ) (eAlignMin : Option ℤ)
+    (x : BlockInput (fp16Fp32Model K padding eAlignMin))
+    (hc : K + 1 ≤ 2 ^ carryBits) (hw : 26 + padding + carryBits ≤ w) :
     evalBlockMachine w x = evalBlock x :=
-  evalBlockMachine_eq x w (23 + neab) carryBits rfl hc (by omega)
+  evalBlockMachine_eq x w (23 + padding) carryBits rfl hc (by omega)
 
 theorem v100_machine_eq (x : BlockInput v100F16F32) :
     evalBlockMachine 29 x = evalBlock x :=

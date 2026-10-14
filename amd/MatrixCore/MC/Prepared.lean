@@ -8,7 +8,7 @@ theory files and for downstream proofs:
 * `e_max` bounds every nonzero product and is `none` only when all products are zero;
 * odd- and even-indexed positions partition the products;
 * every finite operand has a significand below 2, so every product has one below 4;
-* `prepare` keeps the operand counts, and `c` has 23 fractional bits. -/
+* `prepare` keeps the operand counts, and `c` has 23 mantissa bits. -/
 
 namespace MatrixCore
 

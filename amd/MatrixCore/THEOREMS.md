@@ -47,7 +47,7 @@ adds them in `w`-bit wrapping registers (`machineAccumulate`).
 
 | What it says | Lean name | File |
 | --- | --- | --- |
-| A fixed-width wrapping accumulator gives the same output for every input when it is wide enough: `23 + n_eab + 2` bits per product, carry bits for `N_FMA`, and a sign bit (30/30/29/31 bits for CDNA 3 fp16/bf16/XF32/binary8). | `evalBlockMachine_eq`, `cdna3F16_machine_eq`, `cdna3BF16_machine_eq`, `cdna3XF32_machine_eq`, `cdna3FP8_machine_eq` | [MC/MachineRefinement.lean](MC/MachineRefinement.lean) |
+| A fixed-width wrapping accumulator gives the same output for every input when it is wide enough: `23 + padding + 2` bits per product, carry bits for `N_FMA`, and a sign bit (30/30/29/31 bits for CDNA 3 fp16/bf16/XF32/binary8). | `evalBlockMachine_eq`, `cdna3F16_machine_eq`, `cdna3BF16_machine_eq`, `cdna3XF32_machine_eq`, `cdna3FP8_machine_eq` | [MC/MachineRefinement.lean](MC/MachineRefinement.lean) |
 | Every partial sum in that accumulator is exact, in any order. | `machinePrefix_exact` | [MC/MachineRefinement.lean](MC/MachineRefinement.lean) |
 | Odd/even grouping's RD of a group sum to the common `e_max` is an arithmetic right shift of its register. | `shiftRegister_spec` | [MC/MachineRefinement.lean](MC/MachineRefinement.lean) |
 

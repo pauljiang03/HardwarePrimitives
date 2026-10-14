@@ -60,12 +60,12 @@ private def featureJson (p : TCModel) (words : List Nat) (registerTF32 : Bool) :
 
 private def command (args : List String) : Option Json := do
   match args with
-  | "block" :: fmt :: k :: neab :: fl :: words =>
+  | "block" :: fmt :: k :: padding :: fl :: words =>
     let f ← format fmt
     let k ← k.toNat?
-    let neab ← neab.toNat?
+    let padding ← padding.toNat?
     let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
-    blockJson ⟨f,k,neab,eAlignMin⟩ (← words.mapM String.toNat?)
+    blockJson ⟨f,k,padding,eAlignMin⟩ (← words.mapM String.toNat?)
   | ["family", p, k, j] =>
     let p ← p.toNat?
     let k ← k.toNat?
@@ -82,12 +82,12 @@ private def command (args : List String) : Option Json := do
     if d = 0 then none else do
       let x : ℚ := n / (d : ℚ)
       return Json.mkObj [("rne", toJson (round32 .nearestEven x)), ("trunc", toJson (round32 .towardZero x))]
-  | fmt :: k :: neab :: fl :: words =>
+  | fmt :: k :: padding :: fl :: words =>
     let f ← format (if fmt = "canonical" then "fp16" else fmt)
     let k ← k.toNat?
-    let neab ← neab.toNat?
+    let padding ← padding.toNat?
     let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
-    return featureJson ⟨f,k,neab,eAlignMin⟩ (← words.mapM String.toNat?) (fmt == "tf32")
+    return featureJson ⟨f,k,padding,eAlignMin⟩ (← words.mapM String.toNat?) (fmt == "tf32")
   | _ => none
 
 def main (args : List String) : IO Unit := do

@@ -41,9 +41,9 @@ theorem sumQ_eq (xs : List ℚ) : sumQ xs = xs.sum := by
 /-- If every nonzero term is a multiple of `2^g` with exponent at most `g + F`, and the minimum
 alignment exponent is at most `g + F`, alignment loses nothing. -/
 theorem accumulator_eq_exactDot_of_grid (b : PreparedBlock) (g : ℤ)
-    (hfloor : ∀ f ∈ b.model.eAlignMin, f ≤ g + b.model.alignFracBits)
+    (hfloor : ∀ f ∈ b.model.eAlignMin, f ≤ g + b.model.alignMantissaBits)
     (hterm : ∀ t ∈ b.terms, t.significand ≠ 0 →
-      t.exponent ≤ g + b.model.alignFracBits ∧ ∃ k : ℤ, t.value = k * pow2 g) :
+      t.exponent ≤ g + b.model.alignMantissaBits ∧ ∃ k : ℤ, t.value = k * pow2 g) :
     b.accumulator = b.exactDot := by
   rw [accumulator_value, ← terms_value]
   congr 1
@@ -62,7 +62,7 @@ theorem accumulator_eq_exactDot_of_grid (b : PreparedBlock) (g : ℤ)
 /-- An exact accumulator whose value is a binary32 number is returned unchanged by a model with a
 binary32 block output. -/
 theorem evalPrepared_exact (b : PreparedBlock) (hacc : b.accumulator = b.exactDot)
-    (hfin : FiniteValue32 b.exactDot) (hw : 23 ≤ b.model.outputFracBits) :
+    (hfin : FiniteValue32 b.exactDot) (hw : 23 ≤ b.model.outputMantissaBits) :
     ∃ t, evalPrepared b = .ok t ∧ t.output.value = b.exactDot := by
   have hr : absQ b.accumulator ≤ maxFinite32 := by rw [hacc]; exact finiteValue32_abs_le hfin
   obtain ⟨t, ht⟩ := evalPrepared_total b hr
@@ -177,11 +177,11 @@ theorem decode32_isSome_of_value32 {c : F32} {v : ℚ} (h : value32 c = some v) 
 exponent at most `F`, a minimum normal exponent at most `b` (every format in use), and a binary32
 block output. -/
 structure IntExact (p : Model) (b : ℕ) : Prop where
-  align : 2 * (b : ℤ) ≤ p.alignFracBits
-  wide : 23 ≤ p.alignFracBits
-  eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ p.alignFracBits
+  align : 2 * (b : ℤ) ≤ p.alignMantissaBits
+  wide : 23 ≤ p.alignMantissaBits
+  eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ p.alignMantissaBits
   emin : 1 - p.input.bias ≤ b
-  output : 23 ≤ p.outputFracBits
+  output : 23 ≤ p.outputMantissaBits
 
 /-- **Exact integer block.** Operands that are integers of magnitude at most `2^b` and an integer
 `c` with `|c| + Σ|aᵢbᵢ| ≤ 2^24` give `c + Σ aᵢbᵢ` exactly. -/
@@ -209,7 +209,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
   have hzc : (zc.natAbs : ℚ) ≤ 2 ^ (24 : ℤ) := by rw [← abs_intCast]; grind
   -- every product term
   have hprod : ∀ q ∈ x.products, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).significand ≠ 0 →
-      (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignFracBits ∧
+      (denormalizedMul (decodeD p q.1) (decodeD p q.2)).exponent ≤ p.alignMantissaBits ∧
       ∃ k : ℤ, (denormalizedMul (decodeD p q.1) (decodeD p q.2)).value = k * pow2 0 := by
     intro q hq hnz
     obtain ⟨⟨h1, za, hza, hza'⟩, ⟨h2, zb, hzb, hzb'⟩⟩ := hops q hq
@@ -254,7 +254,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
               (by rw [hdcv, abs_intCast]
                   have : ((zc.natAbs : ℕ) : ℚ) < ((2 ^ 24 : ℕ) : ℚ) := Rat.natCast_lt_natCast.mpr hsmall
                   rw [← two_pow_natCast] at this; exact this) hnz
-            show dc.exponent ≤ 0 + blk.model.alignFracBits
+            show dc.exponent ≤ 0 + blk.model.alignMantissaBits
             rw [hprof]; have := hp.wide; omega
           · change dc.value = _; rw [hdcv, pow2_zero, Rat.mul_one]
         · obtain ⟨q, hq, rfl⟩ := List.mem_map.mp ht
@@ -286,7 +286,7 @@ theorem evalBlock_int {p : Model} {b : ℕ} (hp : IntExact p b) {x : BlockInput 
         · refine ⟨?_, zc / 2, ?_⟩
           · have := decode_exp_le (f := fp32) (w := x.c) (d := dc) hdc (E := 24) (by decide)
               (by rw [hdcv, abs_intCast, hceq, ← two_pow_natCast]; exact two_pow_lt (by omega)) hnz
-            show dc.exponent ≤ 1 + blk.model.alignFracBits
+            show dc.exponent ≤ 1 + blk.model.alignMantissaBits
             rw [hprof]; have := hp.wide; omega
           · change dc.value = _
             rw [hdcv, pow2_one]

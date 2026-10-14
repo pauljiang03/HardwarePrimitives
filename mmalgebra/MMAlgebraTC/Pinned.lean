@@ -91,17 +91,17 @@ theorem evalPrepared_pinned (blk : PreparedBlock) {t : BlockTrace} (hev : evalPr
     (α : ℤ) (hf : ∀ f ∈ blk.model.eAlignMin, f ≤ α)
     (hle : ∀ u ∈ blk.terms, u.significand ≠ 0 → u.exponent ≤ α)
     (hpin : ∃ u ∈ blk.terms, u.significand ≠ 0 ∧ u.exponent = α)
-    (hlo : -149 ≤ α - blk.model.alignFracBits) (hhi : α - blk.model.alignFracBits ≤ 104)
-    (hrange : Rat.abs blk.accumulator < 2 ^ (α - blk.model.alignFracBits + 24))
-    (hw : 23 ≤ blk.model.outputFracBits) :
+    (hlo : -149 ≤ α - blk.model.alignMantissaBits) (hhi : α - blk.model.alignMantissaBits ≤ 104)
+    (hrange : Rat.abs blk.accumulator < 2 ^ (α - blk.model.alignMantissaBits + 24))
+    (hw : 23 ≤ blk.model.outputMantissaBits) :
     t.output.value = blk.accumulator ∧
-      blk.accumulator = sumQ (blk.terms.map fun u => truncGrid u.value (α - blk.model.alignFracBits)) := by
-  have hg : blk.alignGridExponent = α - blk.model.alignFracBits := by
+      blk.accumulator = sumQ (blk.terms.map fun u => truncGrid u.value (α - blk.model.alignMantissaBits)) := by
+  have hg : blk.alignGridExponent = α - blk.model.alignMantissaBits := by
     unfold PreparedBlock.alignGridExponent; rw [alignExp_eq blk α hf hle hpin]; rfl
   have hacc := accumulator_value blk
   rw [hg] at hacc
   refine ⟨?_, hacc⟩
-  have hk : blk.accumulator = (sumZ blk.alignedBits : ℚ) * pow2 (α - blk.model.alignFracBits) := by
+  have hk : blk.accumulator = (sumZ blk.alignedBits : ℚ) * pow2 (α - blk.model.alignMantissaBits) := by
     unfold PreparedBlock.accumulator; rw [hg]
   have hnat : (sumZ blk.alignedBits).natAbs < 2 ^ 24 := by
     rw [hk] at hrange; exact abs_grid_natAbs hrange
@@ -138,22 +138,22 @@ structure PinnedBlock (p : Model) (α : ℤ) (ps : List (p.Word × p.Word)) : Pr
 /-- Model conditions: `F ≥ 23`, the minimum alignment exponent at most `α`, the grid
 `2^(α−F)` within binary32's range of exact multiples, and a binary32 block output. -/
 structure PinnedModel (p : Model) (α : ℤ) : Prop where
-  wide : 23 ≤ p.alignFracBits
+  wide : 23 ≤ p.alignMantissaBits
   eAlignMin : ∀ f ∈ p.eAlignMin, f ≤ α
-  lo : -149 ≤ α - p.alignFracBits
-  hi : α - p.alignFracBits ≤ 104
-  output : 23 ≤ p.outputFracBits
+  lo : -149 ≤ α - p.alignMantissaBits
+  hi : α - p.alignMantissaBits ≤ 104
+  output : 23 ≤ p.outputMantissaBits
 
 /-- **Pinned block.** `c` on the grid `2^(α−F)`, a pinned block, and a result below `2^(α−F+24)`:
 the output is `c + Σ trunc_{α−F}(aᵢbᵢ)` exactly. -/
 theorem evalBlock_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) {x : BlockInput p}
     (hb : PinnedBlock p α x.products) {v : ℚ} (hc : value32 x.c = some v)
-    (hcg : ∃ z : ℤ, v = z * pow2 (α - p.alignFracBits))
-    (hrange : Rat.abs (v + truncSum p (α - p.alignFracBits) x.products) <
-      2 ^ (α - p.alignFracBits + 24))
-    (hcr : Rat.abs v < 2 ^ (α - p.alignFracBits + 24))
+    (hcg : ∃ z : ℤ, v = z * pow2 (α - p.alignMantissaBits))
+    (hrange : Rat.abs (v + truncSum p (α - p.alignMantissaBits) x.products) <
+      2 ^ (α - p.alignMantissaBits + 24))
+    (hcr : Rat.abs v < 2 ^ (α - p.alignMantissaBits + 24))
     {t : BlockTrace} (ht : evalBlock x = .ok t) :
-    t.output.value = v + truncSum p (α - p.alignFracBits) x.products := by
+    t.output.value = v + truncSum p (α - p.alignMantissaBits) x.products := by
   obtain ⟨dc, hdc, hdcv⟩ := decode32_isSome_of_value32 hc
   have hprep := prepare_of_finite hb.finite hdc
   generalize hblk : (⟨p, x.products.map fun q => (decodeD p q.1, decodeD p q.2), dc⟩ :
@@ -167,7 +167,7 @@ theorem evalBlock_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) {x : Blo
     intro hnz
     have hlt : Rat.abs dc.value < 2 ^ (α + 1) := by
       rw [hdcv]
-      have : (2 : ℚ) ^ (α - p.alignFracBits + 24) ≤ 2 ^ (α + 1) := by
+      have : (2 : ℚ) ^ (α - p.alignMantissaBits + 24) ≤ 2 ^ (α + 1) := by
         rw [← pow2_eq, ← pow2_eq]; exact pow2_le_of_le (by have := hm.wide; omega)
       grind
     have hbias : (1 : ℤ) - fp32.bias ≤ α := by
@@ -185,8 +185,8 @@ theorem evalBlock_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) {x : Blo
     obtain ⟨q, hq, hnz, he⟩ := hb.pin
     exact ⟨prodTerm p q, by rw [hterms]; exact List.mem_cons_of_mem _ (List.mem_map.mpr ⟨q, hq, rfl⟩),
       hnz, he⟩
-  have hsum : sumQ (blk.terms.map fun u => truncGrid u.value (α - blk.model.alignFracBits)) =
-      v + truncSum p (α - p.alignFracBits) x.products := by
+  have hsum : sumQ (blk.terms.map fun u => truncGrid u.value (α - blk.model.alignMantissaBits)) =
+      v + truncSum p (α - p.alignMantissaBits) x.products := by
     rw [hterms, hmodel, sumQ_eq]
     simp only [List.map_cons, List.sum_cons, List.map_map, Function.comp_def]
     obtain ⟨z, hz⟩ := hcg
@@ -194,9 +194,9 @@ theorem evalBlock_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) {x : Blo
       change dc.value = v; exact hdcv
     rw [hcv, hz, truncGrid_fixed]
     rfl
-  have hacc_eq : blk.accumulator = v + truncSum p (α - p.alignFracBits) x.products := by
+  have hacc_eq : blk.accumulator = v + truncSum p (α - p.alignMantissaBits) x.products := by
     rw [accumulator_value]
-    have hg : blk.alignGridExponent = α - blk.model.alignFracBits := by
+    have hg : blk.alignGridExponent = α - blk.model.alignMantissaBits := by
       unfold PreparedBlock.alignGridExponent
       rw [alignExp_eq blk α (by rw [hmodel]; exact hm.eAlignMin) hle hpin]; rfl
     rw [hg, hsum]
@@ -215,11 +215,11 @@ def PrefixesInRange (p : Model) (g : ℤ) (v : ℚ) (blocks : List (List (p.Word
 range, the chain returns `c + Σ trunc_{α−F}(aᵢbᵢ)` over all products of all blocks. -/
 theorem runBlocks_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) :
     ∀ (blocks : List (List (p.Word × p.Word))) (c : F32) (v : ℚ) (ts : List BlockTrace),
-      value32 c = some v → (∃ z : ℤ, v = z * pow2 (α - p.alignFracBits)) →
+      value32 c = some v → (∃ z : ℤ, v = z * pow2 (α - p.alignMantissaBits)) →
       (∀ gr ∈ blocks, PinnedBlock p α gr) →
-      PrefixesInRange p (α - p.alignFracBits) v blocks →
+      PrefixesInRange p (α - p.alignMantissaBits) v blocks →
       runBlocks p c blocks = .ok ts →
-      runValue c ts = v + truncSum p (α - p.alignFracBits) blocks.flatten
+      runValue c ts = v + truncSum p (α - p.alignMantissaBits) blocks.flatten
   | [], c, v, ts, hc, _, _, _, hrun => by
     simp only [runBlocks, Except.ok.injEq] at hrun; subst hrun
     simp [runValue, value32D, hc, truncSum]
@@ -239,15 +239,15 @@ theorem runBlocks_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) :
         simp only [List.take_zero, List.flatten_nil, truncSum_nil, Rat.add_zero, List.take_succ_cons,
           List.flatten_cons, List.flatten_nil, List.append_nil] at h0 h1
         have hval := evalBlock_pinned (x := ⟨gr, c⟩) hm (hg gr (by simp)) hc hcg h1 h0 ht
-        have hc' : value32 t.output.bits = some (v + truncSum p (α - p.alignFracBits) gr) := by
+        have hc' : value32 t.output.bits = some (v + truncSum p (α - p.alignMantissaBits) gr) := by
           rw [value32_output, hval]
-        have hcg' : ∃ z : ℤ, v + truncSum p (α - p.alignFracBits) gr =
-            z * pow2 (α - p.alignFracBits) := by
+        have hcg' : ∃ z : ℤ, v + truncSum p (α - p.alignMantissaBits) gr =
+            z * pow2 (α - p.alignMantissaBits) := by
           obtain ⟨z, hz⟩ := hcg
-          obtain ⟨w, hw⟩ := truncSum_grid p (α - p.alignFracBits) gr
+          obtain ⟨w, hw⟩ := truncSum_grid p (α - p.alignMantissaBits) gr
           exact ⟨z + w, by rw [hz, hw, Rat.intCast_add]; grind⟩
-        have hpre' : PrefixesInRange p (α - p.alignFracBits)
-            (v + truncSum p (α - p.alignFracBits) gr) rest := by
+        have hpre' : PrefixesInRange p (α - p.alignMantissaBits)
+            (v + truncSum p (α - p.alignMantissaBits) gr) rest := by
           intro n hn
           have := hpre (n + 1) (by simp; omega)
           simp only [List.take_succ_cons, List.flatten_cons, truncSum_append] at this
@@ -260,10 +260,10 @@ theorem runBlocks_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α) :
 of products (in any order, grouped into blocks in any way) return the same value. -/
 theorem pinned_schedule_free {p : Model} {α : ℤ} (hm : PinnedModel p α)
     (b₁ b₂ : List (List (p.Word × p.Word))) (hperm : b₁.flatten.Perm b₂.flatten)
-    (c : F32) (v : ℚ) (hc : value32 c = some v) (hcg : ∃ z : ℤ, v = z * pow2 (α - p.alignFracBits))
+    (c : F32) (v : ℚ) (hc : value32 c = some v) (hcg : ∃ z : ℤ, v = z * pow2 (α - p.alignMantissaBits))
     (hg₁ : ∀ gr ∈ b₁, PinnedBlock p α gr) (hg₂ : ∀ gr ∈ b₂, PinnedBlock p α gr)
-    (hr₁ : PrefixesInRange p (α - p.alignFracBits) v b₁)
-    (hr₂ : PrefixesInRange p (α - p.alignFracBits) v b₂)
+    (hr₁ : PrefixesInRange p (α - p.alignMantissaBits) v b₁)
+    (hr₂ : PrefixesInRange p (α - p.alignMantissaBits) v b₂)
     {ts₁ ts₂ : List BlockTrace} (h₁ : runBlocks p c b₁ = .ok ts₁) (h₂ : runBlocks p c b₂ = .ok ts₂) :
     runValue c ts₁ = runValue c ts₂ := by
   rw [runBlocks_pinned hm b₁ c v ts₁ hc hcg hg₁ hr₁ h₁,
@@ -275,15 +275,15 @@ partial results returns it unchanged (`int`-grid argument of `grid_finiteValue32
 theorem pinned_splitK {p : Model} {α : ℤ} (hm : PinnedModel p α)
     (b₁ b₂ : List (List (p.Word × p.Word)))
     (hg : ∀ gr ∈ b₁ ++ b₂, PinnedBlock p α gr)
-    (hr₁ : PrefixesInRange p (α - p.alignFracBits) 0 b₁)
-    (hr₂ : PrefixesInRange p (α - p.alignFracBits) 0 b₂)
-    (hr : PrefixesInRange p (α - p.alignFracBits) 0 (b₁ ++ b₂))
+    (hr₁ : PrefixesInRange p (α - p.alignMantissaBits) 0 b₁)
+    (hr₂ : PrefixesInRange p (α - p.alignMantissaBits) 0 b₂)
+    (hr : PrefixesInRange p (α - p.alignMantissaBits) 0 (b₁ ++ b₂))
     {ts₁ ts₂ ts : List BlockTrace} (h₁ : runBlocks p 0 b₁ = .ok ts₁)
     (h₂ : runBlocks p 0 b₂ = .ok ts₂) (h : runBlocks p 0 (b₁ ++ b₂) = .ok ts) :
     runValue 0 ts₁ + runValue 0 ts₂ = runValue 0 ts ∧
       FiniteValue32 (runValue 0 ts₁ + runValue 0 ts₂) := by
   have hz : value32 (0 : F32) = some 0 := by decide +kernel
-  have hcg : ∃ z : ℤ, (0 : ℚ) = z * pow2 (α - p.alignFracBits) := ⟨0, by simp⟩
+  have hcg : ∃ z : ℤ, (0 : ℚ) = z * pow2 (α - p.alignMantissaBits) := ⟨0, by simp⟩
   have e₁ := runBlocks_pinned hm b₁ 0 0 ts₁ hz hcg (fun g' h' => hg g' (List.mem_append_left _ h')) hr₁ h₁
   have e₂ := runBlocks_pinned hm b₂ 0 0 ts₂ hz hcg (fun g' h' => hg g' (List.mem_append_right _ h')) hr₂ h₂
   have e := runBlocks_pinned hm (b₁ ++ b₂) 0 0 ts hz hcg hg hr h
@@ -291,7 +291,7 @@ theorem pinned_splitK {p : Model} {α : ℤ} (hm : PinnedModel p α)
     rw [e₁, e₂, e, List.flatten_append, truncSum_append]; grind
   refine ⟨hsum, ?_⟩
   rw [hsum, e]
-  obtain ⟨w, hw⟩ := truncSum_grid p (α - p.alignFracBits) (b₁ ++ b₂).flatten
+  obtain ⟨w, hw⟩ := truncSum_grid p (α - p.alignMantissaBits) (b₁ ++ b₂).flatten
   have hfull := hr (b₁ ++ b₂).length (by omega)
   rw [List.take_length] at hfull
   rw [Rat.zero_add] at hfull ⊢

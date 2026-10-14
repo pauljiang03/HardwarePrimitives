@@ -78,9 +78,9 @@ theorem decode32_onGridQ {c : F32} {d : Decoded} (h : decode32 c = some d) : OnG
   have := classify_onGridQ fp32 c.toNat h
   exact this
 
-theorem fp16_decode_onGridQ {K neab : ℕ} {eAlignMin : Option ℤ}
-    {w : (fp16Fp32Model K neab eAlignMin).Word} {d : Decoded}
-    (h : (fp16Fp32Model K neab eAlignMin).decode w = some d) : OnGridQ d.value (-24) :=
+theorem fp16_decode_onGridQ {K padding : ℕ} {eAlignMin : Option ℤ}
+    {w : (fp16Fp32Model K padding eAlignMin).Word} {d : Decoded}
+    (h : (fp16Fp32Model K padding eAlignMin).decode w = some d) : OnGridQ d.value (-24) :=
   classify_onGridQ fp16 w.toNat h
 
 theorem mapM_some_mem {α β : Type} (f : α → Option β) :
@@ -116,14 +116,14 @@ theorem prepareProducts_mem {p : Model} {ps : List (p.Word × p.Word)} {ds : Lis
 
 /-- Every term of a prepared fp16 block (the accumulator input and the products) is a multiple of
 `2^-149`. -/
-theorem terms_onGridQ {K neab : ℕ} {eAlignMin : Option ℤ}
-    {x : BlockInput (fp16Fp32Model K neab eAlignMin)} {b : PreparedBlock} (hp : prepare x = some b) :
+theorem terms_onGridQ {K padding : ℕ} {eAlignMin : Option ℤ}
+    {x : BlockInput (fp16Fp32Model K padding eAlignMin)} {b : PreparedBlock} (hp : prepare x = some b) :
     ∀ t ∈ b.terms, OnGridQ t.value (-149) := by
   unfold prepare at hp
   cases hc : decode32 x.c with
   | none => simp [hc] at hp
   | some dc =>
-    cases hps : prepareProducts (fp16Fp32Model K neab eAlignMin) x.products with
+    cases hps : prepareProducts (fp16Fp32Model K padding eAlignMin) x.products with
     | none => simp [hc, hps] at hp
     | some ds =>
       simp only [hc, hps, Option.some.injEq] at hp
@@ -142,8 +142,8 @@ theorem terms_onGridQ {K neab : ℕ} {eAlignMin : Option ℤ}
         grind
 
 /-- The sum of the aligned terms of an fp16 block is a multiple of `2^-149`. -/
-theorem accumulator_onGridQ {K neab : ℕ} {eAlignMin : Option ℤ}
-    {x : BlockInput (fp16Fp32Model K neab eAlignMin)} {b : PreparedBlock} (hp : prepare x = some b) :
+theorem accumulator_onGridQ {K padding : ℕ} {eAlignMin : Option ℤ}
+    {x : BlockInput (fp16Fp32Model K padding eAlignMin)} {b : PreparedBlock} (hp : prepare x = some b) :
     OnGridQ b.accumulator (-149) := by
   rw [accumulator_value]
   apply onGridQ_sumQ
@@ -185,8 +185,8 @@ theorem signedRounded_ne_zero {y : ℚ} (hg : OnGridQ y (-149)) (hy : y ≠ 0)
 
 /-- **An fp16 block FMA never returns `−0`**, whatever its accumulator input (V100, A100, H100 and
 every fp16 Tensor Core profile). -/
-theorem blockOut_ne_negZero {K neab : ℕ} {eAlignMin : Option ℤ}
-    {x : BlockInput (fp16Fp32Model K neab eAlignMin)} {d : F32} (h : blockOut x = .ok d) :
+theorem blockOut_ne_negZero {K padding : ℕ} {eAlignMin : Option ℤ}
+    {x : BlockInput (fp16Fp32Model K padding eAlignMin)} {d : F32} (h : blockOut x = .ok d) :
     d ≠ 0x80000000 := by
   unfold blockOut at h
   cases ht : evalBlock x with

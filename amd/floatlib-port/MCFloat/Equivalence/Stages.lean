@@ -104,7 +104,7 @@ theorem alignedSum_agree {ps : List MCFloat.Term} {us : List MatrixCore.Unpacked
     apply sum_agree h
     intro p u hp
     rw [hp.value]
-    simp only [MatrixCore.truncFrac, truncGrid_eq]
+    simp only [MatrixCore.truncMantissa, truncGrid_eq]
     congr 1
 
 theorem odds_agree {R : α → β → Prop} :
@@ -119,12 +119,12 @@ theorem odds_agree {R : α → β → Prop} :
     simp only [MCFloat.odds, MCFloat.evens, MatrixCore.oddIndexed, MatrixCore.evenIndexed]
     exact ⟨.cons h1 ih.1, .cons h2 ih.2⟩
 
-theorem productSum_agree (Q : MatrixCore.Model) (hneab : Q.neab = 1) (i : Bool)
+theorem productSum_agree (Q : MatrixCore.Model) (hpadding : Q.padding = 1) (i : Bool)
     (hacc : Q.accumulation = if i then .oddEvenGrouping else .globalAlignment)
     {ps : List MCFloat.Term} {us : List MatrixCore.Unpacked} (h : List.Forall₂ ProdAgree ps us) :
     (if i then MCFloat.groupedSum ps else MCFloat.alignedSum ps) = MatrixCore.productSum Q us := by
   unfold MatrixCore.productSum
-  rw [hacc, hneab]
+  rw [hacc, hpadding]
   cases i
   · exact alignedSum_agree h
   · simp only [ite_true]
@@ -134,7 +134,7 @@ theorem productSum_agree (Q : MatrixCore.Model) (hneab : Q.neab = 1) (i : Bool)
     generalize MatrixCore.alignedSum 1 (MatrixCore.evenIndexed us) = v
     obtain ⟨o1, o2⟩ := o
     obtain ⟨v1, v2⟩ := v
-    cases o1 <;> cases v1 <;> simp [MatrixCore.joinExp, MatrixCore.rdFrac]
+    cases o1 <;> cases v1 <;> simp [MatrixCore.joinExp, MatrixCore.rdMantissa]
 
 /-! ## Late `c` -/
 
@@ -152,7 +152,7 @@ theorem lateC_agree (Q : MatrixCore.Model) (cut : Option ℕ)
   have hcexp : (if u.m = 0 then some (-126 : ℤ) else some u.e) =
       some (if u.m = 0 then -126 else u.e) := by split <;> rfl
   rw [hcexp]
-  simp only [MatrixCore.rdFrac, rdGrid_eq]
+  simp only [MatrixCore.rdMantissa, rdGrid_eq]
   generalize (if u.m = 0 then (-126 : ℤ) else u.e) = eC
   have hshift : (if MCFloat.rdGrid s (eC - 32) + u.value = 0 then 0
       else MCFloat.rdGrid (MCFloat.rdGrid s (eC - 32) + u.value)

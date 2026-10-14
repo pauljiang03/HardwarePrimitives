@@ -25,8 +25,8 @@ The trace also reports `correctedBits`, the TC-EFT result `0x41080000 = 8.5`.
 | Executable | Input | Purpose |
 | --- | --- | --- |
 | `tc_trace` | eight FP16 hex words and one FP32 word; `--file`, `--round-file` | V100 stage trace |
-| `tc_features` | `canonical K N_EAB E_ALIGN_MIN …`, `bf16 …`, `tf32 …`, `block MODEL …`, `dot MODEL …`, `dot-then-add MODEL …`, `chain DESCRIPTOR …`, `decode`, `round` | general models, the named variants of every GPU (FP8 included), decimal words |
-| `tc_eft_reference` | `block FORMAT K N_EAB E_ALIGN_MIN a0 b0 … c D`, `round`, `family p K j` | reference EFT, in the TC-EFT paper's input format |
+| `tc_features` | `canonical K PADDING E_ALIGN_MIN …`, `bf16 …`, `tf32 …`, `block MODEL …`, `dot MODEL …`, `dot-then-add MODEL …`, `chain DESCRIPTOR …`, `decode`, `round` | general models, the named variants of every GPU (FP8 included), decimal words |
+| `tc_eft_reference` | `block FORMAT K PADDING E_ALIGN_MIN a0 b0 … c D`, `round`, `family p K j` | reference EFT, in the TC-EFT paper's input format |
 | `tc_bounded_eft` | `block VARIANT a0 b0 … c D`, `round SIGNED_COEFFICIENT` | 576-bit bounded EFT |
 | `tc_lean_eft_check` | JSON Lines on stdin | native Float32 vs bounded scalar fold |
 

@@ -177,10 +177,10 @@ multiset alone (see `runBlocks_pinned` for the conditions). -/
 theorem scheduleFree_pinned {p : Model} {α : ℤ} (hm : PinnedModel p α)
     (blocks : List (List (p.Word × p.Word))) (l : List (p.Word × p.Word))
     (hperm : blocks.flatten.Perm l) (c : F32) (v : ℚ) (hc : value32 c = some v)
-    (hcg : ∃ z : ℤ, v = z * pow2 (α - p.alignFracBits)) (hg : ∀ gr ∈ blocks, PinnedBlock p α gr)
-    (hr : PrefixesInRange p (α - p.alignFracBits) v blocks) {ts : List BlockTrace}
+    (hcg : ∃ z : ℤ, v = z * pow2 (α - p.alignMantissaBits)) (hg : ∀ gr ∈ blocks, PinnedBlock p α gr)
+    (hr : PrefixesInRange p (α - p.alignMantissaBits) v blocks) {ts : List BlockTrace}
     (h : runBlocks p c blocks = .ok ts) :
-    runValue c ts = v + truncSum p (α - p.alignFracBits) l := by
+    runValue c ts = v + truncSum p (α - p.alignMantissaBits) l := by
   rw [runBlocks_pinned hm blocks c v ts hc hcg hg hr h, truncSum_perm p _ hperm]
 
 /-- **(3) Correct rounding.** The correctly rounded Ozaki-I, run on any schedule, returns the

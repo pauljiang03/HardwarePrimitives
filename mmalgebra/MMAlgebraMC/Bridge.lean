@@ -165,7 +165,7 @@ theorem scheduleFree_exact {P : Model} {b : ℕ} (hE : ExactMultiplier P b)
 
 theorem sum_truncSum (α : ℤ) : ∀ ts : List (BlockTrace P),
     sumQ (ts.map fun t => truncSum α t.prepared) =
-      ((ts.flatMap fun t => t.prepared.p).map fun p => truncFrac p.value α 24).sum
+      ((ts.flatMap fun t => t.prepared.p).map fun p => truncMantissa p.value α 24).sum
   | [] => by simp [sumQ]
   | t :: ts => by
     rw [List.map_cons, sumQ, sum_truncSum α ts, List.flatMap_cons, List.map_append, List.sum_append]

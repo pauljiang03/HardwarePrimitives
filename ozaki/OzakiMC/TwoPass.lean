@@ -83,13 +83,13 @@ end IntPreparedW
 /-- **CDNA 3 with a wide `c`**: global alignment of integer products within `2^24` and an integer
 `c` within `2^31` is exact whenever the exact sum is within `2^31`. -/
 theorem alignedAccumulation_wide {P : Model} (hacc : P.accumulation = .globalAlignment)
-    (hneab : 1 ≤ P.neab) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
+    (hpadding : 1 ≤ P.padding) (hlate : P.late = {}) (hcz : P.cZeroExp = some (-126)) {x : Prepared}
     (h : IntPreparedW x) : alignedAccumulation P x = x.exact := by
   have hprod := h.p
   have he24 : ∀ q ∈ x.p, q.m ≠ 0 → q.e ≤ 24 := fun q hq hm => (hprod q hq).exp_le hm (h.p_le q hq)
   obtain ⟨zs, hzs⟩ := h.ints
   have hS : sumQ (x.p.map Unpacked.value) = ((zs.sum : ℤ) : ℚ) := by rw [hzs, sumQ_cast]
-  have hal : productSum P x.p = alignedSum P.neab x.p := by unfold productSum; rw [hacc]
+  have hal : productSum P x.p = alignedSum P.padding x.p := by unfold productSum; rw [hacc]
   have hps : productSum P x.p = (maxExp x.p, sumQ (x.p.map Unpacked.value)) := by
     rw [hal]
     unfold alignedSum
@@ -112,7 +112,7 @@ theorem alignedAccumulation_wide {P : Model} (hacc : P.accumulation = .globalAli
     · rw [hcz] at he; cases he; omega
     · rename_i hm; cases he; exact h.c.exp_le hm h.c_le
   obtain ⟨zc, hzc⟩ := h.c_int
-  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 31 → normalizeRD P.late.accFracBits (T : ℚ) = T := by
+  have hT : ∀ T : ℤ, absQ (T : ℚ) ≤ pow2 31 → normalizeRD P.late.accMantissaBits (T : ℚ) = T := by
     intro T hT
     unfold normalizeRD
     split
@@ -122,7 +122,7 @@ theorem alignedAccumulation_wide {P : Model} (hacc : P.accumulation = .globalAli
       have hlog : log2Floor (absQ (T : ℚ)) ≤ 31 :=
         pow2_le_iff.mp (Rat.le_trans (log2Floor_spec hpos).1 hT)
       have hn : normExp (absQ (T : ℚ)) ≤ 31 := by unfold normExp; omega
-      have hacc31 : P.late.accFracBits = 31 := by rw [hlate]
+      have hacc31 : P.late.accMantissaBits = 31 := by rw [hlate]
       exact rdGrid_of_onGrid (OnGrid.mono ⟨T, by rw [pow2_zero, Rat.mul_one]⟩ (by omega))
   have hsumbound : absQ ((zs.sum + zc : ℤ) : ℚ) ≤ pow2 31 := by
     have := h.sum_le
@@ -146,7 +146,7 @@ theorem alignedAccumulation_wide {P : Model} (hacc : P.accumulation = .globalAli
     have hle := hcE eC hce
     unfold shiftedSum
     rw [hS, hlate]
-    simp only [rdFrac]
+    simp only [rdMantissa]
     rw [rdGrid_of_onGrid (OnGrid.mono ⟨zs.sum, by rw [pow2_zero, Rat.mul_one]⟩ (by omega)), hzc,
       ← Rat.intCast_add]
     have := hT (zs.sum + zc) hsumbound
@@ -409,7 +409,7 @@ theorem accumulate_cr {P : Model} (hacc : P.accumulation = .correctRounding)
   unfold accumulate; rw [hpo, hacc]; simp
 
 /-- CDNA 3's global alignment adds an integer block with a wide `c` exactly. -/
-theorem accumulate_wide {P : Model} (hacc : P.accumulation = .globalAlignment) (hn : 1 ≤ P.neab)
+theorem accumulate_wide {P : Model} (hacc : P.accumulation = .globalAlignment) (hn : 1 ≤ P.padding)
     (hl : P.late = {}) (hc : P.cZeroExp = some (-126)) {x : Prepared} (h : IntPreparedW x) :
     accumulate P x = .ok x.exact := by
   unfold accumulate
@@ -438,7 +438,7 @@ theorem mcTwoPass_exact_cr {P : Model} (hacc : P.accumulation = .correctRounding
 /-- **CDNA 3: two passes recover a block** of integer products each at most `2^24` whose sum is at
 most `2^30`. -/
 theorem mcTwoPass_exact_ga {P : Model} (hacc : P.accumulation = .globalAlignment)
-    (hn : 1 ≤ P.neab) (hl : P.late = {}) (hc : P.cZeroExp = some (-126))
+    (hn : 1 ≤ P.padding) (hl : P.late = {}) (hc : P.cZeroExp = some (-126))
     (hsub : P.subnormals = true) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) {a : List P.a.Word} {b : List P.b.Word} (hla : a.length = P.nfma)
     (hlb : b.length = P.nfma) (ha : ∀ w ∈ a, IntWord P.a w) (hb : ∀ w ∈ b, IntWord P.b w)
@@ -498,7 +498,7 @@ def TwoPassOK (P : Model) (b : ℕ) : Prop :=
   P.subnormals = true ∧
     ((P.accumulation = .correctRounding ∧ P.productOverflow = false ∧
         P.nfma * 2 ^ (2 * b) ≤ 2 ^ 48) ∨
-      (P.accumulation = .globalAlignment ∧ 1 ≤ P.neab ∧ P.late = {} ∧
+      (P.accumulation = .globalAlignment ∧ 1 ≤ P.padding ∧ P.late = {} ∧
         P.cZeroExp = some (-126) ∧ 2 * b ≤ 24 ∧ P.nfma * 2 ^ (2 * b) ≤ 2 ^ 30))
 
 instance (P : Model) (b : ℕ) : Decidable (TwoPassOK P b) := by unfold TwoPassOK; infer_instance
@@ -567,12 +567,12 @@ theorem mcMultiplier2_exactOn {P : Model} {b : ℕ} (hok : TwoPassOK P b) (hfa :
   have hrun : mcTwoPass P (x'.map Ea) (y'.map Eb) = some (dotZ x' y' : ℚ) := by
     rw [← hprod]
     obtain ⟨hsub, hcfg⟩ := hok
-    rcases hcfg with ⟨hacc, hpo, hK⟩ | ⟨hacc, hneab, hlate, hcz, h2b, hK⟩
+    rcases hcfg with ⟨hacc, hpo, hK⟩ | ⟨hacc, hpadding, hlate, hcz, h2b, hK⟩
     · refine mcTwoPass_exact_cr hacc hpo hsub hfa hfb hla hlb hia hib ?_
       rw [hprod]
       refine Rat.le_trans hbud ?_
       rw [two_pow_natCast]; exact Rat.natCast_le_natCast.mpr hK
-    · refine mcTwoPass_exact_ga hacc hneab hlate hcz hsub hfa hfb hla hlb hia hib ?_ ?_
+    · refine mcTwoPass_exact_ga hacc hpadding hlate hcz hsub hfa hfb hla hlb hia hib ?_ ?_
       · intro v hv
         obtain ⟨w, hw, w', hw', rfl⟩ := mem_zipWith' hv
         obtain ⟨z, hz, rfl⟩ := List.mem_map.mp hw

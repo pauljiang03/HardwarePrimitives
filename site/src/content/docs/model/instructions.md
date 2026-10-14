@@ -34,7 +34,7 @@ structure InstructionVariant where
   name : String
   k : ℕ                 -- inner dimension of the instruction
   nfma : ℕ              -- K, the FMA size N_FMA
-  neab : ℕ              -- n_eab, the extra alignment bits
+  padding : ℕ           -- p, the padding bits
   eAlignMin : Option ℤ  -- the minimum alignment exponent
   evidence : String     -- where the parameters come from
   nfmaPos : 0 < nfma

@@ -25,7 +25,7 @@ commit `79143bd`). Where the two differ, the formalization follows the paper.
 
 * **bf16, `e_{c=0} = −126`, `i = 23`.** For `c = 0, p₁ = −2^-150, p₂ = −2^(-152-i)`, the paper
   reports `d = −2^-149` "for all values of `i ≥ 0`" with `i` from `0` to `23`. At `i = 23`,
-  `p₂ = −2^-175` lies at the 25th fractional bit below `e_max = −150`, and Algorithm 1 truncates it
+  `p₂ = −2^-175` lies at the 25th mantissa bit below `e_max = −150`, and Algorithm 1 truncates it
   while aligning the products; `S_acc = −2^-150` then rounds to `−0`. The MATLAB model also
   truncates the product magnitudes, and the paper's own fp16 interleaving test
   (`±1, 0, ±(2^-24 + 2^-25)` giving `±1`) rules out rounding the negative product down. The suite
@@ -53,12 +53,12 @@ against the Lean model ([differential testing](differential.md)).
 * **The RD of `S_acc` is not executed in v0.6.** `Generic_BFMA_TC.m` reads the CDNA 3
   normalization-aware RD flag only if the field `rd_borrow_carry` exists (line 54), but
   `MI300AMC.m` sets `rd_norm_aware` (line 60). The RD at lines 614–623 therefore never runs, and
-  `S_acc` keeps 32 fractional bits until the final RNE. Five of the paper's fp16 vectors that
+  `S_acc` keeps 32 mantissa bits until the final RNE. Five of the paper's fp16 vectors that
   depend on this step give a different result in the shipped model, for example
   `c = 2 − 2^-22, p₁ = 2^-22, p₂ = 2^-23 + 2^-32`, where the hardware (and the Lean model) give
   `2` and the MATLAB model gives `2 + 2^-22`. With the field set, all five agree.
 * **Subnormal-aware normalization.** With the RD enabled, the model keeps the leading 32 bits
-  of the integer `S_acc`. Below `2^-126` that is 32 fractional bits relative to `−126`, while the
+  of the integer `S_acc`. Below `2^-126` that is 32 mantissa bits relative to `−126`, while the
   paper's hardware results require 31. Two of the paper's bf16 vectors differ:
   `c = 2^-127 − 2^-140, p₁ + ⋯ = 2^-140 + 2^-150 + 2^-158` (hardware `2^-127`, MATLAB
   `2^-127 + 2^-149`) and `c = 0, p₁ = 2^-150, p₂ = 2^-158` (hardware `0`, MATLAB `2^-149`).
