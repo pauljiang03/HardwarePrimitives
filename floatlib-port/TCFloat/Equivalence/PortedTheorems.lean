@@ -44,7 +44,8 @@ theorem trace_evaluated {s : TensorCore.BlockTrace} {t : Trace} (h : TraceRel s 
       have he : d=s.output.decoded := Option.some.inj (hd.symm.trans s.output.valid)
       subst d
       rfl
-  simp only [TensorCore.evalPrepared,hbits,hd]
+  have hw : s.block.model.outputFracBits = 23 := by rw [h.block_eq]; rfl
+  simp only [TensorCore.evalPrepared,hbits,hw,TensorCore.truncateFraction32_23,hd]
 
 /-- Two-part error bound: the model's error is below (number of terms)·(alignment quantum) plus the output quantum (TC-EFT paper, Theorem III.1). -/
 theorem floatlib_error_bound (t : Trace) (hb : ValidBlock t.block) (hw : t.bits<2^32)
@@ -53,6 +54,7 @@ theorem floatlib_error_bound (t : Trace) (hb : ValidBlock t.block) (hw : t.bits<
       TCFloat.pow2 (outputUlpExponent t.bits) := by
   obtain ⟨s,hs⟩ := trace_related t hb hw hv
   have h := TensorCore.evalPrepared_error_bound (trace_evaluated hs ht)
+    (by rw [hs.block_eq]; exact Nat.le_refl 23)
   simp only [abs_eq,hs.block_eq,ideal_eq _ hb,hs.output_eq,terms_eq,List.length_map,
     q_eq,pow2_eq,TensorCore.outputUlpExponent,hs.bits_eq] at h
   exact h
@@ -190,7 +192,7 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
     rw [TensorCore.denormalizedProduct_value,← hva,← hvb,← TCFloat.mul_value,pow2_eq]
     exact hv
   obtain ⟨s,he,hi,hy,hu⟩ := TensorCore.nonmonotone_range (model M) p K j
-    (project a) (project b) (by simp [model,hp]) hf hvs hs hK hj hj'
+    (project a) (project b) (by simp [model,hp]) hf (Nat.le_refl 23) hvs hs hK hj hj'
   let t : Block := ⟨M,belowTerm j,List.replicate K (a,b)⟩
   have ht : ValidBlock t := by
     constructor
@@ -202,7 +204,7 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
       exact ⟨ha,hb⟩
   have hblock : block t=⟨model M,List.replicate K (project a,project b),TensorCore.belowDecoded j⟩ := by
     simp [t,block,List.map_replicate,belowTerm_project]
-  have hout := TensorCore.evalPrepared_output he
+  have hout := TensorCore.evalPrepared_output he (Nat.le_refl 23)
   refine ⟨s.output.bits.toNat,s.output.value,?_,?_,?_,?_,?_⟩
   · change t.evaluate=_
     rw [evaluate_eq t ht,hblock,hout]

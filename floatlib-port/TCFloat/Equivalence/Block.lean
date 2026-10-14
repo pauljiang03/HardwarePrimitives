@@ -5,9 +5,12 @@ namespace TCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
 def model (p : TCModel) : TensorCore.Model :=
-  ⟨format p.format,p.nfma,23+p.neab,p.eAlignMin⟩
+  ⟨format p.format,p.nfma,23+p.neab,p.eAlignMin,23⟩
 def block (b : Block) : TensorCore.PreparedBlock :=
   ⟨model b.model,b.products.map (fun (a,b) => (project a,project b)),project b.c⟩
+
+/-- The paper's models have a binary32 block output. -/
+@[simp] theorem block_outputFracBits (b : Block) : (block b).model.outputFracBits = 23 := rfl
 def denormalizedTerm (t : Term) : TensorCore.DenormalizedProduct :=
   ⟨t.dyadic.signedSignificand,t.exponent,t.mantissaBits⟩
 

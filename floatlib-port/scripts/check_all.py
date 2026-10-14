@@ -46,7 +46,7 @@ def main():
             assert not re.search(r'^import TensorCore',s,re.M),source
     reports={n:json.loads((OUT/n).read_text()) for n in
              ['feature-report.json','replay-report.json','eft-paper-report.json','edges-report.json','monotonicity-report.json']}
-    summary={'status':'passed','reference_commit':'8829cccf4bad4629c5bf2eee2b8ff76b859c8158',
+    summary={'status':'passed','reference_commit':'9882a52c8f24ee1cce3ab7a840d2735261b51dbc',
              'floatlib_commit':'0d91825727839f597fd06b22fdd038ea21480f0c',
              'lean':'4.34.0','commands':logs,'reports':reports,
              'reference_build':json.loads((PORT/'reference-compat/manifest.json').read_text()),

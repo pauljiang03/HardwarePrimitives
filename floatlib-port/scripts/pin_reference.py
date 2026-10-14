@@ -4,7 +4,8 @@
 Usage (from floatlib-port/): python3 scripts/pin_reference.py REVISION
 Rewrites reference-manifest.json from the parent dependency files at REVISION, updates the
 pinned revision and manifest checksum used by prepare_reference.py and the reports, and
-clears renamed-identifiers.json (renames before the new pin are part of it).
+clears renamed-identifiers.json and the RENAMED_MODULES table of prepare_reference.py (renames
+before the new pin are part of it).
 Use this only after a deliberate change to the parent's behavior has been reviewed.
 """
 if not __debug__:
@@ -47,6 +48,14 @@ def main():
             raise SystemExit(f'{script}: expected one match for {pattern}')
         path.write_text(new)
     (pr.PORT / 'renamed-identifiers.json').write_text('{}\n')
+    # Module renames before the new pin are part of it too.
+    path = pr.PORT / 'scripts' / 'prepare_reference.py'
+    text = path.read_text()
+    new, n = re.subn(r'^RENAMED_MODULES = \{.*?^\}\n|^RENAMED_MODULES = \{\}\n', 'RENAMED_MODULES = {}\n',
+                     text, count=1, flags=re.M | re.S)
+    if n != 1:
+        raise SystemExit('prepare_reference.py: expected one RENAMED_MODULES table')
+    path.write_text(new)
     print(f'Pinned {len(files)} parent dependencies at {rev}; manifest sha256 {digest}')
 
 

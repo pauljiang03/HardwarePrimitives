@@ -7,9 +7,9 @@ import hashlib, json, re
 
 PORT = Path(__file__).resolve().parents[1]
 REPO = PORT.parent
-PIN = "8829cccf4bad4629c5bf2eee2b8ff76b859c8158"
+PIN = "9882a52c8f24ee1cce3ab7a840d2735261b51dbc"
 REFERENCE = PORT / "reference-manifest.json"
-REFERENCE_SHA256 = "6ea0e28894e77de24c1ec1cad627134dc39cc7ef55de878df35f132b1635a25d"
+REFERENCE_SHA256 = "5d9acc2a261db0720c26dd619c33d777e5da234bebca473da1c8500fd5c7c0f3"
 OUT = PORT / "reference-compat"
 
 def lean_tokens(source):
@@ -78,14 +78,7 @@ def pinned_spelling(tokens, name):
 
 
 # Parent modules renamed after the pinned revision: current name -> pinned name.
-RENAMED_MODULES = {
-    'TensorCore.Numerics.Binary.ResidualBound': 'TensorCore.Numerics.Binary.ResidualBudget',
-    'TensorCore.Numerics.DenormalizedProduct': 'TensorCore.Numerics.UnnormalizedProduct',
-    'TensorCore.TC.CanonicalEAlignMin': 'TensorCore.TC.CanonicalFloor',
-    'TensorCore.TC.ExtraAlignmentBits': 'TensorCore.TC.Padding',
-    'TensorCore.TC.Models': 'TensorCore.TC.Profiles',
-    'TensorCore.TC.Specification.Variants': 'TensorCore.TC.Specification.Profiles',
-}
+RENAMED_MODULES = {}
 
 
 def legacy_module(module):

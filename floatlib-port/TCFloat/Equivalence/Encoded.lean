@@ -137,14 +137,14 @@ theorem round_finite (m : TensorCore.RoundingMode) (x : Rat) (b : TensorCore.F32
   obtain ⟨d,hd,hb,_⟩ := TensorCore.finite32_of_value32 b v hv
   exact ⟨d,hd,hb⟩
 
-theorem evalPrepared_bits (b : TensorCore.PreparedBlock) :
+theorem evalPrepared_bits (b : TensorCore.PreparedBlock) (hw : b.model.outputFracBits = 23) :
     (TensorCore.evalPrepared b).toOption.map (fun t => t.output.bits.toNat) =
       (TensorCore.round32 .truncate b.accumulator).map BitVec.toNat := by
   cases hr : TensorCore.round32 .truncate b.accumulator with
   | none => simp [TensorCore.evalPrepared,hr,Except.toOption]
   | some bits =>
     obtain ⟨d,hd,hb⟩ := round_finite .truncate _ bits hr
-    simp [TensorCore.evalPrepared,hr,hd,hb,Except.toOption]
+    simp [TensorCore.evalPrepared,hr,hw,hd,hb,Except.toOption]
 
 theorem trace_algorithm_eq (b : Block) (hb : ValidBlock b) (D : TensorCore.F32) :
     (TCFloat.trace b D.toNat).map Trace.encodedAlgorithm =
@@ -185,7 +185,7 @@ theorem tc_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
     | none => rfl
     | some b =>
       simp only [Option.map_some,Option.bind_some]
-      rw [evalPrepared_bits]
+      rw [evalPrepared_bits _ (block_outputFracBits b)]
       exact evaluate_eq b (prepare_valid p hf x b hb)
   · have hs' : (x.products.length != p.nfma)=true := bne_iff_ne.mpr hs
     simp [Interface.tc,TCFloat.prepare,inputPairs,TensorCore.evalBlock,model,hs',Except.toOption]
