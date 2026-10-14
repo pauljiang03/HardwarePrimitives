@@ -470,7 +470,7 @@ theorem outputStage_eq (v : FP8Variant) (bits : F32) :
       truncateMantissa32_toNat]
     have hlt := bits.isLt
     have hle : bits.toNat / 2 ^ 10 * 2 ^ 10 ≤ bits.toNat := Nat.div_mul_le_self _ _
-    simp only [BitVec.toNat_ofNat, Nat.reduceMod, Nat.reduceSub]
+    simp only [Nat.reduceSub]
     exact Nat.mod_eq_of_lt (by omega)
 
 /-! ## The datapath computes the model -/

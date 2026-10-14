@@ -99,9 +99,7 @@ theorem decode32_value_coeff {w : F32} {d : Decoded} (h : decode32 w = some d) :
     rw [hc]
     unfold Decoded.value signQ32
     by_cases hs : w.toNat / 2 ^ 31 = 0
-    · have hb : (w.toNat / 2147483648 != 0) = false := by
-        simp only [Nat.reducePow] at hs; simp [hs]
-      simp only [hb, hs, Bool.false_eq_true, ↓reduceIte, Rat.intCast_natCast, Rat.one_mul]
+    · simp only [hs, ↓reduceIte, Rat.one_mul]
       rfl
     · have hb : (w.toNat / 2147483648 != 0) = true := by
         simp only [Nat.reducePow] at hs; simp [hs]
@@ -123,8 +121,7 @@ theorem decode32_value_coeff {w : F32} {d : Decoded} (h : decode32 w = some d) :
     by_cases hs : w.toNat / 2 ^ 31 = 0
     · have hb : (w.toNat / 2147483648 != 0) = false := by
         simp only [Nat.reducePow] at hs; simp [hs]
-      simp only [hb, Bool.false_eq_true, ↓reduceIte, Rat.intCast_natCast, Rat.one_mul,
-        Rat.mul_assoc]
+      simp only [hb, Bool.false_eq_true, ↓reduceIte, Rat.intCast_natCast, Rat.mul_assoc]
       rw [if_pos hs, Rat.one_mul]
     · have hb : (w.toNat / 2147483648 != 0) = true := by
         simp only [Nat.reducePow] at hs; simp [hs]
