@@ -1,10 +1,10 @@
 ---
 title: 6. Validation
-description: How the AMD model is tied to hardware - the paper's test vectors as kernel-checked regressions, differential testing against the authors' MATLAB models, and a second implementation on FloatLib proved equivalent.
+description: How the AMD model is tied to hardware - the paper's test vectors as kernel-checked regressions, differential testing against the authors' MATLAB models and against MMA-Sim, and a second implementation on FloatLib proved equivalent.
 ---
 
 The proofs connect the model to an independent specification. Its link to
-the hardware comes from three checks.
+the hardware comes from four checks.
 
 ## The paper's test vectors
 
@@ -45,6 +45,32 @@ no mixed fp8 formats, so those variants are compared through the paper's
 vectors only. The method and the per-model counts are in
 [`amd/docs/differential.md`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/docs/differential.md).
 
+Random sampling rarely reaches the parts of the binary8 algorithm (Algorithm 2)
+that set it apart, so
+[`scripts/matlab_fp8.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/scripts/matlab_fp8.py)
+draws binary8 inputs from six regimes
+([`scripts/fp8_cases.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/scripts/fp8_cases.py)):
+random bits, large odd slots with small even slots, `c` near the binary8
+cutoff, cancellation across the two groups, sparse blocks, and `c` larger than
+every product, with one or two chained blocks. On 20,000 such inner products
+(E4M3 and E5M2) the two models agree once the unread flag is set; with the
+MATLAB code as shipped, 2 differ, both through that flag.
+
+## Differential testing against MMA-Sim
+
+[MMA-Sim](https://github.com/microsoft/MMA-Sim) (Microsoft, MIT licence) is a
+bit-accurate simulator of the matrix units of NVIDIA and AMD GPUs. For CDNA 3
+FP8 it computes blocks of 16 products in two groups of slots, each truncated
+relative to the group's largest exponent, rounds the group sums down to the
+larger exponent, adds `c`, and rounds to nearest even binary32 (its
+`gtr_fdpa`).
+[`scripts/mmasim_fp8.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/scripts/mmasim_fp8.py)
+transcribes that function, at MMA-Sim's commit `aab7f2a`, in exact rational
+arithmetic with MMA-Sim's licence notice, and compares it with the Lean model
+on the binary8 cases above: 90,000 inner products, 30,000 each on E4M3,
+E5M2 and mixed E4M3 × E5M2 operands, with no mismatch. The mixed formats,
+which the MATLAB models lack, are covered here.
+
 ## A second implementation on FloatLib
 
 [`amd/floatlib-port/`](https://github.com/pauljiang03/MMAlgebra/tree/main/amd/floatlib-port)
@@ -64,4 +90,6 @@ cd amd
 lake build                    # library, paper regressions, audit
 python3 scripts/check.py      # clean build, examples, documentation blocks
 python3 scripts/matlab_diff.py --cases 20000 --seed 1   # needs GNU Octave
+python3 scripts/matlab_fp8.py --cases 10000 --seed 2026  # targeted binary8, GNU Octave
+python3 scripts/mmasim_fp8.py --cases 30000 --seed 1     # binary8 against MMA-Sim
 ```

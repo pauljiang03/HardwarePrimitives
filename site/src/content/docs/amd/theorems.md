@@ -1,6 +1,6 @@
 ---
 title: 5. What is proved
-description: The main results about the AMD matrix-core model - the accepted domain, error bounds, monotonicity, fixed-width accumulation, inner products, contracts and binary32 rounding.
+description: The main results about the AMD matrix-core model - the accepted domain, error bounds, monotonicity, the order of the products, fixed-width accumulation, inner products, contracts and binary32 rounding.
 ---
 
 These are the main results Lean has checked about the model. Every theorem
@@ -40,6 +40,14 @@ The bounds compare `d` with the exact `Σ a_ℓ b_ℓ + c` of the decoded inputs
 | CDNA 3 is not monotone in the products, on every input format: raising a product with a subnormal operand can raise `e_max` and truncate the others by more than it gains. | [`MatrixCore.cdna3F16_nonmonotonic`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L164), [`MatrixCore.cdna3E4M3_nonmonotonic`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L187) |
 | CDNA 3 with normal operands: equal products `1.5 · 1.5` and `2.25 · 1` give different outputs. | [`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L202) |
 
+## The order of the products
+
+| What it says | Lean |
+| --- | --- |
+| SFMA, CDNA 1 and CDNA 3 global alignment depend on the products only as a multiset; CDNA 2 and CDNA 3 binary8 depend on their positions. | [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L37), [`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L53), [`MatrixCore.oddEvenGrouping_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Order.lean#L61) |
+| The parity law: a CDNA 3 binary8 block depends on its 16 operand pairs only through the unordered pair {multiset of the odd slots, multiset of the even slots}, for every accumulator input and every mix of E4M3 and E5M2 FNUZ operands (proved in the [reduction algebra](/MMAlgebra/schedules/#the-fp8-algebras)). | [`MMAlgebra.MC.blockBits_parityEquiv`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L151), [`MMAlgebra.MC.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L173) |
+| A permutation of the 16 slots preserves the binary8 output on every input exactly when it preserves the parity partition of the slots: `2·(8!)²` of the `16!` orders. For every mix of formats, two products in one parity class give a different word from the same two in different classes. | [`MMAlgebra.MC.cdna3FP8_permute_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L523), [`MMAlgebra.MC.cdna3FP8_sep_e4m3`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L201) |
+
 ## Fixed-width accumulation (CDNA 3)
 
 Each aligned product is an integer number of grid steps; `evalBlockMachine w`
@@ -72,7 +80,7 @@ in a 29-bit register.
 
 - That AMD GPUs behave like the model. The paper's hardware observations are
   replayed as tests, and the model is compared with the authors' MATLAB models
-  ([validation](/MMAlgebra/amd/validation/)).
+  and, on binary8, with MMA-Sim ([validation](/MMAlgebra/amd/validation/)).
 - The special-value layer for non-finite inputs is a definition (detection at
   the input, as the paper describes it), checked against the paper's vectors
   and the MATLAB models, not derived.

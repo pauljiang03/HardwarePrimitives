@@ -121,6 +121,15 @@ On NVIDIA Tensor Cores any term holding the alignment exponent, a product or `c`
 | CDNA 2 and CDNA 3 binary8 depend on positions: a permutation of the products changes `d`. | `pairWiseSum_order_dependent`, `oddEvenGrouping_order_dependent` | [MC/Order.lean](MC/Order.lean) |
 | CDNA 3 is sign-asymmetric: negating every input does not negate `d`. | `globalAlignment_sign_asymmetric` | [MC/Order.lean](MC/Order.lean) |
 
+How much of the order matters on CDNA 3 binary8 is proved in the reduction algebra
+([`mmalgebra/`](../../mmalgebra/README.md)), which builds on this library:
+
+| What it says | Lean name | File |
+| --- | --- | --- |
+| The parity law: a binary8 block depends on its 16 operand pairs only through the unordered pair {multiset of the odd slots, multiset of the even slots}, for every accumulator input and every mix of E4M3 and E5M2 FNUZ operands. | `MMAlgebra.MC.blockBits_parityEquiv`, `MMAlgebra.MC.cdna3FP8_parityEquiv` | [ParityLaw.lean](../../mmalgebra/MMAlgebraMC/ParityLaw.lean) |
+| A permutation of the 16 slots preserves the output on every input exactly when it preserves the parity partition of the slots: `2·(8!)² = 3,251,404,800` of the `16!` orders, for every mix of formats. | `MMAlgebra.MC.cdna3FP8_permute_iff`, `MMAlgebra.MC.blockBits_permute_iff` | [ParityLaw.lean](../../mmalgebra/MMAlgebraMC/ParityLaw.lean) |
+| For every mix of formats, two products in one parity class give a different word from the same two products in different classes. | `MMAlgebra.MC.cdna3FP8_sep_e4m3`, `…_sep_e5m2`, `…_sep_e4m3_e5m2`, `…_sep_e5m2_e4m3` | [ParityLaw.lean](../../mmalgebra/MMAlgebraMC/ParityLaw.lean) |
+
 ## binary32 rounding
 
 | What it says | Lean name | File |

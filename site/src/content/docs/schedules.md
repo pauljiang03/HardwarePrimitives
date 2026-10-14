@@ -20,7 +20,10 @@ is **rigid**: the products inside one block FMA can be permuted, zero products c
 the two operands of an addition can be swapped, but every other change to a schedule changes the
 result on some input. On CDNA 1 (fp16), a block
 FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a block is a
-**binary32 summation tree** with `c` added last, so `c` can be moved out of a block.
+**binary32 summation tree** with `c` added last, so `c` can be moved out of a block. The FP8
+block FMAs add two more: on Ada and Hopper an empty block FMA truncates its accumulator input, so
+the rigid algebra gains **truncation nodes**, and on CDNA 3 a block depends on the parity of its
+slots, so the algebra is **parity-rigid**; Blackwell FP8 is rigid.
 
 | Part | Status |
 | --- | --- |
@@ -30,7 +33,10 @@ FMA is **correctly rounded**, which allows a few more rewrites. On CDNA 2, a blo
 | Separating inputs on CDNA 1, 2 and 3; one instruction is not one rounding on V100, A100 and CDNA 1–3 | Kernel-checked in Lean |
 | The laws and normal forms on every modeled variant | Random testing; exhaustive enumeration over 2, 3 and 4 products |
 | Distinct normal forms always differ on some input (completeness), on the other bf16 variants | Checked exhaustively over 2 and 3 products (CDNA 1 bf16 terms: not all separated) |
-| Completeness on CDNA 3 xf32, fp8, and tf32 terms off the binary32 grid | Not yet covered |
+| Completeness on CDNA 3 xf32, and tf32 terms off the binary32 grid | Not yet covered |
+| The three FP8 algebras: Blackwell rigid, Ada and Hopper rigid with truncation nodes, CDNA 3 parity-rigid | Exhaustive enumeration over 3 products, every class separated; the laws that set them apart proved in Lean |
+| On CDNA 3 FP8 a block depends on its slots only through their parity classes, and exactly the parity-preserving slot permutations preserve every output | Proved in Lean |
+| One input with four different results on Ada, Hopper, Blackwell and CDNA 3 FP8 | Kernel-checked in Lean |
 | The CDNA 1 merge laws and the CDNA 2 `c`-split law | Proved in Lean, on every input |
 | How far apart two schedules can be: structural bound, divergence of two schedules, shared work | Proved in Lean for any matrix multiplier, with block contracts for V100, A100, H100, SFMA, CDNA 1, CDNA 2 and CDNA 3 |
 | Inside the exact region (small integer operands) every schedule agrees | Proved in Lean on every Tensor Core model and on CDNA 1, 2 and 3 |
@@ -260,6 +266,59 @@ below binary32's range, and then a one-product block rounds it: with `p₀ = 2^-
 chain patterns of three products are pairwise separated, and Lean proves completeness for its
 chains with the rigid normal form ([`MMAlgebra.MC.cdna1BF16_chain_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ChainBF16.lean#L97)).
 
+### The FP8 algebras
+
+The FP8 block FMAs of Ada, Hopper and Blackwell (E4M3 and E5M2) and of CDNA 3 (E4M3 FNUZ and E5M2
+FNUZ, in any mix) obey the laws below. The exhaustive enumeration enumerates every term over three
+products with up to three nonempty blocks, two additions and one empty block, evaluates each on
+800 random inputs, and searches the pairs of normal forms that the random inputs leave together
+until an input separates them ([`fp8_enum.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_enum.py)).
+
+| Algebra | Models | What changes | Normal forms over 3 products |
+| --- | --- | --- | --- |
+| Rigid | Blackwell FP8 | Nothing: an empty block passes `c` through ([`MMAlgebra.TC.fp8_blackwell_pass`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L259)) | 28, all separated |
+| Rigid with truncation nodes | Ada and Hopper FP8 | An empty block truncates `c` to a 13-bit mantissa ([`MMAlgebra.TC.fp8_empty_block_trunc13`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L243)); a following nonempty block absorbs it | 43, all separated (the 28 rigid forms are unsound) |
+| Parity-rigid | CDNA 3 FP8 | A block keeps the unordered pair of the multisets of its odd and of its even slots ([`MMAlgebra.MC.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L173)) | 40, all separated on E4M3, E5M2 and E4M3 × E5M2 (the rigid forms are unsound) |
+
+**Truncation nodes.** Ada and Hopper keep a 13-bit mantissa after alignment, ten bits fewer than
+FP32, and truncate the block output to a 13-bit mantissa. The accumulator input is aligned
+together with the products, so a block with no products returns `c` truncated to a 13-bit mantissa
+(a zero result is `+0`), for every finite `c` ([`MMAlgebra.TC.tc_empty_block_trunc13`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L162)). The
+pass law of the rigid algebra fails, but only where it can be seen: block outputs already have a
+13-bit mantissa, so an empty block after a block changes nothing, and a nonempty block truncates its
+accumulator input anyway. The truncation shows on the initial `C` and after a binary32 addition.
+With `x = 1·1` and `y = 2^-9·2^-9`, the split-K sum `[x] ⊕ [y]` is `1 + 2^-18`, and an empty block
+FMA after it, as a stream-K fix-up might issue, returns `1` on Ada and Hopper and `1 + 2^-18` on
+Blackwell ([`MMAlgebra.TC.fp8_trunc_after_add`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L288)). With `A·B = 0` and `C = 1 + 2^-20`, Hopper
+returns `1` when `C` is the block FMA's accumulator input and `1 + 2^-20` when `C` is added in the
+epilogue ([`MMAlgebra.TC.fp8_c_in_accumulator`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L306)).
+
+**The parity law.** CDNA 3 aligns the products of the odd slots and of the even slots separately,
+each group to its own largest exponent, and rounds the smaller group sum down to the larger
+exponent. A block therefore depends on its operand pairs only through the unordered pair
+{multiset of the odd slots, multiset of the even slots}, for every accumulator input
+([`MMAlgebra.MC.blockBits_parityEquiv`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L151)). Exchanging two products of different classes changes
+the output on some input, for every mix of E4M3 and E5M2: with `x < 0` and `y = 1.5·2^-24·x`, two
+classes round `y` down, away from zero, and one class truncates it toward zero
+([`MMAlgebra.MC.cdna3FP8_sep_e4m3`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L201), [`MMAlgebra.MC.cdna3FP8_sep_e5m2`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L209),
+[`MMAlgebra.MC.cdna3FP8_sep_e4m3_e5m2`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L217), [`MMAlgebra.MC.cdna3FP8_sep_e5m2_e4m3`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L225)). So a permutation
+of the 16 slots preserves the output on every input exactly when it preserves the parity
+partition ([`MMAlgebra.MC.cdna3FP8_permute_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L523)): any permutation within each class, and the
+exchange of the two classes, `2·(8!)² = 3,251,404,800` of the `16!` orders. Reordering the products
+of a CDNA 3 FP8 instruction keeps the bits exactly when every product keeps the parity of its
+slot.
+
+The laws of the three algebras, on every input where they are proved and in random tests where
+they hold:
+
+| Law | Ada, Hopper FP8 | Blackwell FP8 | CDNA 3 FP8 |
+| --- | --- | --- | --- |
+| Products in a block act as a multiset | proved | proved | only the permutations that keep the parity classes (proved) |
+| Zero products are invisible | proved | proved | holds, slot by slot |
+| An empty block passes a finite `c` other than `−0` through | fails: truncation to a 13-bit mantissa (proved) | proved | holds |
+| `t ⊕ u = u ⊕ t` | proved | proved | proved |
+| Merge a one-product first block; `[x] ⊕ [y] = [x y]`; `c` splits off | fail | fail | fail |
+
 ## Completeness
 
 **Statement.** On each modeled variant, two terms with different normal forms produce different
@@ -349,7 +408,10 @@ instantiated as follows.
 | SFMA | Proved on inputs whose products are multiples of `2^-149` | Same |
 | CDNA 1 bf16 | Completeness proved, every input | Enumeration only |
 | CDNA 2 bf16 (with and without `_1k`), CDNA 3 bf16 | Enumeration only | Enumeration only |
-| CDNA 3 xf32, fp8 | Not yet covered | Not yet covered |
+| CDNA 3 xf32 | Not yet covered | Not yet covered |
+| Blackwell FP8 (rigid) | Enumeration only | Enumeration only |
+| Ada, Hopper FP8 (rigid with truncation nodes) | Enumeration only | Enumeration only |
+| CDNA 3 FP8 (parity-rigid) | Enumeration only; the parity law of a block proved | Enumeration only |
 
 On the fp16 models the result is an equivalence: two terms over the same products give the same
 word on every input exactly when their normal forms agree ([`MMAlgebra.TC.v100_term_equiv_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/TermComplete.lean#L226),
@@ -363,8 +425,9 @@ products are multiples of `2^-149` ([`MMAlgebra.TC.a100bf16_term_equiv_iff`](htt
 completeness for chains does not need it ([`MMAlgebra.TC.a100bf16_chain_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/ChainVariants.lean#L230),
 [`MMAlgebra.MC.cdna1BF16_chain_complete`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ChainBF16.lean#L97), …). The remaining variants need their laws in Lean (the
 pass-through of an empty block on CDNA 3 bf16 and xf32, and inputs on the binary32 grid for their
-terms; the pairwise blocks of CDNA 2 bf16; the grouped alignment of fp8; the underflow cases of
-CDNA 1 bf16) and fingerprint tables of their own.
+terms; the pairwise blocks of CDNA 2 bf16; the underflow cases of CDNA 1 bf16) and fingerprint
+tables of their own. The FP8 models need more of the generic theory: blocks labeled by a pair of
+multisets for CDNA 3, whose block-level law is proved, and truncation nodes for Ada and Hopper.
 
 ## One instruction is not one rounding
 
@@ -669,6 +732,7 @@ anchor in `c` does not fix the alignment, while a pin among the products does.
 | --- | --- | --- |
 | V100, A100, H100 | proved ([`MMAlgebra.TC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Pinned.lean#L216)) | proved, block by block ([`MMAlgebra.TC.runBlocks_anchored`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/Anchored.lean#L151)) |
 | CDNA 3 | proved ([`MMAlgebra.MC.runBlocks_pinned`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Pinned.lean#L195)) | fails ([`MMAlgebra.MC.PinnedCases.cdna3_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L83)) |
+| CDNA 3 FP8 | with one pin in each parity group (kernel-checked instance: [`MMAlgebra.MC.cdna3FP8_pins_straddle`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/FP8.lean#L63)); fails with both pins in one group ([`MMAlgebra.MC.cdna3FP8_pins_one_group`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/FP8.lean#L52)) | not studied |
 | CDNA 1 | fails ([`MMAlgebra.MC.PinnedCases.cdna1_pinned_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L43)) | fails ([`MMAlgebra.MC.PinnedCases.cdna1_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L31)) |
 | CDNA 2 | fails ([`MMAlgebra.MC.PinnedCases.cdna2_pinned_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L70)) | fails ([`MMAlgebra.MC.PinnedCases.cdna2_anchored_order_dependent`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Counterexamples.lean#L55)) |
 
@@ -693,6 +757,20 @@ anchored result on every Tensor Core model, fp16 and bf16 (two or three on CDNA 
 accumulation at `k = 1680` gave the same bits on V100 (anchored, at the same grid), A100, H100 and
 CDNA 3 in all 40 fp16 cases, and on A100, H100 and CDNA 3 in all 40 bf16 cases, always equal to the
 truncated sum.
+
+On CDNA 3 FP8 the pin must fix the alignment of both parity groups. With both pins in one group,
+the other group is aligned to its own largest exponent and its sum is then rounded down to the
+pinned grid, so exchanging two products between the groups changes the result; with one pin in
+each group, both groups sit on the grid `2^(α − 24)` and the exchange does not matter. With pins
+`±2^14` and the products `−39/32` and `−75/32768`, one group gives `−1.2216796875` or
+`−1.220703125` depending on which product sits with the pins, and two groups give the pinned value
+`−1.220703125` both ways. In simulation, 200 multisets of 48 E4M3 products each gave one result
+under eight random schedules with the pins in different groups, and none did with both pins in one
+group. Pinned FP8 is also the same function across vendors: Ada and Hopper with pins `±2^3` and
+CDNA 3 with pins `±2^14` straddling the groups all truncate each product to `2^-10`, and in 200
+cases of 64 products the three GPUs, each under three random schedules, returned the same bits,
+equal to the sum of the truncated products
+([`fp8_pinned.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_pinned.py)).
 
 ### The algorithm
 
@@ -846,7 +924,24 @@ different variants, since their block FMAs differ, and the algebra says which re
 each target. Because the models are executable, a term can also be evaluated on a CPU to obtain
 the exact bits a modeled GPU would return, which makes a reference result for one GPU checkable
 on another machine. Identical bits across vendors need a common semantics instead, such as the
-[correctly rounded Ozaki schemes](/MMAlgebra/ozaki/correct-rounding/).
+[correctly rounded Ozaki schemes](/MMAlgebra/ozaki/correct-rounding/), or pinned accumulation on a
+common grid.
+
+One FP8 input shows how far apart four GPUs can be. With `k = 32`, `c = 0` and three nonzero
+products, `(−7/16)·(13/256)`, `(−9/4)·(−36)` and `(−96)·128`, in slots 11, 13 and 21 (values that E4M3
+and E4M3 FNUZ share), the exact sum is `−12207.0222…` and the four FP8 models return four
+different results:
+
+| GPU | Block FMAs | Result |
+| --- | --- | --- |
+| Ada | two of 16 products | `−12208` (`0xC63EC000`) |
+| Hopper | one of 32 | `−12207` (`0xC63EBC00`) |
+| Blackwell | one of 32 | `−12207.021484375` (`0xC63EBC16`) |
+| CDNA 3 | two of 16, odd/even groups | `−12207.0224609375` (`0xC63EBC17`), the binary32 value nearest the exact sum |
+
+Each result is kernel-checked on its model ([`MMAlgebra.TC.xvendor_nvidia`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L339),
+[`MMAlgebra.MC.xvendor_cdna3`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/FP8.lean#L34)); the input was found by a search over short inputs
+([`fp8_crossvendor.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_crossvendor.py)).
 
 ### Who benefits, and how this compares
 
@@ -903,8 +998,10 @@ for any two that do not, an input that shows it.
 ## Roadmap and open problems
 
 - **Completeness in Lean on the remaining variants.** Terms on CDNA 1 bf16; chains and terms on
-  CDNA 2 bf16, CDNA 3 bf16 and xf32, and fp8; and terms on the bf16 and tf32 Tensor Cores and SFMA
-  on inputs whose products are not multiples of `2^-149`, where a block can return `−0`.
+  CDNA 2 bf16, CDNA 3 bf16 and xf32, and the FP8 models (enumerated; the generic theory needs
+  blocks labeled by a pair of multisets for CDNA 3 and truncation nodes for Ada and Hopper); and
+  terms on the bf16 and tf32 Tensor Cores and SFMA on inputs whose products are not multiples of
+  `2^-149`, where a block can return `−0`.
 - **Divergence constants in Lean.** A sharper CDNA 2 constant than `2^-21`, and closed forms for
   chains and split-K.
 - **Real libraries.** Which programs cuBLAS and rocBLAS run for which shapes, probed on GPUs by
@@ -913,8 +1010,7 @@ for any two that do not, an input that shows it.
   A100's `k = 16` instruction, to confirm the models' prediction on hardware; a multi-fold variant
   for accuracy; selective pinning.
 - **Extremes of the formats.** CDNA 1 bf16 terms with additions near binary32's underflow
-  threshold are not fully classified, and FP8 is not covered (CDNA 3's FP8 blocks group odd and
-  even products separately and depend on positions).
+  threshold are not fully classified.
 - **Newer instructions.** WGMMA on Hopper and the `tcgen05` instructions of Blackwell have no model
   in this repository.
 - **Attention.** Online softmax rescales the accumulator between block FMAs, so its terms need a
@@ -941,6 +1037,11 @@ for any two that do not, an input that shows it.
 | Base witnesses on CDNA 1, 2 and 3 | Kernel-checked | [`MMAlgebra.MC.cdna1_trees`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L21), [`MMAlgebra.MC.cdna2_trees`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L35), [`MMAlgebra.MC.cdna3_pair`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/Witnesses.lean#L47) |
 | One instruction is not one rounding | Kernel-checked | [`MMAlgebra.TC.v100_wmma_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L17), [`MMAlgebra.TC.a100_wmma_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/OneRounding.lean#L27), [`MMAlgebra.MC.cdna1_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L16), [`MMAlgebra.MC.cdna2_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L26), [`MMAlgebra.MC.cdna3_k16_swap`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/OneRounding.lean#L36) |
 | The worked examples on this page | Kernel-checked | [`MMAlgebraTCTests.v100_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L17), [`MMAlgebraTCTests.a100_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraTCTests/Examples.lean#L29), [`MMAlgebraMCTests.cdna2_block_boundary`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L13), [`MMAlgebraMCTests.cdna1BF16_tie`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/tests/MMAlgebraMCTests/Examples.lean#L23) |
+| FP8: an empty block truncates `c` to a 13-bit mantissa on Ada and Hopper and passes it through on Blackwell, every finite input; witnesses of the truncation node | Proved; kernel-checked | [`MMAlgebra.TC.tc_empty_block_trunc13`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L162), [`MMAlgebra.TC.fp8_empty_block_trunc13`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L243), [`MMAlgebra.TC.fp8_blackwell_pass`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L259), [`MMAlgebra.TC.fp8_trunc_after_add`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L288), [`MMAlgebra.TC.fp8_c_in_accumulator`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L306) |
+| CDNA 3 FP8: the parity law; the slot permutations that preserve every output are the parity-preserving ones, for every mix of formats | Proved | [`MMAlgebra.MC.blockBits_parityEquiv`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L151), [`MMAlgebra.MC.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L173), [`MMAlgebra.MC.blockBits_permute_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L470), [`MMAlgebra.MC.cdna3FP8_permute_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/ParityLaw.lean#L523) |
+| FP8: one input with four results; pins on CDNA 3 FP8 must straddle the parity groups | Kernel-checked | [`MMAlgebra.TC.xvendor_nvidia`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraTC/FP8.lean#L339), [`MMAlgebra.MC.xvendor_cdna3`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/FP8.lean#L34), [`MMAlgebra.MC.cdna3FP8_pins_one_group`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/FP8.lean#L52), [`MMAlgebra.MC.cdna3FP8_pins_straddle`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/MMAlgebraMC/FP8.lean#L63) |
+| The three FP8 algebras over 3 products; the empty-block laws; pinned FP8 across vendors | Exhaustive enumeration with targeted separation; random tests; simulation | [`fp8_enum.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_enum.py), [`fp8_laws.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_laws.py), [`fp8_pinned.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_pinned.py) |
+| The FP8 port computes the models' output words | 50,000 recorded GPU outputs and 6,000 CDNA 3 inner products against the Lean model, bit for bit | [`fp8_validate.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/fp8_validate.py) |
 | The laws on every modeled variant | Random testing, 300 trials per law and variant | [`laws.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/laws.py) |
 | Normal forms sound and complete over 2 and 3 products on every variant, and over 4 on five variants | Exhaustive enumeration, separating inputs found by search | [`classes.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/classes.py), [`terms.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/terms.py), [`terms4.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/terms4.py), [`bf16_extremes.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/bf16_extremes.py) |
 | Completeness reduces to supports of at most 3 products | Exhaustive: chains over up to 6 products, terms over 4 | [`restriction_lemma.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/restriction_lemma.py), [`terms4.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/mmalgebra/prototype/terms4.py) |

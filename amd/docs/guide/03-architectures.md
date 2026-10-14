@@ -78,7 +78,12 @@ fp8-E4M3 and fp8-E5M2 FNUZ operands is allowed; `N_FMA = 16`.
 
 * `alignedAccumulation_error`: the error of `S_acc` in each branch;
 * `accumulate_perm`: Algorithm 1 is independent of the product order;
-  `oddEvenGrouping_order_dependent`: Algorithm 2 is not;
+  `oddEvenGrouping_order_dependent`: Algorithm 2 is not. It depends on the order only through the
+  parity of the slots: a block depends on its operand pairs only through the unordered pair
+  {multiset of the odd slots, multiset of the even slots}, and a permutation of the 16 slots
+  preserves the output on every input exactly when it preserves the parity partition (the parity
+  law, proved in the reduction algebra:
+  [`MMAlgebra.MC.cdna3FP8_parityEquiv`, `cdna3FP8_permute_iff`](../../../mmalgebra/MMAlgebraMC/ParityLaw.lean));
 * `globalAlignment_sign_asymmetric`: the RD steps make CDNA 3 sign-asymmetric
   (`c = 1, p₁ = 2^-24 + 2^-32` gives `1`, while the negated input gives `−(1 + 2^-23)`);
 * `Spec.blockBits_eq_spec`: Algorithms 1 and 2 as transcribed independently.

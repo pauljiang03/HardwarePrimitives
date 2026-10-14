@@ -62,6 +62,12 @@ four configurations are the constructors of `Accumulation`:
 | CDNA 3 (MI300A, MI300X) | fp16 / bf16 / XF32 | `global_alignment` with late `c` (Algorithm 1) | 8 / 8 / 4 |
 | CDNA 3 | fp8 E4M3/E5M2 FNUZ, any mix | `odd_even_grouping` (Algorithm 2) | 16 |
 
+On binary8, the order of the products matters only through the parity of their slots: a block
+depends on its operand pairs only through the unordered pair {multiset of the odd slots, multiset
+of the even slots}, and a permutation of the slots preserves the output on every input exactly
+when it preserves the parity partition (the parity law, proved in the reduction algebra,
+[`mmalgebra/`](../mmalgebra/README.md)).
+
 Longer inner products chain blocks, with each block's `d` as the next block's `c`.
 `blockOutcome` and `dotOutcome` give the observed result for any input words, including
 infinities, NaN, and overflow.
@@ -94,7 +100,7 @@ alone (`correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori`), and th
 | [`examples/`](examples/) | Checked worked examples |
 | [`docs/`](docs/README.md) | Guide and paper notes |
 | [`Main/`](Main/) | `mc_eval`, which evaluates inner products from words |
-| [`scripts/`](scripts/) | Validation runner and the MATLAB differential test |
+| [`scripts/`](scripts/) | Validation runner and the differential tests against the MATLAB models and MMA-Sim |
 | [`floatlib-port/`](floatlib-port/README.md) | A second implementation on FloatLib, proved equivalent to this one (separate Lake project with mathlib) |
 
 ## Validation and scope
@@ -110,7 +116,10 @@ alone (`correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori`), and th
 * It agrees with the authors' MATLAB models on 600,000 random inner products across all ten
   models, once two special-value lines and one unread flag in the MATLAB code are corrected; the
   remaining two differences are paper vectors where the Lean model, not the MATLAB model, returns
-  the reported hardware result ([differential testing](docs/differential.md)).
+  the reported hardware result ([differential testing](docs/differential.md)). On binary8 it
+  also agrees with the MATLAB model on 20,000 inputs aimed at the odd/even grouping and the cutoff
+  of `c`, and with MMA-Sim's CDNA 3 FP8 arithmetic (Microsoft's bit-accurate simulator) on 90,000,
+  mixed E4M3 × E5M2 operands included.
 * A second implementation written on FloatLib (its formats, classification and binary32
   rounding) gives the same observed result as this model for every input of every model:
   finite word, infinity or NaN ([FloatLib implementation](floatlib-port/README.md)).
