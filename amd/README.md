@@ -1,37 +1,38 @@
-# Matrix-Core
+# MatrixCore
 
-This Lean library formalizes the arithmetic of AMD matrix cores (the MFMA instructions of the
-CDNA 1, CDNA 2 and CDNA 3 GPUs). It follows Khattak, Mikaitis and Graziani, *Accurate Models of
-AMD Matrix Cores* ([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)), and uses the paper's
-notation throughout. Executable calculations and correctness proofs use the same definitions.
+Executable Lean 4 models of the MFMA instructions of AMD CDNA 1, CDNA 2 and
+CDNA 3 GPUs, with machine-checked properties. The models follow Khattak,
+Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
+([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)), in the paper's
+notation.
 
-Matrix-Core lives in the `amd/` folder of the Hardware Primitives repository, as a standalone Lake project: it
-has its own numerical foundation and does not depend on `TensorCore`, the NVIDIA Tensor Core
-formalization in the rest of the [repository](../README.md).
+A standalone Lake project with its own numerics; it does not depend on
+`TensorCore`. Documentation: [the AMD model at a
+glance](https://pauljiang03.github.io/HardwarePrimitives/amd/).
 
-Start with the [guide](docs/README.md). It maps the paper's notation to Lean, describes each
-architecture, and explains the independent specification and the tests.
+## Coverage
 
-[What is proved](MatrixCore/THEOREMS.md) · [Paper notes](docs/paper-notes.md) · [Tests](tests/README.md)
+| Architecture | Inputs | Configuration | `N_FMA` |
+| --- | --- | --- | --- |
+| CDNA 1, 2, 3 | fp32 | SFMA (`correct_rounding`, one product per step) | 1 |
+| CDNA 1 (MI100) | fp16 / bf16 | `correct_rounding` | 4 / 2 |
+| CDNA 2 (MI210, MI250) | fp16 / bf16 / bf16 `_1k` | `pair_wise_sum` | 4 / 2 / 4 |
+| CDNA 3 (MI300A, MI300X) | fp16 / bf16 / XF32 | `global_alignment` (Algorithm 1) | 8 / 8 / 4 |
+| CDNA 3 | fp8 E4M3 / E5M2 FNUZ, any mix | `odd_even_grouping` (Algorithm 2) | 16 |
 
-## Build and run
+`c` and `d` are binary32. Inner products of any length and `D = AB + C` chain
+blocks through `c`; `blockOutcome` and `dotOutcome` give the observed result
+for any input words, infinities and NaN included.
 
-Install [elan](https://github.com/leanprover/elan) and use the pinned `lean-toolchain`. From this
-directory:
+## Build
 
 ```sh
-lake build
-lake env lean examples/GettingStarted.lean
-python3 scripts/check.py
+cd amd
+lake build                    # MatrixCore, the paper's test vectors, the axiom audit
+python3 scripts/check.py      # clean build, examples, documentation blocks
 ```
 
-`lake build` builds the library, the paper's test vectors as kernel-checked regressions, and the
-trust audit. `scripts/check.py` does a clean build and then checks the examples and every Lean
-code block in the documentation.
-
-## A calculation and a proof
-
-Four fp16 products `1 · 1` (`0x3C00 = 1`) with `c = 0` on CDNA 1:
+## Usage
 
 ```lean
 import MatrixCore
@@ -45,87 +46,44 @@ def ones : BlockInput cdna1F16 := ⟨List.replicate 4 0x3C00, List.replicate 4 0
 example : blockBits ones = .ok 0x40800000 := by decide +kernel
 ```
 
-The result is the binary32 encoding of `4`. The same words give different results on the three
-architectures; [GettingStarted.lean](examples/GettingStarted.lean) shows one such input and the
-main theorems.
+## Proved properties
 
-## The model
-
-One MFMA block computes `d = Σ_{ℓ=1}^{N_FMA} a_ℓ b_ℓ + c` with binary32 `c` and `d`. The paper's
-four configurations are the constructors of `Accumulation`:
-
-| Architecture | Inputs | Configuration | `N_FMA` |
-| --- | --- | --- | --- |
-| CDNA 1, 2, 3 | fp32 | SFMA: `correct_rounding`, one product per step | 1 |
-| CDNA 1 (MI100) | fp16 / bf16 | `correct_rounding`: exact sum, one RNE | 4 / 2 |
-| CDNA 2 (MI210, MI250) | fp16 / bf16 / bf16 `_1k` | `pair_wise_sum`, subnormals flushed | 4 / 2 / 4 |
-| CDNA 3 (MI300A, MI300X) | fp16 / bf16 / XF32 | `global_alignment` with late `c` (Algorithm 1) | 8 / 8 / 4 |
-| CDNA 3 | fp8 E4M3/E5M2 FNUZ, any mix | `odd_even_grouping` (Algorithm 2) | 16 |
-
-On binary8, the order of the products matters only through the parity of their slots: a block
-depends on its operand pairs only through the unordered pair {multiset of the odd slots, multiset
-of the even slots}, and a permutation of the slots preserves the output on every input exactly
-when it preserves the parity partition (the parity law, proved in the work-in-progress project
-[`wip/mmalgebra/`](../wip/mmalgebra/README.md), which builds on this library).
-
-Longer inner products chain blocks, with each block's `d` as the next block's `c`.
-`blockOutcome` and `dotOutcome` give the observed result for any input words, including
-infinities, NaN, and overflow.
-
-On CDNA 3 each aligned product is an integer number of grid steps (`alignedBits`).
-`evalBlockMachine w` adds them in `w`-bit wrapping registers, and `evalBlockMachine_eq` proves it
-gives the model's output for every input at 30 bits (fp16, bf16), 29 (XF32) and 31 (binary8).
-
-For downstream proofs, each model has a contract (`cdna1F16_contract`, …, `cdna3FP8_contract`)
-bundling what is proved about one block, including its output error bound, and `dotBits_blocks`
-carries any of them to every block of an inner product, together with the loss accounting of the
-whole inner product; `dotBits_error_bound` sums the blocks' error bounds.
-
-The output is monotone in `c` on every configuration (`evalBlock_c_monotone`,
-`dotBits_c_monotone`): unlike NVIDIA Tensor Cores, where `c` is aligned with the products, `c` never
-sets the alignment exponent. It is monotone in the products only on SFMA and CDNA 1; CDNA 2 (operand flushing) and CDNA 3 (alignment to the largest exponent sum `e_a + e_b`)
-have kernel-checked counterexamples on every input format (`cdna3F16_nonmonotonic`, …). The error bounds are also stated from the inputs
-alone (`correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori`), and the inner product and
-`D = AB + C` results are stated against the exact `c + Σ_ℓ a_ℓ b_ℓ` of the whole vectors
-(`dotBits_exact_error`, `mfma_error`).
-
-## Repository layout
-
-| Import / directory | What belongs here |
+| Generation | Proved |
 | --- | --- |
-| [`MatrixCore.Numerics`](MatrixCore/Numerics.lean) | Exact arithmetic, Table 1 formats, decoding, fixed-point alignment (truncation and RD), binary32 RNE and its correctness and uniqueness |
-| [`MatrixCore.MC`](MatrixCore/MC.lean) | Models of the variants, block stages, evaluation, special values, chaining, the fixed-width accumulator, and their theorems |
-| [`MatrixCore.Specification`](MatrixCore/Specification.lean) | Independent transcription of the paper's algorithms and its equivalence with the model |
-| [`tests/`](tests/README.md) | The paper's test vectors and the trust audit |
-| [`examples/`](examples/) | Checked worked examples |
-| [`docs/`](docs/README.md) | Guide and paper notes |
-| [`Main/`](Main/) | `mc_eval`, which evaluates inner products from words |
-| [`scripts/`](scripts/) | Validation runner and the differential tests against the MATLAB models and MMA-Sim |
-| [`floatlib-port/`](floatlib-port/README.md) | A second implementation on FloatLib, proved equivalent to this one (separate Lake project with mathlib) |
+| All | Equality with an independent transcription of the paper's algorithms; exact accepted domain; error bounds, also from the inputs alone; monotonicity in `c`; loss accounting for inner products and `D = AB + C` |
+| CDNA 1 and SFMA | Correct rounding; error at most half an ulp; monotone in every product; independent of product order |
+| CDNA 2 | Non-monotone in the products only through flushing; correctly rounded when every intermediate rounding is exact; order dependent |
+| CDNA 3 | Monotone in the products while the alignment exponents are unchanged; necessary and sufficient conditions for an output decrease; a family with an exact threshold; correctly rounded when alignment loses nothing; fixed-width registers of 29 to 31 bits; Algorithm 1 independent of product order |
 
-## Validation and scope
+Details per generation: [CDNA 1](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna1/),
+[CDNA 2](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna2/),
+[CDNA 3](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna3/).
 
-* Every test vector of the paper's Section 4 (CDNA 1, 2 and 3; fp32, fp16, bf16, `_1k`, XF32,
-  fp8) is a kernel-checked regression that reproduces the output the paper reports for the
-  hardware. Where the paper's prose and its Algorithm 1 disagree at one point, the test records
-  the algorithm's result and the note explains it ([paper notes](docs/paper-notes.md)).
-* The model equals an independently written transcription of the paper's algorithms on every
-  variant, CDNA 1, 2 and 3, for every input
-  ([`Spec.blockBits_eq_spec`](MatrixCore/Specification/Equivalence.lean),
-  [`Spec.pairwise_eq_spec`](MatrixCore/Specification/Pairwise.lean)).
-* It agrees with the authors' MATLAB models on 600,000 random inner products across all ten
-  models, once two special-value lines and one unread flag in the MATLAB code are corrected; the
-  remaining two differences are paper vectors where the Lean model, not the MATLAB model, returns
-  the reported hardware result ([differential testing](docs/differential.md)). On binary8 it
-  also agrees with the MATLAB model on 20,000 inputs aimed at the odd/even grouping and the cutoff
-  of `c`, and with MMA-Sim's CDNA 3 FP8 arithmetic (Microsoft's bit-accurate simulator) on 90,000,
-  mixed E4M3 × E5M2 operands included.
-* A second implementation written on FloatLib (its formats, classification and binary32
-  rounding) gives the same observed result as this model for every input of every model:
-  finite word, infinity or NaN ([FloatLib implementation](floatlib-port/README.md)).
-* All theorems use only Lean's standard axioms; the audit checks this and that the specification
-  shares no definitions with the implementation.
+Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
-The proofs concern the model. That the hardware behaves like it rests on the paper's experiments,
-which the regression suite replays. No recorded hardware vectors for AMD GPUs are published, so
-the suite uses the paper's explicit vectors.
+## Validation
+
+- Every test vector of the paper's Section 4 is a kernel-checked regression
+  reproducing the output the paper reports for the hardware
+  ([paper notes](docs/paper-notes.md)).
+- Differential testing against the authors' MATLAB models (600,000 random
+  inner products, 20,000 targeted binary8) and MMA-Sim's CDNA 3 FP8 semantics
+  (90,000), with no unexplained difference ([method and counts](docs/differential.md)).
+- A second implementation on FloatLib, proved to give the same observation for
+  every input ([`floatlib-port/`](floatlib-port/README.md)).
+
+No recorded AMD hardware outputs are published; the model rests on the
+paper's vectors and these comparisons.
+
+## Layout
+
+| Path | Contents |
+| --- | --- |
+| [`MatrixCore/Numerics/`](MatrixCore/Numerics.lean) | Formats, decoding, grids, binary32 rounding and its correctness |
+| [`MatrixCore/MC/`](MatrixCore/MC.lean) | Models, block stages, evaluation, special values, chaining, theorems |
+| [`MatrixCore/Specification/`](MatrixCore/Specification.lean) | Independent transcription of the paper and the equality proofs |
+| [`tests/`](tests/README.md) | The paper's test vectors, regressions and the audit |
+| `examples/`, `Main/` | Worked examples; `mc_eval`, which evaluates inner products from words |
+| `scripts/` | Validation runner and differential tests |
+| [`floatlib-port/`](floatlib-port/README.md) | Second implementation on FloatLib (separate Lake project with mathlib) |
+| [`docs/`](docs/paper-notes.md) | Notes on the paper's vectors and on the differential tests |

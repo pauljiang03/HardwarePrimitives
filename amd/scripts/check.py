@@ -17,8 +17,7 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-DOCS = [ROOT / "README.md", ROOT / "MatrixCore" / "THEOREMS.md", ROOT / "tests" / "README.md",
-        *sorted((ROOT / "docs").rglob("*.md"))]
+DOCS = [ROOT / "README.md", ROOT / "tests" / "README.md", *sorted((ROOT / "docs").rglob("*.md"))]
 BLOCK = re.compile(r"```lean\n(.*?)```", re.S)
 
 

@@ -18,9 +18,8 @@ def main():
                            text=True, capture_output=True)
     if build.returncode:
         raise SystemExit(build.stdout + build.stderr)
-    documents = [ROOT / 'README.md', ROOT / 'ARTIFACT.md', ROOT / 'TensorCore/THEOREMS.md',
-                 ROOT / 'tests/README.md', ROOT / 'examples/README.md',
-                 *(ROOT / 'docs').rglob('*.md'), *(ROOT / 'floatlib-port').glob('*.md')]
+    documents = [ROOT / 'README.md', ROOT / 'tests/README.md', ROOT / 'examples/README.md',
+                 *(ROOT / 'floatlib-port').glob('*.md')]
     links = 0
     for document in documents:
         for target in LINK.findall(document.read_text()):
@@ -32,8 +31,7 @@ def main():
             if not (document.parent / target).exists():
                 raise SystemExit(f'{document.relative_to(ROOT)}: missing local link {target}')
             links += 1
-    checked = [ROOT / 'README.md', ROOT / 'TensorCore/THEOREMS.md', ROOT / 'tests/README.md',
-               *sorted((ROOT / 'docs/guide').glob('*.md'))]
+    checked = [ROOT / 'README.md', ROOT / 'tests/README.md']
     snippets = []
     with tempfile.TemporaryDirectory(prefix='tc-doc-examples-') as directory:
         for document in checked:
