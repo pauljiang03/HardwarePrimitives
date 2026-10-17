@@ -25,7 +25,7 @@ from fractions import Fraction
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OZAKI = os.path.dirname(HERE)
-ROOT = os.path.dirname(OZAKI)
+ROOT = os.path.dirname(os.path.dirname(OZAKI))
 
 # --------------------------------------------------------------------------------------------
 # Running the Lean scripts
@@ -145,8 +145,8 @@ ARCH = {
     "cdna3FP8 e5m2fnuz e5m2fnuz": "CDNA 3 (MI300)",
 }
 
-TC_EVAL = "computed by #eval of TensorCore.runBlocks in ozaki/scripts/targeted/TensorCoreCases.lean"
-MC_EVAL = "computed by #eval of MatrixCore.dotBits in ozaki/scripts/targeted/MatrixCoreCases.lean"
+TC_EVAL = "computed by #eval of TensorCore.runBlocks in wip/ozaki/scripts/targeted/TensorCoreCases.lean"
+MC_EVAL = "computed by #eval of MatrixCore.dotBits in wip/ozaki/scripts/targeted/MatrixCoreCases.lean"
 TC_MODELS = "TensorCore/TC/CanonicalDefs.lean, TensorCore/TC/CanonicalFormatDefs.lean"
 MC_MODELS = "amd/MatrixCore/MC/Models.lean"
 
@@ -574,11 +574,11 @@ def main():
     if "--tc" in args:
         tc = read_lines(args[args.index("--tc") + 1])
     else:
-        tc = lean_lines(ROOT, "ozaki/scripts/targeted/TensorCoreCases.lean")
+        tc = lean_lines(ROOT, "wip/ozaki/scripts/targeted/TensorCoreCases.lean")
     if "--mc" in args:
         mc = read_lines(args[args.index("--mc") + 1])
     else:
-        mc = lean_lines(os.path.join(ROOT, "amd"), "../ozaki/scripts/targeted/MatrixCoreCases.lean")
+        mc = lean_lines(os.path.join(ROOT, "amd"), "../wip/ozaki/scripts/targeted/MatrixCoreCases.lean")
     cases = build(tc, mc)
     counts = {}
     for c in cases:
@@ -589,7 +589,7 @@ def main():
                        "not cover (minimum alignment exponents, signed zeros, subnormals, TF32's "
                        "exponent range, H100 TF32 MMA), with the outputs the Lean models predict. "
                        "See targeted-validation.md.",
-        "generated_by": "ozaki/scripts/targeted_validation.py",
+        "generated_by": "wip/ozaki/scripts/targeted_validation.py",
         "conventions": {
             "block": "d = c + sum_i a_i * b_i for one output element; a_i, b_i are input words "
                      "in k order, c and d binary32 words.",

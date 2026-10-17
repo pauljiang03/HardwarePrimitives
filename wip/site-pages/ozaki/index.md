@@ -6,7 +6,7 @@ description: What the Ozaki schemes do, what the Lean development proves about t
 The Ozaki schemes compute a high-precision matrix product on a low-precision
 matrix multiplier. They turn the inputs into small integers, which the matrix
 multiplier multiplies exactly, and combine the exact integer results. The
-[`ozaki/`](https://github.com/pauljiang03/MMAlgebra/tree/main/ozaki) project
+[`ozaki/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/wip/ozaki) project
 formalizes three of them in Lean on this repository's NVIDIA Tensor Core model
 and on the AMD matrix-core model in `amd/`, following a set of bit-precise Z3
 models of the schemes. Every theorem uses only Lean's standard axioms, and
@@ -16,13 +16,13 @@ checker proved never to accept a proof of `False`.
 
 | Scheme | Idea | Read |
 | --- | --- | --- |
-| **Ozaki-I** (Ozaki, Ogita, Oishi and Rump, 2012) | Cut every input into slices of small integers, multiply slice pairs on the matrix multiplier, add the scaled products. | [Ozaki-I, proved end to end](/MMAlgebra/ozaki/ozaki-1/) |
-| **Ozaki-II** (Ozaki, Uchino and Imamura, 2025) | Scale the inputs to integers, multiply them modulo a few moduli on the matrix multiplier, rebuild the product with the Chinese remainder theorem. | [Ozaki-II, proved end to end](/MMAlgebra/ozaki/ozaki-2/) |
-| **ADP and ESC** (Schwarz et al., NVIDIA, 2025) | Ozaki-I on INT8 matrix multipliers for FP64, with a slice count chosen from the inputs' exponent spread and a fallback to native FP64. | [ADP and ESC](/MMAlgebra/ozaki/adp/) |
+| **Ozaki-I** (Ozaki, Ogita, Oishi and Rump, 2012) | Cut every input into slices of small integers, multiply slice pairs on the matrix multiplier, add the scaled products. | [Ozaki-I, proved end to end](/HardwarePrimitives/ozaki/ozaki-1/) |
+| **Ozaki-II** (Ozaki, Uchino and Imamura, 2025) | Scale the inputs to integers, multiply them modulo a few moduli on the matrix multiplier, rebuild the product with the Chinese remainder theorem. | [Ozaki-II, proved end to end](/HardwarePrimitives/ozaki/ozaki-2/) |
+| **ADP and ESC** (Schwarz et al., NVIDIA, 2025) | Ozaki-I on INT8 matrix multipliers for FP64, with a slice count chosen from the inputs' exponent spread and a fallback to native FP64. | [ADP and ESC](/HardwarePrimitives/ozaki/adp/) |
 
-Two pages cut across the schemes: [correct rounding](/MMAlgebra/ozaki/correct-rounding/)
-for all three, and [what the hardware semantics give](/MMAlgebra/ozaki/hardware/).
-[Related work and novelty](/MMAlgebra/ozaki/literature/) places the work in the
+Two pages cut across the schemes: [correct rounding](/HardwarePrimitives/ozaki/correct-rounding/)
+for all three, and [what the hardware semantics give](/HardwarePrimitives/ozaki/hardware/).
+[Related work and novelty](/HardwarePrimitives/ozaki/literature/) places the work in the
 literature.
 
 ## What is proved
@@ -77,9 +77,9 @@ literature.
 ## Not covered
 
 FP8 variants; INT8 hardware semantics, out of scope for now on both vendors
-([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)), so ADP runs on
+([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)), so ADP runs on
 an idealized INT8 matrix multiplier; and a GPU implementation. The theorems are about the
 models; that GPUs behave like them rests on the models'
-[validation](/MMAlgebra/model/validation/). The full list, with every Lean name,
+[validation](/HardwarePrimitives/model/validation/). The full list, with every Lean name,
 is in
-[`ozaki/THEOREMS.md`](https://github.com/pauljiang03/MMAlgebra/blob/main/ozaki/THEOREMS.md).
+[`ozaki/THEOREMS.md`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/THEOREMS.md).

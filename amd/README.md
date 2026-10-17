@@ -5,7 +5,7 @@ CDNA 1, CDNA 2 and CDNA 3 GPUs). It follows Khattak, Mikaitis and Graziani, *Acc
 AMD Matrix Cores* ([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)), and uses the paper's
 notation throughout. Executable calculations and correctness proofs use the same definitions.
 
-Matrix-Core lives in the `amd/` folder of the MMAlgebra repository, as a standalone Lake project: it
+Matrix-Core lives in the `amd/` folder of the Hardware Primitives repository, as a standalone Lake project: it
 has its own numerical foundation and does not depend on `TensorCore`, the NVIDIA Tensor Core
 formalization in the rest of the [repository](../README.md).
 
@@ -65,8 +65,8 @@ four configurations are the constructors of `Accumulation`:
 On binary8, the order of the products matters only through the parity of their slots: a block
 depends on its operand pairs only through the unordered pair {multiset of the odd slots, multiset
 of the even slots}, and a permutation of the slots preserves the output on every input exactly
-when it preserves the parity partition (the parity law, proved in the reduction algebra,
-[`mmalgebra/`](../mmalgebra/README.md)).
+when it preserves the parity partition (the parity law, proved in the work-in-progress project
+[`wip/mmalgebra/`](../wip/mmalgebra/README.md), which builds on this library).
 
 Longer inner products chain blocks, with each block's `d` as the next block's `c`.
 `blockOutcome` and `dotOutcome` give the observed result for any input words, including

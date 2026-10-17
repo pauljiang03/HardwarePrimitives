@@ -10,7 +10,7 @@ from pathlib import Path
 
 SITE = Path(__file__).resolve().parents[1]
 REPO = SITE.parent
-BLOB = 'https://github.com/pauljiang03/MMAlgebra/blob/main/'
+BLOB = 'https://github.com/pauljiang03/HardwarePrimitives/blob/main/'
 DECL = re.compile(r"^\s*(?:@\[[^\]]*\]\s*)?(?:(?:private|protected|noncomputable|partial)\s+)*"
                   r"(?:theorem|lemma|def|abbrev|structure|inductive|class|instance)\s+([^\s(:{\[]+)")
 

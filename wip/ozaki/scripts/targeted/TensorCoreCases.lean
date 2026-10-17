@@ -2,7 +2,7 @@ import TensorCore
 
 /-! Targeted hardware-validation cases on the NVIDIA Tensor Core model.
 
-Run from the repository root: `lake env lean ozaki/scripts/targeted/TensorCoreCases.lean`.
+Run from the repository root: `lake env lean wip/ozaki/scripts/targeted/TensorCoreCases.lean`.
 Each `#eval` prints one line per instruction-level inner product,
 `TC|id|model|K|c|products|output|value|exact`: the words are decimal naturals (converted to hex
 by `targeted_validation.py`), `products` is the whole `k`-long vector of operand pairs, `K` the

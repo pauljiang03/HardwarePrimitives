@@ -64,11 +64,11 @@ binary32, rounded to nearest even (`addBinary32_nearestEven`). This is not
 how a block FMA adds `C`. On the recorded B200 FP8 outputs, from `mma.sync`,
 it agrees with the FP8 `mma.sync` model (`mmaSyncFP8Dot`: two interleaved
 FP16 block FMAs, then `C` added the same way), and the
-[replay](/MMAlgebra/model/validation/) checks both.
+[replay](/HardwarePrimitives/model/validation/) checks both.
 
 ## Proved properties of chains
 
-- [`runBlocks_residual_ledger`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Composition.lean#L95):
+- [`runBlocks_residual_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Composition.lean#L95):
   the exact sum of all inputs equals the final output plus the sum of the
   losses recorded by every block FMA, alignment and final rounding included.
 - `zero_products_passthrough`: a block FMA whose products are all zero returns its

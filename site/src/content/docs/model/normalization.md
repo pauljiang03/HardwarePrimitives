@@ -42,7 +42,7 @@ to 14 once, so the FP8 output is still a single truncation of the exact sum.
 
 ## `round32`: normalize and round an exact rational to FP32
 
-[`round32`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/RoundOp.lean#L53)
+[`round32`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/RoundOp.lean#L53)
 supports two modes, `truncate` and `nearestEven`. EFT uses the second. The
 algorithm is:
 
@@ -79,7 +79,7 @@ round toward zero included. Bits are already truncated during alignment,
 before the addition, so the result can differ from the exact sum rounded
 toward zero. In this model the final truncation acts on the aligned sum,
 which is exact at that point. The overall result is *not* the exact input
-sum rounded toward zero, and the [error bound](/MMAlgebra/properties/error-bounds/)
+sum rounded toward zero, and the [error bound](/HardwarePrimitives/properties/error-bounds/)
 accounts for both truncations.
 
 ## Range: the model is finite-only
@@ -113,16 +113,16 @@ equality proof covers it bit for bit.
 specifications that do not mention it:
 
 - **Truncation:** the [independent
-  specification](/MMAlgebra/model/specification/) describes truncation by ordering:
+  specification](/HardwarePrimitives/model/specification/) describes truncation by ordering:
   the result is the finite FP32 value with the largest magnitude lying
   between 0 and `x`. `supported_eq_spec` proves `round32 .truncate` meets
   this on every supported input.
 - **Nearest even:** `NearestEven32 x b` says that `b` decodes to a finite
   value at least as close to `x` as any finite FP32 value, and that `b` has
   an even final bit whenever a different value is equally close.
-  [`round32_nearestEven_correct`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/CorrectRounding.lean#L155)
+  [`round32_nearestEven_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/CorrectRounding.lean#L155)
   proves `round32 .nearestEven` meets it on the whole finite range.
 - **Any binary format:**
-  [`roundBinary_correct`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Binary/RoundingContract.lean#L17)
+  [`roundBinary_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Binary/RoundingContract.lean#L17)
   gives the same contract for well-formed formats and modes in general. FP64
   (DMMA) and multi-stage rounding use it.

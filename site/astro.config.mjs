@@ -4,27 +4,27 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://pauljiang03.github.io',
-  base: '/MMAlgebra',
+  base: '/HardwarePrimitives',
   trailingSlash: 'always',
   devToolbar: { enabled: false },
   // Old URLs (renamed pages) forward to their current pages.
   redirects: {
-    '/overview': '/MMAlgebra/',
-    '/model/conversion': '/MMAlgebra/model/normalization/',
-    '/proofs/trust': '/MMAlgebra/proofs/tested/',
-    '/model/profiles': '/MMAlgebra/model/variants/',
+    '/overview': '/HardwarePrimitives/',
+    '/model/conversion': '/HardwarePrimitives/model/normalization/',
+    '/proofs/trust': '/HardwarePrimitives/proofs/tested/',
+    '/model/profiles': '/HardwarePrimitives/model/variants/',
   },
   integrations: [
     starlight({
-      title: 'MMAlgebra',
+      title: 'Hardware Primitives',
       description:
-        'Verified semantics of GPU matrix multipliers: models of NVIDIA Tensor Cores and AMD matrix cores, TC-EFT, Ozaki emulation with correct rounding, and the algebra of reduction schedules.',
+        'Lean 4 models of the matrix multipliers of NVIDIA Tensor Cores (Volta to Blackwell) and AMD matrix cores (CDNA 1 to 3), and their proved properties: error bounds, non-monotonicity and TC-EFT.',
       customCss: ['./src/styles/theme.css'],
       expressiveCode: {
         themes: ['github-dark-dimmed', 'github-light'],
         styleOverrides: { borderRadius: '2px', frames: { shadowColor: 'transparent' } },
       },
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/pauljiang03/MMAlgebra' }],
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/pauljiang03/HardwarePrimitives' }],
       sidebar: [
         {
           label: 'Start here',
@@ -35,7 +35,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Modeling the Tensor Core',
+          label: 'Modeling NVIDIA Tensor Cores',
           items: [
             { label: 'The model at a glance', slug: 'model' },
             { label: '1. Formats and decoding', slug: 'model/formats' },
@@ -52,20 +52,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Modeling AMD matrix cores',
-          items: [
-            { label: 'The AMD model at a glance', slug: 'amd' },
-            { label: '1. Getting started', slug: 'amd/getting-started' },
-            { label: '2. Notation and formats', slug: 'amd/notation' },
-            { label: '3. The three architectures', slug: 'amd/architectures' },
-            { label: '4. Independent specification', slug: 'amd/specification' },
-            { label: '5. What is proved', slug: 'amd/theorems' },
-            { label: '6. Validation', slug: 'amd/validation' },
-            { label: 'Modeling scope and limits', slug: 'amd/scope' },
-          ],
-        },
-        {
-          label: 'Properties & algorithms',
+          label: 'Properties of Tensor Cores',
           items: [
             { label: 'Error bounds', slug: 'properties/error-bounds' },
             { label: 'Non-monotonicity', slug: 'properties/non-monotonicity' },
@@ -73,18 +60,23 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Ozaki schemes',
+          label: 'Modeling AMD matrix cores',
           items: [
-            { label: 'At a glance', slug: 'ozaki' },
-            { label: 'Ozaki-I, proved end to end', slug: 'ozaki/ozaki-1' },
-            { label: 'Ozaki-II, proved end to end', slug: 'ozaki/ozaki-2' },
-            { label: 'ADP and ESC', slug: 'ozaki/adp' },
-            { label: 'Correct rounding', slug: 'ozaki/correct-rounding' },
-            { label: 'What the hardware semantics give', slug: 'ozaki/hardware' },
-            { label: 'Related work and novelty', slug: 'ozaki/literature' },
+            { label: 'The AMD model at a glance', slug: 'amd' },
+            { label: '1. Getting started', slug: 'amd/getting-started' },
+            { label: '2. Notation and formats', slug: 'amd/notation' },
+            { label: '3. The three architectures', slug: 'amd/architectures' },
+            { label: '4. Independent specification', slug: 'amd/specification' },
+            { label: '5. Validation', slug: 'amd/validation' },
+            { label: 'Modeling scope and limits', slug: 'amd/scope' },
           ],
         },
-        { label: 'Schedules: the reduction algebra', slug: 'schedules' },
+        {
+          label: 'Properties of matrix cores',
+          items: [
+            { label: 'What is proved', slug: 'amd/theorems' },
+          ],
+        },
         {
           label: 'Proofs & trust',
           items: [

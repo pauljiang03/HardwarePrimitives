@@ -1,22 +1,27 @@
 ---
 title: Overview
-description: What MMAlgebra models, what it proves, and how the parts fit together.
+description: What Hardware Primitives models, what it proves, and how the parts fit together.
 ---
 
-MMAlgebra is a Lean 4 development about the arithmetic of GPU matrix
-multipliers and the software built on them. It verifies the boundary between
-the two: what NVIDIA Tensor Cores and AMD matrix cores actually compute, what
-software can rely on, and which changes to the software leave the result bit
-for bit the same. It has three parts, each building on the one before:
+Hardware Primitives is a Lean 4 development about the arithmetic of GPU matrix
+multipliers: what the block FMAs of NVIDIA Tensor Cores and AMD matrix cores
+actually compute, on every generation whose arithmetic has been characterized,
+and what software built on them can rely on. Executable calculations and
+correctness proofs use the same definitions. For each vendor there is a model
+and a set of proved properties:
 
-1. **Hardware semantics.** Models of the block FMAs of [NVIDIA Tensor
-   Cores](/MMAlgebra/model/) and [AMD matrix cores](/MMAlgebra/amd/), with
-   their error bounds, non-monotonicity and TC-EFT.
-2. **Emulation.** The [Ozaki schemes](/MMAlgebra/ozaki/), proved on both models,
-   with correctly rounded variants.
-3. **Schedules.** An [algebra of reduction schedules](/MMAlgebra/schedules/)
-   that decides which ways of computing a matrix product give identical bits
-   on each architecture, and how far apart they can be when they do not.
+1. **NVIDIA Tensor Cores.** [Models of the block
+   FMAs](/HardwarePrimitives/model/) from Volta to Blackwell (V100, A100, Ada
+   and L40S, H100, H200 and B200) for FP16, BF16 and TF32, the FP8 block FMAs
+   of Ada, Hopper and Blackwell, and the FP8 `mma.sync` paths of Hopper, B200
+   and the RTX PRO 6000. Their [properties](/HardwarePrimitives/properties/error-bounds/)
+   are error bounds, non-monotonicity and TC-EFT.
+2. **AMD matrix cores.** [Models of the MFMA
+   instructions](/HardwarePrimitives/amd/) of CDNA 1, 2 and 3 and of the
+   sequential FMA, for FP16, BF16, XF32 and FP8. Their
+   [properties](/HardwarePrimitives/amd/theorems/) are error bounds,
+   monotonicity in `c`, the dependence on the order of the products, and
+   fixed-width accumulation.
 
 ## The Tensor Core model
 
@@ -31,24 +36,24 @@ can be less accurate than the input precision suggests, and it can be
 
 This part has three layers:
 
-1. **[A model of the Tensor Core](/MMAlgebra/model/).** An executable function,
+1. **[A model of the Tensor Core](/HardwarePrimitives/model/).** An executable function,
    `evalBlock`, maps encoded input words to an FP32 output word for one block
    FMA. It follows the hardware model of Khattak and Mikaitis,
    *[Accurate Models of NVIDIA Tensor Cores](https://arxiv.org/html/2512.07004v4)*,
    and uses exact integers and rationals throughout. It does not rely on
    floating-point hardware or rounding libraries.
-2. **[Properties of that model](/MMAlgebra/properties/error-bounds/).** Proved
+2. **[Properties of that model](/HardwarePrimitives/properties/error-bounds/).** Proved
    facts: the accepted input domain, an error bound split into alignment loss
    and final-rounding loss, exactness of fixed-width accumulators, and a
    characterization of non-monotonicity.
-3. **[TC-EFT](/MMAlgebra/properties/eft/).** An error-free transformation that
+3. **[TC-EFT](/HardwarePrimitives/properties/eft/).** An error-free transformation that
    takes the encoded inputs and any finite FP32 output `D`, recovers what
    alignment discarded, and returns the correctly rounded exact sum when its
    preconditions hold. There is a reference version and a bounded 576-bit
    workspace version, and they are proved to agree.
 
 The AMD model of the MFMA instructions of CDNA 1, 2 and 3 is a separate
-library; see [the AMD model at a glance](/MMAlgebra/amd/).
+library; see [the AMD model at a glance](/HardwarePrimitives/amd/).
 
 ## Why a Lean model?
 
@@ -63,13 +68,13 @@ definition, so:
   EFT correctness are Lean theorems about the *same* definition that the tests
   execute.
 - **It is cross-checked.** An [independent
-  specification](/MMAlgebra/model/specification/), written from *Accurate Models* without
+  specification](/HardwarePrimitives/model/specification/), written from *Accurate Models* without
   importing the implementation, is proved to agree with `evalBlock` on every
-  encoded input. A [bitvector datapath](/MMAlgebra/model/datapath/) with
+  encoded input. A [bitvector datapath](/HardwarePrimitives/model/datapath/) with
   fixed-width registers, and a second implementation built on
-  [FloatLib](/MMAlgebra/proofs/floatlib/), are also proved equivalent.
+  [FloatLib](/HardwarePrimitives/proofs/floatlib/), are also proved equivalent.
 - **It is validated.** Recorded GPU outputs are [replayed bit for
-  bit](/MMAlgebra/model/validation/).
+  bit](/HardwarePrimitives/model/validation/).
 
 ## Two papers
 
@@ -120,13 +125,13 @@ It is evidence, not a proof. The variants run from Volta to Blackwell (V100,
 A100, Ada, H100, H200, B200) with FP16, BF16 or TF32 inputs, and on Ada,
 Hopper and Blackwell also with FP8 (E4M3, E5M2) inputs; all have FP32 `C` and
 output. See [Modeling scope and
-limits](/MMAlgebra/model/scope/) and [What is tested](/MMAlgebra/proofs/tested/).
+limits](/HardwarePrimitives/model/scope/) and [What is tested](/HardwarePrimitives/proofs/tested/).
 
 ## Start exploring
 
-- [The model at a glance](/MMAlgebra/model/): the whole pipeline on one page.
-- [The AMD model at a glance](/MMAlgebra/amd/): the matrix-core model of CDNA 1, 2 and 3.
-- [Quick start](/MMAlgebra/quick-start/): build the project and run the examples.
-- [Schedules](/MMAlgebra/schedules/): when two GEMM schedules give the same bits.
-- [What is proven](/MMAlgebra/proofs/theorems/): the headline results and where they live.
-- [Source on GitHub](https://github.com/pauljiang03/MMAlgebra).
+- [The model at a glance](/HardwarePrimitives/model/): the whole pipeline on one page.
+- [The AMD model at a glance](/HardwarePrimitives/amd/): the matrix-core model of CDNA 1, 2 and 3.
+- [Quick start](/HardwarePrimitives/quick-start/): build the project and run the examples.
+- [Properties of Tensor Cores](/HardwarePrimitives/properties/error-bounds/): error bounds, non-monotonicity and TC-EFT.
+- [What is proven](/HardwarePrimitives/proofs/theorems/): the headline results and where they live.
+- [Source on GitHub](https://github.com/pauljiang03/HardwarePrimitives).

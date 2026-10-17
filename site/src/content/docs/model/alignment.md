@@ -58,7 +58,7 @@ def PreparedBlock.alignedBits (b : PreparedBlock) : List ℤ :=
   b.terms.map fun t => truncBits t.value b.alignGridExponent
 ```
 
-[`truncBits`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Numerics/Exact.lean#L70)
+[`truncBits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Exact.lean#L70)
 takes the floor of the **magnitude** and restores the sign. This is the
 sign-magnitude shifter of the hardware: it **truncates** the magnitude and
 keeps the sign. For a negative term this is not the same as rounding down
@@ -83,8 +83,8 @@ theorem alignment_residual_bounds (x : ℚ) (e : ℤ) :
     -pow2 e < x - truncGrid x e ∧ x - truncGrid x e < pow2 e
 ```
 
-These residuals are what [TC-EFT](/MMAlgebra/properties/eft/) recovers, and the
-first half of the [error bound](/MMAlgebra/properties/error-bounds/).
+These residuals are what [TC-EFT](/HardwarePrimitives/properties/eft/) recovers, and the
+first half of the [error bound](/HardwarePrimitives/properties/error-bounds/).
 
 ## Example: a small term disappears
 
@@ -98,4 +98,4 @@ V100, `F = 23`, `C = 1.0`, one product `2^-24`:
 Four such products are lost the same way, although together they are
 `2^-22`, which an FP32 result near 1 could represent. Lowering `C` slightly
 moves η to −1 and keeps all four: that is the
-[non-monotonicity](/MMAlgebra/properties/non-monotonicity/) mechanism.
+[non-monotonicity](/HardwarePrimitives/properties/non-monotonicity/) mechanism.

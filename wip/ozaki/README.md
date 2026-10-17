@@ -13,7 +13,7 @@ models" below):
 
 The Z3 models take the matrix multiplier to have fp16 inputs and binary32 round-to-nearest
 additions. Here the matrix multiplier is a hardware model of this repository: the NVIDIA Tensor Core model of
-[`TensorCore`](../README.md) and the AMD matrix-core model of [`MatrixCore`](../amd/README.md).
+[`TensorCore`](../../README.md) and the AMD matrix-core model of [`MatrixCore`](../../amd/README.md).
 The scheme itself is proved once, for any matrix multiplier, and each hardware model is shown to
 satisfy what the scheme needs. Every labeled check of the three Z3 models has a Lean theorem or a
 kernel-checked test, except the ones listed under [what is not proved](THEOREMS.md#not-proved).
@@ -475,5 +475,5 @@ and `MatrixCore`. As in the Z3 models, the CRT residues and reconstruction are e
 arithmetic; Ozaki-I's power-of-two rescaling is proved exact when its exponent is in range
 (`Ozaki.TC.scaled_slice_product_exact`). Not covered: FP8 variants, and INT8 hardware semantics,
 which are out of scope for now on both vendors
-([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)): ADP runs on an idealized INT8
+([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)): ADP runs on an idealized INT8
 matrix multiplier. [THEOREMS.md](THEOREMS.md#not-proved) lists the rest.

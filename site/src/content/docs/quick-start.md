@@ -5,12 +5,12 @@ description: Build the Lean project and run the worked examples.
 
 Install [elan](https://github.com/leanprover/elan), Python 3, and Git. The
 repository pins its Lean version in
-[`lean-toolchain`](https://github.com/pauljiang03/MMAlgebra/blob/main/lean-toolchain).
+[`lean-toolchain`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/lean-toolchain).
 The checks need no GPU, CUDA, or MATLAB.
 
 ```sh
-git clone https://github.com/pauljiang03/MMAlgebra.git
-cd MMAlgebra
+git clone https://github.com/pauljiang03/HardwarePrimitives.git
+cd HardwarePrimitives
 lake build                                  # library, regression library, native adapters
 lake env lean examples/GettingStarted.lean
 lake env lean examples/NonMonotonicity.lean

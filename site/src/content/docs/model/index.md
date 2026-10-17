@@ -36,15 +36,15 @@ The Lean model implements these five steps directly.
 ## The pipeline in Lean
 
 <div class="pipeline">
-  <a href="/MMAlgebra/model/formats/"><span class="n">01 · prepare</span><span class="t">Decode</span><span class="d"><code>BlockInput p</code> → <code>PreparedBlock</code></span></a>
-  <a href="/MMAlgebra/model/products/"><span class="n">02 · denormalizedMul</span><span class="t">Multiply</span><span class="d"><code>Decoded × Decoded</code> → <code>DenormalizedProduct</code></span></a>
-  <a href="/MMAlgebra/model/alignment/"><span class="n">03 · alignExp, truncBits</span><span class="t">Align</span><span class="d">grid <code>2^(η − F)</code>, truncate</span></a>
-  <a href="/MMAlgebra/model/accumulation/"><span class="n">04 · accumulator</span><span class="t">Accumulate</span><span class="d">exact <code>Σ bits · 2^(η−F)</code></span></a>
-  <a href="/MMAlgebra/model/normalization/"><span class="n">05 · round32</span><span class="t">Normalize &amp; round</span><span class="d">truncate → <code>F32</code></span></a>
+  <a href="/HardwarePrimitives/model/formats/"><span class="n">01 · prepare</span><span class="t">Decode</span><span class="d"><code>BlockInput p</code> → <code>PreparedBlock</code></span></a>
+  <a href="/HardwarePrimitives/model/products/"><span class="n">02 · denormalizedMul</span><span class="t">Multiply</span><span class="d"><code>Decoded × Decoded</code> → <code>DenormalizedProduct</code></span></a>
+  <a href="/HardwarePrimitives/model/alignment/"><span class="n">03 · alignExp, truncBits</span><span class="t">Align</span><span class="d">grid <code>2^(η − F)</code>, truncate</span></a>
+  <a href="/HardwarePrimitives/model/accumulation/"><span class="n">04 · accumulator</span><span class="t">Accumulate</span><span class="d">exact <code>Σ bits · 2^(η−F)</code></span></a>
+  <a href="/HardwarePrimitives/model/normalization/"><span class="n">05 · round32</span><span class="t">Normalize &amp; round</span><span class="d">truncate → <code>F32</code></span></a>
 </div>
 
 The whole model is about 120 lines, in
-[`TensorCore/TC/Block.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Block.lean).
+[`TensorCore/TC/Block.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Block.lean).
 These are its definitions, unchanged apart from omitted comments:
 
 ```lean
@@ -116,7 +116,7 @@ Three design choices run through the model:
 - **Failure is explicit.** `evalBlock` returns `Except ModelError BlockTrace`.
   It rejects inputs with the wrong number of products, NaN or infinity
   operands, and sums that overflow FP32. The proved theorem
-  [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
+  [`evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
   gives the exact accepted domain, so no input is rejected silently.
 
 ## A worked trace
@@ -137,7 +137,7 @@ Here is the V100 model (`K = 4`, `F = 23`, no minimum alignment exponent) with f
 
 The smaller `C` moves the grid one bit lower, so the four products survive
 alignment and the output **increases**. This is the
-[non-monotonicity](/MMAlgebra/properties/non-monotonicity/) that the library
+[non-monotonicity](/HardwarePrimitives/properties/non-monotonicity/) that the library
 proves in general. Both rows can be checked in Lean:
 
 ```lean
@@ -157,16 +157,16 @@ example : ((evalBlock before).toOption.map fun t => t.output.bits) = some 0x3f80
 
 Each stage has its own page:
 
-1. [Formats and decoding](/MMAlgebra/model/formats/): IEEE classification, exponents, subnormals, TF32 packing.
-2. [Exact products in denormalized form](/MMAlgebra/model/products/): why products are not normalized.
-3. [Alignment](/MMAlgebra/model/alignment/): `η`, the minimum alignment exponent, the grid, and truncation.
-4. [Accumulation](/MMAlgebra/model/accumulation/): the exact sum and fixed-width registers.
-5. [Normalization and final rounding](/MMAlgebra/model/normalization/): `round32`, range, signed zero.
-6. [Variants and their numerical features](/MMAlgebra/model/variants/): the models of V100 to B200, FP8 included, and the general `InvocationSpec`.
-7. [Instructions and chaining](/MMAlgebra/model/instructions/): instructions made of several block FMAs, and passing `C` between them.
-8. [Independent specification](/MMAlgebra/model/specification/): `IndependentSpec` (a transcription of *Accurate Models*) and the equality proof.
-9. [Bitvector datapath](/MMAlgebra/model/datapath/): the model in fixed-width registers, proved to give the same output word.
-10. [Hardware validation](/MMAlgebra/model/validation/): replay of GPU measurements.
+1. [Formats and decoding](/HardwarePrimitives/model/formats/): IEEE classification, exponents, subnormals, TF32 packing.
+2. [Exact products in denormalized form](/HardwarePrimitives/model/products/): why products are not normalized.
+3. [Alignment](/HardwarePrimitives/model/alignment/): `η`, the minimum alignment exponent, the grid, and truncation.
+4. [Accumulation](/HardwarePrimitives/model/accumulation/): the exact sum and fixed-width registers.
+5. [Normalization and final rounding](/HardwarePrimitives/model/normalization/): `round32`, range, signed zero.
+6. [Variants and their numerical features](/HardwarePrimitives/model/variants/): the models of V100 to B200, FP8 included, and the general `InvocationSpec`.
+7. [Instructions and chaining](/HardwarePrimitives/model/instructions/): instructions made of several block FMAs, and passing `C` between them.
+8. [Independent specification](/HardwarePrimitives/model/specification/): `IndependentSpec` (a transcription of *Accurate Models*) and the equality proof.
+9. [Bitvector datapath](/HardwarePrimitives/model/datapath/): the model in fixed-width registers, proved to give the same output word.
+10. [Hardware validation](/HardwarePrimitives/model/validation/): replay of GPU measurements.
 
 The AMD matrix cores have a model of their own, with round-to-nearest output
-and late addition of `c`: see [the AMD model at a glance](/MMAlgebra/amd/).
+and late addition of `c`: see [the AMD model at a glance](/HardwarePrimitives/amd/).

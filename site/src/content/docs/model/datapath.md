@@ -73,7 +73,7 @@ the bookkeeping differs.
 
 ## The stages
 
-[`TensorCore/Kernels/Datapath/Defs.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Defs.lean)
+[`TensorCore/Kernels/Datapath/Defs.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Defs.lean)
 follows the same five steps as the model:
 
 1. **Decode.** Bit-field extraction gives the sign, the significand with its
@@ -119,14 +119,14 @@ the stages:
 
 | Stage | Lean result | What it shows |
 | --- | --- | --- |
-| Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L48), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L97) | each decoder gives the model's decoded value |
-| Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's product in denormalized form |
-| Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
-| Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
-| Accumulate | [`Datapath.accumulate_toInt`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Align.lean#L126), [`Datapath.accumulator_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L121) | the accumulator's signed value is the model's exact sum; it never overflows |
-| Normalize and truncate | [`Datapath.normalize_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Normalize.lean#L182) | the bitvector normalizer is `round32 .truncate`, bit for bit |
+| Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L48), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Decode.lean#L97) | each decoder gives the model's decoded value |
+| Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's product in denormalized form |
+| Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Align.lean#L141) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
+| Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
+| Accumulate | [`Datapath.accumulate_toInt`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Align.lean#L126), [`Datapath.accumulator_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Correctness.lean#L121) | the accumulator's signed value is the model's exact sum; it never overflows |
+| Normalize and truncate | [`Datapath.normalize_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Normalize.lean#L182) | the bitvector normalizer is `round32 .truncate`, bit for bit |
 
-[`Normalize.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/Normalize.lean)
+[`Normalize.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/Normalize.lean)
 proves `normalize_eq` for any accumulator width from 24 to 64 bits, so it
 does not depend on the model.
 
@@ -153,7 +153,7 @@ independent specification) holds for the datapath too.
 
 The datapath above shifts each significand left by `F − 23`, so it needs
 `F ≥ 23` mantissa bits after alignment. The FP8 block FMAs of Ada and Hopper
-keep `F = 13`, fewer than `C`'s 23. [`Datapath.FP8.evalBlock8`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L106) first places
+keep `F = 13`, fewer than `C`'s 23. [`Datapath.FP8.evalBlock8`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L106) first places
 every significand on `L = max F 23` bits after the binary point, shifts it right
 by the exponent gap, and then drops `L − F` more bits; for `F ≥ 23` the extra
 shift is zero and this is the alignment above. The accumulator has `F + 2`
@@ -169,7 +169,7 @@ theorem evalBlock8_eq (v : FP8Variant) (x : BlockInput v.model) :
     evalBlock8 v x = (TensorCore.evalBlock x).map (·.output.bits)
 ```
 
-[`Datapath.FP8.evalBlock8_eq`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L480) holds on every input of the six FP8 models
+[`Datapath.FP8.evalBlock8_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Kernels/Datapath/FP8.lean#L480) holds on every input of the six FP8 models
 (Ada, Hopper and B200; E4M3 in the 9-bit `e4m3x` layout, and E5M2), every
 rejection included.
 
@@ -197,7 +197,7 @@ queries on one fixed model, through Lean's `bv_decide`.
 
 ## Tests
 
-[`tests/TensorCoreTests/TC/Datapath.lean`](https://github.com/pauljiang03/MMAlgebra/blob/main/tests/TensorCoreTests/TC/Datapath.lean)
+[`tests/TensorCoreTests/TC/Datapath.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tests/TensorCoreTests/TC/Datapath.lean)
 checks concrete words with the kernel: four products of one, products lost
 below the grid, an out-of-range sum, a subnormal output, a negative sum that
 truncates to −0, and both input errors.

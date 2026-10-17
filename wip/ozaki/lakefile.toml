@@ -7,11 +7,11 @@ pp.unicode.fun = true
 
 [[require]]
 name = "tensorCore"
-path = ".."
+path = "../.."
 
 [[require]]
 name = "matrixCore"
-path = "../amd"
+path = "../../amd"
 
 [[lean_lib]]
 name = "Ozaki"

@@ -1,6 +1,6 @@
 # FP32-output tensor-core arithmetic with FloatLib
 
-This is an independent Lean project inside `MMAlgebra`. It implements the FP32-output TC block model and the reference TC-EFT algorithm using FloatLib. Its executable runtime imports no `TensorCore` modules. A separate proof layer imports hash-checked copies of the parent definitions to prove universal equivalence. The project uses its own toolchain, Lake configuration, and build artifacts.
+This is an independent Lean project inside the Hardware Primitives repository. It implements the FP32-output TC block model and the reference TC-EFT algorithm using FloatLib. Its executable runtime imports no `TensorCore` modules. A separate proof layer imports hash-checked copies of the parent definitions to prove universal equivalence. The project uses its own toolchain, Lake configuration, and build artifacts.
 
 Start with the [folder guide](FOLDER_GUIDE.md) for the project layout, what the correctness claims mean, how transferred proofs work, and the verification commands.
 

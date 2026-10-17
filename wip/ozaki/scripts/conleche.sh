@@ -3,13 +3,13 @@
 # a proof of False (https://github.com/leanprover/con-leche). Exports each library set with
 # lean4export (https://github.com/leanprover/lean4export) and checks it in --verified mode.
 #
-# Usage: EXPORTER=/path/to/lean4export CHECKER=/path/to/con-leche bash ozaki/scripts/conleche.sh [OUT]
+# Usage: EXPORTER=/path/to/lean4export CHECKER=/path/to/con-leche bash wip/ozaki/scripts/conleche.sh [OUT]
 # Both tools must be built for this repository's Lean version (lean4export) or accept its exports
 # (con-leche). `example`s are not declarations, so they are not exported or re-checked.
 set -uo pipefail
 : "${EXPORTER:?set EXPORTER to the lean4export binary}" "${CHECKER:?set CHECKER to the con-leche binary}"
-ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
-OUT="${1:-$ROOT/ozaki/.lake/conleche}"; mkdir -p "$OUT"
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
+OUT="${1:-$ROOT/wip/ozaki/.lake/conleche}"; mkdir -p "$OUT"
 mods() { (cd "$1" && find "$2" -name '*.lean' | sed 's|\.lean$||; s|/|.|g' | sort); }
 check() { # name dir modules...
   local name="$1" dir="$2"; shift 2
@@ -20,5 +20,5 @@ check() { # name dir modules...
 (cd "$ROOT" && lake build TensorCore TensorCoreTests >/dev/null) && (cd "$ROOT/amd" && lake build MatrixCore MatrixCoreTests >/dev/null) || exit 1
 check tensorcore "$ROOT" $(mods "$ROOT" TensorCore) TensorCore $(mods "$ROOT/tests" TensorCoreTests) TensorCoreTests
 check matrixcore "$ROOT/amd" $(mods "$ROOT/amd" MatrixCore) MatrixCore $(mods "$ROOT/amd/tests" MatrixCoreTests) MatrixCoreTests
-check ozaki-tc "$ROOT/ozaki" $(mods "$ROOT/ozaki" Ozaki) Ozaki $(mods "$ROOT/ozaki" OzakiTC) OzakiTC $(mods "$ROOT/ozaki/tests" OzakiTCTests) OzakiTCTests
-check ozaki-mc "$ROOT/ozaki" $(mods "$ROOT/ozaki" Ozaki) Ozaki $(mods "$ROOT/ozaki" OzakiMC) OzakiMC $(mods "$ROOT/ozaki/tests" OzakiMCTests) OzakiMCTests
+check ozaki-tc "$ROOT/wip/ozaki" $(mods "$ROOT/wip/ozaki" Ozaki) Ozaki $(mods "$ROOT/wip/ozaki" OzakiTC) OzakiTC $(mods "$ROOT/wip/ozaki/tests" OzakiTCTests) OzakiTCTests
+check ozaki-mc "$ROOT/wip/ozaki" $(mods "$ROOT/wip/ozaki" Ozaki) Ozaki $(mods "$ROOT/wip/ozaki" OzakiMC) OzakiMC $(mods "$ROOT/wip/ozaki/tests" OzakiMCTests) OzakiMCTests

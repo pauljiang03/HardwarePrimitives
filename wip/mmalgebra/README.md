@@ -1,6 +1,6 @@
 # Schedules: the reduction algebra
 
-The third part of MMAlgebra characterizes, for each matrix multiplier modeled in this repository,
+This work-in-progress project characterizes, for each matrix multiplier modeled in this repository,
 exactly when two GEMM schedules give the same result bit for bit. For one output entry, every schedule (split-K,
 stream-K, the k-tile depth, the instruction shape, and whether `C` is added in the first block FMA
 or in the epilogue) is a term built from four operations: the zero accumulator, the initial
@@ -60,8 +60,8 @@ differences.
 
 The full explanation, with the laws per architecture, concrete witnesses, the decision procedure,
 applications to batch invariance and reproducible autotuning, a plan for Triton, and the open
-problems, is on the [schedules page](https://pauljiang03.github.io/MMAlgebra/schedules/) of the
-website.
+problems, is in [the schedules page](../site-pages/schedules.md), which is off the website while this
+project is a work in progress.
 
 ## Status
 

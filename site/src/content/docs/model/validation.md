@@ -11,7 +11,7 @@ model and comparing output words exactly.
 
 The vectors come from the validation suite of the MATLAB Tensor Core models
 (v0.5) that accompany *Accurate Models* (Khattak and Mikaitis), vendored with pinned hashes in
-[`vendor/matlab-tensor-core-v0.5/model_validation/`](https://github.com/pauljiang03/MMAlgebra/tree/main/vendor/matlab-tensor-core-v0.5/model_validation).
+[`vendor/matlab-tensor-core-v0.5/model_validation/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/vendor/matlab-tensor-core-v0.5/model_validation).
 Each configuration has 5,000 rows of `a`, `b`, `c` inputs and the `d` output
 measured on the GPU.
 
@@ -29,9 +29,9 @@ measured on the GPU.
 The BF16 and TF32 rows are run through **both** the general `InvocationSpec`
 descriptor and the proved model. Both agree with the device and with each
 other. The results are recorded in
-[`data/regressions/device-report.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/data/regressions/device-report.json)
+[`data/regressions/device-report.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/data/regressions/device-report.json)
 and
-[`device-formats-report.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/data/regressions/device-formats-report.json).
+[`device-formats-report.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/data/regressions/device-formats-report.json).
 
 ```sh
 python3 scripts/check_features.py
@@ -44,7 +44,7 @@ A later commit of the toolbox,
 [`79143bd`](https://github.com/north-numerical-computing/MATLAB-tensor-core/tree/79143bd29a4a71dc7c2ed47741b63572498b17f6/model_validation),
 records five more GPUs, again 5,000 rows per configuration. Its vectors are vendored
 with pinned hashes in
-[`vendor/matlab-tensor-core-79143bd/`](https://github.com/pauljiang03/MMAlgebra/tree/main/vendor/matlab-tensor-core-79143bd).
+[`vendor/matlab-tensor-core-79143bd/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/vendor/matlab-tensor-core-79143bd).
 Every row is replayed through the model and through its invocation
 descriptor:
 
@@ -60,7 +60,7 @@ descriptor:
 The FP16, BF16 and TF32 rows use the models of A100 (Ada, L40S) and H100
 (H100, H200, B200). Each FP8 row holds 32 products. The toolbox's CUDA harness
 for the FP8 rows with binary32 output
-([`mma_fp8_output_fp32.cu`](https://github.com/pauljiang03/MMAlgebra/blob/main/vendor/matlab-tensor-core-79143bd/model_validation/CUDA/mma_fp8_output_fp32.cu),
+([`mma_fp8_output_fp32.cu`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/matlab-tensor-core-79143bd/model_validation/CUDA/mma_fp8_output_fp32.cu),
 vendored with a pinned hash; the same file is in release v0.1) issues
 `mma.sync.aligned.m16n8k32` with FP8 operands and binary32 `C` and `D`. The model each FP8 row is replayed through
 follows what its outputs agree with:
@@ -69,7 +69,7 @@ follows what its outputs agree with:
   in the block FMA. On Ada the FP8 `mma.sync` runs on Ada's FP8 block FMA
   (two 16-product blocks per row, chained through `C`).
 - **B200 FP8**, recorded with the toolbox's `mma.sync` harness: the outputs
-  agree with the [FP8 `mma.sync` model](/MMAlgebra/model/variants/#fp8-through-mmasync)
+  agree with the [FP8 `mma.sync` model](/HardwarePrimitives/model/variants/#fp8-through-mmasync)
   (`mmaSyncFP8Dot`: FP8 converted to FP16, two interleaved Hopper FP16 block
   FMAs, then `C` added in binary32 with round-to-nearest-even), and equally with
   B200's FP8 block FMA run from `C = 0` followed by the same addition of `C`
@@ -100,7 +100,7 @@ per GPU and format, so the replay distinguishes the 13-bit output.
 The toolbox's releases v0.1 and v0.2 hold other H100 and H200 FP8 outputs for
 the same `a`, `b` and `c` inputs (later releases replaced them). They are
 vendored with pinned hashes in
-[`vendor/matlab-tensor-core-v0.1/`](https://github.com/pauljiang03/MMAlgebra/tree/main/vendor/matlab-tensor-core-v0.1),
+[`vendor/matlab-tensor-core-v0.1/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/vendor/matlab-tensor-core-v0.1),
 because they are the only recorded Hopper FP8 outputs in which `C` is
 accumulated:
 
@@ -122,7 +122,7 @@ kernel-checked).
 
 In all, the replay covers 145,000 rows (125,000 of commit 79143bd and 20,000
 of v0.1) with 0 mismatches. The results are in
-[`data/regressions/device-replay-report.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/data/regressions/device-replay-report.json).
+[`data/regressions/device-replay-report.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/data/regressions/device-replay-report.json).
 
 ```sh
 python3 scripts/check_device_replay.py
@@ -134,9 +134,9 @@ python3 scripts/check_device_replay.py
 bit-accurate simulator of GPU matrix multiply-accumulate units, built and
 checked by its authors against GPUs. It covers instructions with no recorded
 data here, `wgmma` and `tcgen05.mma` with `C` accumulated among them.
-[`scripts/check_mmasim.py`](https://github.com/pauljiang03/MMAlgebra/blob/main/scripts/check_mmasim.py)
+[`scripts/check_mmasim.py`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/scripts/check_mmasim.py)
 runs an unmodified local checkout of the commit pinned in
-[`vendor/mmasim/SOURCES.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/vendor/mmasim/SOURCES.json)
+[`vendor/mmasim/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/mmasim/SOURCES.json)
 (`ce75698`; the script checks the SHA-256 of every file it imports; MMA-Sim's
 code is not vendored) and compares it with `tc_features model-dot`, the Lean
 model with each variant's parameters. MMA-Sim's FP64 FMA module, a C++ kernel
@@ -208,7 +208,7 @@ is tested by the recorded rows above.
 | Blackwell e5m2 k=16 | 10,000 | 9,179 | 821 | 0 |
 
 The report is
-[`data/regressions/mmasim-report.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/data/regressions/mmasim-report.json).
+[`data/regressions/mmasim-report.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/data/regressions/mmasim-report.json).
 The check needs a Python with `torch` and `ninja` for MMA-Sim and a checkout of
 the pinned commit; it is not part of the clean-build report.
 
@@ -253,7 +253,7 @@ hardware data**:
   about 113–128.
 
 These features rest on *Accurate Models* and on the
-[proofs](/MMAlgebra/model/specification/), plus synthetic oracle cases, not on
+[proofs](/HardwarePrimitives/model/specification/), plus synthetic oracle cases, not on
 measurements.
 
 ## Independent software oracles

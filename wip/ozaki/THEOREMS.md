@@ -286,7 +286,7 @@ theorem or a kernel-checked test.
 - That real GPUs behave like the models; see the Tensor Core and matrix core validation.
 - FP8 variants: CDNA 3's `odd_even_grouping`, and no FP8 Tensor Core variant exists in `TensorCore`.
 - INT8 hardware semantics are out of scope for now, on both vendors
-  ([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)). ADP runs on an idealized INT8
+  ([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)). ADP runs on an idealized INT8
   matrix multiplier, the arithmetic of a wrapping (or saturating) INT32 register over exact integer products;
   its result does not depend on the accumulation order, but neither `TensorCore` nor `MatrixCore`
   models an INT8 instruction, and nothing is validated against INT8 hardware.

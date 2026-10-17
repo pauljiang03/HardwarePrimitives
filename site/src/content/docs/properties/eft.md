@@ -22,9 +22,9 @@ routes** produces the answer (a fast FP32 path or a slower exact fallback), and
 
 ## What it recovers, in bits
 
-The Tensor Core [aligns](/MMAlgebra/model/alignment/) every term to the bit
+The Tensor Core [aligns](/HardwarePrimitives/model/alignment/) every term to the bit
 position of the largest exponent and **drops every bit below its lowest kept
-bit**. Then it [truncates](/MMAlgebra/model/normalization/) the sum to FP32's 24
+bit**. Then it [truncates](/HardwarePrimitives/model/normalization/) the sum to FP32's 24
 significant bits. TC-EFT puts those dropped bits back.
 
 1. **Pick a cut-off bit.** This is whichever is higher: the lowest bit the
@@ -138,4 +138,4 @@ concrete block satisfies all of them, checked in Lean.
 
 **6. No answer when the sum is too large for FP32.** If the exact sum rounds
 beyond FP32's largest finite value, TC-EFT returns no result rather than
-infinity, matching the finite scope of the [model](/MMAlgebra/model/scope/).
+infinity, matching the finite scope of the [model](/HardwarePrimitives/model/scope/).

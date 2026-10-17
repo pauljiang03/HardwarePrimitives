@@ -3,7 +3,7 @@
 
 1. Build the two libraries, then each test module on its own (kernel-checked worked examples and
    the axiom audits, which allow only Lean's standard axioms), optionally from a clean build
-   directory. The models themselves (`TensorCore` in `..`, `MatrixCore` in `../amd`) are built by
+   directory. The models themselves (`TensorCore` in `../..`, `MatrixCore` in `../../amd`) are built by
    their own projects and reused.
 2. Elaborate every ```lean code block in the README as a standalone file.
 3. Check the local links of the README files.

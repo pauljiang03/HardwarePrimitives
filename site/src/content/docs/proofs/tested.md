@@ -5,13 +5,13 @@ description: What is tested rather than proven, what is trusted, and what is ass
 
 This page separates what Lean proves from what is only tested, trusted, or
 assumed. The proven results themselves are listed on
-[What is proven](/MMAlgebra/proofs/theorems/).
+[What is proven](/HardwarePrimitives/proofs/theorems/).
 
 ## Proven in Lean
 
 All model properties, EFT correctness, and refinement results, under the
 hypotheses stated in each theorem (see [What is
-proven](/MMAlgebra/proofs/theorems/)). The development uses no `sorry` and no
+proven](/HardwarePrimitives/proofs/theorems/)). The development uses no `sorry` and no
 custom axioms. `scripts/check_axioms.py` audits every public theorem under
 the `TensorCore` namespace and allows only `propext`, `Classical.choice`, and
 `Quot.sound`. The recorded run audited 1,543 theorem roots.
@@ -20,10 +20,9 @@ Every named declaration is also re-checked outside Lean's kernel by
 [con-leche](https://github.com/leanprover/con-leche), an external checker
 proved never to accept a proof of `False`. On 2026-10-13, at revision
 `3b37939` in `--verified` mode, it accepted every declaration of `TensorCore`
-and its tests (168,810, including Lean's own library), of the AMD model
-`MatrixCore` and its tests (166,049), and of the Ozaki libraries with their
-tests (175,851 and 171,967). Lean does not record `example`s as declarations,
-so the kernel-evaluated regression examples are checked by Lean's kernel only.
+and its tests (168,810, including Lean's own library) and of the AMD model
+`MatrixCore` and its tests (166,049). Lean does not record `example`s as
+declarations, so the kernel-evaluated regression examples are checked by Lean's kernel only.
 
 ## Tested, not proved
 
@@ -31,7 +30,7 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
   V100, A100 and H100; 125,000 rows of Ada, L40S, H100, H200 and B200 with
   FP16, BF16, TF32, E4M3 and E5M2 inputs; 20,000 H100 and H200 FP8 rows of
   the toolbox's release v0.1), with the
-  [coverage gaps](/MMAlgebra/model/validation/#what-the-rows-dont-cover) noted
+  [coverage gaps](/HardwarePrimitives/model/validation/#what-the-rows-dont-cover) noted
   there.
 - **The accumulator input of the recorded FP8 outputs**: Ada and L40S
   accumulate `C` in the block FMA; the H100 and H200 outputs of commit 79143bd
@@ -43,7 +42,7 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
   instructions of V100 to B200 and the RTX PRO 6000 (581,052 identical with a
   nonzero `C`, `wgmma` and `tcgen05.mma` included) and 80,000 FP8 `mma.sync`
   cases composed from MMA-Sim's FP16 `mma.sync`, 0 mismatches
-  ([details](/MMAlgebra/model/validation/#cross-check-against-mma-sim)).
+  ([details](/HardwarePrimitives/model/validation/#cross-check-against-mma-sim)).
 - **FP8 decoding**: proved for every E4M3 and E5M2 word in Lean, and also
   compared with an independent Python decoder on all 512 words.
 - **Agreement with Python oracles**: exact-rational reimplementations of
@@ -59,8 +58,8 @@ so the kernel-evaluated regression examples are checked by Lean's kernel only.
 - The Python harnesses that compare outputs. Their pass/fail rests largely on
   `assert`; every script refuses to run under `python -O` or `PYTHONOPTIMIZE`.
 - The authenticity of the vendored measurement files. They are pinned by
-  SHA-256 in [`vendor/SOURCES.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/vendor/SOURCES.json)
-  and in [`vendor/matlab-tensor-core-79143bd/SOURCES.json`](https://github.com/pauljiang03/MMAlgebra/blob/main/vendor/matlab-tensor-core-79143bd/SOURCES.json)
+  SHA-256 in [`vendor/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/SOURCES.json)
+  and in [`vendor/matlab-tensor-core-79143bd/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/matlab-tensor-core-79143bd/SOURCES.json)
   but cannot be independently re-measured without GPUs.
 
 ## Assumed

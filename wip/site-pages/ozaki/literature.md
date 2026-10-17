@@ -3,7 +3,7 @@ title: Related work and novelty
 description: Where the Lean formalization of the Ozaki schemes sits in the literature on GEMM emulation, correctly rounded and reproducible linear algebra, matrix-multiplier numerics and formal verification, and which of its results are new.
 ---
 
-This page places the [Ozaki formalization](/MMAlgebra/ozaki/) in the literature.
+This page places the [Ozaki formalization](/HardwarePrimitives/ozaki/) in the literature.
 It is based on a review done in October 2026. For each source it notes how
 closely it was read: **full** text, **abstract** only, or a **snippet** or
 secondary source. Sources not read in full may contain more than is
@@ -242,7 +242,7 @@ this work adds, and what each has that this work does not.
 | --- | --- | --- | --- |
 | **Ozaki-II** (Ozaki, Uchino and Imamura 2025) and its error analysis (2026) | CRT-based emulation on INT8 matrix multipliers; the analysis assumes exact INT8 products | Ozaki-II machine-checked on fp16, bf16 and tf32 Tensor Cores and AMD matrix cores, with the exactness of the matrix multiplier proved from the hardware models instead of assumed, and a correctly rounded version | Implementations and performance on INT8 hardware; complex, FP8 and improved-scaling variants |
 | **GEMMul8** (Uchino et al.) | CUDA and HIP library for Ozaki-II GEMM, bitwise reproducible | A proof that the NVIDIA and AMD models return identical results, which are also the correctly rounded ones, not only reproducible | A working library on real GPUs |
-| **ADP** (Schwarz et al. 2025, in cuBLAS) | FP64 emulation on INT8 with an exponent-span estimate and a native fallback; Grade A shown by experiment | Grade A proved for the whole routine; a subnormal counterexample and a guardrail that fixes it; the coarsening for every block size; every Z3 test-level check; Inf and NaN results; a correctly rounded version | The production implementation, on real INT8 Tensor Cores (here an idealized INT8 matrix multiplier, [issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)) |
+| **ADP** (Schwarz et al. 2025, in cuBLAS) | FP64 emulation on INT8 with an exponent-span estimate and a native fallback; Grade A shown by experiment | Grade A proved for the whole routine; a subnormal counterexample and a guardrail that fixes it; the coarsening for every block size; every Z3 test-level check; Inf and NaN results; a correctly rounded version | The production implementation, on real INT8 Tensor Cores (here an idealized INT8 matrix multiplier, [issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)) |
 | **Abdelfattah, Dongarra, Fasi, Mikaitis and Tisseur** (2025) | Error analysis of Ozaki-I on integer units and a slice-count estimator; −0, Inf and NaN not handled | Machine-checked bounds of the same shape for our splitting; IEEE special values handled, with proofs; correct rounding | A slice-count estimator (here: their accumulation by levels and different slice counts per matrix, proved in our splitting; their spare-carry recursion formalized, with a level's size read as a count of diagonals) |
 | **Uchino, Ozaki and Imamura** (2026, Ozaki-II error analysis) | Error bounds for Ozaki-II | Their truncation bound machine-checked, without its cross term for truncation toward zero; correct rounding | Their exhaustively checked scaling slack, taken here as a hypothesis (here: their reconstruction algorithm and constant R64 proved in their setting, and their scaling's Lemma 1) |
 | **Mazumder, Calotoiu and Hoefler** (Sept 2026) | CRT emulation targeting `fl(AB)`, a lower bound on the CRT window, and an "exact emulation" for bounded dynamic range by widening the window | Correct rounding for every input, not only bounded dynamic range: a cheap rounding test decides most entries and a proved exact fallback the rest; exactness derived from hardware models rather than assumed; AMD and special values | A lower bound on the window; Blackwell measurements |
@@ -275,4 +275,4 @@ this work adds, and what each has that this work does not.
   ill-conditioned inputs and the frequency of the exact fallback need measuring.
 - **Hardware coverage.** FP8 and FP4 matrix multipliers and Blackwell are not modeled;
   INT8 instruction semantics are out of scope for now
-  ([issue #2](https://github.com/pauljiang03/MMAlgebra/issues/2)).
+  ([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)).

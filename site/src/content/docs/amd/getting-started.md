@@ -23,7 +23,7 @@ Lean code block in the documentation.
 ## Evaluate a block
 
 A block has the vectors `a`, `b` (`N_FMA` words each, in the model's input
-formats) and the binary32 word `c`. [`MatrixCore.blockBits`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Eval.lean#L64) returns the
+formats) and the binary32 word `c`. [`MatrixCore.blockBits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Eval.lean#L64) returns the
 binary32 word `d` or a `ModelError`:
 
 ```lean
@@ -42,7 +42,7 @@ example : blockBits x = .ok 0x3F800000 := by decide +kernel
 #eval (evalBlock x).map fun t => (t.sAcc, value32 t.d)
 ```
 
-[`MatrixCore.evalBlock`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Eval.lean#L50) returns a trace with the decoded inputs, `S_acc` and
+[`MatrixCore.evalBlock`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Eval.lean#L50) returns a trace with the decoded inputs, `S_acc` and
 `d`. The errors:
 
 | `ModelError` | Meaning | Observed by the hardware as |
@@ -53,14 +53,14 @@ example : blockBits x = .ok 0x3F800000 := by decide +kernel
 | `intermediateOverflow` | CDNA 2: an intermediate `fl{·}` overflowed | infinity or NaN |
 | `outputOverflow` | `fl{S_acc}` overflowed | infinity of the sign of `S_acc` |
 
-[`MatrixCore.blockOutcome`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Special.lean#L134) gives the observation for every input word: a
+[`MatrixCore.blockOutcome`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Special.lean#L134) gives the observation for every input word: a
 finite word, an infinity of either sign, or NaN.
 
 ## Longer inner products and `D = AB + C`
 
 An instruction with inner dimension `k` evaluates each element in
 `⌈k / N_FMA⌉` blocks, padding with zeros, each block's `d` becoming the next
-block's `c` ([`MatrixCore.dotBits`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Composition.lean#L29)):
+block's `c` ([`MatrixCore.dotBits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Composition.lean#L29)):
 
 ```lean
 import MatrixCore
@@ -73,8 +73,8 @@ example : dotBits sfmaF32 [0x33800000, 0x34000000] [0x3F800000, 0x3F800000] 0x3F
     .ok 0x3F800001 := by decide +kernel
 ```
 
-[`MatrixCore.dotOutcome`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Composition.lean#L43) is the observation for any words, and
-[`MatrixCore.mfma`](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Composition.lean#L52) applies it to every element of `D = AB + C`.
+[`MatrixCore.dotOutcome`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Composition.lean#L43) is the observation for any words, and
+[`MatrixCore.mfma`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Composition.lean#L52) applies it to every element of `D = AB + C`.
 
 ## Input words by value
 
@@ -87,18 +87,18 @@ of being rounded silently.
 
 | Topic | Declarations | File |
 | --- | --- | --- |
-| Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Numerics/Format.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Numerics/Format.lean) |
-| Truncation and round-down | `truncGrid`, `truncMantissa`, `rdGrid`, `rdMantissa` | [Numerics/Grid.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Numerics/Grid.lean) |
-| `fl{·}` | `rne32`, `fl32`, `normExp` | [Numerics/Round32.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/Numerics/Round32.lean) |
-| Models | `Model`, `Accumulation`, `cdna1F16`, … | [MC/Defs.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Defs.lean), [MC/Models.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Models.lean) |
-| Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [MC/Stages.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Stages.lean) |
-| Evaluation | `evalBlock`, `blockBits`, `accumulate` | [MC/Eval.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Eval.lean) |
-| Special values | `blockOutcome`, `Outcome` | [MC/Special.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Special.lean) |
-| Chaining | `dotBits`, `dotOutcome`, `mfma` | [MC/Composition.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Composition.lean) |
-| Runs of blocks | `runBlocks`, `Chain`, `runBlocks_all` | [MC/Chain.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Chain.lean) |
-| Output error | `correctRounding_error`, `pairwise_error`, `aligned_error`, `dotBits_error_bound` | [MC/ErrorBounds.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/ErrorBounds.lean) |
-| Bounds from the inputs | `correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori` | [MC/AprioriBounds.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/AprioriBounds.lean) |
-| Monotonicity | `evalBlock_c_monotone`, `dotBits_c_monotone`, `cdna3F16_nonmonotonic`, … | [MC/Monotonicity.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Monotonicity.lean), [MC/ProductMonotonicity.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean) |
-| Inner products and `D = AB + C` | `dotBits_exact_error`, `mfma_error` | [MC/InnerProduct.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/InnerProduct.lean), [MC/MFMA.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/MFMA.lean) |
-| Contracts | `BlockContract`, `cdna1F16_contract`, …, `dotBits_blocks` | [MC/Contract.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Contract.lean) |
-| Fixed-width accumulation | `alignedBits`, `machineAccumulate`, `evalBlockMachine` | [MC/Accumulator.lean](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/MatrixCore/MC/Accumulator.lean) |
+| Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Numerics/Format.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean) |
+| Truncation and round-down | `truncGrid`, `truncMantissa`, `rdGrid`, `rdMantissa` | [Numerics/Grid.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Grid.lean) |
+| `fl{·}` | `rne32`, `fl32`, `normExp` | [Numerics/Round32.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Round32.lean) |
+| Models | `Model`, `Accumulation`, `cdna1F16`, … | [MC/Defs.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Defs.lean), [MC/Models.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Models.lean) |
+| Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [MC/Stages.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Stages.lean) |
+| Evaluation | `evalBlock`, `blockBits`, `accumulate` | [MC/Eval.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Eval.lean) |
+| Special values | `blockOutcome`, `Outcome` | [MC/Special.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Special.lean) |
+| Chaining | `dotBits`, `dotOutcome`, `mfma` | [MC/Composition.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Composition.lean) |
+| Runs of blocks | `runBlocks`, `Chain`, `runBlocks_all` | [MC/Chain.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Chain.lean) |
+| Output error | `correctRounding_error`, `pairwise_error`, `aligned_error`, `dotBits_error_bound` | [MC/ErrorBounds.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ErrorBounds.lean) |
+| Bounds from the inputs | `correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori` | [MC/AprioriBounds.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean) |
+| Monotonicity | `evalBlock_c_monotone`, `dotBits_c_monotone`, `cdna3F16_nonmonotonic`, … | [MC/Monotonicity.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean), [MC/ProductMonotonicity.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean) |
+| Inner products and `D = AB + C` | `dotBits_exact_error`, `mfma_error` | [MC/InnerProduct.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/InnerProduct.lean), [MC/MFMA.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MFMA.lean) |
+| Contracts | `BlockContract`, `cdna1F16_contract`, …, `dotBits_blocks` | [MC/Contract.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Contract.lean) |
+| Fixed-width accumulation | `alignedBits`, `machineAccumulate`, `evalBlockMachine` | [MC/Accumulator.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Accumulator.lean) |

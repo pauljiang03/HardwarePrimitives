@@ -56,14 +56,14 @@ theorem evalBlock_error_bound_any {p : Model} {x : BlockInput p} {t : BlockTrace
 
 With `m` output mantissa bits, truncating the binary32 word further to `m` bits
 loses less than `2^(23 − m)` binary32 ulps, and the two truncations together
-still lose less than that. On Ada and Hopper FP8 ([`fp8_error_bound`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/OutputWidth.lean#L442),
+still lose less than that. On Ada and Hopper FP8 ([`fp8_error_bound`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/OutputWidth.lean#L442),
 `m = 13`) the output term is `2^10` binary32 ulps, one unit in the last place of
 the 14-bit output significand; for `m ≥ 23` the bound is `evalBlock_error_bound`.
-The proof ([`evalBlock_error_bound_any`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/OutputWidth.lean#L432)) works on the binary32 magnitude as
+The proof ([`evalBlock_error_bound_any`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/OutputWidth.lean#L432)) works on the binary32 magnitude as
 an integer multiple of `2^-149`, which is monotone in the word, so clearing low
 mantissa bits stays between zero and the value and moves it by less than one
 unit of the cleared position. The bound uses only quantities in the trace,
-and [`evalBlock_success_iff`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
+and [`evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
 says exactly when it applies.
 
 The alignment term depends on η, the **largest** exponent in the block FMA, not
@@ -75,6 +75,6 @@ recover.
 ## Chains
 
 For chained block FMAs,
-[`runBlocks_residual_ledger`](https://github.com/pauljiang03/MMAlgebra/blob/main/TensorCore/TC/Composition.lean#L95)
+[`runBlocks_residual_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Composition.lean#L95)
 gives the same identity across the whole chain. The initial `C` plus every
 product equals the last output plus the sum of the residuals of all the blocks.

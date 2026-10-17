@@ -1,6 +1,6 @@
 {
  "description": "Targeted hardware-validation suite: inputs that exercise the models' distinguishing cases and the boundaries the earlier NVIDIA measurements did not cover (minimum alignment exponents, signed zeros, subnormals, TF32's exponent range, H100 TF32 MMA), with the outputs the Lean models predict. See targeted-validation.md.",
- "generated_by": "ozaki/scripts/targeted_validation.py",
+ "generated_by": "wip/ozaki/scripts/targeted_validation.py",
  "conventions": {
   "block": "d = c + sum_i a_i * b_i for one output element; a_i, b_i are input words in k order, c and d binary32 words.",
   "words": "hex; fp16/bf16 16-bit, tf32 the 19-bit tf19 word (a_fp32_register / b_fp32_register give the 32-bit register words, low 13 bits zero), binary32 and xf32 32-bit, fp8 8-bit FNUZ.",
@@ -9,8 +9,8 @@
   "alternatives": "the same input evaluated by the model under a nearby hypothesis (another minimum alignment exponent, number of padding bits or FMA size): which one the hardware matches localises a mismatch."
  },
  "predictions": {
-  "NVIDIA": "computed by #eval of TensorCore.runBlocks in ozaki/scripts/targeted/TensorCoreCases.lean; models in TensorCore/TC/CanonicalDefs.lean, TensorCore/TC/CanonicalFormatDefs.lean",
-  "AMD": "computed by #eval of MatrixCore.dotBits in ozaki/scripts/targeted/MatrixCoreCases.lean; models in amd/MatrixCore/MC/Models.lean"
+  "NVIDIA": "computed by #eval of TensorCore.runBlocks in wip/ozaki/scripts/targeted/TensorCoreCases.lean; models in TensorCore/TC/CanonicalDefs.lean, TensorCore/TC/CanonicalFormatDefs.lean",
+  "AMD": "computed by #eval of MatrixCore.dotBits in wip/ozaki/scripts/targeted/MatrixCoreCases.lean; models in amd/MatrixCore/MC/Models.lean"
  },
  "counts": {
   "full-block-exactness": 8,

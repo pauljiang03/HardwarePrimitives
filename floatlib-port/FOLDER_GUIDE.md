@@ -1,6 +1,6 @@
 # Guide to the FloatLib implementation
 
-`floatlib-port/` is an independent Lean project inside `MMAlgebra`. It implements the paper's FP32-output Tensor Core block model and reference TC-EFT using FloatLib, and proves that its checked interfaces agree with the first-principles implementation. Its equivalence layer verifies the parent arithmetic and proof bodies against the pinned reference manifest.
+`floatlib-port/` is an independent Lean project inside the Hardware Primitives repository. It implements the paper's FP32-output Tensor Core block model and reference TC-EFT using FloatLib, and proves that its checked interfaces agree with the first-principles implementation. Its equivalence layer verifies the parent arithmetic and proof bodies against the pinned reference manifest.
 
 This guide explains the folder and the strength of its evidence. The [README](README.md) gives the detailed numerical behavior and executable commands. The [comparison document](COMPARISON.md) maps the arithmetic stages and paper statements to their Lean theorems.
 

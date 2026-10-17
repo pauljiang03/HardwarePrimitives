@@ -17,7 +17,7 @@ description: What the Lean model of AMD matrix cores covers, the modeling choice
 ## Choices the paper leaves open
 
 The model fixes these, and the
-[paper notes](https://github.com/pauljiang03/MMAlgebra/blob/main/amd/docs/paper-notes.md)
+[paper notes](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/docs/paper-notes.md)
 record why:
 
 - **NaN.** The GPUs return a NaN with a negative sign; its payload is not
@@ -42,12 +42,11 @@ record why:
 - **Hardware correspondence** is evidence, not proof: the paper's
   observations are replayed as tests and the model is compared with the
   authors' MATLAB models, but no recorded AMD hardware measurements are
-  published ([validation](/MMAlgebra/amd/validation/)).
+  published ([validation](/HardwarePrimitives/amd/validation/)).
 - **The special-value layer** for non-finite inputs is a definition following
   the paper's description, checked against its vectors and the MATLAB models,
   not derived.
-- **INT8 MFMA instructions** are not modeled. The ADP scheme of the
-  [Ozaki section](/MMAlgebra/ozaki/adp/) runs on an idealized INT8 matrix multiplier.
+- **INT8 MFMA instructions** are not modeled.
 - **Tiles, GEMMs and scheduling.** The model covers blocks and explicitly
   chained blocks; how a full GEMM is split across wavefronts and instructions
   is outside it.
