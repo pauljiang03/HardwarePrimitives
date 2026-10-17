@@ -24,5 +24,9 @@ import MatrixCore.MC.MFMA
 import MatrixCore.MC.Monotonicity
 import MatrixCore.MC.AprioriBounds
 import MatrixCore.MC.ProductMonotonicity
+import MatrixCore.MC.AlignmentMonotonicity
+import MatrixCore.MC.LossCondition
+import MatrixCore.MC.LosslessAlignment
+import MatrixCore.MC.NonmonotoneFamily
 
 /-! # Matrix-core model -/

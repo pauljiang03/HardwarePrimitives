@@ -9,6 +9,7 @@ import MatrixCoreTests.Machine
 import MatrixCoreTests.Chain
 import MatrixCoreTests.ErrorBounds
 import MatrixCoreTests.Monotonicity
+import MatrixCoreTests.ProductProperties
 import MatrixCoreTests.InnerProduct
 import MatrixCoreTests.Audit
 
