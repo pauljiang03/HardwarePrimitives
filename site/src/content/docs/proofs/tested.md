@@ -14,15 +14,16 @@ hypotheses stated in each theorem (see [What is
 proven](/HardwarePrimitives/proofs/theorems/)). The development uses no `sorry` and no
 custom axioms. `scripts/check_axioms.py` audits every public theorem under
 the `TensorCore` namespace and allows only `propext`, `Classical.choice`, and
-`Quot.sound`. The recorded run audited 1,543 theorem roots.
+`Quot.sound`. The recorded run audited 1,543 theorem roots. The AMD test
+library audits every theorem of `MatrixCore` the same way (824 theorems).
 
-Every named declaration is also re-checked outside Lean's kernel by
+The declarations are also re-checked outside Lean's kernel by
 [con-leche](https://github.com/leanprover/con-leche), an external checker
 proved never to accept a proof of `False`. On 2026-10-13, at revision
 `3b37939` in `--verified` mode, it accepted every declaration of `TensorCore`
 and its tests (168,810, including Lean's own library) and of the AMD model
-`MatrixCore` and its tests (166,049). Lean does not record `example`s as
-declarations, so the kernel-evaluated regression examples are checked by Lean's kernel only.
+`MatrixCore` and its tests (166,049); the `MatrixCore` theorems added since
+have not been re-checked. Lean does not record `example`s as declarations, so the kernel-evaluated regression examples are checked by Lean's kernel only.
 
 ## Tested, not proved
 
@@ -47,6 +48,13 @@ declarations, so the kernel-evaluated regression examples are checked by Lean's 
   compared with an independent Python decoder on all 512 words.
 - **Agreement with Python oracles**: exact-rational reimplementations of
   the same *Accurate Models* semantics.
+- **Agreement of the AMD model with the hardware**: through the paper's test
+  vectors, each a kernel-checked regression reproducing the output the paper
+  reports for the hardware; differential testing against the authors' MATLAB
+  models (600,000 random inner products, and 20,000 targeted binary8 ones);
+  and 90,000 binary8 inner products against MMA-Sim's CDNA 3 semantics. No
+  recorded AMD hardware outputs are published
+  ([details](/HardwarePrimitives/amd/validation/)).
 - **Native Float32**: `tcEftWithLean_eq` is proved against Lean's float
   *model*. That the compiled `Float32` addition matches the model is checked
   by `check_lean_eft.py`, not proved.
@@ -68,4 +76,6 @@ That the *Accurate Models* model, and therefore this one, matches hardware in th
 regions the recorded data does not exercise: active minimum alignment exponents,
 subnormal and zero operands, wide-exponent BF16/TF32 inputs, the H100 TF32
 K = 8 MMA variant, a nonzero `C` inside the FP8 block FMA of Hopper and B200,
-and E4M3's top binade.
+and E4M3's top binade. For the AMD model: that *Accurate Models of AMD Matrix
+Cores*, and therefore this model, matches the hardware beyond the paper's test
+vectors.

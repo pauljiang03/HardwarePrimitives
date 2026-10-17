@@ -1,5 +1,5 @@
 ---
-title: 4. Independent specification
+title: 8. Independent specification
 description: A second transcription of Accurate Models of AMD Matrix Cores, written in the paper's fixed-point language without the model's definitions, and proved equal to the model on every variant.
 ---
 

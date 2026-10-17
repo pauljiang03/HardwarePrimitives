@@ -22,3 +22,26 @@ description: Where each part of the development lives.
 | [`floatlib-port/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/floatlib-port) | Independent FloatLib implementation |
 | [`site/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/site) | This website (Astro Starlight) |
 | [`wip/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/wip) | Work in progress that builds on the models, not covered by this website |
+
+## The AMD model
+
+The matrix-core model `MatrixCore` lives in [`amd/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/amd), a standalone Lake project with its own tests, examples and FloatLib implementation.
+
+| Topic | Declarations | File |
+| --- | --- | --- |
+| Formats and decoding | `Format`, `binary16`, `bfloat16`, `e4m3fnuz`, `e5m2fnuz`, `InputFormat.read` | [Format.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean) |
+| Truncation and round-down | `truncGrid`, `truncMantissa`, `rdGrid`, `rdMantissa` | [Grid.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Grid.lean) |
+| `fl{·}` | `rne32`, `fl32`, `normExp` | [Round32.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Round32.lean) |
+| Models | `Model`, `Accumulation`, `cdna1F16`, … | [Defs.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Defs.lean), [Models.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Models.lean) |
+| Stages | `pairwiseSum`, `productSum`, `lateSum`, `shiftedSum` | [Stages.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Stages.lean) |
+| Evaluation | `evalBlock`, `blockBits`, `accumulate` | [Eval.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Eval.lean) |
+| Special values | `blockOutcome`, `Outcome` | [Special.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Special.lean) |
+| Chaining | `dotBits`, `dotOutcome`, `mfma` | [Composition.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Composition.lean) |
+| Runs of blocks | `runBlocks`, `Chain`, `runBlocks_all` | [Chain.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Chain.lean) |
+| Output error | `correctRounding_error`, `pairwise_error`, `aligned_error`, `dotBits_error_bound` | [ErrorBounds.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ErrorBounds.lean) |
+| Bounds from the inputs | `correctRounding_apriori`, `pairwise_apriori`, `aligned_apriori` | [AprioriBounds.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean) |
+| Monotonicity | `evalBlock_c_monotone`, `dotBits_c_monotone`, `cdna3F16_nonmonotonic`, … | [Monotonicity.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean), [ProductMonotonicity.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean) |
+| Inner products and `D = AB + C` | `dotBits_exact_error`, `mfma_error` | [InnerProduct.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/InnerProduct.lean), [MFMA.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MFMA.lean) |
+| Contracts | `BlockContract`, `cdna1F16_contract`, …, `dotBits_blocks` | [Contract.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Contract.lean) |
+| Fixed-width accumulation | `alignedBits`, `machineAccumulate`, `evalBlockMachine` | [Accumulator.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Accumulator.lean), [MachineRefinement.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean) |
+| Independent specification | `Spec.Result`, `Spec.blockBits_eq_spec`, `Spec.pairwise_eq_spec` | [Defs.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Defs.lean), [Equivalence.lean](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Equivalence.lean) |

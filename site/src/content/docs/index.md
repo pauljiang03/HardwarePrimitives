@@ -19,9 +19,11 @@ and a set of proved properties:
 2. **AMD matrix cores.** [Models of the MFMA
    instructions](/HardwarePrimitives/amd/) of CDNA 1, 2 and 3 and of the
    sequential FMA, for FP16, BF16, XF32 and FP8. Their
-   [properties](/HardwarePrimitives/amd/theorems/) are error bounds,
-   monotonicity in `c`, the dependence on the order of the products, and
-   fixed-width accumulation.
+   properties, one page per generation ([CDNA 1](/HardwarePrimitives/amd/properties/cdna1/),
+   [CDNA 2](/HardwarePrimitives/amd/properties/cdna2/),
+   [CDNA 3](/HardwarePrimitives/amd/properties/cdna3/)), are error bounds,
+   monotonicity, correct rounding and the dependence on the order of the
+   products.
 
 ## The Tensor Core model
 

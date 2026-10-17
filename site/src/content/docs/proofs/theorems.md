@@ -3,7 +3,8 @@ title: What is proven
 description: Every headline theorem in plain language, with what it assumes, what it means, and how strong it is.
 ---
 
-This page lists the main results that Lean has checked. Each entry says, in
+This page lists the main results that Lean has checked about the Tensor Core
+model and the AMD matrix-core model. Each entry says, in
 plain words, what the result means, what it assumes, and how much it really
 establishes. The Lean name and a source link follow each entry for anyone
 who wants to read the formal statement.
@@ -155,7 +156,7 @@ row.
   [`interleave_test_e5m2`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MmaSyncFP8.lean#L88), [`interleave_test_reversed`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MmaSyncFP8.lean#L103),
   [`interleave_test_single_block`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MmaSyncFP8.lean#L109), [`late_c_witness`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MmaSyncFP8.lean#L119), [`separate_groups_excluded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MmaSyncFP8.lean#L147)
 
-## Non-monotonicity
+## Tensor Core non-monotonicity
 
 ### Can a smaller C give a larger result?
 
@@ -266,7 +267,7 @@ negative. A nonzero result that rounds to zero keeps its own sign.
 - **Classification:** Core theorem.
 - **Lean:** [`binary64FmaBits_of_eq_zero`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/FusedRounding.lean#L78), [`binary64FmaBits_of_ne_zero`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/FusedRounding.lean#L68)
 
-## Number formats and rounding
+## Tensor Core number formats and rounding
 
 ### Is FP32 rounding implemented correctly?
 
@@ -286,10 +287,200 @@ including subnormals and both zeros.
 - **Classification:** Core theorem.
 - **Lean:** [`signedFiniteBinaryBijection`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Binary/SignedBijection.lean#L130)
 
+## The matrix core model
+
+### Does the Lean model match the published model?
+
+**Yes, for every possible input.** The executable model and an independently
+written transcription of *Accurate Models of AMD Matrix Cores*, in the paper's
+fixed-point language, give the same output word, or both reject the input, on
+every variant: the SFMA, CDNA 1 fp16 and bf16, CDNA 2 fp16, bf16 and bf16
+`_1k`, and CDNA 3 fp16, bf16, XF32 and binary8 in any mix of formats.
+
+- **Assumes:** nothing.
+- **Classification:** Core theorem. An audit checks that the transcription
+  depends only on the standard library and the notation module, and that it
+  detects a deliberately planted implementation dependency.
+- **Lean:** [`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L129), [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161)
+
+### Which inputs does the model accept?
+
+**Exactly those with `N_FMA` operands, no NaN or infinity, an accumulation
+that succeeds, and an `S_acc` below the overflow threshold `2^128 − 2^103`.**
+On CDNA 1 and the SFMA this is an exact sum below the threshold; products may
+exceed `2^128` inside the block.
+
+- **Assumes:** nothing.
+- **Classification:** Core theorem. It is an exact "if and only if".
+- **Lean:** [`MatrixCore.evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L41), [`MatrixCore.correctRounding_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L42)
+
+### How large can the error be?
+
+**On CDNA 1 and the SFMA, at most half an ulp of the exact sum.** On CDNA 3, at
+most the loss of `S_acc` in its branch of Algorithms 1 and 2 (about
+`(n + 2)·2^(e_max − 24)` from the products and `2^(e_max − 24)` from `c`) plus
+one final rounding. On CDNA 2, at most the effect of flushing plus one
+rounding for each product conversion, each pairwise sum and the final `fl{·}`.
+The library also bounds each error from the inputs alone.
+
+- **Assumes:** the model accepted the input.
+- **Classification:** Core theorems.
+- **Lean:** [`MatrixCore.correctRounding_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L85), [`MatrixCore.aligned_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L302), [`MatrixCore.pairwise_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ErrorBounds.lean#L229),
+  [`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L76), [`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L238), [`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L473)
+
+### Does modeling the adder as exact hide anything?
+
+**No.** A model of the CDNA 3 product accumulation with fixed-width, wrapping
+two's-complement registers gives the same output for every input: 30 bits
+for fp16 and bf16, 29 for XF32 and 31 for binary8, a sign bit included. Every
+partial sum is exact too, whatever the order of additions.
+
+- **Assumes:** a register at least that wide.
+- **Classification:** Core theorem.
+- **Lean:** [`MatrixCore.evalBlockMachine_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L176), [`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L199)
+
+### Inner products and `D = AB + C`
+
+**For inner products of any length and every finite entry of `D = AB + C`,
+the exact sum equals the output plus the residuals of all the blocks, and the
+error is at most the sum of the blocks' bounds.** Every accepted block also
+satisfies a contract bundling what is proved about it.
+
+- **Assumes:** each block's output is passed on as the next block's `c`.
+- **Classification:** Core theorems.
+- **Lean:** [`MatrixCore.dotBits_exact_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/InnerProduct.lean#L173), [`MatrixCore.dotBits_exact_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/InnerProduct.lean#L184), [`MatrixCore.mfma_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MFMA.lean#L50),
+  [`MatrixCore.evalBlock_contract`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Contract.lean#L52)
+
+### Special values
+
+**The observation for any input words reports a finite word exactly when the
+finite model accepts, with the same word; otherwise an infinity or NaN.**
+
+- **Assumes:** nothing.
+- **Classification:** Core theorem about a definition: the special-value
+  layer itself follows the paper's description and is checked against its
+  vectors and the MATLAB models, not derived.
+- **Lean:** [`MatrixCore.blockOutcome_finite_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/SpecialAgreement.lean#L169)
+
+## Matrix core monotonicity
+
+### Can a smaller `c` give a larger result?
+
+**No, on every configuration.** For the same `a` and `b`, a larger `c` never
+gives a smaller output, and the same holds for inner products of any length.
+On a Tensor Core `C` takes part in alignment and can trigger
+non-monotonicity; on AMD `c` never sets the products' alignment.
+
+- **Assumes:** the model is one of the paper's (all are proved to qualify).
+- **Classification:** Core theorem.
+- **Lean:** [`MatrixCore.evalBlock_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L633), [`MatrixCore.dotBits_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L657), [`MatrixCore.paper_models_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L678)
+
+### Can larger products give a smaller result?
+
+**Not on CDNA 1 or the SFMA; yes on CDNA 2 and CDNA 3, on every input
+format.** CDNA 1 and the SFMA depend only on the exact sum, monotonically. On
+CDNA 2 a product with a subnormal operand is flushed while a slightly larger
+one with normal operands is not. On CDNA 3 raising a product can raise
+`e_max` and truncate the others by more than it gains.
+
+- **Assumes:** nothing.
+- **Classification:** Core theorem for CDNA 1 and the SFMA; kernel-checked
+  witnesses for CDNA 2 and CDNA 3.
+- **Lean:** [`MatrixCore.correctRounding_not_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L120), [`MatrixCore.cdna2F16_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L146),
+  [`MatrixCore.cdna3F16_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L164), [`MatrixCore.cdna3E4M3_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L187)
+
+### When does it happen in general?
+
+**On CDNA 3, only when a product changes an alignment exponent; on CDNA 2, only
+through flushing.** With the alignment exponents fixed, CDNA 3 is monotone in
+the products, so every non-monotone pair changes `e_max` (or a group exponent
+on binary8). On CDNA 2, larger products never give a smaller output when no
+operand is subnormal. On every configuration an output decrease requires the
+accumulation loss to grow by more than the gain in the exact sum, and that is
+sufficient when both accumulated values are binary32 values. The drop is at
+most the two blocks' error bounds less the gain.
+
+- **Assumes:** the model accepted both inputs; the same `c`; for the sufficient
+  direction, subnormals and binary32 accumulated values.
+- **Classification:** Core theorems.
+- **Lean:** [`MatrixCore.aligned_product_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AlignmentMonotonicity.lean#L317), [`MatrixCore.aligned_nonmonotone_alignment_changes`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AlignmentMonotonicity.lean#L340),
+  [`MatrixCore.pairwise_product_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AlignmentMonotonicity.lean#L525), [`MatrixCore.output_decrease_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L127), [`MatrixCore.aligned_output_drop_le`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L159)
+
+### Is there an exact threshold, as on Tensor Cores?
+
+**Yes, for a family on CDNA 3 fp16.** A block holds a lead product with
+`e_a + e_b = −10` and value `m_a m_b · 2^-30`, `n ≤ 7` products `2^-24`, and
+`c = 0`; raising the lead to `2^-24 · 2^15 = 2^-9` (exponent 1) lowers the
+output exactly when `2^21 − m_a m_b < 64n`. The theorem holds for every lead
+and every `n`.
+
+- **Assumes:** the lead's operands have the same sign and a nonzero product.
+- **Classification:** Core theorem, an exact "if and only if".
+- **Lean:** [`MatrixCore.cdna3F16LeadBlock_nonmonotone_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/NonmonotoneFamily.lean#L381), [`MatrixCore.cdna3F16LeadBlock_decrease_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/NonmonotoneFamily.lean#L311)
+
+## Matrix core correct rounding
+
+### Is the output ever the correctly rounded sum?
+
+**Always on CDNA 1 and the SFMA.** An accepted block returns the binary32 value
+nearest to the exact `Σ a_ℓ b_ℓ + c`, ties to even, and each SFMA step is the
+value nearest to `c + a·b`.
+
+- **Assumes:** the model accepted the input.
+- **Classification:** Core theorem.
+- **Lean:** [`MatrixCore.correctRounding_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L30), [`MatrixCore.sfma_step_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CompositionProperties.lean#L80)
+
+### When is CDNA 3 correctly rounded?
+
+**Whenever alignment loses nothing.** If every product lies on the alignment
+grid and the late alignment of `c` loses nothing in its branch, `S_acc` is the
+exact sum and the output is its nearest-even rounding. On CDNA 2 the same holds
+when nothing is flushed and every conversion and pairwise sum is exact.
+
+- **Assumes:** the stated condition on the inputs (`LosslessAlignment`).
+- **Classification:** Core theorems.
+- **Lean:** [`MatrixCore.aligned_nearestEven_of_lossless`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LosslessAlignment.lean#L220), [`MatrixCore.alignedAccumulation_of_lossless`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LosslessAlignment.lean#L192),
+  [`MatrixCore.pairwise_fl_exact_of_lossless`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LosslessAlignment.lean#L266)
+
+## Matrix core product order
+
+### Does the order of the products matter?
+
+**Not on CDNA 1 or CDNA 3 Algorithm 1, which depend on the products only as a
+multiset; yes on CDNA 2 and CDNA 3 binary8.** On binary8 the parity law says
+exactly how much: the output depends on the slots only through the unordered
+pair {multiset of the odd slots, multiset of the even slots}, and a
+permutation preserves it on every input exactly when it preserves the parity
+partition. The parity law is proved in `wip/mmalgebra`, a work-in-progress
+project that builds on the model.
+
+- **Assumes:** nothing.
+- **Classification:** Core theorems; kernel-checked witnesses for the order
+  dependence.
+- **Lean:** [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L37), [`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L53),
+  [`MatrixCore.oddEvenGrouping_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L61), [`MMAlgebra.MC.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L173), [`MMAlgebra.MC.cdna3FP8_permute_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L523)
+
+## Matrix core number formats and rounding
+
+### Is binary32 rounding implemented correctly?
+
+**Yes.** `fl{x}` is the nearest value among all finite binary32 words, ties to
+an even last bit, and is finite exactly when `|x| < 2^128 − 2^103`. Within that
+range the correctly rounded word with the sign of `x` is unique.
+
+- **Classification:** Core theorems.
+- **Lean:** [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/RoundingContract.lean#L322), [`MatrixCore.rne32_isSome_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/RoundingContract.lean#L400), [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L370)
+
 ## What is not proved
 
-- **That real GPUs behave like the model.** That rests on replaying recorded
-  measurements. See [hardware validation](/HardwarePrimitives/model/validation/).
+- **That real GPUs behave like the models.** For the Tensor Cores that rests on
+  replaying recorded measurements (see [hardware
+  validation](/HardwarePrimitives/model/validation/)). No recorded AMD hardware
+  measurements are published, so the AMD model rests on the paper's test
+  vectors, the authors' MATLAB models and MMA-Sim (see [hardware
+  validation](/HardwarePrimitives/amd/validation/)).
+- **The AMD special-value layer** is a definition following the paper's
+  description, not derived.
 - **No theorem here is a finite list of cases dressed up as a general result.**
   Concrete `decide` checks are used only for worked examples and regression
   witnesses.

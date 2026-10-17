@@ -1,5 +1,5 @@
 ---
-title: 5. Validation
+title: 9. Hardware validation
 description: How the AMD model is tied to hardware - the paper's test vectors as kernel-checked regressions, differential testing against the authors' MATLAB models and against MMA-Sim, and a second implementation on FloatLib proved equivalent.
 ---
 

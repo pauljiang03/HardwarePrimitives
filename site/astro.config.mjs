@@ -13,6 +13,10 @@ export default defineConfig({
     '/model/conversion': '/HardwarePrimitives/model/normalization/',
     '/proofs/trust': '/HardwarePrimitives/proofs/tested/',
     '/model/profiles': '/HardwarePrimitives/model/variants/',
+    '/amd/getting-started': '/HardwarePrimitives/quick-start/',
+    '/amd/notation': '/HardwarePrimitives/amd/formats/',
+    '/amd/architectures': '/HardwarePrimitives/amd/',
+    '/amd/theorems': '/HardwarePrimitives/proofs/theorems/',
   },
   integrations: [
     starlight({
@@ -62,19 +66,25 @@ export default defineConfig({
         {
           label: 'Modeling AMD matrix cores',
           items: [
-            { label: 'The AMD model at a glance', slug: 'amd' },
-            { label: '1. Getting started', slug: 'amd/getting-started' },
-            { label: '2. Notation and formats', slug: 'amd/notation' },
-            { label: '3. The three architectures', slug: 'amd/architectures' },
-            { label: '4. Independent specification', slug: 'amd/specification' },
-            { label: '5. Validation', slug: 'amd/validation' },
+            { label: 'The model at a glance', slug: 'amd' },
+            { label: '1. Formats and decoding', slug: 'amd/formats' },
+            { label: '2. Exact products in denormalized form', slug: 'amd/products' },
+            { label: '3. CDNA 1: correct rounding', slug: 'amd/cdna1' },
+            { label: '4. CDNA 2: pairwise sums', slug: 'amd/cdna2' },
+            { label: '5. CDNA 3: global alignment', slug: 'amd/cdna3' },
+            { label: '6. Normalization and final rounding', slug: 'amd/normalization' },
+            { label: '7. Instructions and chaining', slug: 'amd/instructions' },
+            { label: '8. Independent specification', slug: 'amd/specification' },
+            { label: '9. Hardware validation', slug: 'amd/validation' },
             { label: 'Modeling scope and limits', slug: 'amd/scope' },
           ],
         },
         {
           label: 'Properties of matrix cores',
           items: [
-            { label: 'What is proved', slug: 'amd/theorems' },
+            { label: 'CDNA 1', slug: 'amd/properties/cdna1' },
+            { label: 'CDNA 2', slug: 'amd/properties/cdna2' },
+            { label: 'CDNA 3', slug: 'amd/properties/cdna3' },
           ],
         },
         {

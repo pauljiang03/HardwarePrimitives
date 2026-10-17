@@ -61,3 +61,47 @@ python3 scripts/check_equivalence.py
 | `TensorCore.EFT` | Reference EFT, scalar preconditions, Algorithm 1 of the TC-EFT paper |
 | `TensorCore.Kernels.EFT` | Bounded 576-bit EFT and its refinement proofs |
 | `TensorCore` | All of the above |
+
+## The AMD model
+
+The AMD matrix-core model is a standalone Lake project in `amd/`, with its
+own pinned toolchain:
+
+```sh
+cd amd
+lake build                                  # library, paper regressions, audit
+lake env lean examples/GettingStarted.lean
+python3 scripts/check.py                    # clean build, examples, documentation blocks
+```
+
+`lake build` builds the library (`MatrixCore`) and the regression library
+(`MatrixCoreTests`): every test vector of the paper is checked by kernel
+evaluation during the build, and an audit checks the axioms.
+
+A block has the vectors `a`, `b` (`N_FMA` words each, in the model's input
+formats) and the binary32 word `c`. `blockBits` returns the binary32 word `d`
+or a `ModelError`, and `evalBlock` a trace with the decoded inputs, `S_acc`
+and `d`:
+
+```lean
+import MatrixCore
+
+open MatrixCore
+
+-- CDNA 3 fp16: c = 1 (0x3F800000), p₁ = 2^-12 · 2^-12 = 2^-24 (0x0C00), other products zero.
+def x : BlockInput cdna3F16 :=
+  ⟨0x0C00 :: List.replicate 7 0, 0x0C00 :: List.replicate 7 0, 0x3F800000⟩
+
+-- S_acc = 1 + 2^-24 is exactly halfway between 1 and 1 + 2^-23; RNE gives 1.
+example : blockBits x = .ok 0x3F800000 := by decide +kernel
+
+-- The decoded value and the intermediate S_acc.
+#eval (evalBlock x).map fun t => (t.sAcc, value32 t.d)
+```
+
+| Import | Contents |
+| --- | --- |
+| `MatrixCore.Numerics` | Formats, decoding, grids, binary32 rounding and its correctness |
+| `MatrixCore.MC` | Models, block evaluation, special values, chaining, error bounds, monotonicity |
+| `MatrixCore.Specification` | The independent transcription of the paper and the equality proofs |
+| `MatrixCore` | All of the above |

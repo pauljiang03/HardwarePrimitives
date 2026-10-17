@@ -30,13 +30,17 @@ The models are described on [the model at a glance](/HardwarePrimitives/model/) 
 - An exact characterization of a family of non-monotonic inputs.
 - TC-EFT: the correctly rounded sum of a block FMA, with a 576-bit exact fallback.
 
-**Proved properties of the matrix core models.**
+**Proved properties of the matrix core models**, per generation:
 
-- Per-block error bounds in each branch of the accumulation algorithms.
-- Monotonicity in `c`, and the cases where it fails in the products.
-- How the output depends on the order of the products, including the CDNA 3 FP8 parity law
+- **All:** per-block error bounds, also from the inputs alone, and monotonicity in `c`.
+- **CDNA 1 and the SFMA:** correct rounding, monotonicity in every product, and independence of
+  the order of the products.
+- **CDNA 2:** non-monotonicity in the products only through flushing; correct rounding when every
+  intermediate rounding is exact.
+- **CDNA 3:** monotonicity in the products while the alignment exponents are unchanged, necessary
+  and sufficient conditions for an output decrease, a non-monotone family with an exact threshold,
+  correct rounding when alignment loses nothing, fixed-width accumulation, and the FP8 parity law
   (proved in `wip/mmalgebra`, which builds on the model).
-- Fixed-width accumulation on CDNA 3.
 
 **Cross-checks proved in Lean.** Each model equals an independent specification. The Tensor Core
 model also equals a bitvector datapath, and a second implementation on FloatLib.
@@ -54,7 +58,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 | AMD vectors and MATLAB models | every published test vector; 600,000 random inner products plus targeted ones; 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics, 0 mismatches |
 | Software oracle cases | 715 blocks, 2,918 rounding cases, 2,033 feature cases, 0 mismatches |
 | FloatLib equivalence | proved; 115,029 + 668,944 comparison cases, 0 mismatches |
-| Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted |
+| Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted on 2026-10-13; the `MatrixCore` theorems added since are not yet re-checked |
 
 ## What is not done
 
