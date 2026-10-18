@@ -349,7 +349,7 @@ theorem single_block_output (p : InstructionVariant) (hfl : ∀ f ∈ p.eAlignMi
 
 /-- V100: WMMA m16n16k16 FP16 → FP32; four block FMAs of four products. -/
 def v100Wmma16 : InstructionVariant :=
-  ⟨"V100 WMMA m16n16k16 FP16->FP32 (HMMA.844)", 16, 4, 0, none,
+  ⟨"V100 WMMA m16n16k16 FP16->FP32 (HMMA.884)", 16, 4, 0, none,
     "Accurate Models v4 §4.1.1 and Tables 3-4; MATLAB v0.5 GEMM.m increasing-k rule; " ++
     "Jia et al. arXiv:1804.06826 (four sets of four HMMA.884 steps)", by decide, by decide⟩
 

@@ -46,7 +46,7 @@ def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F
 
 | Variant | Lowering | Block FMAs × K |
 | --- | --- | --- |
-| `v100Wmma16` | `HMMA.844` | 4 × 4 |
+| `v100Wmma16` | `HMMA.884` | 4 × 4 |
 | `ampereWmma16` (A100, Ada) | `HMMA.1688` | 2 × 8 |
 | `hopperWmma16` (H100, H200, B200) | `HMMA.16816` | 1 × 16 |
 
@@ -60,7 +60,7 @@ through `C`. A recorded FP8 row of 32 products is two block FMAs on Ada
 proves that `K` products are one block FMA.
 
 `Model.dotThenAdd` runs the block FMAs from `C = 0` and adds `C` afterwards in
-binary32, rounded to nearest even (`addBinary32_nearestEven`). This is not
+FP32, rounded to nearest even (`addFp32_nearestEven`). This is not
 how a block FMA adds `C`. On the recorded B200 FP8 outputs, from `mma.sync`,
 it agrees with the FP8 `mma.sync` model (`mmaSyncFP8Dot`: two interleaved
 FP16 block FMAs, then `C` added the same way), and the
@@ -68,7 +68,7 @@ FP16 block FMAs, then `C` added the same way), and the
 
 ## Proved properties of chains
 
-- [`runBlocks_residual_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Composition.lean#L95):
+- [`runBlocks_residual_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Composition.lean#L93):
   the exact sum of all inputs equals the final output plus the sum of the
   losses recorded by every block FMA, alignment and final rounding included.
 - `zero_products_passthrough`: a block FMA whose products are all zero returns its
