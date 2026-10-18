@@ -5,11 +5,12 @@ namespace TCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
 def model (p : TCModel) : TensorCore.Model :=
-  ⟨format p.format,p.nfma,23+p.padding,p.eAlignMin,23⟩
+  ⟨format p.format,p.nfma,p.outputMantissaBits+p.padding,p.eAlignMin,p.outputMantissaBits⟩
 def block (b : Block) : TensorCore.PreparedBlock :=
   ⟨model b.model,b.products.map (fun (a,b) => (project a,project b)),project b.c⟩
 
-@[simp] theorem block_outputMantissaBits (b : Block) : (block b).model.outputMantissaBits = 23 := rfl
+@[simp] theorem block_outputMantissaBits (b : Block) :
+    (block b).model.outputMantissaBits = b.model.outputMantissaBits := rfl
 def denormalizedTerm (t : Term) : TensorCore.DenormalizedProduct :=
   ⟨t.dyadic.signedSignificand,t.exponent,t.mantissaBits⟩
 

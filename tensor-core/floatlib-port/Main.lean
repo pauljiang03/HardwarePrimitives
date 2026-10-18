@@ -22,6 +22,10 @@ private def pairs : List Nat → Option (List (Nat × Nat))
   | _ => none
 private def format (s : String) : Option FloatFormat := match s with
   | "fp16" => some .binary16 | "bf16" => some .bfloat16 | "tf32" => some .tf32 | _ => none
+private def fp8Model (s : String) : Option TCModel := match s with
+  | "ada-e4m3" => some adaE4M3 | "ada-e5m2" => some adaE5M2
+  | "h100-e4m3" => some hopperE4M3 | "h100-e5m2" => some hopperE5M2
+  | "b200-e4m3" => some blackwellE4M3 | "b200-e5m2" => some blackwellE5M2 | _ => none
 private def blockJson (p : TCModel) (ns : List Nat) : Option Json := do
   if ns.length != 2*p.nfma+2 then none else do
     let c := ns[2*p.nfma]!
@@ -65,7 +69,8 @@ private def command (args : List String) : Option Json := do
     let k ← k.toNat?
     let padding ← padding.toNat?
     let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
-    blockJson ⟨f,k,padding,eAlignMin⟩ (← words.mapM String.toNat?)
+    blockJson ⟨f,k,padding,eAlignMin,23⟩ (← words.mapM String.toNat?)
+  | "fp8" :: m :: words => blockJson (← fp8Model m) (← words.mapM String.toNat?)
   | ["family", p, k, j] =>
     let p ← p.toNat?
     let k ← k.toNat?
@@ -87,7 +92,7 @@ private def command (args : List String) : Option Json := do
     let k ← k.toNat?
     let padding ← padding.toNat?
     let eAlignMin ← if fl = "none" then some none else fl.toInt? |>.map some
-    return featureJson ⟨f,k,padding,eAlignMin⟩ (← words.mapM String.toNat?) (fmt == "tf32")
+    return featureJson ⟨f,k,padding,eAlignMin,23⟩ (← words.mapM String.toNat?) (fmt == "tf32")
   | _ => none
 
 def main (args : List String) : IO Unit := do

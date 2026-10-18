@@ -35,7 +35,9 @@ def main():
                          'Equivalence.floatlib_eq_reference', 'Equivalence.floatlib_eq_reference_inverse',
                          'Equivalence.floatlib_error_bound', 'Equivalence.floatlib_nonmonotone_range',
                          'Equivalence.general_flowback_necessary', 'Equivalence.general_flowback_sufficient',
-                         'Equivalence.floatlib_scalar_correct_of_inputGrid', 'Equivalence.floatlib_bitSpan_exact']:
+                         'Equivalence.floatlib_scalar_correct_of_inputGrid', 'Equivalence.floatlib_bitSpan_exact',
+                         'Equivalence.e4m3x_decodesLikeReference', 'Equivalence.e4m3fn_decode_widen',
+                         'Equivalence.fp8_models', 'Equivalence.e4m3_equivalence', 'Equivalence.e5m2_equivalence']:
                 assert f"'TCFloat.{name}' depends on axioms:" in log, name
         logs.append({'command':cmd,'exit_code':p.returncode})
     sources=[*sorted((PORT/'TCFloat').rglob('*.lean')),PORT/'Main.lean',PORT/'TCFloat.lean']

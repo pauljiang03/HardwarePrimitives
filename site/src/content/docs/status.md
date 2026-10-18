@@ -46,7 +46,8 @@ The models are described on [the model at a glance](/HardwarePrimitives/tensor-c
 
 **Proven properties of FP8 on Tensor Cores.** The 576-bit TC-EFT on the six FP8 block FMAs; the
 exact non-monotonicity threshold of each; and for FP8 `mma.sync`, an error bound, the correction
-by TC-EFT, an independent specification and a bitvector datapath.
+by TC-EFT, an independent specification and a bitvector datapath. The FloatLib implementation covers
+all six FP8 block FMAs.
 
 **Cross-checks proven in Lean.** Each model equals an independent specification. The Tensor Core
 model also equals a bitvector datapath, and a second implementation on FloatLib.
@@ -63,7 +64,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 | MMA-Sim cross-check | 850,000 cases on 31 instructions (581,052 identical with a nonzero `C`) and 80,000 FP8 `mma.sync` cases, 0 mismatches |
 | AMD vectors and MATLAB models | every published test vector; 600,000 random inner products plus targeted ones; 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics, 0 mismatches |
 | Software oracle cases | 715 blocks, 2,918 rounding cases, 2,033 feature cases, 0 mismatches |
-| FloatLib equivalence | proven; 115,029 + 668,944 comparison cases, 0 mismatches |
+| FloatLib equivalence | proven on every model, FP8 included; 115,029 + 668,944 comparison cases and 50,000 recorded FP8 rows, 0 mismatches |
 | Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted on 2026-10-18 (169,059 and 167,239) |
 
 ## What is not done
@@ -79,8 +80,6 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 - **The FP8 `mma.sync` path** of Hopper and B200 follows the structure that *Accurate Models*
   describes. The recorded rows do not separate it from a single block followed by `c`; the
   paper's interleaving experiment does, and that is a kernel-checked theorem.
-- **The FloatLib implementation of the Tensor Core model** covers FP16, BF16, TF32 and B200's E5M2
-  block FMA. The E4M3 block FMAs and the 13-bit outputs of Ada and Hopper FP8 are not ported.
 - **Cross-vendor statements.** `TensorCore` and `MatrixCore` cannot be imported together, so
   every statement that compares the two vendors is two theorems.
 

@@ -7,30 +7,22 @@ set_option maxRecDepth 2048
 namespace TCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-def SupportedFormat (f : FloatFormat) : Prop := f=.binary16 ∨ f=.bfloat16 ∨ f=.tf32 ∨ f=.e5m2
-theorem SupportedFormat.ieee {f : FloatFormat} (h : SupportedFormat f) : f.isIEEE=true := by
-  rcases h with rfl|rfl|rfl|rfl <;> decide +kernel
+def SupportedFormat (f : FloatFormat) : Prop :=
+  f=.binary16 ∨ f=.bfloat16 ∨ f=.tf32 ∨ f=.e5m2 ∨ f=e4m3x
+theorem SupportedFormat.decodes {f : FloatFormat} (h : SupportedFormat f) : DecodesLikeReference f := by
+  rcases h with rfl|rfl|rfl|rfl|rfl
+  iterate 4 exact DecodesLikeReference.of_isIEEE (by decide +kernel)
+  exact e4m3x_decodesLikeReference
 
-/-- The universal equivalence for the FP16, BF16, TF32 and E5M2 input formats with FP32 output. -/
+/-- The universal equivalence for the FP16, BF16, TF32, E5M2 and `e4m3x` input formats, for every
+output width. -/
 theorem supportedFormat_equivalence (p : TCModel) (hf : SupportedFormat p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tc p (inputPairs x) x.c.toNat =
         (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) ∧
     Interface.eft p (inputPairs x) x.c.toNat D.toNat =
         (TensorCore.tcEftEncoded x D).toOption.map encodedResult :=
-  universal_equivalence p hf.ieee x D
-
-/-- B200's E5M2 block FMA (`blackwellE5M2F32`) is a port model: E5M2 inputs, 32 products, two
-padding bits, no minimum alignment exponent, an FP32 output. -/
-theorem blackwellE5M2_model : model ⟨.e5m2, 32, 2, none⟩ = ⟨⟨2, 5, 15⟩, 32, 25, none, 23⟩ := by decide
-
-theorem blackwellE5M2_equivalence (x : TensorCore.BlockInput (model ⟨.e5m2, 32, 2, none⟩))
-    (D : TensorCore.F32) :
-    Interface.tc ⟨.e5m2, 32, 2, none⟩ (inputPairs x) x.c.toNat =
-        (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) ∧
-    Interface.eft ⟨.e5m2, 32, 2, none⟩ (inputPairs x) x.c.toNat D.toNat =
-        (TensorCore.tcEftEncoded x D).toOption.map encodedResult :=
-  supportedFormat_equivalence _ (Or.inr (Or.inr (Or.inr rfl))) x D
+  universal_equivalence p hf.decodes x D
 
 theorem trace_related (t : Trace) (hb : ValidBlock t.block) (hw : t.bits < 2^32)
     (hv : TCFloat.value32 t.bits=some t.output) : ∃ s, TraceRel s t := by
@@ -44,8 +36,8 @@ theorem trace_evaluated {s : TensorCore.BlockTrace} {t : Trace} (h : TraceRel s 
     (ht : t.block.evaluate=some t.bits) : TensorCore.evalPrepared s.block=.ok s := by
   rw [evaluate_eq t.block h.valid,← h.block_eq] at ht
   obtain ⟨bits,hbits,hval⟩ := Option.map_eq_some_iff.mp ht
-  have heq : bits=s.output.bits := BitVec.eq_of_toNat_eq (hval.trans h.bits_eq.symm)
-  rw [heq] at hbits
+  have heq : TensorCore.truncateMantissa32 t.block.model.outputMantissaBits bits = s.output.bits :=
+    BitVec.eq_of_toNat_eq ((truncateMantissa32_toNat _ _).trans (hval.trans h.bits_eq.symm))
   have hd : TensorCore.finite32 s.output.bits=some s.output := by
     unfold TensorCore.finite32
     split
@@ -56,17 +48,19 @@ theorem trace_evaluated {s : TensorCore.BlockTrace} {t : Trace} (h : TraceRel s 
       have he : d=s.output.decoded := Option.some.inj (hd.symm.trans s.output.valid)
       subst d
       rfl
-  have hw : s.block.model.outputMantissaBits = 23 := by rw [h.block_eq]; rfl
-  simp only [TensorCore.evalPrepared,hbits,hw,TensorCore.truncateMantissa32_23,hd]
+  have hw : s.block.model.outputMantissaBits = t.block.model.outputMantissaBits := by
+    rw [h.block_eq]; rfl
+  simp only [TensorCore.evalPrepared,hbits,hw,heq,hd]
 
 /-- Error below terms × alignment quantum plus the output quantum (TC-EFT paper, Theorem III.1). -/
 theorem floatlib_error_bound (t : Trace) (hb : ValidBlock t.block) (hw : t.bits<2^32)
-    (hv : TCFloat.value32 t.bits=some t.output) (ht : t.block.evaluate=some t.bits) :
+    (hv : TCFloat.value32 t.bits=some t.output) (ht : t.block.evaluate=some t.bits)
+    (hm : t.block.model.outputMantissaBits = 23) :
     |t.block.ideal-t.output| < (t.block.terms.length:Rat)*TCFloat.pow2 t.block.q +
       TCFloat.pow2 (outputUlpExponent t.bits) := by
   obtain ⟨s,hs⟩ := trace_related t hb hw hv
   have h := TensorCore.evalPrepared_error_bound (trace_evaluated hs ht)
-    (by rw [hs.block_eq]; exact Nat.le_refl 23)
+    (by rw [hs.block_eq]; exact hm ▸ Nat.le_refl 23)
   simp only [abs_eq,hs.block_eq,ideal_eq _ hb,hs.output_eq,terms_eq,List.length_map,
     q_eq,pow2_eq,TensorCore.outputUlpExponent,hs.bits_eq] at h
   exact h
@@ -149,19 +143,23 @@ theorem rtz_output_monotone (x y : Rat) (bx by' : Nat) (dx dy : Rat)
 
 /-- After changing C, the output rises iff its truncated accumulator does (TC-EFT paper, Eq. 6). -/
 theorem floatlib_output_increase_iff (p : TCModel) (ps : List (Term×Term)) (c c' : Term)
-    (bits bits' : Nat) (d d' : Rat)
+    (bits bits' : Nat) (d d' : Rat) (hm : p.outputMantissaBits = 23)
     (h : (Block.mk p c ps).evaluate=some bits) (h' : (Block.mk p c' ps).evaluate=some bits')
     (hd : TCFloat.value32 bits=some d) (hd' : TCFloat.value32 bits'=some d') :
     (d<d' ↔ TensorCore.signedRounded .truncate (Block.mk p c ps).accumulator <
       TensorCore.signedRounded .truncate ((Block.mk p c ps).accumulator+
         TCFloat.flowback p ps c c'-TCFloat.accumulatorShift p ps c c')) := by
+  rw [evaluate_fp32 (b := Block.mk p c ps) hm] at h
+  rw [evaluate_fp32 (b := Block.mk p c' ps) hm] at h'
   rw [rtz_value_spec _ _ _ h hd,rtz_value_spec _ _ _ h' hd',TCFloat.perturbed_accumulator p ps c c']
 
 theorem floatlib_flowback_necessary (p : TCModel) (ps : List (Term×Term)) (c c' : Term)
-    (bits bits' : Nat) (d d' : Rat)
+    (bits bits' : Nat) (d d' : Rat) (hm : p.outputMantissaBits = 23)
     (h : (Block.mk p c ps).evaluate=some bits) (h' : (Block.mk p c' ps).evaluate=some bits')
     (hd : TCFloat.value32 bits=some d) (hd' : TCFloat.value32 bits'=some d') (hi : d<d') :
     TCFloat.accumulatorShift p ps c c' < TCFloat.flowback p ps c c' := by
+  rw [evaluate_fp32 (b := Block.mk p c ps) hm] at h
+  rw [evaluate_fp32 (b := Block.mk p c' ps) hm] at h'
   by_contra hn
   have ha : (Block.mk p c' ps).accumulator ≤ (Block.mk p c ps).accumulator := by
     rw [TCFloat.perturbed_accumulator p ps c c']; linarith
@@ -169,12 +167,14 @@ theorem floatlib_flowback_necessary (p : TCModel) (ps : List (Term×Term)) (c c'
   linarith
 
 theorem floatlib_flowback_sufficient (p : TCModel) (ps : List (Term×Term)) (c c' : Term)
-    (bits bits' : Nat) (d d' : Rat)
+    (bits bits' : Nat) (d d' : Rat) (hm : p.outputMantissaBits = 23)
     (h : (Block.mk p c ps).evaluate=some bits) (h' : (Block.mk p c' ps).evaluate=some bits')
     (hd : TCFloat.value32 bits=some d) (hd' : TCFloat.value32 bits'=some d')
     (ha : TensorCore.FiniteValue32 (Block.mk p c ps).accumulator)
     (ha' : TensorCore.FiniteValue32 (Block.mk p c' ps).accumulator)
     (hi : TCFloat.accumulatorShift p ps c c' < TCFloat.flowback p ps c c') : d<d' := by
+  rw [evaluate_fp32 (b := Block.mk p c ps) hm] at h
+  rw [evaluate_fp32 (b := Block.mk p c' ps) hm] at h'
   rw [rtz_value_spec _ _ _ h hd,rtz_value_spec _ _ _ h' hd',
     TensorCore.signedRounded_trunc_of_finite _ ha,TensorCore.signedRounded_trunc_of_finite _ ha',
     TCFloat.perturbed_accumulator p ps c c']
@@ -188,7 +188,7 @@ theorem belowTerm_project (j : Nat) : project (belowTerm j)=TensorCore.belowDeco
 
 /-- Non-monotonicity over `C = 1 − j·2^-24`, for any p and K (TC-EFT paper, Theorem III.5). -/
 theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
-    (hp : M.padding=p) (ha : ValidTerm a) (hb : ValidTerm b)
+    (hp : M.padding=p) (hm : M.outputMantissaBits = 23) (ha : ValidTerm a) (hb : ValidTerm b)
     (hf : ∀ f ∈ M.eAlignMin, f≤ -1)
     (hv : (a.mul b).value=TCFloat.pow2 (-(24+(p:Int))))
     (hs : (a.mul b).exponent≤ -1) (hK : K<2^(24+p)) (hj : 1≤j) (hj' : j≤2^23) :
@@ -204,7 +204,7 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
     rw [TensorCore.denormalizedProduct_value,← hva,← hvb,← TCFloat.mul_value,pow2_eq]
     exact hv
   obtain ⟨s,he,hi,hy,hu⟩ := TensorCore.nonmonotone_range (model M) p K j
-    (project a) (project b) (by simp [model,hp]) hf (Nat.le_refl 23) hvs hs hK hj hj'
+    (project a) (project b) (by simp [model,hp,hm]) hf (by simp [model,hm]) hvs hs hK hj hj'
   let t : Block := ⟨M,belowTerm j,List.replicate K (a,b)⟩
   have ht : ValidBlock t := by
     constructor
@@ -216,11 +216,11 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
       exact ⟨ha,hb⟩
   have hblock : block t=⟨model M,List.replicate K (project a,project b),TensorCore.belowDecoded j⟩ := by
     simp [t,block,List.map_replicate,belowTerm_project]
-  have hout := TensorCore.evalPrepared_output he (Nat.le_refl 23)
+  have hout := TensorCore.evalPrepared_output he (by simp [model,hm])
   refine ⟨s.output.bits.toNat,s.output.value,?_,?_,?_,?_,?_⟩
   · change t.evaluate=_
-    rw [evaluate_eq t ht,hblock,hout]
-    rfl
+    rw [evaluate_fp32 (b := t) hm, ← evaluate_fp32 (b := t) hm, evaluate_eq t ht,hblock,hout]
+    simp [t, hm, truncateMantissa]
   · rw [value32_eq]
     simp [TensorCore.value32,s.output.valid,TensorCore.Finite32.value]
   · exact hi

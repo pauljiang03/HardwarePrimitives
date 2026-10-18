@@ -43,29 +43,29 @@ theorem option_mapM_valid {α β : Type} (xs : List α) (f : α → Option β) (
 def pairDecode (p : TCModel) (ab : (model p).Word × (model p).Word) : Option (Term × Term) := do
   return (← decode p.format ab.1.toNat, ← decode p.format ab.2.toNat)
 
-theorem pair_decode_eq (p : TCModel) (hf : p.format.isIEEE=true)
+theorem pair_decode_eq (p : TCModel) (hf : DecodesLikeReference p.format)
     (ab : (model p).Word × (model p).Word) :
     (pairDecode p ab).map (fun (a,b) => (project a,project b)) =
       (do return (← (model p).decode ab.1, ← (model p).decode ab.2)) := by
-  have ha := decode_project p.format hf ab.1.toNat ab.1.isLt
-  have hb := decode_project p.format hf ab.2.toNat ab.2.isLt
+  have ha := hf.decode_eq ab.1.toNat ab.1.isLt
+  have hb := hf.decode_eq ab.2.toNat ab.2.isLt
   change _ = (model p).decode ab.1 at ha
   change _ = (model p).decode ab.2 at hb
   rw [← ha,← hb]
   cases hda : decode p.format ab.1.toNat <;> cases hdb : decode p.format ab.2.toNat <;>
     simp [pairDecode,hda,hdb]
 
-theorem pair_decode_valid (p : TCModel) (hf : p.format.isIEEE=true)
+theorem pair_decode_valid (p : TCModel) (hf : DecodesLikeReference p.format)
     (ab : (model p).Word × (model p).Word) (v : Term × Term)
     (hv : pairDecode p ab=some v) : ValidTerm v.1 ∧ ValidTerm v.2 := by
   unfold pairDecode at hv
   cases ha : decode p.format ab.1.toNat <;> cases hb : decode p.format ab.2.toNat <;>
     simp [ha,hb] at hv
   subst v
-  exact ⟨decode_value p.format hf _ _ ha,decode_value p.format hf _ _ hb⟩
+  exact ⟨hf.value_eq _ _ ha,hf.value_eq _ _ hb⟩
 
 /-- Preparation commutes with projection, given the shape check. -/
-theorem prepare_eq (p : TCModel) (hf : p.format.isIEEE=true)
+theorem prepare_eq (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) (hshape : x.products.length=p.nfma) :
     (TCFloat.prepare p (inputPairs x) x.c.toNat).map block = TensorCore.prepare x := by
   have hc := decode_project .binary32 (by decide) x.c.toNat x.c.isLt
@@ -84,7 +84,7 @@ theorem prepare_eq (p : TCModel) (hf : p.format.isIEEE=true)
   rw [← hc,← hp]
   cases decode .binary32 x.c.toNat <;> cases x.products.mapM (pairDecode p) <;> rfl
 
-theorem prepare_valid (p : TCModel) (hf : p.format.isIEEE=true)
+theorem prepare_valid (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) (b : Block)
     (hb : TCFloat.prepare p (inputPairs x) x.c.toNat=some b) : ValidBlock b := by
   unfold TCFloat.prepare inputPairs at hb
@@ -137,14 +137,50 @@ theorem round_finite (m : TensorCore.RoundingMode) (x : Rat) (b : TensorCore.F32
   obtain ⟨d,hd,hb,_⟩ := TensorCore.finite32_of_value32 b v hv
   exact ⟨d,hd,hb⟩
 
-theorem evalPrepared_bits (b : TensorCore.PreparedBlock) (hw : b.model.outputMantissaBits = 23) :
+theorem truncateMantissa32_toNat (m : Nat) (w : TensorCore.F32) :
+    (TensorCore.truncateMantissa32 m w).toNat = truncateMantissa m w.toNat := by
+  unfold TensorCore.truncateMantissa32 truncateMantissa
+  rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (lt_of_le_of_lt (Nat.div_mul_le_self _ _) w.isLt)]
+
+theorem truncateMantissa_high (m n : Nat) : truncateMantissa m n / 2^23 = n / 2^23 := by
+  unfold truncateMantissa
+  have h : 2^23 = 2^(23-m) * 2^(23-(23-m)) := by rw [← Nat.pow_add]; congr 1; omega
+  rw [h, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul,
+    Nat.mul_div_cancel _ (Nat.two_pow_pos _)]
+
+theorem classify32_isSome (n : Nat) :
+    ((TensorCore.classifyNat TensorCore.fp32 n).finite).isSome = decide (n / 2^23 % 2^8 ≠ 255) := by
+  unfold TensorCore.classifyNat
+  simp only [TensorCore.fp32]
+  split_ifs <;> simp_all [TensorCore.Classification.finite]
+
+/-- Clearing low mantissa bits keeps the exponent field, so a finite word stays finite. -/
+theorem finite32_truncate (m : Nat) (w : TensorCore.F32) (d : TensorCore.Finite32)
+    (h : TensorCore.finite32 w = some d) :
+    ∃ d', TensorCore.finite32 (TensorCore.truncateMantissa32 m w) = some d' ∧
+      d'.bits = TensorCore.truncateMantissa32 m w := by
+  have hw : (TensorCore.value32 w).isSome := by
+    rw [← finite32_value, h]; rfl
+  have ht : (TensorCore.decode32 (TensorCore.truncateMantissa32 m w)).isSome := by
+    simp only [TensorCore.value32, Option.isSome_map] at hw
+    rw [TensorCore.decode32_eq, classify32_isSome] at hw ⊢
+    rw [truncateMantissa32_toNat, truncateMantissa_high]
+    exact hw
+  obtain ⟨e, he⟩ := Option.isSome_iff_exists.mp ht
+  obtain ⟨f, hf, hb, -⟩ := TensorCore.finite32_of_value32 (TensorCore.truncateMantissa32 m w) e.value
+    (by rw [TensorCore.value32, he]; rfl)
+  exact ⟨f, hf, hb⟩
+
+theorem evalPrepared_bits (b : TensorCore.PreparedBlock) :
     (TensorCore.evalPrepared b).toOption.map (fun t => t.output.bits.toNat) =
-      (TensorCore.round32 .truncate b.accumulator).map BitVec.toNat := by
+      (TensorCore.round32 .truncate b.accumulator).map
+        (fun w => truncateMantissa b.model.outputMantissaBits w.toNat) := by
   cases hr : TensorCore.round32 .truncate b.accumulator with
   | none => simp [TensorCore.evalPrepared,hr,Except.toOption]
   | some bits =>
-    obtain ⟨d,hd,hb⟩ := round_finite .truncate _ bits hr
-    simp [TensorCore.evalPrepared,hr,hw,hd,hb,Except.toOption]
+    obtain ⟨d,hd,-⟩ := round_finite .truncate _ bits hr
+    obtain ⟨d',hd',hb'⟩ := finite32_truncate b.model.outputMantissaBits bits d hd
+    simp [TensorCore.evalPrepared,hr,hd',hb',truncateMantissa32_toNat,Except.toOption]
 
 theorem trace_algorithm_eq (b : Block) (hb : ValidBlock b) (D : TensorCore.F32) :
     (TCFloat.trace b D.toNat).map Trace.encodedAlgorithm =
@@ -172,7 +208,7 @@ theorem trace_algorithm_eq (b : Block) (hb : ValidBlock b) (D : TensorCore.F32) 
     exact congrArg some (encoded_trace_eq hrel)
 
 /-- Encoded Tensor Core equality on every input, including malformed and rejected inputs. -/
-theorem tc_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
+theorem tc_encoded_eq (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) :
     Interface.tc p (inputPairs x) x.c.toNat =
       (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) := by
@@ -185,13 +221,13 @@ theorem tc_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
     | none => rfl
     | some b =>
       simp only [Option.map_some,Option.bind_some]
-      rw [evalPrepared_bits _ (block_outputMantissaBits b)]
+      rw [evalPrepared_bits, block_outputMantissaBits]
       exact evaluate_eq b (prepare_valid p hf x b hb)
   · have hs' : (x.products.length != p.nfma)=true := bne_iff_ne.mpr hs
     simp [Interface.tc,TCFloat.prepare,inputPairs,TensorCore.evalBlock,model,hs',Except.toOption]
 
 /-- Encoded EFT equality: the same validation, branch and bits, for every supplied FP32 D. -/
-theorem eft_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
+theorem eft_encoded_eq (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.eft p (inputPairs x) x.c.toNat D.toNat =
       (TensorCore.tcEftEncoded x D).toOption.map encodedResult := by
@@ -211,7 +247,7 @@ theorem eft_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
       TensorCore.prepareEncodedEFT,model,hs',Except.toOption]
 
 /-- The encoded Tensor Core and EFT interfaces commute with the same input translation. -/
-theorem universal_equivalence (p : TCModel) (hf : p.format.isIEEE=true)
+theorem universal_equivalence (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tc p (inputPairs x) x.c.toNat =
         (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) ∧

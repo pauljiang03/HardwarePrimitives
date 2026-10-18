@@ -12,9 +12,10 @@ structure TraceRel (s : TensorCore.BlockTrace) (t : Trace) : Prop where
   valid : ValidBlock t.block
 
 theorem evaluate_eq (b : Block) (hb : ValidBlock b) :
-    b.evaluate = (TensorCore.round32 .truncate (block b).accumulator).map BitVec.toNat := by
-  rw [accumulator_eq b hb]
-  exact round32_eq .truncate _
+    b.evaluate = (TensorCore.round32 .truncate (block b).accumulator).map
+      (fun w => truncateMantissa b.model.outputMantissaBits w.toNat) := by
+  rw [accumulator_eq b hb, Block.evaluate, round32_rtz_eq, Option.map_map]
+  rfl
 
 theorem representable_eq (x : Rat) : TCFloat.representable x = TensorCore.representable32 x := by
   unfold TCFloat.representable TensorCore.representable32

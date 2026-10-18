@@ -104,6 +104,38 @@ theorem decode_values (f : FloatFormat) (n : Nat) (hn : n < 2^f.bitWidth) :
   | some d =>
     by_cases hz : d.significand=0 <;> simp [hz,Term.value]
 
+/-- FloatLib decodes every word of `f` as the reference does, with consistent metadata. -/
+structure DecodesLikeReference (f : FloatFormat) : Prop where
+  decode_eq : ∀ n, n < 2^f.bitWidth →
+    (decode f n).map project = (TensorCore.classifyNat (format f) n).finite
+  value_eq : ∀ n t, decode f n = some t → t.value = (project t).value
+
+theorem DecodesLikeReference.of_isIEEE {f : FloatFormat} (hf : f.isIEEE = true) :
+    DecodesLikeReference f :=
+  ⟨decode_project f hf, decode_value f hf⟩
+
+theorem decode_none_of_ge (f : FloatFormat) {n : Nat} (hn : 2^f.bitWidth ≤ n) : decode f n = none := by
+  simp [decode, hn]
+
+set_option maxRecDepth 100000 in
+/-- The 9-bit E4M3 layout has bias 7, not IEEE's 15; its decoding is checked on all 512 words. -/
+theorem e4m3x_decodesLikeReference : DecodesLikeReference e4m3x := by
+  have hd : ∀ n, n < 512 →
+      (decode e4m3x n).map project = (TensorCore.classifyNat (format e4m3x) n).finite := by
+    decide +kernel
+  have hv : ∀ n, n < 512 →
+      (decode e4m3x n).all (fun t => decide (t.value = (project t).value)) = true := by
+    decide +kernel
+  refine ⟨fun n hn => hd n hn, fun n t ht => ?_⟩
+  have hn : n < 512 := by
+    by_contra h
+    rw [decode_none_of_ge e4m3x (show 2^e4m3x.bitWidth ≤ n by
+      change 2^9 ≤ n; omega)] at ht
+    cases ht
+  have h := hv n hn
+  rw [ht] at h
+  simpa using h
+
 /-- FP32 decoder equality on every word, including special-value rejection. -/
 theorem value32_eq (b : TensorCore.F32) : TCFloat.value32 b.toNat = TensorCore.value32 b := by
   have hn : b.toNat < 2^FloatFormat.binary32.bitWidth := b.isLt

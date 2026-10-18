@@ -27,10 +27,14 @@ The first build needs network access to fetch Lean, FloatLib and mathlib.
 ## What is proven
 
 `TCFloat.Equivalence.floatlib_eq_reference`: for every encoded input of the
-FP16, BF16, TF32 and E5M2 models with an FP32 output (B200's E5M2 block FMA
-included) and every supplied `D`, the two implementations
-agree on the block output bits, the TC-EFT bits and branch, and the
-validation errors. The port also proves, on its own definitions, the error
+FP16, BF16, TF32, E5M2 and E4M3 models, for every block-output width, and for
+every supplied `D`, the two implementations agree on the block output bits,
+the TC-EFT bits and branch, and the validation errors. This covers the six
+FP8 block FMAs of Ada, Hopper and B200, the 13-bit outputs of Ada and Hopper
+included (`fp8_models`). The port reads E4M3 as 8-bit OCP words with
+FloatLib's `e4m3fn` format; the parent reads the same words in its 9-bit
+layout, and the two decode every word identically (`e4m3fn_decode_widen`,
+`e4m3_equivalence`). The port also proves, on its own definitions, the error
 bound, the non-monotonicity threshold `3·2^p`, overlap recovery, and the
 correctness of both branches of TC-EFT. Only `propext`, `Classical.choice`
 and `Quot.sound` are used.
@@ -42,6 +46,7 @@ and `Quot.sound` are used.
 | `TCFloat/Rounding.lean`, `DirectedRounding.lean` | The bridge from FloatLib's rounding to the model's |
 | `TCFloat/EFT.lean` | Exact prefix sums and TC-EFT correctness |
 | `TCFloat/Equivalence/` | The universal equivalence with the parent implementation |
+| `TCFloat/Equivalence/FP8.lean` | The FP8 block FMAs, and FloatLib's E4M3 decoding against the parent's |
 | `Main.lean` | Batch executable `tc_floatlib` |
 
 ## Tests
@@ -49,14 +54,13 @@ and `Quot.sound` are used.
 | Script | Checks |
 | --- | --- |
 | `check_features.py` | 2,033 synthetic FP16 cases and 15,000 recorded FP16 GPU rows |
-| `check_replay.py` | 20,000 recorded BF16/TF32 GPU rows and 21,966 scalar-coverage records |
+| `check_replay.py` | 20,000 recorded BF16/TF32 GPU rows, 50,000 recorded FP8 GPU rows (Ada, L40S, H100, H200, B200) and 21,966 scalar-coverage records |
 | `check_tc_eft_paper.py` | 52,031 cases from the TC-EFT paper's pinned generators |
 | `check_edges.py` | Unrelated `D`, signed zeros, underflow ties, range endpoints, nonfinite inputs |
 | `check_monotonicity.py` | Cases below, at and above the `3·2^p` threshold |
 
 ## Scope
 
-The E4M3 block FMAs and the 13-bit outputs of Ada and Hopper FP8 are not
-ported. NaNs and infinities are
-rejected; exception flags, tiling, scheduling and FP16 outputs are not
-modeled.
+FP8 `mma.sync`, which the parent composes from FP16 block FMAs and an FP32
+addition, is not ported as one operation. NaNs and infinities are rejected;
+exception flags, tiling, scheduling and FP16 outputs are not modeled.

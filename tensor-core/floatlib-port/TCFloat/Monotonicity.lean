@@ -44,6 +44,10 @@ theorem construction_alignExp (M : TCModel) (K : Nat) (a b c : Term)
     have h := hf f (by simp [hp])
     simp [max_eq_left h]
 
+theorem evaluate_fp32 {b : Block} (h : b.model.outputMantissaBits = 23) :
+    b.evaluate = round32 .towardZero b.accumulator := by
+  cases hr : round32 .towardZero b.accumulator <;> simp [Block.evaluate, hr, h, truncateMantissa]
+
 def oneTerm : Term := ⟨⟨false,8388608,-23⟩,0,23⟩
 def belowOneTerm : Term := ⟨⟨false,16777215,-24⟩,-1,23⟩
 
@@ -51,7 +55,7 @@ theorem oneTerm_value : oneTerm.value = 1 := by decide +kernel
 theorem belowOneTerm_value : belowOneTerm.value = 1-pow2 (-24) := by decide +kernel
 
 theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hm : M.outputMantissaBits = 23) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1) :
     Block.accumulator ⟨M,oneTerm,List.replicate K (a,b)⟩ = 1 := by
   have he := construction_alignExp M K a b oneTerm (by decide) (by exact le_trans hs (by decide))
@@ -59,8 +63,8 @@ theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
   have hq : Block.q ⟨M,oneTerm,List.replicate K (a,b)⟩ = -(23+(p:Int)) := by
     unfold Block.q
     rw [he]
-    change 0 - ((23+M.padding:Nat):Int) = _
-    rw [hp]
+    change 0 - ((M.outputMantissaBits+M.padding:Nat):Int) = _
+    rw [hm, hp]
     omega
   have hone : truncGrid 1 (-(23+(p:Int))) = 1 := by
     have hpow : ((2^(23+p):Nat):ℚ)*pow2 (-(23+(p:Int))) = 1 := by
@@ -77,7 +81,7 @@ theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
     List.sum_cons, List.sum_replicate, hq, oneTerm_value, hone, hterm, nsmul_zero, add_zero]
 
 theorem construction_accumulator_below (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hm : M.outputMantissaBits = 23) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1) :
     Block.accumulator ⟨M,belowOneTerm,List.replicate K (a,b)⟩ =
       1-pow2 (-24)+(K:ℚ)*pow2 (-(24+(p:Int))) := by
@@ -85,8 +89,8 @@ theorem construction_accumulator_below (M : TCModel) (p K : Nat) (a b : Term)
   have hq : Block.q ⟨M,belowOneTerm,List.replicate K (a,b)⟩ = -(24+(p:Int)) := by
     unfold Block.q
     rw [he]
-    change -1 - ((23+M.padding:Nat):Int) = _
-    rw [hp]
+    change -1 - ((M.outputMantissaBits+M.padding:Nat):Int) = _
+    rw [hm, hp]
     omega
   have hcval : belowOneTerm.value = ((16777215*2^p:Nat):ℚ)*pow2 (-(24+(p:Int))) := by
     have hpow : ((2^p:Nat):ℚ)*pow2 (-(24+(p:Int))) = pow2 (-24) := by
@@ -148,15 +152,15 @@ theorem round32_rtz_above_one (x : ℚ) (hx : (1:ℚ)/2 ≤ x) (hx2 : x < 2) :
 
 /-- General TC-EFT nonmonotonicity threshold (Theorem III.4), for all natural p and K. -/
 theorem nonmonotone_perturbation (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hm : M.outputMantissaBits = 23) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1)
     (hK : K < 2^(24+p)) :
     ∃ bits y,
       Block.evaluate ⟨M,oneTerm,List.replicate K (a,b)⟩ = some 0x3f800000 ∧
       Block.evaluate ⟨M,belowOneTerm,List.replicate K (a,b)⟩ = some bits ∧
       value32 bits = some y ∧ (1 < y ↔ 3*2^p ≤ K) := by
-  have ha := construction_accumulator_one M p K a b hp hf hv hs
-  have hb := construction_accumulator_below M p K a b hp hf hv hs
+  have ha := construction_accumulator_one M p K a b hp hm hf hv hs
+  have hb := construction_accumulator_below M p K a b hp hm hf hv hs
   let q := pow2 (-(24+(p:Int)))
   let A : ℚ := 1-pow2 (-24)+(K:ℚ)*q
   have hq : 0 < q := pow2_pos' _
@@ -185,9 +189,10 @@ theorem nonmonotone_perturbation (M : TCModel) (p K : Nat) (a b : Term)
     linarith
   obtain ⟨bits,y,hr,hy,hcross⟩ := round32_rtz_above_one A hAlo hAhi
   refine ⟨bits,y,?_,?_,hy,?_⟩
-  · rw [Block.evaluate, ha]
+  · rw [evaluate_fp32 (b := ⟨M,oneTerm,List.replicate K (a,b)⟩) hm, ha]
     decide +kernel
-  · simpa only [Block.evaluate, hb, A, q] using hr
+  · rw [evaluate_fp32 (b := ⟨M,belowOneTerm,List.replicate K (a,b)⟩) hm]
+    simpa only [hb, A, q] using hr
   · rw [hcross]
     have hdouble : pow2 (-23) = 2*pow2 (-24) := by decide +kernel
     dsimp only [A]
@@ -209,11 +214,11 @@ def MonotoneInAccumulator (M : TCModel) (products : List (Term × Term)) : Prop 
 
 /-- An explicit failure of monotonicity whenever the general family's threshold is met. -/
 theorem construction_not_monotone (M : TCModel) (p K : Nat) (a b : Term)
-    (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
+    (hp : M.padding = p) (hm : M.outputMantissaBits = 23) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1)
     (hK : K < 2^(24+p)) (hthreshold : 3*2^p ≤ K) :
     ¬ MonotoneInAccumulator M (List.replicate K (a,b)) := by
-  obtain ⟨bits,y,h1,h2,hy,hiff⟩ := nonmonotone_perturbation M p K a b hp hf hv hs hK
+  obtain ⟨bits,y,h1,h2,hy,hiff⟩ := nonmonotone_perturbation M p K a b hp hm hf hv hs hK
   intro hm
   have hle := hm oneTerm belowOneTerm 0x3f800000 bits 1 y h1 h2 (by decide +kernel) hy
     (by rw [oneTerm_value, belowOneTerm_value]; exact sub_lt_self 1 (pow2_pos' _))
@@ -249,7 +254,7 @@ theorem nonmonotone_encoded (K p : Nat) (eAlignMin : Option Int)
   have h2 : decode .binary32 0x3f7fffff = some belowOneTerm := by rfl
   have hp1 := prepare_replicate (fp16 K p eAlignMin) K aw bw 0x3f800000 a b oneTerm rfl ha hb h1
   have hp2 := prepare_replicate (fp16 K p eAlignMin) K aw bw 0x3f7fffff a b belowOneTerm rfl ha hb h2
-  obtain ⟨bits,y,he1,he2,hy,hi⟩ := nonmonotone_perturbation (fp16 K p eAlignMin) p K a b rfl hf hv hs hK
+  obtain ⟨bits,y,he1,he2,hy,hi⟩ := nonmonotone_perturbation (fp16 K p eAlignMin) p K a b rfl rfl hf hv hs hK
   exact ⟨bits,y,by simpa [evalWords, hp1] using he1,
     by simpa [evalWords, hp2] using he2,hy,hi⟩
 

@@ -13,12 +13,16 @@ runtime. The libraries themselves stay free of Mathlib.
 [`tensor-core/floatlib-port/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/tensor-core/floatlib-port)
 reimplements the block model and the reference EFT.
 
-[`floatlib_eq_reference`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/Representations.lean#L149)
-and its inverse cover every model with FP16, BF16, TF32 or E5M2 input and an
-FP32 block output (any FMA size `K`, padding bits, and minimum alignment
-exponent), B200's E5M2 block FMA included, every encoded input, and every `D`.
-The E4M3 block FMAs and the 13-bit outputs of Ada and Hopper FP8 are not
-ported. They prove that
+[`floatlib_eq_reference`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/Representations.lean#L150)
+and its inverse cover every model with FP16, BF16, TF32, E5M2 or E4M3 input
+(any FMA size `K`, padding bits, minimum alignment exponent, and block-output
+width), every encoded input, and every `D`. This includes the six FP8 block
+FMAs of Ada, Hopper and B200, with the 13-bit outputs of Ada and Hopper
+([`TCFloat.Equivalence.fp8_models`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/FP8.lean#L113)). The port reads E4M3 as 8-bit OCP words
+with FloatLib's `e4m3fn` format, and the parent reads them in its 9-bit
+layout. Both decode every word to the same value
+([`TCFloat.Equivalence.e4m3fn_decode_widen`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/FP8.lean#L28)), so the two implementations
+agree on every E4M3 input ([`TCFloat.Equivalence.e4m3_equivalence`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/FP8.lean#L142)). They prove that
 the two implementations produce corresponding **complete observations**:
 TC results, EFT results, error kinds, and branch tags. The correspondence is
 stated through explicit `Equiv`s.
@@ -33,8 +37,10 @@ python3 scripts/check_all.py          # builds proofs, audits axioms and indepen
 python3 scripts/check_equivalence.py  # 115,029 command observations, 668,944 decoding cases
 ```
 
-`check_all.py` writes `floatlib-port/test-results/summary.json`. The file is
-generated at run time and is not committed.
+`check_all.py` also replays 50,000 recorded FP8 GPU rows of Ada, L40S, H100,
+H200 and B200 through the FloatLib implementation, with 0 mismatches. It
+writes `floatlib-port/test-results/summary.json`. The file is generated at run
+time and is not committed.
 
 ## Matrix Cores
 

@@ -28,18 +28,38 @@ def truncCoeff (x : ℚ) (e : Int) : Int :=
   if x < 0 then -⌊-x / pow2 e⌋ else ⌊x / pow2 e⌋
 def truncGrid (x : ℚ) (e : Int) : ℚ := truncCoeff x e * pow2 e
 
+/-- A block keeps `outputMantissaBits + padding` bits after alignment and outputs an FP32 word
+with `outputMantissaBits` mantissa bits. -/
 structure TCModel where
   format : FloatFormat
   nfma : Nat
   padding : Nat
   eAlignMin : Option Int
+  outputMantissaBits : Nat
 
-def fp16 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.binary16, k, padding, eAlignMin⟩
-def bf16 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.bfloat16, k, padding, eAlignMin⟩
-def tf32 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.tf32, k, padding, eAlignMin⟩
+def fp16 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.binary16, k, padding, eAlignMin, 23⟩
+def bf16 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.bfloat16, k, padding, eAlignMin, 23⟩
+def tf32 (k padding : Nat) (eAlignMin : Option Int := none) : TCModel := ⟨.tf32, k, padding, eAlignMin, 23⟩
 def v100 := fp16 4 0
 def a100 := fp16 8 1 (some (-132))
 def h100 := fp16 16 2 (some (-133))
+
+/-- E4M3 in a 9-bit IEEE layout: a fifth exponent bit keeps `S.1111.xxx` finite. -/
+def e4m3x : FloatFormat :=
+  { expWidth := 5, fracWidth := 3, exponentBias := 7, encoding := .ieee,
+    exponentBias_pos := by decide, exponentBias_le_maxFinite := by decide }
+
+/-- The `e4m3x` word of an E4M3 word: the sign moves to bit 8 and the NaNs become `S.11111.111`. -/
+def widenE4M3 (n : Nat) : Nat := n / 128 * 256 + if n % 128 = 127 then 255 else n % 128
+
+/-- FP8 block FMAs. Ada and Hopper keep 13 bits after alignment and output 13 mantissa bits; B200
+keeps 25 and outputs FP32. E4M3 words are read with FloatLib's OCP E4M3 format. -/
+def adaE4M3 : TCModel := ⟨.e4m3fn, 16, 0, none, 13⟩
+def adaE5M2 : TCModel := ⟨.e5m2, 16, 0, none, 13⟩
+def hopperE4M3 : TCModel := ⟨.e4m3fn, 32, 0, none, 13⟩
+def hopperE5M2 : TCModel := ⟨.e5m2, 32, 0, none, 13⟩
+def blackwellE4M3 : TCModel := ⟨.e4m3fn, 32, 2, none, 23⟩
+def blackwellE5M2 : TCModel := ⟨.e5m2, 32, 2, none, 23⟩
 
 structure Term where
   dyadic : ExactDyadic
@@ -82,12 +102,16 @@ def maxTermExp : List Term → Option Int
     else some (rest.map (max t.exponent) |>.getD t.exponent)
 def Block.alignExp (b : Block) : Option Int :=
   (maxTermExp b.terms).map fun e => b.model.eAlignMin.map (max e) |>.getD e
-def Block.q (b : Block) : Int := b.alignExp.getD 0 - (23 + b.model.padding : Nat)
+def Block.q (b : Block) : Int := b.alignExp.getD 0 - (b.model.outputMantissaBits + b.model.padding : Nat)
 def Block.aligned (b : Block) : List ℚ := b.terms.map fun t => truncGrid t.value b.q
 def Block.accumulator (b : Block) : ℚ := b.aligned.sum
 def Block.residuals (b : Block) : List ℚ := b.terms.map fun t => t.value - truncGrid t.value b.q
 
-def Block.evaluate (b : Block) : Option Nat := round32 .towardZero b.accumulator
+/-- Keep the top `m` mantissa bits of an FP32 word. -/
+def truncateMantissa (m bits : Nat) : Nat := bits / 2^(23-m) * 2^(23-m)
+
+def Block.evaluate (b : Block) : Option Nat :=
+  (round32 .towardZero b.accumulator).map (truncateMantissa b.model.outputMantissaBits)
 
 structure Trace where
   block : Block

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay all recorded BF16/TF32 hardware rows and the source scalar-guard corpus."""
+"""Replay the recorded BF16, TF32 and FP8 hardware rows and the source scalar-guard corpus."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 from pathlib import Path
@@ -9,7 +9,8 @@ PORT = Path(__file__).resolve().parents[1]
 ROOT = PORT.parent
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / 'scripts'))
-from check_device import read_hex_rows, read_bin
+from check_device import read_hex_rows, read_bin, value
+from check_device_replay import operand
 OUT = PORT / 'test-results'
 OUT.mkdir(exist_ok=True)
 
@@ -49,6 +50,45 @@ def hardware():
         reports[f'{gpu}-{fmt}']={'rows':len(rows),'mismatches':0}
     return reports
 
+def fp8_block(model, pairs, c):
+    return f'fp8 {model} ' + ' '.join(map(str, [w for ab in pairs for w in ab] + [c, 0]))
+
+def fp8():
+    """Toolbox 79143bd: Ada and L40S chain two 16-product blocks through c; H100 and H200 rows are
+    one block from c = 0; B200 rows add c after the block in FP32 with round-to-nearest-even."""
+    vendor = ROOT/'vendor/matlab-tensor-core-79143bd'
+    pins = json.loads((vendor/'SOURCES.json').read_text())
+    reports = {}
+    for gpu, arch in [('Ada','ada'),('L40S','ada'),('H100','h100'),('H200','h100'),('B200','b200')]:
+        for fmt in ['E4M3', 'E5M2']:
+            base = vendor/'model_validation'/gpu/fmt
+            files = [base/f'a_{gpu}_{fmt}.txt', base/f'b_{gpu}_{fmt}.txt',
+                     base/f'c_{gpu}_fp32.txt', base/f'd_{gpu}_fp32.txt']
+            for f in files:
+                assert hashlib.sha256(f.read_bytes()).hexdigest() == pins['sha256'][str(f.relative_to(vendor))]
+            aa, bb = read_hex_rows(files[0]), read_hex_rows(files[1])
+            cc, dd = read_bin(files[2]), read_bin(files[3])
+            assert len(aa) == len(bb) == len(cc) == len(dd) == 5000
+            rows = [[(operand(x, fmt)[0], operand(y, fmt)[0]) for x, y in zip(a, b)] for a, b in zip(aa, bb)]
+            assert all(len(r) == 32 for r in rows)
+            model = f'{arch}-{fmt.lower()}'
+            if arch == 'ada':
+                first = run([fp8_block(model, r[:16], c) for r, c in zip(rows, cc)], f'{gpu}-{fmt}-1')
+                out = run([fp8_block(model, r[16:], f['model']['bits']) for r, f in zip(rows, first)],
+                          f'{gpu}-{fmt}-2')
+                bits = [o['model']['bits'] for o in out]
+            else:
+                out = run([fp8_block(model, r, 0) for r in rows], f'{gpu}-{fmt}')
+                bits = [o['model']['bits'] for o in out]
+                if arch == 'b200':
+                    sums = [value(b, 23, 8, 127) + value(c, 23, 8, 127) for b, c in zip(bits, cc)]
+                    out = run([f'round {s.numerator} {s.denominator}' for s in sums], f'{gpu}-{fmt}-add')
+                    bits = [o['rne'] for o in out]
+            for i, (b, d) in enumerate(zip(bits, dd)):
+                assert b == d, (gpu, fmt, i, b, d)
+            reports[f'{gpu}-{fmt}'] = {'rows': len(rows), 'mismatches': 0}
+    return reports
+
 def coverage():
     path=ROOT/'data/regressions/eft-coverage-cases.json'
     cases=json.loads(path.read_text())
@@ -75,6 +115,6 @@ def coverage():
             'mismatches':0,'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
 
 if __name__=='__main__':
-    report={'hardware':hardware(),'scalar':coverage(),'new_gpu_measurements':False}
+    report={'hardware':hardware(),'fp8':fp8(),'scalar':coverage(),'new_gpu_measurements':False}
     (OUT/'replay-report.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))

@@ -101,7 +101,7 @@ def observe {α β : Type} (f : α → β) : Except TensorCore.ModelError α →
   | .error e => .error (error e)
   | .ok a => .ok (f a)
 
-theorem tc_checked_eq (p : TCModel) (hf : p.format.isIEEE=true)
+theorem tc_checked_eq (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) :
     Interface.tcChecked p (input p x)=observe (fun t => t.output.bits.toNat) (TensorCore.evalBlock x) := by
   by_cases hs : x.products.length=p.nfma
@@ -117,12 +117,13 @@ theorem tc_checked_eq (p : TCModel) (hf : p.format.isIEEE=true)
       cases hr : TensorCore.round32 .truncate (block b).accumulator with
       | none => simp [TensorCore.evalPrepared,hr,observe,error]
       | some bits =>
-        obtain ⟨d,hd,hbits⟩ := round_finite .truncate _ bits hr
-        simp [TensorCore.evalPrepared,hr,hd,observe,hbits]
+        obtain ⟨d,hd,-⟩ := round_finite .truncate _ bits hr
+        obtain ⟨d',hd',hb'⟩ := finite32_truncate b.model.outputMantissaBits bits d hd
+        simp [TensorCore.evalPrepared,hr,hd',observe,hb',truncateMantissa32_toNat]
   · have hs' : (x.products.length != p.nfma)=true := bne_iff_ne.mpr hs
     simp [Interface.tcChecked,TensorCore.evalBlock,input_length,model,hs',observe,error]
 
-theorem eft_checked_eq (p : TCModel) (hf : p.format.isIEEE=true)
+theorem eft_checked_eq (p : TCModel) (hf : DecodesLikeReference p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.eftChecked p (input p x) (wordEquiv 32 D)=
       observe encodedResult (TensorCore.tcEftEncoded x D) := by
@@ -152,7 +153,7 @@ theorem floatlib_eq_reference (p : TCModel) (hf : SupportedFormat p.format)
       observe (fun t => t.output.bits.toNat) (TensorCore.evalBlock x) ∧
     Interface.eftChecked p (inputEquiv p x) (wordEquiv 32 D)=
       observe encodedResult (TensorCore.tcEftEncoded x D) :=
-  ⟨tc_checked_eq p hf.ieee x,eft_checked_eq p hf.ieee x D⟩
+  ⟨tc_checked_eq p hf.decodes x,eft_checked_eq p hf.decodes x D⟩
 
 /-- The same equivalence, quantified over every port input. -/
 theorem floatlib_eq_reference_inverse (p : TCModel) (hf : SupportedFormat p.format)
