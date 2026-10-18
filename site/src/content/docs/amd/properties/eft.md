@@ -1,11 +1,12 @@
 ---
-title: TC-EFT correction
-description: TC-EFT on AMD matrix cores - the correctly rounded sum of a CDNA 1, 2 or 3 block from its output, the cut-off of each generation, and what the matrix core's output buys.
+title: MC-EFT correction
+description: MC-EFT, the error-free transformation for AMD matrix cores - the correctly rounded sum of a CDNA 1, 2 or 3 block from its output, the cut-off of each generation, and what the matrix core's output buys.
 ---
 
-[TC-EFT](/HardwarePrimitives/properties/eft/) corrects a Tensor Core block with
-the bits the hardware dropped. The library carries the same algorithm over to
-the AMD matrix cores. It takes the encoded inputs of one block and a finite
+MC-EFT is the error-free transformation for AMD matrix cores. It carries the
+algorithm of [TC-EFT](/HardwarePrimitives/properties/eft/), which corrects a
+Tensor Core block with the bits the hardware dropped, over to CDNA 1, 2 and 3.
+It takes the encoded inputs of one block and a finite
 FP32 word `D`, normally the matrix core's output, and returns the exact sum
 `S = c + Σ a_ℓ b_ℓ` rounded to the nearest FP32 value (ties to even).
 

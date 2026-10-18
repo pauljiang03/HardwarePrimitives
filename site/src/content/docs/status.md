@@ -33,7 +33,7 @@ The models are described on [the model at a glance](/HardwarePrimitives/model/) 
 **Proved properties of the matrix core models**, per generation:
 
 - **All:** per-block error bounds, also from the inputs alone, monotonicity in `c`, and the
-  [TC-EFT correction](/HardwarePrimitives/amd/properties/eft/) of a block from its output.
+  [MC-EFT correction](/HardwarePrimitives/amd/properties/eft/) of a block from its output.
 - **CDNA 1 and the SFMA:** correct rounding, monotonicity in every product, and independence of
   the order of the products.
 - **CDNA 2:** non-monotonicity in the products only through flushing; correct rounding when every

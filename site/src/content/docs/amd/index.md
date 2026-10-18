@@ -64,12 +64,12 @@ The Lean model implements these steps directly.
 | Monotone in `C` / `c` | no: a smaller `C` can move the grid and raise the output | yes, on every configuration |
 | Monotone in the products | no | SFMA and CDNA 1 yes; CDNA 2 and CDNA 3 no |
 | Product order | — | CDNA 1 and CDNA 3 Algorithm 1 depend only on the multiset; CDNA 2 and CDNA 3 FP8 depend on positions |
-| TC-EFT correction | cut-off at the alignment grid or the last bit of `D` | the same algorithm; the cut-off of each generation |
+| EFT correction | TC-EFT: cut-off at the alignment grid or the last bit of `D` | MC-EFT: the same algorithm; the cut-off of each generation |
 
 Each generation's properties page ([CDNA 1](/HardwarePrimitives/amd/properties/cdna1/),
 [CDNA 2](/HardwarePrimitives/amd/properties/cdna2/),
 [CDNA 3](/HardwarePrimitives/amd/properties/cdna3/)) states and proves its
-entries. [TC-EFT](/HardwarePrimitives/amd/properties/eft/) returns the
+entries. [MC-EFT](/HardwarePrimitives/amd/properties/eft/) returns the
 correctly rounded sum of a block of any generation from its output.
 
 ## The pipeline in Lean

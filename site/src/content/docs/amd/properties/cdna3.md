@@ -241,9 +241,9 @@ every prefix of the accumulation is exact at that width
 [`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L185);
 see [the register model](/HardwarePrimitives/amd/cdna3/#a-fixed-width-register-model)).
 
-## TC-EFT correction
+## MC-EFT correction
 
-The [TC-EFT correction](/HardwarePrimitives/amd/properties/eft/) returns the
+The [MC-EFT correction](/HardwarePrimitives/amd/properties/eft/) returns the
 correctly rounded sum for any finite `D`, with the cut-off at the higher of the
 last bit of `D` and the alignment grid. With `D` the block's output, `S_acc` is
 the high sum plus the part of the low parts that alignment kept, and the overlap

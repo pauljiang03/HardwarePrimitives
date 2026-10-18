@@ -50,7 +50,7 @@ example : blockBits ones = .ok 0x40800000 := by decide +kernel
 
 | Generation | Proved |
 | --- | --- |
-| All | Equality with an independent transcription of the paper's algorithms; exact accepted domain; error bounds, also from the inputs alone; monotonicity in `c`; loss accounting for inner products and `D = AB + C`; the TC-EFT correction, which returns the correctly rounded sum from any finite output word |
+| All | Equality with an independent transcription of the paper's algorithms; exact accepted domain; error bounds, also from the inputs alone; monotonicity in `c`; loss accounting for inner products and `D = AB + C`; the MC-EFT correction, which returns the correctly rounded sum from any finite output word |
 | CDNA 1 and SFMA | Correct rounding; error at most half an ulp; monotone in every product; independent of product order |
 | CDNA 2 | Non-monotone in the products only through flushing; correctly rounded when every intermediate rounding is exact; order dependent |
 | CDNA 3 | Monotone in the products while the alignment exponents are unchanged; necessary and sufficient conditions for an output decrease; a family with an exact threshold; correctly rounded when alignment loses nothing; fixed-width registers of 29 to 31 bits; Algorithm 1 independent of product order |
@@ -58,7 +58,7 @@ example : blockBits ones = .ok 0x40800000 := by decide +kernel
 Details per generation: [CDNA 1](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna1/),
 [CDNA 2](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna2/),
 [CDNA 3](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna3/),
-[TC-EFT](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/eft/).
+[MC-EFT](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/eft/).
 
 Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
@@ -83,7 +83,7 @@ paper's vectors and these comparisons.
 | [`MatrixCore/Numerics/`](MatrixCore/Numerics.lean) | Formats, decoding, grids, FP32 rounding and its correctness |
 | [`MatrixCore/MC/`](MatrixCore/MC.lean) | Models, block stages, evaluation, special values, chaining, theorems |
 | [`MatrixCore/Specification/`](MatrixCore/Specification.lean) | Independent transcription of the paper and the equality proofs |
-| [`MatrixCore/EFT/`](MatrixCore/EFT.lean) | The TC-EFT correction for every generation |
+| [`MatrixCore/EFT/`](MatrixCore/EFT.lean) | The MC-EFT correction for every generation |
 | [`tests/`](tests/README.md) | The paper's test vectors, regressions and the audit |
 | `examples/`, `Main/` | Worked examples; `mc_eval`, which evaluates inner products from words |
 | `scripts/` | Validation runner and differential tests |

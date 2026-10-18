@@ -5,4 +5,4 @@ import MatrixCore.EFT.CDNA3
 import MatrixCore.EFT.CDNA2
 import MatrixCore.EFT.CDNA1
 
-/-! # TC-EFT correction on matrix cores -/
+/-! # MC-EFT correction on matrix cores -/

@@ -7,7 +7,8 @@ TC-EFT is the algorithm of the **TC-EFT paper** (*TC-EFT: Characterizing and
 Correcting Tensor Core Arithmetic*), Section IV. It takes the encoded inputs
 of one block and a finite FP32 word `D`, normally the Tensor Core's output. It
 returns the exact sum `S = C + Σ aᵢ·bᵢ` rounded to the nearest FP32 value
-(ties to even).
+(ties to even). [MC-EFT](/HardwarePrimitives/amd/properties/eft/) carries the
+same algorithm over to the AMD matrix cores.
 
 ## Does it work?
 

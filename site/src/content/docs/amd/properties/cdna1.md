@@ -92,9 +92,9 @@ below the overflow threshold `2^128 − 2^103`; products may exceed `2^128`
 inside the block
 ([`MatrixCore.correctRounding_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L38)).
 
-## TC-EFT correction
+## MC-EFT correction
 
-The [TC-EFT correction](/HardwarePrimitives/amd/properties/eft/) from the
+The [MC-EFT correction](/HardwarePrimitives/amd/properties/eft/) from the
 block's output returns that output, since it is already the correctly rounded
 sum
 ([`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA1.lean#L11)).

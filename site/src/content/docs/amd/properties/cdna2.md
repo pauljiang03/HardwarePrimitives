@@ -103,9 +103,9 @@ the products: `1, s, s, 0` and `s, s, 1, 0` with `s = 2^-23 + 2^-24` give
 ([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L41);
 [example](/HardwarePrimitives/amd/cdna2/#example)).
 
-## TC-EFT correction
+## MC-EFT correction
 
-The [TC-EFT correction](/HardwarePrimitives/amd/properties/eft/) returns the
+The [MC-EFT correction](/HardwarePrimitives/amd/properties/eft/) returns the
 correctly rounded sum of the inputs before flushing, for any finite `D`. Its
 cut-off is the last bit of `D`. With `D` the block's output, the overlap
 `D − H` is exactly the low parts plus every rounding error of the block (each

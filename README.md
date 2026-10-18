@@ -33,7 +33,8 @@ Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
   characterization of non-monotonicity in the products (a family with an exact
   threshold, and necessary and sufficient conditions), correct rounding when
   alignment loses nothing, and fixed-width accumulation. Every generation is
-  monotone in `c`.
+  monotone in `c`, and MC-EFT, the matrix core counterpart of TC-EFT, recovers
+  the correctly rounded sum of a block from its output.
 
 Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
@@ -88,7 +89,7 @@ tested](https://pauljiang03.github.io/HardwarePrimitives/proofs/tested/).
 | Path | Contents |
 | --- | --- |
 | [`TensorCore/`](TensorCore.lean) | NVIDIA Tensor Core models, properties, TC-EFT, bitvector kernels |
-| [`amd/`](amd/README.md) | AMD matrix-core library `MatrixCore` (standalone Lake project) |
+| [`amd/`](amd/README.md) | AMD matrix-core library `MatrixCore`: models, properties, MC-EFT (standalone Lake project) |
 | [`floatlib-port/`](floatlib-port/README.md) | Second implementation of the Tensor Core model on FloatLib |
 | [`tests/`](tests/README.md) | `TensorCoreTests` regression library |
 | [`examples/`](examples/README.md) | Checked worked examples |
