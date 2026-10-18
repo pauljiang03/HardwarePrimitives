@@ -1,9 +1,9 @@
 import OzakiMC.Signed
 import Ozaki.ZeroCheck
 
-/-! # Exact-zero results without the exact fallback on the matrix-core model
+/-! # Exact-zero results without the exact fallback on the Matrix Core model
 
-Correctly rounded Ozaki-I of any inner dimension on matrix-core blocks with split-K, with the bound
+Correctly rounded Ozaki-I of any inner dimension on Matrix Core blocks with split-K, with the bound
 of `Ozaki.ZeroCheck` that counts only nonzero positions: the slicing bound uses the number of
 indices where both `xᵢ` and `yᵢ` are nonzero, which one extra dot product on the matrix multiplier
 of the `0`/`1` support indicators computes. Correctly rounded for binary64 and binary32 inputs

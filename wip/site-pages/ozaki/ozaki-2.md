@@ -1,6 +1,6 @@
 ---
 title: Ozaki-II, proven end to end
-description: The complete Lean proof of Ozaki-II on the Tensor Core and AMD matrix-core models, from scaling and residues to Chinese-remainder reconstruction and the final rounding, and its correctly rounded variant.
+description: The complete Lean proof of Ozaki-II on the Tensor Core and AMD Matrix Core models, from scaling and residues to Chinese-remainder reconstruction and the final rounding, and its correctly rounded variant.
 ---
 
 Ozaki-II (Ozaki, Uchino and Imamura, 2025) computes `x · y` with one call to
@@ -39,7 +39,7 @@ and `P = 22`: four calls to the matrix multiplier per entry.
 | --- | --- |
 | Symmetric residues lie in `(−m/2, m/2]`, and the product of the residues is congruent to the product modulo `m`. | [`symMod_bounds`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/CRT.lean#L32), [`dvd_dotZ_symMod`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/Ozaki2.lean#L240) |
 | A residue product has magnitude at most `k ⌊m/2⌋²`, at most `2^24` for the Z3 moduli. | [`natAbs_residueProduct_le`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/Checks.lean#L69), [`z3_residue_exactnessBound`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/Checks.lean#L83) |
-| The matrix multiplier computes each residue product exactly: residues of moduli at most `2^(b+1)` are `b`-bit integers, and the Tensor Core and matrix-core matrix multipliers are exact on those. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/MatrixMultiplier.lean#L195), [`mcMultiplier_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/MatrixMultiplier.lean#L326) |
+| The matrix multiplier computes each residue product exactly: residues of moduli at most `2^(b+1)` are `b`-bit integers, and the Tensor Core and Matrix Core matrix multipliers are exact on those. | [`tcMultiplier_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/MatrixMultiplier.lean#L195), [`mcMultiplier_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/MatrixMultiplier.lean#L326) |
 
 ## Step 3: Chinese-remainder reconstruction
 
@@ -75,7 +75,7 @@ The reconstruction range grows with `k`, so a longer dot product needs more
 moduli or a smaller `P`; the matrix-multiplier side is handled by split-K, which runs
 each residue product in chunks and adds the chunk results exactly
 ([`chunked_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/SplitK.lean#L131)). With binary64 inputs and enough moduli, Ozaki-II
-emulates FP64 on fp16, bf16 and tf32 Tensor Cores and on AMD matrix cores; the
+emulates FP64 on fp16, bf16 and tf32 Tensor Cores and on AMD Matrix Cores; the
 tests use twelve moduli at most `4096` (`P = 69` for `k = 8`).
 
 ## Correctly rounded Ozaki-II

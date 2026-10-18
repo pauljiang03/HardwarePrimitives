@@ -30,7 +30,7 @@ explicit vectors rather than bulk measurements.
 ## Differential testing against the MATLAB models
 
 [`scripts/matlab_diff.py`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/scripts/matlab_diff.py)
-compares the Lean model with the authors' MATLAB matrix-core models, run in
+compares the Lean model with the authors' MATLAB Matrix Core models, run in
 GNU Octave, on random inputs sampled as in the paper's Section 5 (normal,
 subnormal and uniform random bits) and on the paper's targeted vectors.
 The Lean side is `mc_eval`, which prints the observed result of an inner

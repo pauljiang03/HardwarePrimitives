@@ -136,7 +136,7 @@ theorem mcEft_ok_iff {P : Model} (x : BlockInput P) (D : F32) :
     rw [if_neg (by omega), hp]
     simp only [hd]
 
-/-- From the matrix core's own output, the correction runs on the block's trace. -/
+/-- From the Matrix Core's own output, the correction runs on the block's trace. -/
 theorem mcEft_of_evalBlock {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) :
     mcEft x t.d = .ok ((eftSplit P t.prepared (wordValue t.d)).run (wordValue t.d)) := by

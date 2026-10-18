@@ -1,8 +1,8 @@
 import OzakiMC.Exactness
 
-/-! # The matrix core as a matrix multiplier for the Ozaki schemes
+/-! # The Matrix Core as a matrix multiplier for the Ozaki schemes
 
-`mcMultiplier P` evaluates an integer dot product on the matrix-core model `P`: it writes
+`mcMultiplier P` evaluates an integer dot product on the Matrix Core model `P`: it writes
 each integer with `MatrixCore`'s exact encoder `encodeExact`, and runs `dotBits` (zero padding to
 whole blocks of `N_FMA`, each block's `d` the next block's `c`) from `c = +0`.
 
@@ -288,7 +288,7 @@ theorem xf32_encodesInts : EncodesInts .xf32 11 := by
 
 /-! ## The matrix multiplier -/
 
-/-- **The matrix core as a matrix multiplier for the Ozaki schemes.** Encode the integers exactly,
+/-- **The Matrix Core as a matrix multiplier for the Ozaki schemes.** Encode the integers exactly,
 and evaluate the inner product with `dotBits` from `c = +0`. -/
 def mcMultiplier (P : Model) : MatrixMultiplier := fun x y => do
   let a ← x.mapM fun z : ℤ => P.a.encodeExact (z : ℚ)
@@ -321,7 +321,7 @@ theorem encoded_products {P : Model} (Ea : ℤ → P.a.Word) (Eb : ℤ → P.b.W
     simp [← Rat.intCast_mul, absQ_intCast]
 
 /-- **Exact matrix multiplier.** On an exact configuration whose operand formats hold every `b`-bit
-integer, the matrix core is exact on `b`-bit integer vectors whose products total at most `2^24`
+integer, the Matrix Core is exact on `b`-bit integer vectors whose products total at most `2^24`
 in magnitude. -/
 theorem mcMultiplier_exactOn {P : Model} {b : ℕ} (hP : ExactConfig P) (hfa : smallSubnormals P.a)
     (hfb : smallSubnormals P.b) (hn : 0 < P.nfma) (hea : EncodesInts P.a b)

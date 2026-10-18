@@ -1,9 +1,9 @@
 import MatrixCore
 import Ozaki
 
-/-! # Exact integer blocks on the AMD matrix-core model
+/-! # Exact integer blocks on the AMD Matrix Core model
 
-The Ozaki schemes need the matrix core to multiply small integers exactly. On the model of
+The Ozaki schemes need the Matrix Core to multiply small integers exactly. On the model of
 `MatrixCore`, a block computes `S_acc` by one of the paper's configurations and rounds it once to
 binary32 with RNE. This file shows that for integer operands nothing is lost on three of them:
 

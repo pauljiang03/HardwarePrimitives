@@ -1,6 +1,6 @@
 import OzakiMC.LongDot
 
-/-! # FP64 emulation and long dot products on the AMD matrix-core model
+/-! # FP64 emulation and long dot products on the AMD Matrix Core model
 
 The binary64 cases of [`data/correct-reference.json`](../../data/correct-reference.json) (random
 `4 × 8` by `8 × 4` binary64 products), against the exact-fraction oracle. `MatrixCore` has no

@@ -35,7 +35,7 @@ export default defineConfig({
     starlight({
       title: 'Hardware Primitives',
       description:
-        'Lean 4 models of the matrix multipliers of NVIDIA Tensor Cores (Volta to Blackwell) and AMD matrix cores (CDNA 1 to 3), and their proven properties: error bounds, non-monotonicity, TC-EFT and MC-EFT.',
+        'Lean 4 models of the matrix multipliers of NVIDIA Tensor Cores (Volta to Blackwell) and AMD Matrix Cores (CDNA 1 to 3), and their proven properties: error bounds, non-monotonicity, TC-EFT and MC-EFT.',
       customCss: ['./src/styles/theme.css'],
       expressiveCode: {
         themes: ['github-dark-dimmed', 'github-light'],
@@ -77,7 +77,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Modeling AMD matrix cores',
+          label: 'Modeling AMD Matrix Cores',
           items: [
             { label: 'The model at a glance', slug: 'matrix-core' },
             { label: '1. Formats and decoding', slug: 'matrix-core/formats' },
@@ -93,7 +93,7 @@ export default defineConfig({
           ],
         },
         {
-          label: 'Properties of matrix cores',
+          label: 'Properties of Matrix Cores',
           items: [
             { label: 'CDNA 1', slug: 'matrix-core/properties/cdna1' },
             { label: 'CDNA 2', slug: 'matrix-core/properties/cdna2' },

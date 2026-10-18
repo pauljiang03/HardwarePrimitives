@@ -1,6 +1,6 @@
 import OzakiMC
 
-/-! # The Z3 models' test matrices on AMD matrix cores
+/-! # The Z3 models' test matrices on AMD Matrix Cores
 
 The two `4 × 4` cases of the Z3 models (`random.Random(2026)`, exponents in `[2^-1, 2^1]` and
 `[2^-6, 2^6]`), with the outputs of the unmodified Z3 models recorded in

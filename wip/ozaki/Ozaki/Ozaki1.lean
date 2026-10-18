@@ -13,7 +13,7 @@ One output entry `x · y` (row `x` of `A`, column `y` of `B`) is computed as fol
 
 The matrix multiplier is abstract here (`MatrixMultiplier`): any function that returns an integer
 dot product. The hardware libraries supply matrix multipliers built from the NVIDIA Tensor Core
-model (`OzakiTC`) and the AMD matrix-core model (`OzakiMC`), and prove them exact on slices
+model (`OzakiTC`) and the AMD Matrix Core model (`OzakiMC`), and prove them exact on slices
 (`MatrixMultiplier.ExactOn`).
 
 Main results:

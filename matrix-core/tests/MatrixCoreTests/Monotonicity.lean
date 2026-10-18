@@ -2,7 +2,7 @@ import MatrixCore
 
 /-! # Monotonicity in `c`, against the TC-EFT construction
 
-Lowering `c` from `1` to `1 − 2^-24` raises a Tensor Core output but not a matrix core output. -/
+Lowering `c` from `1` to `1 − 2^-24` raises a Tensor Core output but not a Matrix Core output. -/
 
 open MatrixCore
 

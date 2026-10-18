@@ -33,7 +33,7 @@ bound and every correctness statement compares the output with it.
 ## The accumulator input is not a product
 
 On a Tensor Core, `C` enters the same list of terms as the products and
-competes with them for the alignment exponent. On the AMD matrix cores it
+competes with them for the alignment exponent. On the AMD Matrix Cores it
 does not:
 
 - **CDNA 1** adds `c` to the products exactly, in the same sum.

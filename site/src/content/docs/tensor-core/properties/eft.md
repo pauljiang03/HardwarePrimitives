@@ -8,7 +8,7 @@ Correcting Tensor Core Arithmetic*), Section IV. It takes the encoded inputs
 of one block and a finite FP32 word `D`, normally the Tensor Core's output. It
 returns the exact sum `S = C + Σ aᵢ·bᵢ` rounded to the nearest FP32 value
 (ties to even). [MC-EFT](/HardwarePrimitives/matrix-core/properties/eft/) carries the
-same algorithm over to the AMD matrix cores.
+same algorithm over to the AMD Matrix Cores.
 
 ## Does it work?
 

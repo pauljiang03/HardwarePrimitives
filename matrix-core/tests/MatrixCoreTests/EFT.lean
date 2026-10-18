@@ -2,7 +2,7 @@ import MatrixCore
 
 /-! # The correction on CDNA 1–3
 
-Kernel-evaluated blocks: the matrix core's output `D`, the correction from `D`, and its path. -/
+Kernel-evaluated blocks: the Matrix Core's output `D`, the correction from `D`, and its path. -/
 
 namespace MatrixCoreTests.EFT
 
@@ -12,7 +12,7 @@ open MatrixCore
 def target {P : Model} (x : BlockInput P) : Option (Option F32) :=
   (prepare x).map fun px => rne32 px.exact
 
-/-- Cut-off `q`, `H`, overlap, sum of the low parts, and the part the matrix core kept. -/
+/-- Cut-off `q`, `H`, overlap, sum of the low parts, and the part the Matrix Core kept. -/
 def parts {P : Model} (x : BlockInput P) : Option (ℤ × ℚ × ℚ × ℚ × ℚ) :=
   match evalBlock x with
   | .ok t => some (t.split.q, t.split.H, t.split.overlap (wordValue t.d), sumQ t.split.lows,
@@ -36,7 +36,7 @@ example : mcEft cdna3Lost 0 = .ok (.fast 0x40100002) ∧
     mcEft cdna3Lost 0xC0100000 = .ok (.fast 0x40100002) ∧
     mcEft cdna3Lost 0x7F7FFFFF = .ok (.exact 0x40100002) := by decide +kernel
 
-/-! ## CDNA 3 FP16: the matrix core keeps part of a low part -/
+/-! ## CDNA 3 FP16: the Matrix Core keeps part of a low part -/
 
 def cdna3Kept : BlockInput cdna3F16 :=
   ⟨[0x3C00, 0x0E00] ++ List.replicate 6 0, [0x3C00, 0x1000] ++ List.replicate 6 0, 0⟩

@@ -1,6 +1,6 @@
 ---
 title: The Ozaki schemes at a glance
-description: What the Ozaki schemes do, what the Lean development proves about them on the Tensor Core and AMD matrix-core models, and where to read each proof.
+description: What the Ozaki schemes do, what the Lean development proves about them on the Tensor Core and AMD Matrix Core models, and where to read each proof.
 ---
 
 The Ozaki schemes compute a high-precision matrix product on a low-precision
@@ -8,7 +8,7 @@ matrix multiplier. They turn the inputs into small integers, which the matrix
 multiplier multiplies exactly, and combine the exact integer results. The
 [`ozaki/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/wip/ozaki) project
 formalizes three of them in Lean on this repository's NVIDIA Tensor Core model
-and on the AMD matrix-core model in `amd/`, following a set of bit-precise Z3
+and on the AMD Matrix Core model in `amd/`, following a set of bit-precise Z3
 models of the schemes. Every theorem uses only Lean's standard axioms, and
 every named declaration is re-checked by
 [con-leche](https://github.com/leanprover/con-leche), an independent Lean
@@ -38,7 +38,7 @@ literature.
   guardrail; the paper establishes Grade A by experiment.
 - **Dot products of any length** (split-K), **full block FMAs on A100 and
   H100** by a second pass through `C`, and **FP64 emulation** on fp16, bf16 and tf32
-  Tensor Cores and on AMD matrix cores, with the cheapest exact configuration
+  Tensor Cores and on AMD Matrix Cores, with the cheapest exact configuration
   per GPU.
 - **Correct rounding.** Each scheme has a variant that returns the round to
   nearest even of the exact product for every input, with the same result on

@@ -1,6 +1,6 @@
 ---
 title: Modeling scope and limits
-description: What the Lean model of AMD matrix cores covers, the modeling choices the paper leaves open, and what it leaves out.
+description: What the Lean model of AMD Matrix Cores covers, the modeling choices the paper leaves open, and what it leaves out.
 ---
 
 ## Covered

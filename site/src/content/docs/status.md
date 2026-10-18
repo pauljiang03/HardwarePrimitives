@@ -4,7 +4,7 @@ description: What Hardware Primitives can do today, how it is checked, what is n
 ---
 
 Hardware Primitives is a Lean 4 development about the arithmetic of GPU matrix multipliers:
-models of the block FMAs of NVIDIA Tensor Cores and AMD matrix cores, and their proven
+models of the block FMAs of NVIDIA Tensor Cores and AMD Matrix Cores, and their proven
 properties. This page summarizes what it can do today, how it is checked, what is not done, and
 what could come next. Work in progress that builds on the models is kept in the repository's
 `wip/` folder and is not covered here.
@@ -18,7 +18,7 @@ what could come next. Work in progress that builds on the models is kept in the 
 | NVIDIA Tensor Cores | V100; A100; Ada and L40S (A100's arithmetic); H100 and H200; B200 (Hopper's arithmetic for FP16, BF16 and TF32) | FP16, BF16, TF32 |
 | NVIDIA Tensor Cores, FP8 block FMAs | Ada, Hopper (`wgmma`) and B200 (`tcgen05.mma`) | E4M3, E5M2 |
 | NVIDIA Tensor Cores, FP8 `mma.sync` | H100, H200 and B200 (FP16 path with interleaving); RTX PRO 6000 | E4M3, E5M2 |
-| AMD matrix cores | CDNA 1, 2 and 3, and the sequential FMA of FP32 inputs | FP16, BF16 (incl. `_1k`), XF32, FP8 (E4M3 and E5M2 FNUZ, any mix) |
+| AMD Matrix Cores | CDNA 1, 2 and 3, and the sequential FMA of FP32 inputs | FP16, BF16 (incl. `_1k`), XF32, FP8 (E4M3 and E5M2 FNUZ, any mix) |
 
 The models are described on [the model at a glance](/HardwarePrimitives/tensor-core/) and
 [the AMD model at a glance](/HardwarePrimitives/matrix-core/).
@@ -30,7 +30,7 @@ The models are described on [the model at a glance](/HardwarePrimitives/tensor-c
 - An exact characterization of a family of non-monotonic inputs.
 - TC-EFT: the correctly rounded sum of a block FMA, with a 576-bit exact fallback.
 
-**Proven properties of the matrix core models**, per generation:
+**Proven properties of the Matrix Core models**, per generation:
 
 - **All:** per-block error bounds, also from the inputs alone, monotonicity in `c`, and the
   [MC-EFT correction](/HardwarePrimitives/matrix-core/properties/eft/) of a block from its output.
@@ -92,7 +92,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 **TC-EFT.** The paper's input-based precondition (17) derives five of the nine conditions of
 the fast-path check for FP32; the other four depend on the particular sum and remain
-assumptions. On the matrix cores no input-based condition is proven, the fallback uses exact
+assumptions. On the Matrix Cores no input-based condition is proven, the fallback uses exact
 rationals rather than a fixed-width word, and chained blocks are not covered.
 
 ## What could come next
@@ -109,7 +109,7 @@ rationals rather than a fixed-width word, and chained blocks are not covered.
 - **Run the models against GPUs where no recording exists:**
   - the inputs that no recorded row exercises (listed above);
   - FP8 with a nonzero `C` inside `wgmma` and `tcgen05.mma`;
-  - the AMD matrix cores, including one FP8 instruction that swaps two products between an odd
+  - the AMD Matrix Cores, including one FP8 instruction that swaps two products between an odd
     and an even slot to confirm the parity law.
 - **New architectures.** Model CDNA 4, Rubin and the FP4/FP6 paths once their arithmetic is
   characterized.

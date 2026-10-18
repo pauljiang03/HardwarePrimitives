@@ -3,7 +3,7 @@ import MMAlgebra.Sub
 
 /-! # CDNA 1 and CDNA 2 on every input
 
-A matrix-core block holding an operand pair with a non-finite word fails (`mc_block_bad`), so a
+A Matrix Core block holding an operand pair with a non-finite word fails (`mc_block_bad`), so a
 term holding such a product evaluates to `none`, and two terms over the same products that agree
 on every input of finite operands agree on every input (`MMAlgebra.agree_of_good`). With the
 theorems on finite inputs: two terms are equivalent on CDNA 1 fp16 exactly when their correctly
@@ -29,7 +29,7 @@ theorem mapM_none_of_mem {γ δ : Type} (f : γ → Option δ) :
       | none => simp
       | some b => simp [mapM_none_of_mem f hx hf]
 
-/-- **A matrix-core block holding a pair with a non-finite word fails.** -/
+/-- **A Matrix Core block holding a pair with a non-finite word fails.** -/
 theorem mc_block_bad (P : Model) (d : F32) (ps : List (Option (P.a.Word × P.b.Word)))
     (a : P.a.Word × P.b.Word) (ha : some a ∈ ps) (hb : BadPair P a) : (mcMachine P).block d ps = none := by
   show (blockBits (P := P) ⟨(slotPairs P ps).map Prod.fst, (slotPairs P ps).map Prod.snd, d⟩).toOption = none
@@ -65,7 +65,7 @@ theorem finite_of_not_bad {P : Model} {q : P.a.Word × P.b.Word} (h : ¬ BadPair
     | some v => simp
 
 /-- Two terms over the same products that agree on every input of finite operands agree on every
-input, on every matrix-core model whose zero pair is finite. -/
+input, on every Matrix Core model whose zero pair is finite. -/
 theorem mc_agree_all (P : Model) (hz : ¬ BadPair P (0, 0)) (t₁ t₂ : MMAlgebra.Term)
     (hl : ∀ i, i ∈ t₁.leaves ↔ i ∈ t₂.leaves)
     (hg : ∀ q, FiniteIn P q → MMAlgebra.eval (mcMachine P) q 0 0 t₁ = MMAlgebra.eval (mcMachine P) q 0 0 t₂)

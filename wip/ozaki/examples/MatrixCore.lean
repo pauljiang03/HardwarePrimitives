@@ -1,6 +1,6 @@
 import OzakiMC
 
-/-! # The Ozaki schemes on the AMD matrix-core model
+/-! # The Ozaki schemes on the AMD Matrix Core model
 
 Run with `lake env lean examples/MatrixCore.lean` from `ozaki/`. Every `example` is checked by
 kernel evaluation of the same definitions the theorems are about. -/

@@ -1,10 +1,10 @@
 import OzakiMC.Schemes
 import Ozaki.Success
 
-/-! # The matrix-core pipelines return a value
+/-! # The Matrix Core pipelines return a value
 
 The Z3 models check that no NaN or infinity ever appears (`[H.1]` of both models). On the
-matrix-core model the schemes return `none` only when a binary32 rounding overflows, and
+Matrix Core model the schemes return `none` only when a binary32 rounding overflows, and
 `MatrixCore`'s round to nearest even succeeds below the overflow threshold, so on every value of
 magnitude at most `maxFinite32` (`round32Value_succeeds`). With an exact matrix multiplier:
 
@@ -33,7 +33,7 @@ theorem round32Value_succeeds : RoundSucceeds round32Value maxFinite32 := by
 theorem fp32Add_succeeds : AddSucceeds fp32Add maxFinite32 := by
   rw [fp32Add_eq_addOfRound]; exact addOfRound_succeeds round32Value_succeeds
 
-/-- **Ozaki-I returns a value on the matrix core** (`[H.1]`). -/
+/-- **Ozaki-I returns a value on the Matrix Core** (`[H.1]`). -/
 theorem mcOzaki1_isSome {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (s : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)
     (hL : (1 + 2 ^ (-24 : ℤ)) ^ (trianglePairs s).length *
@@ -44,7 +44,7 @@ theorem mcOzaki1_isSome {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (s : �
   ozaki1_isSome hP.exactOn (Rat.le_of_lt (two_pow_pos _)) (Rat.le_of_lt (two_pow_pos _))
     fp32Add_within fp32Add_succeeds hlen hk hL
 
-/-- **Ozaki-II returns a value on the matrix core** (`[H.1]`). -/
+/-- **Ozaki-II returns a value on the Matrix Core** (`[H.1]`). -/
 theorem mcOzaki2_isSome {P : Model} {b : ℕ} (hP : ExactMultiplier P b) {B : CRTBasis} (hB : B.Valid)
     (hmb : ∀ m ∈ B.moduli, m ≤ 2 ^ (b + 1)) (Pb : ℕ) {x y : List ℚ} (hlen : x.length = y.length)
     (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)

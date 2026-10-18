@@ -463,7 +463,7 @@ def cdna2Alg : MMAlgebra.PairAlg cdna2M 4 :=
 
 /-! ## Completeness and the `c`-split law -/
 
-/-- The CDNA 2 machine with flushed products evaluates terms as the matrix-core model does. -/
+/-- The CDNA 2 machine with flushed products evaluates terms as the Matrix Core model does. -/
 theorem eval_cdna2M (p : ℕ → cdna2F16.a.Word × cdna2F16.b.Word) (c h : F32) :
     ∀ t : MMAlgebra.Term, MMAlgebra.eval cdna2M p c h t = MMAlgebra.eval (mcMachine cdna2F16) p c h t
   | .zero => rfl

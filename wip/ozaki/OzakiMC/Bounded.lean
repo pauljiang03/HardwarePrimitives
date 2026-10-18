@@ -3,14 +3,14 @@ import Ozaki.BoundedOzaki
 import Ozaki.BoundedInt
 import Ozaki.BoundedChecked
 
-/-! # Correctly rounded Ozaki-I with bounded registers on the matrix-core model
+/-! # Correctly rounded Ozaki-I with bounded registers on the Matrix Core model
 
-`Ozaki.ozaki1CRB` on matrix-core blocks with split-K: every slice product on the hardware model,
+`Ozaki.ozaki1CRB` on Matrix Core blocks with split-K: every slice product on the hardware model,
 the rounding test, the exact fallback and the final rounding in integer registers whose width does
 not depend on the inputs' exponents, for binary32 and FP64 inputs of any length. `mcOzaki1CRID`,
 `mcOzaki1CRIL` take the stored entries `(m, e)` and slice in integers too (`Ozaki.ozaki1CRI`);
 `mcOzaki1CRIDS`, `mcOzaki1CRILS` add IEEE's signed zeros. `cdna3F16_fp64CRI_widths` and
-`cdna3F16_binary32CRI_widths` bound every integer off the matrix core together
+`cdna3F16_binary32CRI_widths` bound every integer off the Matrix Core together
 (`Ozaki.Checked.ozaki1CRIC`). -/
 
 open MatrixCore
@@ -29,7 +29,7 @@ theorem mcOzaki1CRBL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2
     mcOzaki1CRBL P b W ss smax x y = rne32Q (dot x y) :=
   ozaki1CRB32_eq (mcSplitK_exactOn hP hb _) W ss (by omega) hsmax hlen (Nat.le_refl _) hx hy
 
-/-- **Correctly rounded FP64 GEMM on AMD matrix cores with bounded registers.** -/
+/-- **Correctly rounded FP64 GEMM on AMD Matrix Cores with bounded registers.** -/
 theorem mcOzaki1CRBD_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :
@@ -54,7 +54,7 @@ def mcOzaki1CRILS (P : Model) (b W : ℕ) (ss : List ℕ) (smax : ℕ) (xs ys : 
     Option Signed :=
   ozaki1CRIS (mcSplitK P b) 24 (-126) 127 b W ss smax xs ys
 
-/-- **Correctly rounded FP64 GEMM on AMD matrix cores, every step off the matrix core in
+/-- **Correctly rounded FP64 GEMM on AMD Matrix Cores, every step off the Matrix Core in
 integers.** -/
 theorem mcOzaki1CRID_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List (ℤ × ℤ)}

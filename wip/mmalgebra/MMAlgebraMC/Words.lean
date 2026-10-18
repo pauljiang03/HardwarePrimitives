@@ -1,7 +1,7 @@
 import MMAlgebraMC.Exact
 import OzakiMC
 
-/-! # Binary32 words on the matrix-core machine
+/-! # Binary32 words on the Matrix Core machine
 
 Facts about binary32 words used by the reduction algebra on the AMD models: a finite word is
 determined by its sign and value, so rounding the value of a finite word other than `−0` returns

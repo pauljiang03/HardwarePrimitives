@@ -207,7 +207,7 @@ def tc_block(P, prods, c):
     return w
 
 
-# ---------------------------------------------------------------- AMD matrix cores
+# ---------------------------------------------------------------- AMD Matrix Cores
 class MCProfile:
     def __init__(self, name, fmt, nfma, acc, subnormals=True, product_overflow=False):
         self.name, self.fmt, self.K, self.acc = name, fmt, nfma, acc

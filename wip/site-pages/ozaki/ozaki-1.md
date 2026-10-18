@@ -1,6 +1,6 @@
 ---
 title: Ozaki-I, proven end to end
-description: The complete Lean proof of Ozaki-I on the Tensor Core and AMD matrix-core models, from exact slicing to the binary32 or binary64 result, for dot products of any length, and a variant that is always correctly rounded.
+description: The complete Lean proof of Ozaki-I on the Tensor Core and AMD Matrix Core models, from exact slicing to the binary32 or binary64 result, for dot products of any length, and a variant that is always correctly rounded.
 ---
 
 Ozaki-I (Ozaki, Ogita, Oishi and Rump, 2012) computes a high-precision matrix
@@ -10,7 +10,7 @@ products of small integers are exact, and adds the scaled products. This page fo
 whole proof, from the slicing of the inputs to the value the hardware returns.
 Every step is a Lean theorem in the [`ozaki/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/wip/ozaki)
 project, which depends on the Tensor Core model of this repository and on the
-AMD matrix-core model in `amd/`. Lean checks all of it with only its standard
+AMD Matrix Core model in `amd/`. Lean checks all of it with only its standard
 axioms.
 
 The project follows a set of bit-precise Z3 models of the schemes. A Z3 runtime
@@ -190,7 +190,7 @@ and `8`-bit slices on bf16 ([`h100F16_exactOn2`](https://github.com/pauljiang03/
 - Ozaki-I's error bound holds for every `k` ([`tcOzaki1L_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/LongDot.lean#L114)).
 - **FP64 emulation.** With binary64 recombination the same bound holds with
   `u = 2^-53` ([`tcOzaki1D_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/LongDot.lean#L183), [`mcOzaki1D_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/LongDot.lean#L96)), on fp16, bf16 and
-  tf32 Tensor Cores and on AMD matrix cores.
+  tf32 Tensor Cores and on AMD Matrix Cores.
 
 ## Correctly rounded Ozaki-I
 
@@ -211,7 +211,7 @@ theorem tcOzaki1CRD_eq {p : Model} {b : ℕ} (hmult : (tcMultiplier p).ExactOn b
 
 This is correctly rounded FP64 GEMM on fp16, bf16 or tf32 Tensor Cores for
 binary64 inputs of any length ([`tcOzaki1CRD_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/LongDot.lean#L209)), and the same holds on AMD
-matrix cores ([`mcOzaki1CRD_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/LongDot.lean#L120)) and for binary32 ([`tcOzaki1CRL_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/LongDot.lean#L150)). The
+Matrix Cores ([`mcOzaki1CRD_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/LongDot.lean#L120)) and for binary32 ([`tcOzaki1CRL_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/LongDot.lean#L150)). The
 whole pipeline also runs in fixed-width integer registers, with one theorem
 bounding every register, and with IEEE special values. All of it is on the
 [correct rounding](/HardwarePrimitives/ozaki/correct-rounding/) page.
@@ -235,7 +235,7 @@ bounding every register, and with IEEE special values. All of it is on the
 ## What the proof assumes
 
 - **The hardware models.** The theorems are about the Tensor Core and
-  matrix-core models; that GPUs behave like them rests on the models'
+  Matrix Core models; that GPUs behave like them rests on the models'
   [validation](/HardwarePrimitives/tensor-core/validation/).
 - **The matrix multiplier's conditions.** Slices fit the input format (`b ≤ 11` for fp16
   and tf32, `b ≤ 8` for bf16) and `2b ≤ F`; with split-K, chunks of

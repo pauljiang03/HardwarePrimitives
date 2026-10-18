@@ -1,12 +1,12 @@
 ---
 title: What the hardware semantics give
-description: Where the bit-level Tensor Core and matrix-core models enter the Ozaki proofs - exact slice products derived instead of assumed, the exact condition with cancellation, the two-pass recovery, the per-GPU choice of slices and chunks, and where NVIDIA and AMD differ.
+description: Where the bit-level Tensor Core and Matrix Core models enter the Ozaki proofs - exact slice products derived instead of assumed, the exact condition with cancellation, the two-pass recovery, the per-GPU choice of slices and chunks, and where NVIDIA and AMD differ.
 ---
 
 Every Ozaki scheme assumes that the matrix multiplier multiplies its small
 integers exactly. Prior work states that assumption and backs it with
 documentation and tests. Here it is a theorem on each variant, derived from the bit-level
-NVIDIA Tensor Core model of this repository and the AMD matrix-core model in
+NVIDIA Tensor Core model of this repository and the AMD Matrix Core model in
 `amd/`. Both models are validated against GPUs by measurement, and the
 theorems are about the models.
 

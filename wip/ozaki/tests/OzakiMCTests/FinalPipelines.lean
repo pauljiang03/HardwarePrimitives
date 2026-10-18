@@ -1,7 +1,7 @@
 import OzakiMC.Ozaki2Checked
 import OzakiMC.IEEEBounded
 
-/-! # Integer Ozaki-II on the matrix-core model: jumping top-down summation, signed zeros, widths, specials
+/-! # Integer Ozaki-II on the Matrix Core model: jumping top-down summation, signed zeros, widths, specials
 
 The cases of `tests/OzakiTCTests/FinalPipelines.lean` for Ozaki-II on CDNA 3 fp16 blocks with
 split-K, checked by kernel evaluation: the configuration and the jumping exact fallback alone

@@ -6,7 +6,7 @@ and every assumption. All results depend only on Lean's standard axioms (`propex
 theorem. *The paper* is Khattak, Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
 (arXiv 2609.14845).
 
-## The matrix-core model
+## The Matrix Core model
 
 | What it says | Lean name | File |
 | --- | --- | --- |

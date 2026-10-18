@@ -3,12 +3,12 @@ import Ozaki.SplitK
 import Ozaki.Exact64
 import Ozaki.TruncatedSum
 
-/-! # Long dot products on the AMD matrix-core model
+/-! # Long dot products on the AMD Matrix Core model
 
-Split-K on matrix-core blocks: chunks of `2^(24 − 2b)` terms, each an exact matrix-core dot
+Split-K on Matrix Core blocks: chunks of `2^(24 − 2b)` terms, each an exact Matrix Core dot
 product, added exactly. With it the AMD theorems hold for every inner dimension: Ozaki-I's error
 bound, and correctly rounded binary32 Ozaki-I and Ozaki-II whose slice products,
-including the exact fallback's, run on matrix-core blocks. The correctly rounded results are stated
+including the exact fallback's, run on Matrix Core blocks. The correctly rounded results are stated
 with the hardware-independent IEEE round to nearest even of `Ozaki.Binary` (`rne32Q`, `rne64`), the
 same function as on the Tensor Core model.
 
@@ -16,24 +16,24 @@ FP64 emulation uses the hardware-independent binary64 round to nearest even of `
 (`rne64`), since `MatrixCore` models no binary64 arithmetic: Ozaki-I with binary64 recombination
 (`mcOzaki1D_error`), and correctly rounded binary64 results from Ozaki-I and Ozaki-II
 (`mcOzaki1CRD_eq`, `mcOzaki2CRD_eq`) for binary64 inputs of any length, every slice product on
-matrix-core blocks. -/
+Matrix Core blocks. -/
 
 open MatrixCore
 
 namespace Ozaki.MC
 
-/-- **Split-K on matrix-core blocks.** -/
+/-- **Split-K on Matrix Core blocks.** -/
 def mcSplitK (P : Model) (b : ℕ) : MatrixMultiplier := chunked (chunkLen b) (mcMultiplier P)
 
 theorem mcSplitK_exactOn {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (B : ℕ) :
     (mcSplitK P b).ExactOn b B :=
   chunked_exactOn hP.exactOn (chunkLen_pos b) (chunkLen_exactnessBound hb) B
 
-/-- Ozaki-I on matrix-core blocks with split-K, binary32 recombination. -/
+/-- Ozaki-I on Matrix Core blocks with split-K, binary32 recombination. -/
 def mcOzaki1L (P : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (mcSplitK P b) fp32Add b s x y
 
-/-- **Ozaki-I on the matrix core for any inner dimension.** -/
+/-- **Ozaki-I on the Matrix Core for any inner dimension.** -/
 theorem mcOzaki1L_error {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (s : ℕ)
     {x y : List ℚ} (hlen : x.length = y.length) {v : ℚ} (hv : mcOzaki1L P b s x y = some v) :
     Rat.abs (v - dot x y) ≤
@@ -56,12 +56,12 @@ def mcOzaki1CRL (P : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List �
   ozaki1CRE (mcSplitK P b) rne32Q b ss smax x y
 
 /-- Correctly rounded binary32 Ozaki-II of any inner dimension; every residue and slice product on
-matrix-core blocks. -/
+Matrix Core blocks. -/
 def mcOzaki2CRL (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRE (mcSplitK P b) rne32Q cfgs b smax x y
 
-/-- **Correctly rounded binary32 Ozaki-I on the matrix core, for any inner dimension**: the IEEE round
+/-- **Correctly rounded binary32 Ozaki-I on the Matrix Core, for any inner dimension**: the IEEE round
 to nearest even of `x · y`, the same function as on the Tensor Core model. -/
 theorem mcOzaki1CRL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (ss : List ℕ) {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
@@ -70,7 +70,7 @@ theorem mcOzaki1CRL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 
   ozaki1CRE_eq rne32Q_nearest rne32Q_intervals (mcSplitK_exactOn hP hb _) ss hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
-/-- **Correctly rounded binary32 Ozaki-II on the matrix core, for any inner dimension.** -/
+/-- **Correctly rounded binary32 Ozaki-II on the Matrix Core, for any inner dimension.** -/
 theorem mcOzaki2CRL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 277 < smax * (b + 1)) {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -88,7 +88,7 @@ def fp64Add (a b : ℚ) : Option ℚ := rne64 (a + b)
 theorem fp64Add_within : AddWithin fp64Add (2 ^ (-53 : ℤ)) (2 ^ (-1075 : ℤ)) :=
   addOfRound_within rne64_within
 
-/-- **FP64 emulation, Ozaki-I**: slices on matrix-core blocks with split-K, binary64
+/-- **FP64 emulation, Ozaki-I**: slices on Matrix Core blocks with split-K, binary64
 recombination. -/
 def mcOzaki1D (P : Model) (b s : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1 (mcSplitK P b) fp64Add b s x y
@@ -104,7 +104,7 @@ theorem mcOzaki1D_error {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2
   ozaki1_error (mcSplitK_exactOn hP hb _) (Rat.le_of_lt (two_pow_pos _))
     (Rat.le_of_lt (two_pow_pos _)) fp64Add_within hlen (Nat.le_refl _) hv
 
-/-- Correctly rounded FP64 emulation by Ozaki-I; every slice product on matrix-core blocks. -/
+/-- Correctly rounded FP64 emulation by Ozaki-I; every slice product on Matrix Core blocks. -/
 def mcOzaki1CRD (P : Model) (b : ℕ) (ss : List ℕ) (smax : ℕ) (x y : List ℚ) : Option ℚ :=
   ozaki1CRE (mcSplitK P b) rne64 b ss smax x y
 
@@ -114,7 +114,7 @@ def mcOzaki2CRD (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y 
     Option ℚ :=
   ozaki2CRE (mcSplitK P b) rne64 cfgs b smax x y
 
-/-- **FP64 GEMM on AMD matrix cores, correctly rounded.** For binary64 inputs of any length, on any
+/-- **FP64 GEMM on AMD Matrix Cores, correctly rounded.** For binary64 inputs of any length, on any
 variant whose matrix multiplier is exact on `b`-bit slices, the result is the binary64 round to
 nearest of `x · y`. -/
 theorem mcOzaki1CRD_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
@@ -124,7 +124,7 @@ theorem mcOzaki1CRD_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 
   ozaki1CRE_eq rne64_nearest rne64_intervals (mcSplitK_exactOn hP hb _) ss hlen (Nat.le_refl _)
     (vanish64 (by omega) hsmax hx hy)
 
-/-- **FP64 GEMM by Ozaki-II on AMD matrix cores, correctly rounded.** -/
+/-- **FP64 GEMM by Ozaki-II on AMD Matrix Cores, correctly rounded.** -/
 theorem mcOzaki2CRD_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hcfg : ∀ c ∈ cfgs, c.1.Valid ∧ (∀ m ∈ c.1.moduli, m ≤ 2 ^ (b + 1)) ∧
@@ -163,7 +163,7 @@ theorem mcOzaki1CRLW_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2
   ozaki1CRW_eq rne32Q_nearest rne32Q_intervals (mcSplitK_exactOn hP hb _) W ss hlen
     (Nat.le_refl _) (vanish32Q (by omega) hsmax hx hy)
 
-/-- **Correctly rounded FP64 GEMM on AMD matrix cores with a two-word accumulator.** -/
+/-- **Correctly rounded FP64 GEMM on AMD Matrix Cores with a two-word accumulator.** -/
 theorem mcOzaki1CRDW_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24) (W : ℕ)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {x y : List ℚ}
     (hx : ∀ a ∈ x, Binary64Value a) (hy : ∀ a ∈ y, Binary64Value a) (hlen : x.length = y.length) :

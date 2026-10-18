@@ -1,8 +1,8 @@
 import OzakiMC.Schemes
 
-/-! # Where the conditions bind on AMD matrix cores
+/-! # Where the conditions bind on AMD Matrix Cores
 
-Kernel-checked evaluations of the matrix-core model that show the conditions of the exactness
+Kernel-checked evaluations of the Matrix Core model that show the conditions of the exactness
 theorems at work. Operand words are fp16 (`0x67FF = 2047`, `0x3C00 = 1`, `0xE7FF = −2047`) or
 binary32 (`0x44FFE000 = 2047`, `0x3F800000 = 1`, `0xC4FFE000 = −2047`).
 

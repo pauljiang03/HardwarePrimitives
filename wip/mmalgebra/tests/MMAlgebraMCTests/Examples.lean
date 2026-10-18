@@ -1,6 +1,6 @@
 import MMAlgebraMC
 
-/-! # Worked examples on the matrix-core model -/
+/-! # Worked examples on the Matrix Core model -/
 
 open MatrixCore MMAlgebra.MC
 

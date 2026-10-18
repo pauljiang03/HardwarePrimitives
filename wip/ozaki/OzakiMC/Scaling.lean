@@ -1,7 +1,7 @@
 import OzakiMC.Success
 import Ozaki.Checks
 
-/-! # Power-of-two scaling in binary32 on the matrix-core model
+/-! # Power-of-two scaling in binary32 on the Matrix Core model
 
 The statements of `OzakiTC.Scaling` with `MatrixCore`'s binary32 values and round to nearest:
 `2^e` is a binary32 value (Ozaki-I `[H.2]`, Ozaki-II `[H.3]`), a slice product times its scale

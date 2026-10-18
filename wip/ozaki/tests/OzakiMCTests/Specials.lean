@@ -1,6 +1,6 @@
 import OzakiMC.IEEESchemes
 
-/-! # IEEE special values on the matrix-core model
+/-! # IEEE special values on the Matrix Core model
 
 The specification's special cases for correctly rounded FP64 by Ozaki-I on CDNA 3 fp16 blocks with
 special values (`mcOzaki1CRDI`), each checked against `dotIEEE` by kernel evaluation: a NaN input,

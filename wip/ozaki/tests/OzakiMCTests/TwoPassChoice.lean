@@ -1,7 +1,7 @@
 import OzakiMCTests.LongFP64
 import OzakiMC.Ozaki2Choice
 
-/-! # Two passes and the chosen configurations on the matrix-core model
+/-! # Two passes and the chosen configurations on the Matrix Core model
 
 * `mcMultiplier2` on CDNA 3 fp16 is exact on `11`-bit vectors whose full block FMAs exceed the
   one-pass exactness bound: nine products `2047 · 2047` (two blocks, the first of eight products

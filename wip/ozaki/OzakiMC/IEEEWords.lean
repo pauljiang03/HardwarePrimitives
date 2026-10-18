@@ -8,7 +8,7 @@ MatrixCore with IEEE special values (binary32, binary16, bfloat16, the 19-bit fo
 word, it gives the datum MatrixCore's `decodeNat` gives: the same infinity or NaN, and for a finite
 word the same value and sign bit (`decodeWord_decodeNat`). On binary32 words it is MatrixCore's
 binary32 decoding (`decodeWord_binary32`, `decodeWord_value32`). `mcOzaki1CRILW_eq` runs correctly
-rounded binary32 Ozaki-I in integers on binary32 words on a matrix-core variant, with every step,
+rounded binary32 Ozaki-I in integers on binary32 words on a Matrix Core variant, with every step,
 special cases included, in integer arithmetic. -/
 
 open MatrixCore
@@ -74,7 +74,7 @@ theorem decodeWord_value32 {w : F32} {v : ℚ} (h : value32 w = some v) :
 theorem decodeWord_inFormat32 (w : ℕ) : (decodeWord .binary32 w).InFormat 24 (-126) 127 :=
   decodeWord_inFormat .binary32 (by decide) w
 
-/-- **Correctly rounded binary32 Ozaki-I on binary32 words on a matrix-core variant, every step in
+/-- **Correctly rounded binary32 Ozaki-I on binary32 words on a Matrix Core variant, every step in
 integer arithmetic**: the words decoded by integer operations, the special cases decided on the
 stored data, the finite entries through the integer scheme with the integer sign oracle; the
 result meets the IEEE specification on the words as MatrixCore decodes them. -/

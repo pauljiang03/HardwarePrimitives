@@ -16,7 +16,7 @@ exponent span `ESC` comes from the data.
 * **The cost** of an encoding is `s² · ⌈k / K₈⌉` INT8 blocks of `K₈` byte products. The INT8
   matrix multiplier of this development has no block FMA structure, since INT8 hardware semantics
   are out of scope (issue #2); `K₈ = 32`, the `k` of the `m16n8k32` integer MMA shape, is a modeling
-  assumption. INT8 blocks are not comparable with the Tensor Core or matrix-core blocks of the other
+  assumption. INT8 blocks are not comparable with the Tensor Core or Matrix Core blocks of the other
   choices without the instructions' relative throughput, which the models do not give.
 
 **The remap encoding is never worse than the naive one** (`adpCost_remap_le_naive`), as the paper

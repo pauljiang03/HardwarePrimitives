@@ -3,9 +3,9 @@ import MMAlgebraMC.Exact
 import MMAlgebraMC.Pinned
 import OzakiMC
 
-/-! # Every schedule is an exact matrix multiplier (matrix-core model)
+/-! # Every schedule is an exact matrix multiplier (Matrix Core model)
 
-`scheduleMultiplier P S` runs any reduction schedule `S` on the AMD matrix-core model;
+`scheduleMultiplier P S` runs any reduction schedule `S` on the AMD Matrix Core model;
 `scheduleMultiplier_exactOn` shows that on every exact configuration (SFMA, CDNA 1, CDNA 2, and
 CDNA 3 fp16 and bf16) every schedule is exact on `b`-bit integers whose products total at most
 `2^24`; on CDNA 2 that bound also covers every pairwise sum inside a block. So Ozaki-I and Ozaki-II
@@ -22,7 +22,7 @@ open MatrixCore Ozaki Ozaki.MC
 namespace MMAlgebra.MC
 
 /-- The matrix multiplier that encodes two integer vectors as operand words and evaluates the
-schedule's term for their length on the matrix-core model, from `c = 0`. -/
+schedule's term for their length on the Matrix Core model, from `c = 0`. -/
 def scheduleMultiplier (P : Model) (S : MMAlgebra.Schedule P.nfma) : MatrixMultiplier :=
   fun x y => do
     let ax ← x.mapM fun z : ℤ => P.a.encodeExact (z : ℚ)

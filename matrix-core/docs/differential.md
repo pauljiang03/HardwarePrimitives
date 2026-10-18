@@ -1,7 +1,7 @@
 # Differential testing against the MATLAB models and MMA-Sim
 
 `scripts/matlab_diff.py` compares the Lean model with the authors' MATLAB Tensor Core v0.6
-matrix-core models (`MI100MC.m`, `MI210MC.m`, `MI300AMC.m`, and the generalized model
+Matrix Core models (`MI100MC.m`, `MI210MC.m`, `MI300AMC.m`, and the generalized model
 `models/tools/Generic_BFMA_TC.m`, commit `79143bd`) on random and targeted inputs.
 
 ```sh

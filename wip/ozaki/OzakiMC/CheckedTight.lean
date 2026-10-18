@@ -1,10 +1,10 @@
 import OzakiMC.Ozaki2Checked
 import Ozaki.CheckedTight
 
-/-! # Tighter widths on the matrix-core model, with split-K guarded
+/-! # Tighter widths on the Matrix Core model, with split-K guarded
 
 Ozaki-I and Ozaki-II on CDNA 3 fp16 blocks through the guarded split-K matrix multiplier
-(`Ozaki.Checked.chunkedC`): every integer outside the matrix-core blocks' own arithmetic, split-K's
+(`Ozaki.Checked.chunkedC`): every integer outside the Matrix Core blocks' own arithmetic, split-K's
 chunk sums included, within `263` bits and every exponent and counter within `17` bits for FP64
 (`cdna3F16_fp64CRI_checked`, `cdna3F16_fp64CRJ_checked`), and `207` and `15` bits for binary32
 Ozaki-I (`cdna3F16_binary32CRI_checked`). -/

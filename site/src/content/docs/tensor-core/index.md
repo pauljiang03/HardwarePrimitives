@@ -168,5 +168,5 @@ Each stage has its own page:
 9. [Bitvector datapath](/HardwarePrimitives/tensor-core/datapath/): the model in fixed-width registers, proven to give the same output word.
 10. [Hardware validation](/HardwarePrimitives/tensor-core/validation/): replay of GPU measurements.
 
-The AMD matrix cores have a model of their own, with round-to-nearest output
+The AMD Matrix Cores have a model of their own, with round-to-nearest output
 and late addition of `c`: see [the AMD model at a glance](/HardwarePrimitives/matrix-core/).

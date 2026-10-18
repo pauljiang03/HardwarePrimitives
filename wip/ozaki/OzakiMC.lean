@@ -27,7 +27,7 @@ import OzakiMC.TwoPass
 import OzakiMC.CRRules
 import OzakiMC.IEEEWords
 
-/-! # The Ozaki schemes on the AMD matrix-core model
+/-! # The Ozaki schemes on the AMD Matrix Core model
 
 The matrix multiplier of the `Ozaki` library built from the block model of `MatrixCore`, its
 exactness on the SFMA, CDNA 1, CDNA 2 and CDNA 3 fp16, bf16 and XF32 variants, and Ozaki-I and

@@ -1,10 +1,10 @@
 import OzakiMC.LongDot
 import Ozaki.BoundedOzaki2Int
 
-/-! # Ozaki-II with bounded registers and signed zeros on the matrix-core model
+/-! # Ozaki-II with bounded registers and signed zeros on the Matrix Core model
 
 `Ozaki.ozaki2CRB` (the rounding test on integer enclosures, then Ozaki-I's bounded exact fallback)
-and `Ozaki.ozaki2CRS`, `Ozaki.ozaki2CRBS` (signed zeros) with matrix-core blocks and split-K as the
+and `Ozaki.ozaki2CRS`, `Ozaki.ozaki2CRBS` (signed zeros) with Matrix Core blocks and split-K as the
 matrix multiplier: every residue and slice product on the hardware model, for binary64 and binary32
 inputs of any length; and `Ozaki.ozaki2CRZ`, the same from integer-pair inputs with every step
 integer arithmetic. -/
@@ -13,17 +13,17 @@ open MatrixCore
 
 namespace Ozaki.MC
 
-/-- Correctly rounded FP64 by Ozaki-II with bounded registers on matrix-core blocks. -/
+/-- Correctly rounded FP64 by Ozaki-II with bounded registers on Matrix Core blocks. -/
 def mcOzaki2CRB (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRB (mcSplitK P b) 53 (-1022) 1023 cfgs b smax x y
 
-/-- Correctly rounded binary32 Ozaki-II with bounded registers on matrix-core blocks. -/
+/-- Correctly rounded binary32 Ozaki-II with bounded registers on Matrix Core blocks. -/
 def mcOzaki2CRBL (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (x y : List ℚ) :
     Option ℚ :=
   ozaki2CRB (mcSplitK P b) 24 (-126) 127 cfgs b smax x y
 
-/-- **FP64 GEMM by Ozaki-II on AMD matrix cores with bounded registers, correctly rounded**, any
+/-- **FP64 GEMM by Ozaki-II on AMD Matrix Cores with bounded registers, correctly rounded**, any
 length. -/
 theorem mcOzaki2CRB_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     (hb : 2 * b ≤ 24) {cfgs : List (CRTBasis × ℕ)} {smax : ℕ} (hsmax : 2098 < smax * (b + 1))
@@ -45,7 +45,7 @@ theorem mcOzaki2CRBL_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
     mcOzaki2CRBL P cfgs b smax x y = rne32Q (dot x y) :=
   ozaki2CRB32_eq (mcSplitK_exactOn hP hb _) (by omega) hsmax hcfg hlen (Nat.le_refl _) hx hy
 
-/-- Correctly rounded FP64 Ozaki-II with signed zeros on matrix-core blocks. -/
+/-- Correctly rounded FP64 Ozaki-II with signed zeros on Matrix Core blocks. -/
 def mcOzaki2CRDS (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List Signed) :
     Option Signed :=
   ozaki2CRS (mcSplitK P b) rne64 cfgs b smax xs ys
@@ -81,7 +81,7 @@ theorem mcOzaki2CRBS_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b)
   ozaki2CRBS_eq (by decide) (by decide) (mcSplitK_exactOn hP hb _) hcfg hlen (Nat.le_refl _)
     (vanish64 (by omega) hsmax (vals_all hx) (vals_all hy))
 
-/-- **Correctly rounded FP64 by Ozaki-II as an integer pipeline on matrix-core blocks**: binary64
+/-- **Correctly rounded FP64 by Ozaki-II as an integer pipeline on Matrix Core blocks**: binary64
 inputs as integer pairs `(m, e)`. -/
 def mcOzaki2CRZ (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=

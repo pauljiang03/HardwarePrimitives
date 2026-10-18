@@ -4,7 +4,7 @@ import MMAlgebraMCTests.Examples
 
 /-! # Trust audit
 
-Every theorem of the reduction algebra on the matrix-core model, and of its worked examples, depends
+Every theorem of the reduction algebra on the Matrix Core model, and of its worked examples, depends
 only on Lean's standard axioms `propext`, `Classical.choice` and `Quot.sound`. -/
 
 open Lean Elab Command

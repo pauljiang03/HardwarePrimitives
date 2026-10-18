@@ -1,6 +1,6 @@
 import MatrixCore.Numerics
 
-/-! # Matrix-core feature parameters
+/-! # Matrix Core feature parameters
 
 A `Model` records the numerical features of one block of `N_FMA` products, following the paper's
 feature comparison table. -/

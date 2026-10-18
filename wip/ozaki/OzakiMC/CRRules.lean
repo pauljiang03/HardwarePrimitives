@@ -1,9 +1,9 @@
 import OzakiMC.Ozaki2Choice
 import Ozaki.Adaptive
 
-/-! # The two design rules and the correct-rounding margin on the matrix-core model
+/-! # The two design rules and the correct-rounding margin on the Matrix Core model
 
-`Ozaki.Adaptive`'s rules on matrix-core blocks with split-K (slice counts from the inner dimension,
+`Ozaki.Adaptive`'s rules on Matrix Core blocks with split-K (slice counts from the inner dimension,
 and the shortcut to the exact fallback), each correctly rounded for every length, and the
 per-variant comparison of Ozaki-I and Ozaki-II with the margin of `Ozaki.SliceRuleCR`: at
 `k = 1024`, `t = 63` for FP64 and `34` for binary32.

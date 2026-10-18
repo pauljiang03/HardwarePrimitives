@@ -3,9 +3,9 @@ import MMAlgebraMC.Chain
 import OzakiMC.Cancellation
 import OzakiMC.Models
 
-/-! # Inside the exact region every schedule agrees (matrix-core model)
+/-! # Inside the exact region every schedule agrees (Matrix Core model)
 
-`mcMachine P` is the matrix-core model as a `MMAlgebra.Machine`: binary32 accumulator words,
+`mcMachine P` is the Matrix Core model as a `MMAlgebra.Machine`: binary32 accumulator words,
 operand pairs, `blockBits` for a block (an empty slot is the zero pair), and binary32
 round-to-nearest-even addition. On an exact configuration (SFMA, CDNA 1, CDNA 2, and CDNA 3 fp16
 and bf16) with integer operands, an integer `c` and `|c| + Σ|aᵢbᵢ| ≤ 2^24`, every block and every
@@ -21,7 +21,7 @@ namespace MMAlgebra.MC
 def slotPairs (P : Model) (ps : List (Option (P.a.Word × P.b.Word))) : List (P.a.Word × P.b.Word) :=
   ps.map fun o => o.getD (0, 0)
 
-/-- The matrix-core model as a machine for reduction terms. -/
+/-- The Matrix Core model as a machine for reduction terms. -/
 def mcMachine (P : Model) : MMAlgebra.Machine (P.a.Word × P.b.Word) F32 where
   val w := (value32 w).getD 0
   pval q := P.a.wordValue q.1 * P.b.wordValue q.2

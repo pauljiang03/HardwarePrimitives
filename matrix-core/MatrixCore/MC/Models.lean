@@ -1,6 +1,6 @@
 import MatrixCore.MC.Defs
 
-/-! # CDNA 1, CDNA 2 and CDNA 3 matrix cores
+/-! # CDNA 1, CDNA 2 and CDNA 3 Matrix Cores
 
 Models for every input format characterized in the paper (Section 4); `c` and `d` are FP32. -/
 

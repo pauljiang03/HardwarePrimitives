@@ -4,7 +4,7 @@ description: Every headline theorem in plain language, with what it assumes, wha
 ---
 
 This page lists the main results that Lean has checked about the Tensor Core
-model and the AMD matrix-core model. Each entry says, in
+model and the AMD Matrix Core model. Each entry says, in
 plain words, what the result means, what it assumes, and how much it really
 establishes. The Lean name and a source link follow each entry for anyone
 who wants to read the formal statement.
@@ -287,7 +287,7 @@ including subnormals and both zeros.
 - **Classification:** Core theorem.
 - **Lean:** [`signedFiniteBinaryBijection`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Binary/SignedBijection.lean#L130)
 
-## The matrix core model
+## The Matrix Core model
 
 ### Does the Lean model match the published model?
 
@@ -362,7 +362,7 @@ finite model accepts, with the same word; otherwise an infinity or NaN.**
   vectors and the MATLAB models, not derived.
 - **Lean:** [`MatrixCore.blockOutcome_finite_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/SpecialAgreement.lean#L161)
 
-## Matrix core monotonicity
+## Matrix Core monotonicity
 
 ### Can a smaller `c` give a larger result?
 
@@ -418,7 +418,7 @@ and every `n`.
 - **Classification:** Core theorem, an exact "if and only if".
 - **Lean:** [`MatrixCore.cdna3F16LeadBlock_nonmonotone_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/NonmonotoneFamily.lean#L325), [`MatrixCore.cdna3F16LeadBlock_decrease_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/NonmonotoneFamily.lean#L265)
 
-## Matrix core correct rounding
+## Matrix Core correct rounding
 
 ### Is the output ever the correctly rounded sum?
 
@@ -442,7 +442,7 @@ when nothing is flushed and every conversion and pairwise sum is exact.
 - **Lean:** [`MatrixCore.aligned_nearestEven_of_lossless`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/LosslessAlignment.lean#L184), [`MatrixCore.alignedAccumulation_of_lossless`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/LosslessAlignment.lean#L159),
   [`MatrixCore.pairwise_fl_exact_of_lossless`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/LosslessAlignment.lean#L222)
 
-## Matrix core product order
+## Matrix Core product order
 
 ### Does the order of the products matter?
 
@@ -463,7 +463,7 @@ project that builds on the model.
 ## MC-EFT correction
 
 [MC-EFT](/HardwarePrimitives/matrix-core/properties/eft/) is TC-EFT carried over to the
-AMD matrix cores.
+AMD Matrix Cores.
 
 ### Is the corrected result right?
 
@@ -485,7 +485,7 @@ is then exact.
   exact when all the bits fit within one span of 24 bits.
 - **Lean:** [`MatrixCore.EftSplit.fastPath_sound`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Core.lean#L155), [`MatrixCore.naiveSum32_exact_of_bitSpan`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Sum32.lean#L119)
 
-### What does the matrix core's output buy?
+### What does the Matrix Core's output buy?
 
 **On CDNA 1 the correction returns the output itself. On CDNA 2 the overlap is
 exactly the low parts plus every rounding error of the block, minus what
@@ -498,7 +498,7 @@ final rounding error, less than `N_FMA + 6` units of the cut-off.**
 - **Lean:** [`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA1.lean#L11), [`MatrixCore.pairwise_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA2.lean#L109),
   [`MatrixCore.aligned_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L632), [`MatrixCore.globalAlignment_exact_rounding`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L706)
 
-## Matrix core number formats and rounding
+## Matrix Core number formats and rounding
 
 ### Is FP32 rounding implemented correctly?
 

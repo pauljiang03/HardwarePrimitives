@@ -68,7 +68,7 @@ python3 scripts/check_equivalence.py
 
 ## The AMD model
 
-The AMD matrix-core model is a standalone Lake project in `matrix-core/`, with
+The AMD Matrix Core model is a standalone Lake project in `matrix-core/`, with
 its own pinned toolchain. From the repository root:
 
 ```sh

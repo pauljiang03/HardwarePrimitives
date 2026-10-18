@@ -1,7 +1,7 @@
 import OzakiMC.Cancellation
 import OzakiMC.IEEE
 
-/-! # Two passes through `c` on the matrix-core model
+/-! # Two passes through `c` on the Matrix Core model
 
 On the Tensor Core, running a block FMA a second time from `c = −D1` recovers exactly what the first
 pass truncated (`Ozaki.TC.twoPass_exact`). Here is what happens on each AMD architecture.
@@ -487,7 +487,7 @@ def mcBlock2 (P : Model) : MatrixMultiplier := fun x y => do
   let b ← (y ++ List.replicate (P.nfma - y.length) 0).mapM fun z : ℤ => P.b.encodeExact (z : ℚ)
   mcTwoPass P a b
 
-/-- **The two-pass matrix multiplier on the matrix core**: split-K with chunks of one block, every
+/-- **The two-pass matrix multiplier on the Matrix Core**: split-K with chunks of one block, every
 block run twice, the block results added exactly. -/
 def mcMultiplier2 (P : Model) : MatrixMultiplier := chunked P.nfma (mcBlock2 P)
 

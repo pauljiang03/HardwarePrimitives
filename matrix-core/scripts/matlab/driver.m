@@ -1,5 +1,5 @@
 function driver(model_dir, infile, outfile, variant)
-% Evaluate inner products with the MATLAB Tensor Core v0.6 matrix-core model.
+% Evaluate inner products with the MATLAB Tensor Core v0.6 Matrix Core model.
 % Usage: driver(model_dir, infile, outfile, variant), variant 'shipped' or 'rdfix' (rd_borrow_carry).
   addpath(fullfile(model_dir, 'models', 'tools'));
   warning('off', 'Octave:shadowed-function');

@@ -3,7 +3,7 @@ import MatrixCore.EFT.Encoded
 /-! # CDNA 2: the overlap is the low parts plus the rounding errors
 
 CDNA 2 does not align its products, so the cut-off is `D`'s last bit. The overlap is then the low
-parts plus every rounding error of the matrix core, less what flushing to zero removed. -/
+parts plus every rounding error of the Matrix Core, less what flushing to zero removed. -/
 
 namespace MatrixCore
 
@@ -96,7 +96,7 @@ theorem pairwiseSum_eq_errors {P : Model} {px : Prepared} {s : ℚ} (h : pairwis
   unfold Prepared.exact
   grind
 
-/-- What `D` buys on CDNA 2: the overlap is the low parts plus the matrix core's rounding errors. -/
+/-- What `D` buys on CDNA 2: the overlap is the low parts plus the Matrix Core's rounding errors. -/
 structure PairwiseOverlap {P : Model} (t : BlockTrace P) : Prop where
   cutoff : t.split.q = ulpExp32 (wordValue t.d)
   onGrid : OnGrid (t.split.overlap (wordValue t.d)) t.split.q

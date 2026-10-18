@@ -1,6 +1,6 @@
 import MMAlgebraMC.Words
 
-/-! # Block FMAs on the matrix-core machine
+/-! # Block FMAs on the Matrix Core machine
 
 How a block of slots is prepared (`prepare_pairs`: the operand pairs are decoded together), the
 multiset law for the correctly rounded and globally aligned models (`mc_perm`: CDNA 1, CDNA 3,

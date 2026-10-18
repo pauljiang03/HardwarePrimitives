@@ -3,4 +3,4 @@ import MatrixCore.MC
 import MatrixCore.Specification
 import MatrixCore.EFT
 
-/-! # AMD matrix-core arithmetic -/
+/-! # AMD Matrix Core arithmetic -/

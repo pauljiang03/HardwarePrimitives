@@ -3,7 +3,7 @@ import Init.GrindInstances.Ring.Rat
 
 /-! # Independent specification
 
-A second transcription of the paper's matrix-core blocks in its fixed-point language, sharing only
+A second transcription of the paper's Matrix Core blocks in its fixed-point language, sharing only
 standard-library arithmetic with the implementation. -/
 
 namespace MatrixCore.Spec

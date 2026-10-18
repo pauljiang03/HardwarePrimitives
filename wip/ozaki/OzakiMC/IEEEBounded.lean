@@ -3,9 +3,9 @@ import OzakiMC.Bounded
 import OzakiMC.ZeroCheck
 import Ozaki.IEEEInt
 
-/-! # The bounded and integer matrix-core schemes with IEEE special values
+/-! # The bounded and integer Matrix Core schemes with IEEE special values
 
-As on the Tensor Core side (`OzakiTC.IEEEBounded`), on matrix-core blocks with split-K, each meeting
+As on the Tensor Core side (`OzakiTC.IEEEBounded`), on Matrix Core blocks with split-K, each meeting
 the IEEE specification `dotIEEE` for every input:
 
 * on rational data (`FVal`) with the sign oracle `exactSignB`: Ozaki-II with integer rounding tests

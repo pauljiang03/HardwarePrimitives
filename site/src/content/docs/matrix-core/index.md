@@ -1,9 +1,9 @@
 ---
 title: The model at a glance
-description: How the AMD matrix-core model turns encoded MFMA inputs into an FP32 output word in Lean, end to end.
+description: How the AMD Matrix Core model turns encoded MFMA inputs into an FP32 output word in Lean, end to end.
 ---
 
-This section explains how the arithmetic of AMD matrix cores, the MFMA
+This section explains how the arithmetic of AMD Matrix Cores, the MFMA
 instructions of the CDNA 1, CDNA 2 and CDNA 3 GPUs, is represented in Lean. It
 covers the data types, every stage of `evalBlock`, the numerical features of
 each architecture, and how the model is tied to an independent specification
@@ -57,7 +57,7 @@ The Lean model implements these steps directly.
 
 ## How it differs from a Tensor Core
 
-| | NVIDIA Tensor Core | AMD matrix core |
+| | NVIDIA Tensor Core | AMD Matrix Core |
 | --- | --- | --- |
 | Final rounding | truncation to FP32 | round to nearest even (`fl{·}`) |
 | Alignment | every term, `C` included, to the largest exponent | CDNA 3: the products to their largest exponent; `c` added late |

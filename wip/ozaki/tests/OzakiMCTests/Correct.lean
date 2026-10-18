@@ -1,8 +1,8 @@
 import OzakiMC.Correct
 
-/-! # Correct rounding on AMD matrix cores against an exact-arithmetic oracle
+/-! # Correct rounding on AMD Matrix Cores against an exact-arithmetic oracle
 
-The correctly rounded schemes on the matrix-core model return the words that
+The correctly rounded schemes on the Matrix Core model return the words that
 `scripts/correct_reference.py` computes with exact fractions (recorded in
 [`data/correct-reference.json`](../../data/correct-reference.json)), as on the
 Tensor Core model: binary32 is binary32, whatever the matrix multiplier does inside. Ozaki-I tries

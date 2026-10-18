@@ -1,6 +1,6 @@
 import MatrixCore
 
-/-! Targeted hardware-validation cases on the AMD matrix-core model.
+/-! Targeted hardware-validation cases on the AMD Matrix Core model.
 
 Run from `matrix-core/`: `lake env lean ../wip/ozaki/scripts/targeted/MatrixCoreCases.lean`.
 Each `#eval` prints one line per inner product, `MC|id|model|c|a|b|output|value|exact`, where the

@@ -3,7 +3,7 @@ import FloatLib.Numerics.Exact.Dyadic.Order
 import Mathlib.Data.Rat.Floor
 import Mathlib.Tactic
 
-/-! # AMD matrix cores on FloatLib
+/-! # AMD Matrix Cores on FloatLib
 
 The CDNA 1, CDNA 2 and CDNA 3 blocks of Khattak, Mikaitis and Graziani, *Accurate Models of AMD
 Matrix Cores*, written against FloatLib's formats and rounding. -/

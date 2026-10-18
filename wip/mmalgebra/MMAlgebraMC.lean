@@ -20,7 +20,7 @@ import MMAlgebraMC.FP8
 import MMAlgebraMC.ParityFP8
 import MMAlgebraMC.CDNA3Formats
 
-/-! # The reduction algebra on the AMD matrix-core model
+/-! # The reduction algebra on the AMD Matrix Core model
 
 Kernel-checked witnesses on the CDNA 1, 2 and 3 fp16 models of `MatrixCore`: inputs that separate
 the summation trees of three products on CDNA 1 and CDNA 2 and the block patterns of two products

@@ -2,7 +2,7 @@ import MatrixCore
 
 /-! # Chains of MFMA blocks
 
-A chain schedule for one output entry on the matrix-core model: a list of blocks, each block's
+A chain schedule for one output entry on the Matrix Core model: a list of blocks, each block's
 output word `d` the next block's `c`. -/
 
 open MatrixCore

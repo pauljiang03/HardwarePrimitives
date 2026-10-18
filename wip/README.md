@@ -6,7 +6,7 @@ does not cover it, and the root checks do not build it.
 
 | Folder | Contents |
 | --- | --- |
-| [`ozaki/`](ozaki/README.md) | The Ozaki schemes (Ozaki-I, Ozaki-II, ADP/ESC) on the Tensor Core and matrix core models, with correctly rounded versions |
+| [`ozaki/`](ozaki/README.md) | The Ozaki schemes (Ozaki-I, Ozaki-II, ADP/ESC) on the Tensor Core and Matrix Core models, with correctly rounded versions |
 | [`mmalgebra/`](mmalgebra/README.md) | The reduction algebra of schedules: when two GEMM schedules give identical bits, and how far apart they can be; requires `ozaki/` |
 | [`site-pages/`](site-pages/) | The website pages of both projects, kept while they are off the site |
 | [`docs/`](docs/) | Earlier guides, the reviewer guide, the status file, the theorem indexes and the test walkthrough; not maintained |

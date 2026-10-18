@@ -8,7 +8,7 @@ runs from this directory and needs no GPU. The scripts rely on `assert` and refu
 
 [`models.py`](models.py) is a bit-exact port of two Lean models of this repository: the Tensor Core
 block FMA (`TensorCore.evalBlock`, V100, A100 and H100 with fp16 and bf16 inputs) and the AMD
-matrix-core block (`MatrixCore.blockBits`: SFMA, CDNA 1, CDNA 2, and CDNA 3 with global
+Matrix Core block (`MatrixCore.blockBits`: SFMA, CDNA 1, CDNA 2, and CDNA 3 with global
 alignment). [`validate_port.py`](validate_port.py) generates 150 random blocks per variant (1,800 in
 all), evaluates them with the Lean models, and compares the output words bit for bit; from
 `mmalgebra/`, `python3 scripts/check.py --port` runs it end to end. On 2026-10-13 all 1,800 agreed.

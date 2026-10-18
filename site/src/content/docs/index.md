@@ -4,7 +4,7 @@ description: What Hardware Primitives models, what it proves, and how the parts 
 ---
 
 Hardware Primitives is a Lean 4 development about the arithmetic of GPU matrix
-multipliers: what the block FMAs of NVIDIA Tensor Cores and AMD matrix cores
+multipliers: what the block FMAs of NVIDIA Tensor Cores and AMD Matrix Cores
 actually compute, on every generation whose arithmetic has been characterized,
 and what software built on them can rely on. Executable calculations and
 correctness proofs use the same definitions. For each vendor there is a model
@@ -16,7 +16,7 @@ and a set of proven properties:
    of Ada, Hopper and Blackwell, and the FP8 `mma.sync` paths of Hopper, B200
    and the RTX PRO 6000. Their [properties](/HardwarePrimitives/tensor-core/properties/error-bounds/)
    are error bounds, non-monotonicity and TC-EFT.
-2. **AMD matrix cores.** [Models of the MFMA
+2. **AMD Matrix Cores.** [Models of the MFMA
    instructions](/HardwarePrimitives/matrix-core/) of CDNA 1, 2 and 3 and of the
    sequential FMA, for FP16, BF16, XF32 and FP8. Their
    properties, one page per generation ([CDNA 1](/HardwarePrimitives/matrix-core/properties/cdna1/),
@@ -133,7 +133,7 @@ limits](/HardwarePrimitives/tensor-core/scope/) and [What is tested](/HardwarePr
 ## Start exploring
 
 - [The model at a glance](/HardwarePrimitives/tensor-core/): the whole pipeline on one page.
-- [The AMD model at a glance](/HardwarePrimitives/matrix-core/): the matrix-core model of CDNA 1, 2 and 3.
+- [The AMD model at a glance](/HardwarePrimitives/matrix-core/): the Matrix Core model of CDNA 1, 2 and 3.
 - [Quick start](/HardwarePrimitives/quick-start/): build the project and run the examples.
 - [Properties of Tensor Cores](/HardwarePrimitives/tensor-core/properties/error-bounds/): error bounds, non-monotonicity and TC-EFT.
 - [What is proven](/HardwarePrimitives/proofs/theorems/): the headline results and where they live.

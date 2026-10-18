@@ -1,4 +1,4 @@
-# Ozaki schemes on the Tensor Core and matrix core models
+# Ozaki schemes on the Tensor Core and Matrix Core models
 
 This Lean project formalizes the Ozaki schemes for emulating a high-precision matrix product on a
 low-precision matrix multiplier, following a set of bit-precise Z3 models of the schemes (the "Z3
@@ -13,7 +13,7 @@ models" below):
 
 The Z3 models take the matrix multiplier to have fp16 inputs and binary32 round-to-nearest
 additions. Here the matrix multiplier is a hardware model of this repository: the NVIDIA Tensor Core model of
-[`TensorCore`](../../tensor-core/README.md) and the AMD matrix-core model of [`MatrixCore`](../../matrix-core/README.md).
+[`TensorCore`](../../tensor-core/README.md) and the AMD Matrix Core model of [`MatrixCore`](../../matrix-core/README.md).
 The scheme itself is proven once, for any matrix multiplier, and each hardware model is shown to
 satisfy what the scheme needs. Every labeled check of the three Z3 models has a Lean theorem or a
 kernel-checked test, except the ones listed under [what is not proven](THEOREMS.md#not-proven).
@@ -23,7 +23,7 @@ Beyond the Z3 models:
 * **Long dot products.** Split-K (chunks of the inner dimension, each an exact call to the matrix
   multiplier, added exactly) lifts the limit `k · 2^(2b) ≤ 2^24` of the exactness bound, so every
   result holds for every `k`.
-* **FP64 emulation** on fp16, bf16 and tf32 Tensor Cores and on AMD matrix cores: Ozaki-I and
+* **FP64 emulation** on fp16, bf16 and tf32 Tensor Cores and on AMD Matrix Cores: Ozaki-I and
   Ozaki-II on binary64 inputs, with binary64 error bounds and correctly rounded binary64 results.
 * **Correct rounding.** All three schemes have a version that returns the round to nearest even of
   the exact product for every input on which the matrix multiplier is exact ([below](#correct-rounding)).
@@ -166,7 +166,7 @@ There are two kinds of correctly rounded versions, and the difference matters:
   left over (`Ozaki.ozaki1Full_eq`), and inputs on a grid `2^m` leave nothing over after enough
   slices (`Ozaki.split_residual_zero`): `24` slices of `11` bits for binary32, `175` for binary64.
   Every product on the matrix multiplier, including those of the exact fallback, then runs on
-  Tensor Core or matrix-core block FMAs. The slicing and the rounding test are exact arithmetic in
+  Tensor Core or Matrix Core block FMAs. The slicing and the rounding test are exact arithmetic in
   the proofs.
 
 **The rounding test needs only a fixed number of bits.** Correct rounding has to decide only on which side of
@@ -394,7 +394,7 @@ What changes from the Z3 models:
   slices), and
   is correctly rounded for binary64 inputs of any length (`Ozaki.TC.adpCRE_eq`).
 
-## On the matrix-core model
+## On the Matrix Core model
 
 A CDNA block computes `S_acc` by one of three configurations and rounds it once to binary32 with
 round to nearest: CDNA 1 sums exactly, CDNA 2 rounds pairwise sums of binary32 products in groups and

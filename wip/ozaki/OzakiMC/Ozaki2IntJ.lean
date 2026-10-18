@@ -1,9 +1,9 @@
 import OzakiMC.Ozaki2Bounded
 import Ozaki.BoundedOzaki2J
 
-/-! # Ozaki-II as an integer pipeline with the jumping top-down summation on the matrix-core model
+/-! # Ozaki-II as an integer pipeline with the jumping top-down summation on the Matrix Core model
 
-`Ozaki.ozaki2CRJ` and its signed variant `Ozaki.ozaki2CRJS` with matrix-core blocks and split-K as
+`Ozaki.ozaki2CRJ` and its signed variant `Ozaki.ozaki2CRJS` with Matrix Core blocks and split-K as
 the matrix multiplier: every residue and slice product on the hardware model, every other step
 integer arithmetic, and an exact fallback whose number of ranges does not depend on the inputs'
 exponents; binary64 and binary32 inputs of any length. -/
@@ -13,7 +13,7 @@ open MatrixCore
 namespace Ozaki.MC
 
 /-- Correctly rounded FP64 by Ozaki-II in integers with the jumping top-down summation on
-matrix-core blocks. -/
+Matrix Core blocks. -/
 def mcOzaki2CRJ (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List (ℤ × ℤ)) :
     Option ℚ :=
   ozaki2CRJ (mcSplitK P b) 53 (-1022) 1023 cfgs b smax xs ys
@@ -23,7 +23,7 @@ def mcOzaki2CRJL (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs 
     Option ℚ :=
   ozaki2CRJ (mcSplitK P b) 24 (-126) 127 cfgs b smax xs ys
 
-/-- Correctly rounded FP64 by Ozaki-II in integers with signed zeros on matrix-core blocks. -/
+/-- Correctly rounded FP64 by Ozaki-II in integers with signed zeros on Matrix Core blocks. -/
 def mcOzaki2CRJS (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) (xs ys : List SEntry) :
     Option Signed :=
   ozaki2CRJS (mcSplitK P b) 53 (-1022) 1023 cfgs b smax xs ys

@@ -3,7 +3,7 @@ import OzakiMC
 
 /-! # Trust audit
 
-Every theorem of the `Ozaki` scheme library and of the matrix-core instantiation depends only on
+Every theorem of the `Ozaki` scheme library and of the Matrix Core instantiation depends only on
 Lean's standard axioms `propext`, `Classical.choice` and `Quot.sound`. -/
 
 open Lean Elab Command

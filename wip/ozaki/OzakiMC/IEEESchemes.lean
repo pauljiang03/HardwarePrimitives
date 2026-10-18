@@ -2,7 +2,7 @@ import OzakiMC.LongDot
 import OzakiMC.IEEE
 import Ozaki.IEEEDot
 
-/-! # The matrix-core schemes with IEEE special values
+/-! # The Matrix Core schemes with IEEE special values
 
 The correctly rounded schemes of the AMD instantiation on vectors of IEEE data (`FVal`), wrapped by
 `crIEEE` with the exact fallback's sign on the same matrix multiplier (`exactSignB`), meet the IEEE
@@ -40,7 +40,7 @@ def mcOzaki2CRLI (P : Model) (cfgs : List (CRTBasis × ℕ)) (b smax : ℕ) :
     List FVal → List FVal → FVal :=
   crIEEE (mcOzaki2CRL P cfgs b smax) (exactSignB (mcSplitK P b) b smax)
 
-/-- **Correctly rounded FP64 GEMM on AMD matrix cores with IEEE special values.** -/
+/-- **Correctly rounded FP64 GEMM on AMD Matrix Cores with IEEE special values.** -/
 theorem mcOzaki1CRDI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2 * b ≤ 24)
     (ss : List ℕ) {smax : ℕ} (hsmax : 2098 < smax * (b + 1)) {xs ys : List FVal}
     (hx : ∀ a ∈ xs, a.InFormat 53 (-1022) 1023) (hy : ∀ a ∈ ys, a.InFormat 53 (-1022) 1023)
@@ -105,7 +105,7 @@ theorem mcOzaki2CRLI_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 2
       (by rw [hl1, hl2]))
     hx hy hlen
 
-/-- FP64 emulation by Ozaki-I on matrix-core blocks with IEEE special values: binary64 IEEE
+/-- FP64 emulation by Ozaki-I on Matrix Core blocks with IEEE special values: binary64 IEEE
 additions. -/
 def mcOzaki1DI (P : Model) (b s : ℕ) : List FVal → List FVal → FVal :=
   ozaki1IEEE (mcSplitK P b) 53 (-1022) 1023 b s
@@ -120,11 +120,11 @@ theorem fp32Add_eq_rne32Q : fp32Add = addOfRound rne32Q := by
   funext a b
   exact round32Value_eq_rne32Q (a + b)
 
-/-- Ozaki-I on a matrix-core variant with IEEE special values: binary32 IEEE additions. -/
+/-- Ozaki-I on a Matrix Core variant with IEEE special values: binary32 IEEE additions. -/
 def mcOzaki1I (P : Model) (b s : ℕ) : List FVal → List FVal → FVal :=
   ozaki1IEEE (mcMultiplier P) 24 (-126) 127 b s
 
-/-- Ozaki-II on a matrix-core variant with IEEE special values: one binary32 IEEE rounding. -/
+/-- Ozaki-II on a Matrix Core variant with IEEE special values: one binary32 IEEE rounding. -/
 def mcOzaki2I (P : Model) (B : CRTBasis) (Pb : ℕ) : List FVal → List FVal → FVal :=
   ozaki2IEEE (mcMultiplier P) 24 (-126) 127 B Pb
 

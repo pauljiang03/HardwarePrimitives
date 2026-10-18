@@ -1,6 +1,6 @@
 import OzakiMC.MatrixMultiplier
 
-/-! # The matrix-core variants
+/-! # The Matrix Core variants
 
 Exact matrix multipliers on the variants of `MatrixCore` whose operand formats hold the slices. The
 slice width is bounded by what the format holds: `b ≤ 11` for fp16 and XF32, `b ≤ 8` for bf16, and
@@ -25,7 +25,7 @@ open MatrixCore
 
 namespace Ozaki.MC
 
-/-- A model whose matrix core is exact on `b`-bit slices: an exact configuration, operand
+/-- A model whose Matrix Core is exact on `b`-bit slices: an exact configuration, operand
 formats with small subnormals that hold every `b`-bit integer, and a nonempty block. -/
 structure ExactMultiplier (P : Model) (b : ℕ) : Prop where
   config : ExactConfig P

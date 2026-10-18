@@ -170,7 +170,7 @@ end Format
 /-- Finite value of an FP32 word, if any. -/
 def value32 (w : F32) : Option ℚ := (fp32.decode w).toFinite.map Unpacked.value
 
-/-! ## Matrix-core operand formats -/
+/-! ## Matrix Core operand formats -/
 
 /-- How an MFMA instruction reads an input word of `A` or `B`. -/
 inductive InputFormat where

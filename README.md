@@ -32,12 +32,12 @@ Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
 - **Tensor Cores:** a characterization of non-monotonicity, and TC-EFT, which
   recovers the correctly rounded sum of a block FMA (with a 576-bit exact
   fallback); a bitvector datapath proven equal to the model.
-- **Matrix cores, per generation:** correct rounding on CDNA 1; on CDNA 2,
+- **Matrix Cores, per generation:** correct rounding on CDNA 1; on CDNA 2,
   non-monotonicity in the products only through flushing; on CDNA 3, an exact
   characterization of non-monotonicity in the products (a family with an exact
   threshold, and necessary and sufficient conditions), correct rounding when
   alignment loses nothing, and fixed-width accumulation. Every generation is
-  monotone in `c`, and MC-EFT, the matrix core counterpart of TC-EFT, recovers
+  monotone in `c`, and MC-EFT, the Matrix Core counterpart of TC-EFT, recovers
   the correctly rounded sum of a block from its output.
 
 Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
@@ -71,7 +71,7 @@ tested](https://pauljiang03.github.io/HardwarePrimitives/proofs/tested/).
 | Path | Contents |
 | --- | --- |
 | [`tensor-core/`](tensor-core/README.md) | NVIDIA Tensor Cores: models, properties, TC-EFT, bitvector kernels, tests, examples, FloatLib implementation, GPU recordings |
-| [`matrix-core/`](matrix-core/README.md) | AMD matrix cores: models, properties, MC-EFT, tests, examples, FloatLib implementation |
+| [`matrix-core/`](matrix-core/README.md) | AMD Matrix Cores: models, properties, MC-EFT, tests, examples, FloatLib implementation |
 | `site/` | Website sources |
 | [`wip/`](wip/README.md) | Work in progress, not part of the libraries |
 

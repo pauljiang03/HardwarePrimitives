@@ -1,7 +1,7 @@
 import OzakiMC.Ozaki2IntJ
 import Ozaki.BoundedChecked2
 
-/-! # Ozaki-II on matrix-core blocks, every integer bounded
+/-! # Ozaki-II on Matrix Core blocks, every integer bounded
 
 `Ozaki.ozaki2CRJC_binary64_eq` and `Ozaki.ozaki2CRJC_binary32_eq` with CDNA 3 fp16 blocks and
 split-K as the matrix multiplier: every data integer of correctly rounded Ozaki-II within `264` bits

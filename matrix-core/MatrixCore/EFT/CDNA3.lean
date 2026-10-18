@@ -1,8 +1,8 @@
 import MatrixCore.EFT.Encoded
 
-/-! # CDNA 3: what the matrix core's output buys
+/-! # CDNA 3: what the Matrix Core's output buys
 
-With `D` the block's output, the matrix core's `S_acc` is the high sum plus what its alignment
+With `D` the block's output, the Matrix Core's `S_acc` is the high sum plus what its alignment
 keeps of the low parts, so the overlap is that kept part plus the final rounding error. -/
 
 namespace MatrixCore
@@ -248,14 +248,14 @@ theorem productSum_onGrid (P : Model) (ps : List Unpacked) {e : ℤ} (he : align
     obtain ⟨p, _, rfl⟩ := hv
     exact truncGrid_onGrid _ _
 
-/-! ## What the matrix core keeps of the low parts -/
+/-! ## What the Matrix Core keeps of the low parts -/
 
 def lateKept (P : Model) (px : Prepared) (eC : ℤ) (A εc : ℚ) : ℚ :=
   let T := rdMantissa (productSum P px.p).2 eC P.late.sumMantissaBits + px.c.value
   let X := rdMantissa A eC P.late.sumMantissaBits + εc
   if T = 0 then X else rdGrid X (normExp (absQ T) - P.late.accMantissaBits)
 
-/-- What the matrix core keeps of the low parts: its alignment, `s'_c`, or late normalization. -/
+/-- What the Matrix Core keeps of the low parts: its alignment, `s'_c`, or late normalization. -/
 def keptLow (P : Model) (px : Prepared) (q : ℤ) : ℚ :=
   let A := productSumAt P px.p (px.p.map fun p => p.value - truncGrid p.value q)
   let εc := px.c.value - (cRule P px).high px.c.value q

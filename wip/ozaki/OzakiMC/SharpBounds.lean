@@ -3,7 +3,7 @@ import OzakiMC.Native
 import OzakiMC.IEEE
 import Ozaki.SharpBounds
 
-/-! # Sharper error bounds on the matrix-core model
+/-! # Sharper error bounds on the Matrix Core model
 
 MatrixCore's binary32 round to nearest is IEEE's (`round32Value_eq_rne32Q`), so the bounds of
 `Ozaki.SharpBounds` apply: native binary32 GEMM within `k 2^-24 Σ|xᵢyᵢ|` when no product
@@ -17,7 +17,7 @@ namespace Ozaki.MC
 
 theorem round32Value_eq_rne32Q_fun : round32Value = rne32Q := funext round32Value_eq_rne32Q
 
-/-- **Native binary32 GEMM, Jeannerod and Rump**, on the matrix-core model's rounding. -/
+/-- **Native binary32 GEMM, Jeannerod and Rump**, on the Matrix Core model's rounding. -/
 theorem native32_error_jr {x y : List ℚ}
     (hz : ∀ z ∈ List.zipWith (· * ·) x y, (2 : ℚ) ^ (-126 : ℤ) ≤ Rat.abs z ∨ Binary32Value z)
     {v : ℚ} (h : native32 x y = some v) :
@@ -28,7 +28,7 @@ theorem native32_error_jr {x y : List ℚ}
   rw [round32Value_eq_rne32Q_fun] at h
   exact nativeDot_error_jr_rne32 hz h
 
-/-- **Ozaki-I on the matrix core, sharper**: `(n − 1) 2^-24 Σ|tⱼ| + (s + 1) Σᵢ min(2|xᵢyᵢ|,
+/-- **Ozaki-I on the Matrix Core, sharper**: `(n − 1) 2^-24 Σ|tⱼ| + (s + 1) Σᵢ min(2|xᵢyᵢ|,
 2^(E+F−s(b+1)))` when the scaled slice products are binary32 values. -/
 theorem mcOzaki1_error_jr {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (s : ℕ) {x y : List ℚ}
     (hlen : x.length = y.length) (hk : x.length * (2 ^ b * 2 ^ b) ≤ 2 ^ 24)

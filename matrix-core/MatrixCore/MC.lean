@@ -29,4 +29,4 @@ import MatrixCore.MC.LossCondition
 import MatrixCore.MC.LosslessAlignment
 import MatrixCore.MC.NonmonotoneFamily
 
-/-! # Matrix-core model -/
+/-! # Matrix Core model -/

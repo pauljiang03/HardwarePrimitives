@@ -1,9 +1,9 @@
 import OzakiMC.Models
 
-/-! # Exact matrix-core blocks with cancellation
+/-! # Exact Matrix Core blocks with cancellation
 
 The AMD analogue of `OzakiTC.Cancellation`. `evalBlock_int` asks `|c| + Σ|aᵢbᵢ| ≤ 2^24`; what each
-configuration of the matrix-core model needs is weaker, and differs by architecture. With integer
+configuration of the Matrix Core model needs is weaker, and differs by architecture. With integer
 operands, an integer `c` and every product at most `2^24` in magnitude (true for slices of at most
 `12` bits):
 
@@ -254,7 +254,7 @@ theorem accumulate_cancel {P : Model} (hP : ExactConfig P) {x : Prepared} (h : I
 
 /-! ## Encoded blocks -/
 
-/-- **Exact matrix-core block with cancellation.** On an exact configuration, integer operands
+/-- **Exact Matrix Core block with cancellation.** On an exact configuration, integer operands
 whose products are each within `2^24`, an integer `c` within `2^24`, and an exact sum
 `c + Σ aᵢbᵢ` within `2^24` give the binary32 word of that sum, however large `Σ|aᵢbᵢ|` is; on
 CDNA 2 every pairwise sum of the products must be within `2^24` as well. -/

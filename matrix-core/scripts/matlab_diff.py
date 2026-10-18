@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Differential test of the Lean model against the authors' MATLAB matrix-core models.
+"""Differential test of the Lean model against the authors' MATLAB Matrix Core models.
 
 Usage: python3 scripts/matlab_diff.py [--cases N] [--seed S] [--profiles p1,p2,...]
 """

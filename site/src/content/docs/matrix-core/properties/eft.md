@@ -1,13 +1,13 @@
 ---
 title: MC-EFT correction
-description: MC-EFT, the error-free transformation for AMD matrix cores - the correctly rounded sum of a CDNA 1, 2 or 3 block from its output, the cut-off of each generation, and what the matrix core's output buys.
+description: MC-EFT, the error-free transformation for AMD Matrix Cores - the correctly rounded sum of a CDNA 1, 2 or 3 block from its output, the cut-off of each generation, and what the Matrix Core's output buys.
 ---
 
-MC-EFT is the error-free transformation for AMD matrix cores. It carries the
+MC-EFT is the error-free transformation for AMD Matrix Cores. It carries the
 algorithm of [TC-EFT](/HardwarePrimitives/tensor-core/properties/eft/), which corrects a
 Tensor Core block with the bits the hardware dropped, over to CDNA 1, 2 and 3.
 It takes the encoded inputs of one block and a finite
-FP32 word `D`, normally the matrix core's output, and returns the exact sum
+FP32 word `D`, normally the Matrix Core's output, and returns the exact sum
 `S = c + Σ a_ℓ b_ℓ` rounded to the nearest FP32 value (ties to even).
 
 ## Does it work?
@@ -85,9 +85,9 @@ within one span of 24 bits inside the FP32 range
 If the check fails, `D − εₒ + Σ low parts` is formed in exact arithmetic and
 rounded once. This always gives the right answer.
 
-## What the matrix core's output buys
+## What the Matrix Core's output buys
 
-Correctness never depends on `D`. What `D` buys, when it is the matrix core's
+Correctness never depends on `D`. What `D` buys, when it is the Matrix Core's
 own output, is a small overlap, which keeps the work on the fast path. Each
 generation has its own exact statement.
 
@@ -101,7 +101,7 @@ output returns the output
 ### CDNA 2: the overlap is every rounding error
 
 With the cut-off at the last bit of `D`, the overlap is exactly the low parts,
-plus every rounding error of the matrix core (each product conversion, each
+plus every rounding error of the Matrix Core (each product conversion, each
 pairwise addition and the final rounding), minus what flushing to zero removed:
 
 ```lean
@@ -156,9 +156,9 @@ the low parts are exactly what alignment dropped: `S = D + Σ low parts`
 
 Every row is a kernel-checked test
 ([`EFT.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/tests/MatrixCoreTests/EFT.lean)).
-"Correction" is the result from the matrix core's own `D`.
+"Correction" is the result from the Matrix Core's own `D`.
 
-| Block | Inputs | Matrix core `D` | Correctly rounded `S` | Correction |
+| Block | Inputs | Matrix Core `D` | Correctly rounded `S` | Correction |
 | --- | --- | --- | --- | --- |
 | CDNA 3 FP16 | `c = 0`, `2.25 × 1`, seven `2^-12 × 2^-12` | `0x40100000` | `0x40100002` | fast, `0x40100002` |
 | CDNA 3 FP16 | `1 × 1`, `1.5·2^-12 × 2^-11` | `0x3F800002` | `0x3F800002` | fast, `0x3F800002` |
@@ -174,7 +174,7 @@ Every row is a kernel-checked test
   the overlap is `0` and the low parts are `7·2^-24`. The same block from
   `D = 0` or `D = 0xC0100000` also takes the fast path, and from
   `D = 0x7F7FFFFF` the exact one. All three return `0x40100002`.
-- **The second row** shows a kept part. The matrix core keeps `2^-24` of the
+- **The second row** shows a kept part. The Matrix Core keeps `2^-24` of the
   low part, and the overlap `2^-23` is that part plus `D − S_acc = 2^-24`.
 - **The third row** is cancellation. The last bit of `D = 2^-11` is below the
   grid, so `H = D`, the overlap is `0`, and the low part `2^-25` is what
@@ -188,7 +188,7 @@ Every row is a kernel-checked test
 
 ## The caveats, plainly
 
-**1. The result doesn't depend on `D` being the matrix core's output.** The
+**1. The result doesn't depend on `D` being the Matrix Core's output.** The
 proofs work for any finite `D`, so the correction does not rely on the model
 matching the hardware. A good `D` buys speed, not correctness.
 

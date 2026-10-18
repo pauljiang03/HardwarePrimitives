@@ -9,7 +9,7 @@ examples, scripts and FloatLib implementation.
 | Path | Contents |
 | --- | --- |
 | [`tensor-core/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/tensor-core) | NVIDIA Tensor Cores: the `TensorCore` library |
-| [`matrix-core/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/matrix-core) | AMD matrix cores: the `MatrixCore` library (CDNA 1, 2 and 3) |
+| [`matrix-core/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/matrix-core) | AMD Matrix Cores: the `MatrixCore` library (CDNA 1, 2 and 3) |
 | [`site/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/site) | This website (Astro Starlight) |
 | [`wip/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/wip) | Work in progress that builds on the models, not covered by this website |
 
@@ -36,7 +36,7 @@ The two libraries are independent: `MatrixCore` does not import `TensorCore`.
 
 Paths are relative to `tensor-core/`.
 
-## Matrix core
+## Matrix Core
 
 | Path | Contents |
 | --- | --- |

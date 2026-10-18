@@ -33,7 +33,7 @@ python3 scripts/check_equivalence.py  # 115,029 command observations, 668,944 de
 `check_all.py` writes `floatlib-port/test-results/summary.json`. The file is
 generated at run time and is not committed.
 
-## Matrix cores
+## Matrix Cores
 
 [`matrix-core/floatlib-port/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/matrix-core/floatlib-port)
 reimplements the model of every CDNA 1, 2 and 3 configuration on FloatLib

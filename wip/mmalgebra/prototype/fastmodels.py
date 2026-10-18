@@ -175,7 +175,7 @@ def tc_block_terms(P, pterms, cN):
     return rz32(acc)
 
 
-# ---------------------------------------------------------------- AMD matrix cores
+# ---------------------------------------------------------------- AMD Matrix Cores
 class MC:
     kind = 'mc'
 
