@@ -40,4 +40,4 @@ import TensorCore.TC.Specification.Stages
 import TensorCore.TC.Specification.Supported
 import TensorCore.TC.StageResiduals
 
-/-! # Tensor-core model -/
+/-! # Tensor Core model -/

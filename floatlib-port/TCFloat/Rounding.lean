@@ -55,7 +55,7 @@ theorem round32_nearest_real (x : ℚ) (hx : |x| ≤ maxFinite32) :
       exact (Model.toReal_roundRatScaled_eq_roundAt _ _ _ _ _ (by decide) hn x.den_nz hf).trans
         (congrArg (Model.roundAt .binary32) (signed_rat_real x))
 
-/-- Mathematical IEEE grid representation, expressed independently of the executable rounder. -/
+/-- Membership in the FP32 grid, independent of the executable rounder. -/
 def Grid32 (x : ℚ) : Prop :=
   genericFormat FloatLib.Numerics.binaryRadix (Model.fexpOf .binary32) (x : ℝ)
 
@@ -69,7 +69,6 @@ theorem representable_of_grid (x : ℚ) (hg : Grid32 x) (hx : |x| ≤ maxFinite3
   subst y
   simp [representable, hr, hv]
 
-/-- Common-grid coefficient bound used by the source scalar EFT predicate. -/
 theorem grid_representable (z : Int) (e : Int) (hmin : -149 ≤ e) (hmax : e ≤ 104)
     (hz : z.natAbs < 2^24) : representable ((z : ℚ)*pow2 e) = true := by
   apply representable_of_grid

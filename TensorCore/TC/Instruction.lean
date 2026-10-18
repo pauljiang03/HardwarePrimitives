@@ -72,7 +72,6 @@ theorem finite32_bits {c : F32} {initial : Finite32} (h : finite32 c = some init
   · contradiction
   · cases Option.some.inj h; rfl
 
-/-- The bits of a finite encoding of value zero, other than `−0`, are `0`. -/
 theorem zero_value_bits (c : F32) (d : Decoded) (hd : decode32 c = some d)
     (hz : d.significand = 0) (hneg : c ≠ 0x80000000) : c = 0 := by
   have hlt := c.isLt
@@ -107,7 +106,6 @@ theorem Decoded.value_ne_zero (d : Decoded) (h : d.significand ≠ 0) : d.value 
       _ = 0 := by rw [Rat.div_def, Rat.zero_mul]
   exact h (Rat.intCast_inj.mp h1)
 
-/-- With only zero products, the alignment exponent is the accumulator input's exponent, whenever the minimum alignment exponent is at most `−126`. -/
 theorem zero_products_alignExp (K padding : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -126)
     (c : Decoded) (hc : c.significand ≠ 0) (hlow : -126 ≤ c.exponent) :
     (PreparedBlock.mk (fp16Fp32Model K padding eAlignMin)
@@ -143,7 +141,7 @@ theorem zero_products_alignExp (K padding : ℕ) (eAlignMin : Option ℤ) (hfl :
     have := hfl f (by rw [hf]; simp)
     simp [Int.max_eq_left (by omega : f ≤ c.exponent)]
 
-/-- A block FMA whose products are all zero pairs returns its accumulator input unchanged, for every finite input other than `−0`. -/
+/-- With all-zero products, a block FMA returns any finite `c` other than `−0` unchanged. -/
 theorem zero_products_passthrough (K padding : ℕ) (eAlignMin : Option ℤ)
     (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (c : F32) (f : Finite32) (hf : finite32 c = some f)
     (hneg : c ≠ 0x80000000) :
@@ -228,7 +226,6 @@ theorem zero_products_passthrough (K padding : ℕ) (eAlignMin : Option ℤ)
   simp only [prepare, hc, hps]
   exact hrun
 
-/-- Block FMAs with zero products pass a finite accumulator, other than `−0`, through unchanged. -/
 theorem runBlocks_zero_blocks (K padding : ℕ) (eAlignMin : Option ℤ)
     (hfl : ∀ f ∈ eAlignMin, f ≤ -126) (m : ℕ) (c : F32) (f : Finite32) (hf : finite32 c = some f)
     (hneg : c ≠ 0x80000000) :
@@ -251,7 +248,7 @@ theorem runBlocks_zero_blocks (K padding : ℕ) (eAlignMin : Option ℤ)
         rw [hbits] at hlast
         exact hlast
 
-/-- A pinned instruction variant: the inner dimension `k`, the FMA size N_FMA, the padding bits, the minimum alignment exponent, and the source of these numerical features. -/
+/-- A pinned instruction variant: `k`, N_FMA, padding bits, minimum alignment exponent, evidence. -/
 structure InstructionVariant where
   name : String
   k : ℕ
@@ -272,13 +269,12 @@ def InstructionVariant.schedule (p : InstructionVariant) (pairs : List (F16 × F
     List (List (p.model.Word × p.model.Word)) :=
   chunks p.nfma p.blocks pairs
 
-/-- Execute the instruction. -/
 def InstructionVariant.run (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16)) :
     Except ModelError (List BlockTrace) :=
   if pairs.length != p.k then .error .wrongProductCount
   else runBlocks p.model c (p.schedule pairs)
 
-/-- The instruction's FP32 result: the output of the last block FMA, or the accumulator input when there are none. -/
+/-- The output of the last block FMA, or `c` when there are none. -/
 def InstructionVariant.output (p : InstructionVariant) (c : F32) (pairs : List (F16 × F16)) :
     Option F32 :=
   match p.run c pairs with
@@ -351,19 +347,19 @@ theorem single_block_output (p : InstructionVariant) (hfl : ∀ f ∈ p.eAlignMi
     simp only [List.getLast?_cons_cons]
     rw [getD_of_cons _ u us c t.output.bits, hlast]
 
-/-- V100: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.844; four block FMAs of four products. -/
+/-- V100: WMMA m16n16k16 FP16 → FP32; four block FMAs of four products. -/
 def v100Wmma16 : InstructionVariant :=
   ⟨"V100 WMMA m16n16k16 FP16->FP32 (HMMA.844)", 16, 4, 0, none,
     "Accurate Models v4 §4.1.1 and Tables 3-4; MATLAB v0.5 GEMM.m increasing-k rule; " ++
     "Jia et al. arXiv:1804.06826 (four sets of four HMMA.884 steps)", by decide, by decide⟩
 
-/-- A100/A2/A30/L40S/Ada: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.1688; two block FMAs of eight products, validated by Accurate Models on k = 16 inputs. -/
+/-- A100/A2/A30/L40S/Ada: WMMA m16n16k16 FP16 → FP32 (HMMA.1688); two block FMAs of eight products. -/
 def ampereWmma16 : InstructionVariant :=
   ⟨"Ampere/Ada WMMA m16n16k16 FP16->FP32 (HMMA.1688)", 16, 8, 1, some (-132),
     "Accurate Models v4 §4.1.2, §4.2 (k = 16 with N_FMA = 8, 10^7-vector validation), Tables 3-4",
     by decide, by decide⟩
 
-/-- H100/H200/B200: WMMA m16n16k16 FP16 → FP32 lowers to HMMA.16816; one block FMA of sixteen products. -/
+/-- H100/H200/B200: WMMA m16n16k16 FP16 → FP32 (HMMA.16816); one block FMA of sixteen products. -/
 def hopperWmma16 : InstructionVariant :=
   ⟨"Hopper/Blackwell WMMA m16n16k16 FP16->FP32 (HMMA.16816)", 16, 16, 2, some (-133),
     "Accurate Models v4 §4.1.6 and Tables 3-4", by decide, by decide⟩

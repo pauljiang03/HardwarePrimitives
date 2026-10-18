@@ -2,9 +2,7 @@ import MatrixCore.Numerics.RoundingContract
 
 /-! # Integer sums and their bit width
 
-An aligned significand is an integer: the number of grid steps it holds. `sumZ` adds such
-integers exactly; `magnitudeSum` bounds every partial sum, whatever the order and cancellation,
-and so gives the width of a register that holds the sum without wrapping. -/
+`magnitudeSum` bounds every partial sum of aligned significands, and so the register width. -/
 
 namespace MatrixCore
 
@@ -41,8 +39,7 @@ theorem magnitudeSum_le_length_mul (zs : List ℤ) (B : ℕ)
     simp only [magnitudeSum, List.length_cons, Nat.add_mul, Nat.one_mul]
     omega
 
-/-- A signed width that suffices: `B` bits per term, `c` carry bits for the term count, and a sign
-bit. -/
+/-- Width `B + c + 1` suffices: `B` bits per term, `c` carry bits, and a sign bit. -/
 theorem coefficient_width_sufficient (zs : List ℤ) (B c : ℕ)
     (hterm : ∀ z ∈ zs, z.natAbs < 2 ^ B) (hcount : zs.length ≤ 2 ^ c) :
     magnitudeSum zs < 2 ^ ((B + c + 1) - 1) := by
@@ -64,7 +61,6 @@ theorem magnitudeSum_perm {xs ys : List ℤ} (h : xs.Perm ys) : magnitudeSum xs 
   | swap x y zs => simp only [magnitudeSum]; omega
   | trans _ _ ih1 ih2 => exact ih1.trans ih2
 
-/-- The exact sum of integers placed on one grid. -/
 theorem sumQ_map_intCast_mul (zs : List ℤ) (g : ℤ) :
     sumQ (zs.map fun (z : ℤ) => (z : ℚ) * pow2 g) = (sumZ zs : ℚ) * pow2 g := by
   induction zs with
@@ -74,8 +70,7 @@ theorem sumQ_map_intCast_mul (zs : List ℤ) (g : ℤ) :
 
 /-! ## Aligned significands as integers -/
 
-/-- Magnitude truncation onto multiples of `2^g`, counted in steps: the bits of the aligned
-significand that are kept, as a signed integer. -/
+/-- `truncGrid` counted in steps of `2^g`, as a signed integer. -/
 def truncBits (x : ℚ) (g : ℤ) : ℤ :=
   if x < 0 then -((-x / pow2 g).floor) else (x / pow2 g).floor
 
@@ -88,7 +83,6 @@ theorem truncGrid_eq_truncBits (x : ℚ) (g : ℤ) : truncGrid x g = (truncBits 
 
 theorem rdGrid_eq_rdBits (x : ℚ) (g : ℤ) : rdGrid x g = (rdBits x g : ℚ) * pow2 g := rfl
 
-/-- Truncation keeps at most `|x| / 2^g` steps. -/
 theorem truncBits_natAbs_le (x : ℚ) (g : ℤ) :
     ((truncBits x g).natAbs : ℚ) * pow2 g ≤ absQ x := by
   have h := (truncGrid_bounds x g).1
@@ -115,8 +109,6 @@ theorem floor_intCast_div (V : ℤ) (n : ℕ) (hn : 0 < n) : ((V : ℚ) / (n : �
     have : (V : ℚ) < (((V / (n : ℤ) + 1) * n : ℤ) : ℚ) := by exact_mod_cast h2
     simpa [Rat.add_mul, Rat.intCast_natCast] using this
 
-/-- RD of an integer number of `2^g` steps onto the grid `2^(g + n)` is an arithmetic right shift
-by `n` bits. -/
 theorem rdBits_intCast_mul (z : ℤ) (g : ℤ) (n : ℕ) :
     rdBits ((z : ℚ) * pow2 g) (g + n) = z >>> n := by
   have hg := pow2_ne_zero g

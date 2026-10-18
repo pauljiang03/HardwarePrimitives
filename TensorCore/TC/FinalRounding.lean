@@ -41,7 +41,6 @@ theorem evalInvocation_output_truncate {p : InvocationSpec} {x : InvocationInput
   obtain ⟨hv, _, _, _, _, hout⟩ := evalInvocation_spec h
   exact roundingStage_truncate_correct p.output hv.2.2.2.1 hmode _ _ hout
 
-/-- FP64 fused specification: one correctly rounded result in the stated direction. -/
 theorem fp64Fma_nearestEven {x : InvocationInput (fp64Fma .nearestEven)}
     {t : InvocationTrace (fp64Fma .nearestEven)} (h : evalInvocation x = .ok t) :
     NearestEven fp64 t.intermediate.value t.output.bits :=
@@ -96,7 +95,7 @@ theorem fp64Fma_towardPositive {x : InvocationInput (fp64Fma .towardPositive)}
     TowardPositive fp64 t.intermediate.value t.output.bits :=
   evalInvocation_output_towardPositive h rfl
 
-/-- Fused FP64 rounds the independently decoded exact product plus accumulator; there is no intermediate rounding. -/
+/-- Fused FP64 rounds the exact product plus accumulator, with no intermediate rounding. -/
 theorem fp64Fma_exact_input {mode : BinaryRoundingMode}
     {x : InvocationInput (fp64Fma mode)} {t : InvocationTrace (fp64Fma mode)}
     (h : evalInvocation x = .ok t) : invocationIdeal x = some t.intermediate.value := by

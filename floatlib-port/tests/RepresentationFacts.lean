@@ -32,7 +32,7 @@ theorem unrestricted_projection_changes_value :
       pow2 (inconsistentTerm.exponent-inconsistentTerm.mantissaBits) ≠ inconsistentTerm.value := by
   decide +kernel
 
-/-- `TensorCore.Finite32` requires bits/value consistency by a proof field; unchecked `Trace` permits inconsistent fields. -/
+/-- Unlike `TensorCore.Finite32`, the unchecked `Trace` permits inconsistent bits and value. -/
 def inconsistentTrace : Trace :=
   ⟨⟨fp16 0 0,zeroPositive,[]⟩,0,1⟩
 

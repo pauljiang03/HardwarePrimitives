@@ -21,7 +21,7 @@ example : Datapath.evalBlock .v100F16 ⟨[], 0⟩ = .error .wrongProductCount :=
 example : Datapath.evalBlock .v100F16 ⟨List.replicate 4 (0x7c00, 0x3c00), 0⟩ = .error .nonfiniteInput := by
   decide +kernel
 
-/-- The same words from the integer model, by the equivalence theorem. -/
+/-- The same word from the model, by the equivalence theorem. -/
 example : (evalBlock dpNegativeZero).map (·.output.bits) = .ok 0x80000000 :=
   (Datapath.evalBlock_eq .ampereTF32 dpNegativeZero).symm.trans (by decide +kernel)
 

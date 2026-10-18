@@ -1,18 +1,4 @@
-"""Random and targeted CDNA 3 binary8 inner products for the differential tests.
-
-Shared by `mmasim_fp8.py` and `matlab_fp8.py`. Each case is one inner product with `k = 16` or
-`k = 32` (one block, or two chained blocks) for one of the `mc_eval` profiles `cdna3E4M3`,
-`cdna3E5M2` and `cdna3E4M3E5M2`, in one of six regimes, cycled case by case:
-
-0. random bits: uniformly random words (NaN excluded), a random binary32 `c`;
-1. odd slots large, even slots small: operands of magnitude `2^2`–`2^7` in the odd slots (first,
-   third, ...) and `2^-9`–`2^-3` in the even slots, so the two groups have different exponents;
-2. `c` near the binary8 cutoff, where `e_max − e_c` is about 22 to 28;
-3. cancellation across the groups: pairs `x·y` and `−x·y` in adjacent slots, three of them
-   replaced by small products;
-4. sparse: two or three nonzero products in random slots;
-5. `c` larger than every product (the shifted-sum path).
-"""
+"""Random and targeted CDNA 3 FP8 inner products for the differential tests."""
 import random
 from fractions import Fraction as Q
 
@@ -55,8 +41,7 @@ def rand_word(rng, fmt, band=None):
 
 
 def rand_c(rng, emin, emax):
-    """A random binary32 word with exponent in [emin, emax] (clamped to the normal range), zero
-    one time in ten."""
+    """A random FP32 word with exponent in [emin, emax] (clamped to normal), zero one time in ten."""
     if rng.random() < 0.1:
         return 0
     m = rng.getrandbits(23)

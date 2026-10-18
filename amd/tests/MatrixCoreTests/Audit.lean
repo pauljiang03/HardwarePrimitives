@@ -3,11 +3,8 @@ import MatrixCore
 
 /-! # Trust audit
 
-* Every theorem of the library depends only on Lean's standard axioms `propext`,
-  `Classical.choice` and `Quot.sound`.
-* The independent specification (`MatrixCore.Specification.Defs`) uses only the standard library
-  and the notation module, never an implementation declaration; a negative control checks that
-  the audit detects such a dependency. -/
+Every library theorem uses only the standard axioms, and the specification depends only on the
+standard library and the notation module. -/
 
 open Lean Elab Command
 
@@ -24,8 +21,7 @@ def standardModule (m : Name) : Bool :=
 def specAllowed (m : Name) : Bool :=
   standardModule m || m == `MatrixCore.Numerics.Notation || m == `MatrixCore.Specification.Defs
 
-/-- Every constant reachable from `root` through types and bodies, stopping at the standard
-library. -/
+/-- Constants reachable from `n` through types and bodies, stopping at the standard library. -/
 partial def reach (env : Environment) (n : Name) : StateM NameSet Unit := do
   if (← get).contains n then return
   modify (·.insert n)

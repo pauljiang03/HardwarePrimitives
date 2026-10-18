@@ -14,7 +14,7 @@ example (m : EFMachine.Magnitude) :
     EFMachine.leadingZeros m = m.clz ∧ EFMachine.trailingZeros m = m.ctz :=
   ⟨EFMachine.leadingZeros_eq m, EFMachine.trailingZeros_eq m⟩
 
-/-- The public contract needs only finite decoded inputs, a finite supplied D, and the independent ideal's finite range. -/
+/-- The contract needs only finite inputs, a finite `D` and an exact result in the FP32 range. -/
 example (variant : EFMachine.Variant) (x : BlockInput variant.model) (D : F32) (s d : ℚ)
     (shape : x.products.length = variant.model.nfma)
     (inputs : exactDot x = some s) (output : value32 D = some d)

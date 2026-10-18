@@ -12,7 +12,6 @@ set_option exponentiation.threshold 1024
 theorem pow2_shift (g : ℤ) (a : ℕ) : ((2 ^ a : ℕ) : ℚ) * pow2 g = pow2 (g + a) := by
   rw [pow2_add, pow2_natCast, Rat.mul_comm]
 
-/-- `M·D < n` exactly when the quotient is `M` and the remainder is nonzero, given quotient at most `M`. -/
 theorem gt_mul_iff (n D M : ℕ) (hD : 0 < D) (hq : n / D ≤ M) :
     M * D < n ↔ n / D = M ∧ n % D ≠ 0 := by
   have h1 := Nat.div_add_mod n D
@@ -31,7 +30,6 @@ theorem gt_mul_iff (n D M : ℕ) (hD : 0 < D) (hq : n / D ≤ M) :
     · intro h; omega
     · intro h; exact absurd h.1 he
 
-/-- Range check of truncation on `n · 2^g` with `2^P ≤ n < 2^(P+1)`. -/
 theorem dyadic_range (n P : ℕ) (g E r : ℤ) (k : ℕ)
     (hlo : 2 ^ P ≤ n) (hhi : n < 2 ^ (P + 1))
     (hE : E = max ((P : ℤ) + g) (-126)) (hr : r = E - 23 - g)
@@ -162,7 +160,6 @@ theorem round32_truncate_dyadic (neg : Bool) (n P : ℕ) (g E r : ℤ) (k : ℕ)
   · rw [if_pos hc, if_pos (by rw [GT.gt, hrange]; exact hc)]
   · rw [if_neg hc, if_neg (by rw [GT.gt, hrange]; exact hc), if_neg (by omega)]
 
-/-- The two's complement value from the sign bit and the magnitude. -/
 theorem toInt_eq_signed (s : BitVec w) :
     s.toInt = if s.msb then -((if s.msb then -s else s).toNat : ℤ)
       else ((if s.msb then -s else s).toNat : ℤ) := by
@@ -222,7 +219,6 @@ theorem normalize_eq {w : ℕ} (s : BitVec w) (e : Exp) (F : BitVec 5) (hw : 24 
     generalize hP : w - 1 - m.clz.toNat = P at hleadN hlo
     have hhi' : m.toNat < 2 ^ (P + 1) := by rw [show P + 1 = w - m.clz.toNat by omega]; exact hhi
     have hPw : P < w := by omega
-    -- comparisons of exponent registers, none of which wraps
     have hnormalP : decide (F9 + 130 - lead ≤ e) = decide (F.toNat + 130 ≤ P + e.toNat) := by
       apply decide_eq_decide.mpr
       rw [BitVec.le_def, BitVec.toNat_sub_of_le (by rw [BitVec.le_def, BitVec.toNat_add, hF9, hleadN]; change _ ≤ (F.toNat + 130) % 512; omega),
@@ -251,7 +247,6 @@ theorem normalize_eq {w : ℕ} (s : BitVec w) (e : Exp) (F : BitVec 5) (hw : 24 
         (if left = true then 23 - lead else lead - 23)
       else (if left = true then e - (F9 + 107) else F9 + 107 - e)) = amount
     generalize hkb : (if left = true then m <<< amount else m >>> amount) = kb
-    -- the integer quantities these registers hold
     have hbN : (biased.toNat : ℤ) = max ((P : ℤ) + ((e.toNat : ℤ) - 256 - F.toNat)) (-126) + 127 := by
       rw [← hbiased]
       by_cases hn : F.toNat + 130 ≤ P + e.toNat

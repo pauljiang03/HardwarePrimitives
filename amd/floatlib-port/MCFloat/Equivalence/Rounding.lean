@@ -2,12 +2,10 @@ import MCFloat.Equivalence.Base
 import FloatLib.Floats.Formats.BinaryInterchange.DirectedSemantics.Rational.RoundingSemantics.Executable
 import FloatLib.Floats.Formats.BinaryInterchange.DirectedSemantics.Rational.Scaling
 
-/-! # `fl{·}`: FloatLib's binary32 rounding is Matrix-Core's `fl32`
+/-! # `fl{·}`: FloatLib's FP32 rounding is `MatrixCore`'s `fl32`
 
-For every rational, the word produced by FloatLib's `roundRatWithRounding` (round to nearest,
-ties to even) is Matrix-Core's `rne32` word, and FloatLib's `±∞` is produced exactly where
-`rne32` overflows. The proof matches FloatLib's closed form for positive magnitudes
-(`roundRatScaled_false_eq_of_isIEEE`) branch by branch with `rneFields`. -/
+FloatLib's round-to-nearest-even word is the `rne32` word, with `±∞` exactly where `rne32`
+overflows. -/
 
 set_option maxRecDepth 4096
 set_option maxHeartbeats 1600000
@@ -45,7 +43,6 @@ theorem scale_ratio (n d : ℕ) (e : ℤ) :
   simpa [MCFloat.pow2, Model.scaledRatToReal, Model.bpow, FloatLib.Floats.Formats.Flocq.bpow,
     binaryRadix, Radix.toReal] using Model.scaleByPowerOfTwo_real n d e
 
-/-- FloatLib's rounded scaled quotient is `rneInt (|x| / 2^g)`. -/
 theorem scaled_rne (x : ℚ) (g : ℤ) :
     (roundQuotientEven (RationalBinary.scaleByPowerOfTwo x.num.natAbs x.den (-g)).1
       (RationalBinary.scaleByPowerOfTwo x.num.natAbs x.den (-g)).2 : ℤ) =
@@ -137,16 +134,15 @@ theorem neg_bits (w : MCFloat.F32) (h : MCFloat.bits w < 2 ^ 31) :
     · omega
   omega
 
-/-! ## Matrix-Core's word -/
+/-! ## The `MatrixCore` word -/
 
-/-- The word of `fl{x}` in Matrix-Core: `rne32`, with the infinity of `x`'s sign on overflow,
-and subnormal results flushed when `ftz`. -/
+/-- The `MatrixCore` word of `fl{x}`: `rne32`, signed infinity on overflow, flushed when `ftz`. -/
 def refWord (ftz : Bool) (x : ℚ) : ℕ :=
   match MatrixCore.fl32 ftz x with
   | some w => w.toNat
   | none => (MatrixCore.infinity32 (decide (x < 0))).toNat
 
-/-- The positive word for a magnitude `a > 0`, by Matrix-Core's `rneFields`. -/
+/-- The positive word for a magnitude `a > 0`, from `MatrixCore.rneFields`. -/
 def posWord (a : ℚ) : ℕ :=
   if (MatrixCore.rneFields a).1 > 127 then 0x7F800000
   else if (MatrixCore.rneFields a).2 < 8388608 then (MatrixCore.rneFields a).2
@@ -313,7 +309,7 @@ theorem positive_bits (x : ℚ) (hx : x ≠ 0) :
 
 /-! ## Signed rationals and flushing -/
 
-/-- FloatLib's `fl{x}` word is Matrix-Core's, for every rational. -/
+/-- FloatLib's `fl{x}` word is the `MatrixCore` word, for every rational. -/
 theorem round32_bits (x : ℚ) : MCFloat.bits (MCFloat.round32 x) = refWord false x := by
   by_cases hx : x = 0
   · subst hx; decide +kernel
@@ -329,7 +325,6 @@ theorem round32_bits (x : ℚ) : MCFloat.bits (MCFloat.round32 x) = refWord fals
 
 theorem bits_lt (w : MCFloat.F32) : MCFloat.bits w < 2 ^ 32 := w.bits.isLt
 
-/-- Flushing in FloatLib's fields is Matrix-Core's flush of the word. -/
 theorem flush_bits (w : MCFloat.F32) :
     MCFloat.bits (MCFloat.flush w) =
       (if MatrixCore.isSubnormal32 (BitVec.ofNat 32 (MCFloat.bits w))
@@ -362,7 +357,7 @@ theorem flush_bits (w : MCFloat.F32) :
   · rw [ite_eq_right hc, ite_eq_right hc]
     simp only [BitVec.toNat_ofNat, Nat.mod_eq_of_lt hlt]
 
-/-- `fl{·}` with optional flushing: FloatLib's word is Matrix-Core's. -/
+/-- `fl{·}` with optional flushing: FloatLib's word is the `MatrixCore` word. -/
 theorem fl_bits (ftz : Bool) (x : ℚ) : MCFloat.bits (MCFloat.fl ftz x) = refWord ftz x := by
   cases ftz
   · exact round32_bits x

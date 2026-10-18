@@ -13,7 +13,7 @@ open Float.Model.UnpackedFloat
 /-- Lean's representation permits every non-NaN encoding and one canonical NaN. -/
 abbrev Native32Valid (bits : F32) : Prop := Float.Model.Format.binary32.Valid bits
 
-/-- No arithmetic or rounding occurs in this adapter; the proof guards Lean's canonical-NaN representation invariant. -/
+/-- Reinterprets the bits; the proof guards Lean's canonical-NaN invariant. -/
 def toNative32 (bits : F32) (h : Native32Valid bits) : Float32 :=
   .ofModel ⟨UInt32.ofBitVec bits, h⟩
 
@@ -64,7 +64,6 @@ theorem unpackSign32_eq (a : F32) :
   · rw [if_neg (fun h' => h (hz.mp h'))]
     simp [h]
 
-/-- Finite exponent fields satisfy Lean's representation invariant directly. -/
 theorem native32Valid_finite (a : F32) (h : a.toNat / 8388608 % 256 < 255) : Native32Valid a := by
   constructor
   intro he _
@@ -172,7 +171,6 @@ theorem encodeZero32_eq (negative : Bool) (e : ℤ) :
   change BitVec.ofNat 32 ((if negative then 2147483648 else 0) + 0) = _
   cases negative <;> rfl
 
-/-- Once normalization has produced a bounded coefficient, the two output encoders agree bit for bit. -/
 theorem packFinite32_eq (negative : Bool) (e : ℤ) (k : ℕ)
     (hk : 0 < k) (hu : k < 2 ^ 24) (he : -126 ≤ e) (he' : e ≤ 127) :
     pack Float.Model.Format.binary32 (.finite (nativeSign negative) k (e - 23) hk) =
@@ -211,7 +209,6 @@ theorem packFinite32_eq (negative : Bool) (e : ℤ) (k : ℕ)
     congr 1
     omega
 
-/-- Complete agreement of normalization and packing on the finite reference domain. -/
 theorem packRound32_eq (negative : Bool) (m : ℕ) (e : ℤ) (hm : 0 < m)
     (hr : (m : ℚ) * pow2 e ≤ fp32.maxFinite) :
     let x := (m : ℚ) * pow2 e

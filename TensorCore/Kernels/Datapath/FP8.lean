@@ -3,19 +3,8 @@ import TensorCore.TC.GPUs
 
 /-! # A bitvector datapath for the FP8 block FMAs
 
-The datapath of `TensorCore.Datapath` covers FP16, BF16 and TF32 with `F ≥ 23` mantissa bits
-after alignment: it shifts each significand left by `F − mantissaBits`. The FP8 block FMAs of Ada
-and Hopper keep `F = 13` bits, fewer than `c`'s 23, so the alignment here first places every
-significand on `L = max F 23` bits after the binary point, shifts it right by the exponent gap,
-and then drops `L − F` more bits. For `F ≥ 23` the extra shift is zero and this is the alignment of
-`Datapath.Term.aligned`. The accumulator has `F + 2` integer and mantissa bits, the carry bits and
-a sign bit: 21 bits on Ada (`N_FMA = 16`) and 22 on Hopper (`N_FMA = 32`), as in *Accurate Models*
-Table 3 plus the sign; it is sign-extended for the normalizer `Datapath.normalize`. Ada and Hopper
-then clear the ten low mantissa bits of the binary32 word (a 13-bit block output).
-
-`evalBlock8_eq`: on every input of the six FP8 models (Ada, Hopper and B200; E4M3 in the `e4m3x`
-layout of `GPUs.lean`, and E5M2), the datapath returns the model's output word, or the same
-error. -/
+Ada and Hopper keep `F = 13` mantissa bits after alignment, fewer than `c`'s 23, so each
+significand is aligned on `L = max F 23` bits and then shifted right by `L − F`. -/
 
 namespace TensorCore.Datapath.FP8
 
@@ -60,8 +49,7 @@ def termWidth8 (v : FP8Variant) : ℕ := (fBits v).toNat + 2
 def carryBits8 (v : FP8Variant) : ℕ := v.model.nfma.log2 + 1
 def accWidth8 (v : FP8Variant) : ℕ := termWidth8 v + carryBits8 v + 1
 
-/-- Field extraction for E4M3 (in the `e4m3x` layout: five exponent bits, bias 7) and E5M2 words;
-infinities and NaNs are rejected. Exponents are biased by 128 as in `Datapath.Input`. -/
+/-- Field extraction for E4M3 (`e4m3x` layout) and E5M2 words; infinities and NaNs are rejected. -/
 def decodeInput8 (e4 : Bool) (bits : F32) : Option Input :=
   let mb : ℕ := if e4 then 3 else 2
   let e := ((bits >>> mb) &&& 31).setWidth 9
@@ -85,8 +73,7 @@ def alignExp8 (ts : List Datapath.Term) : Exp :=
   ts.foldl (fun e t => if t.significand == 0 then e
     else if e ≤ t.biasedExp then t.biasedExp else e) 0
 
-/-- The term's magnitude truncated to the grid `2 ^ (e − 256 − F)`: placed on `L` bits after the
-binary point, shifted right by the exponent gap, then by `L − F`. -/
+/-- The term's magnitude truncated to the grid `2 ^ (e − 256 − F)`, aligned on `L` bits first. -/
 def aligned8 (v : FP8Variant) (e : Exp) (t : Datapath.Term) : BitVec (termWidth8 v) :=
   (((t.significand.zeroExtend (wideWidth v) <<< (lBits v - t.mantissaBits)) >>>
     (e - t.biasedExp)) >>> dropBits v).setWidth (termWidth8 v)
@@ -98,7 +85,7 @@ def signedAligned8 (v : FP8Variant) (e : Exp) (t : Datapath.Term) : BitVec (accW
 def accumulate8 (v : FP8Variant) (e : Exp) (ts : List Datapath.Term) : BitVec (accWidth8 v) :=
   ts.foldl (fun s t => s + signedAligned8 v e t) 0
 
-/-- Ada and Hopper clear the ten low mantissa bits of the binary32 word. -/
+/-- Ada and Hopper clear the ten low mantissa bits of the FP32 word. -/
 def outputStage (v : FP8Variant) (bits : F32) : F32 :=
   if v.narrow then (bits >>> 10) <<< 10 else bits
 
@@ -120,7 +107,6 @@ def boundsB (a : Input) : Bool :=
   decide (a.significand.toNat < 2 ^ (a.mantissaBits.toNat + 1)) && decide (a.mantissaBits.toNat ≤ 3) &&
     decide (2 ≤ a.biasedExp.toNat) && decide (a.biasedExp.toNat ≤ 255)
 
-/-- Bounds of every decoded FP8 input, both layouts, all words (kernel-checked). -/
 theorem decodeInput8_bounds_all (e4 : Bool) :
     ∀ n : ℕ, n < 512 → (decodeInput8 e4 (BitVec.ofNat 32 n)).all boundsB = true := by
   cases e4 <;> decide +kernel
@@ -364,7 +350,6 @@ theorem accumulate8_eq (v : FP8Variant) (e : Exp) (ts : List Datapath.Term) (s :
     simp only [List.foldl_cons, List.map_cons, machineAccumulate]
     rw [ih, signedAligned8_eq]
 
-/-- The two's complement accumulator holds the exact sum of the aligned terms. -/
 theorem accumulate8_toInt (v : FP8Variant) (e : Exp) (ts : List Datapath.Term)
     (hlen : ts.length = v.model.nfma + 1) :
     (accumulate8 v e ts).toInt = sumZ (ts.map fun t =>
@@ -379,7 +364,6 @@ theorem accumulate8_toInt (v : FP8Variant) (e : Exp) (ts : List Datapath.Term)
   · rw [List.length_map, hlen]
     exact Nat.lt_log2_self
 
-/-- The bitvector accumulator, read on its grid, is the model's aligned accumulator. -/
 theorem accumulator8_eq (v : FP8Variant) (ts : List Datapath.Term) (b : PreparedBlock)
     (hprof : b.model = v.model) (hterms : b.terms = ts.map Term.denormalized)
     (hacc : ∀ t ∈ ts, Accepted8 t) (hlen : ts.length = v.model.nfma + 1) :
@@ -475,8 +459,7 @@ theorem outputStage_eq (v : FP8Variant) (bits : F32) :
 
 /-! ## The datapath computes the model -/
 
-/-- The FP8 bitvector datapath returns the model's output word, or the same error, on every input
-of the six FP8 models. -/
+/-- The FP8 bitvector datapath returns the model's output word, or the same error, on every input. -/
 theorem evalBlock8_eq (v : FP8Variant) (x : BlockInput v.model) :
     evalBlock8 v x = (TensorCore.evalBlock x).map (·.output.bits) := by
   unfold evalBlock8 TensorCore.evalBlock

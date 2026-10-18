@@ -16,7 +16,7 @@ def splitMagnitude (m : BitVec 24) (gap : BitVec 8) : SplitMagnitude :=
     let coarse := (m >>> gap) <<< gap
     ⟨coarse, m - coarse⟩
 
-/-- Multiply two unsigned FP16 significands after widening, so every product fits. -/
+/-- Product of two 11-bit significands, widened to 24 bits so that it cannot wrap. -/
 def multiplySignificands (a b : BitVec 11) : BitVec 24 :=
   a.zeroExtend 24 * b.zeroExtend 24
 

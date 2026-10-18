@@ -4,7 +4,6 @@ import TensorCore.Numerics.Exact
 
 namespace TensorCore
 
-/-- Total magnitude support. -/
 def magnitudeSum : List ℤ → ℕ
   | [] => 0
   | z :: zs => z.natAbs + magnitudeSum zs
@@ -33,7 +32,7 @@ theorem magnitudeSum_le_length_mul (zs : List ℤ) (B : ℕ)
     simp only [magnitudeSum, List.length_cons, Nat.add_mul, Nat.one_mul]
     omega
 
-/-- A usable conservative signed width: B coefficient bits, carry bits c for the term count, and a separate sign bit. -/
+/-- `B` coefficient bits, `c` carry bits for the term count and a sign bit suffice. -/
 theorem coefficient_width_sufficient (zs : List ℤ) (B c : ℕ)
     (hterm : ∀ z ∈ zs, z.natAbs < 2 ^ B) (hcount : zs.length ≤ 2 ^ c) :
     magnitudeSum zs < 2 ^ ((B + c + 1) - 1) := by
@@ -151,7 +150,7 @@ theorem coefficient_bitSpan_sufficient (zs : List ℤ) (B P : ℕ)
   rw [he] at h
   omega
 
-/-- The TC-EFT paper's signed-exponent form: |Tᵢ| < 2^(b+1), Tᵢ = zᵢ 2^ℓ, and `b − ℓ + 1 + ⌈log₂ n⌉ ≤ P` imply the predicate's strict coefficient bound. -/
+/-- Theorem IV.8's coefficient bound from `|Tᵢ| < 2^(b+1)` and `b − ℓ + 1 + ⌈log₂ n⌉ ≤ P`. -/
 theorem bitSpan_coefficient_bound (zs : List ℤ) (b ℓ : ℤ) (P : ℕ)
     (hterm : ∀ z ∈ zs, absQ ((z : ℚ) * pow2 ℓ) < pow2 (b + 1))
     (hspan : b - ℓ + 1 + (ceilLog2 zs.length : ℤ) ≤ P) : magnitudeSum zs < 2 ^ P := by

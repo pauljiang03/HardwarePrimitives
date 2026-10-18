@@ -4,7 +4,7 @@ import TensorCore.Scalar.Specification
 
 namespace TensorCore.IEEE
 
-/-- Same-format IEEE conversion fixes every finite encoding, including both zero encodings, and raises no exception in any rounding direction. -/
+/-- Same-format conversion fixes every finite encoding, both zeros included, and raises no flags. -/
 theorem convert_self_finite (f : BinaryFormat) (cfg : Context) (a : Word f)
     (s : Bool) (x : ℚ) (hd : decode f a = .finite s x) :
     convert f f cfg a = ⟨a, {}⟩ := by

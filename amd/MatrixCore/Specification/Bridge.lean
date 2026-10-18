@@ -2,10 +2,7 @@ import MatrixCore.Specification.Defs
 import MatrixCore.MC.SpecialAgreement
 import MatrixCore.Numerics.Uniqueness
 
-/-! # Bridges between the specification and the implementation
-
-Decoding, products, fixed-point alignment, normalization, and rounding of the specification
-agree with the implementation's grid operations. -/
+/-! # Bridges between the specification and the implementation -/
 
 namespace MatrixCore.Spec
 

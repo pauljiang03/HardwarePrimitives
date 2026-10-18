@@ -1,14 +1,13 @@
 import TensorCore.Numerics.CorrectRounding
 import TensorCore.Numerics.Sum
 
-/-! Correctly rounded FP32 addition on values, and exact naive summation on a common grid (TC-EFT Definition IV.6, Lemma IV.7, Theorem IV.8). -/
+/-! Correctly rounded FP32 addition and exact naive summation on a common grid (TC-EFT IV.6–IV.8). -/
 
 namespace TensorCore
 
 /-- Value of a correctly rounded FP32 addition; `none` outside the finite range. -/
 def fp32Add (x y : ℚ) : Option ℚ := (round32 .nearestEven (x + y)).bind value32
 
-/-- Every finite FP32 value lies within `maxFinite32`. -/
 theorem finiteValue32_abs_le {z : ℚ} (h : FiniteValue32 z) : absQ z ≤ maxFinite32 := by
   obtain ⟨k, e, _, he2, hk, rfl⟩ := h
   have hq := pow2_pos (e - 23)
@@ -48,7 +47,6 @@ theorem fp32Add_exact (x y : ℚ) (h : FiniteValue32 (x + y)) : fp32Add x y = so
   rw [hb]
   exact hv
 
-/-- An integer multiple of a grid between `2^-149` and `2^104` with fewer than 24 significant bits is a finite FP32 value. -/
 theorem grid_finiteValue32 (k ℓ : ℤ) (h1 : -149 ≤ ℓ) (h2 : ℓ ≤ 104)
     (hk : k.natAbs < 2 ^ 24) : FiniteValue32 ((k : ℚ) * pow2 ℓ) := by
   refine ⟨k, ℓ + 23, by omega, by omega, hk, ?_⟩
@@ -84,7 +82,7 @@ theorem naiveSum32From_exact (ℓ : ℤ) (h1 : -149 ≤ ℓ) (h2 : ℓ ≤ 104)
     have hs : a + z + sumZ zs = a + sumZ (z :: zs) := by simp only [sumZ]; omega
     rw [hs]
 
-/-- Naive FP32 summation on one grid `2^ℓ` (`-149 ≤ ℓ ≤ 104`) is exact within a 24-bit coefficient bound (TC-EFT paper, Theorem IV.8). -/
+/-- Theorem IV.8 for FP32: naive summation on one grid `2^ℓ`, `-149 ≤ ℓ ≤ 104`, is exact. -/
 theorem naiveSum32_exact (ℓ : ℤ) (h1 : -149 ≤ ℓ) (h2 : ℓ ≤ 104) (zs : List ℤ)
     (hbound : magnitudeSum zs < 2 ^ 24) :
     naiveSum32 (zs.map fun (z : ℤ) => (z : ℚ) * pow2 ℓ) = some ((sumZ zs : ℚ) * pow2 ℓ) := by

@@ -3,7 +3,7 @@ import Std
 import Init.Data.Rat
 import Init.GrindInstances.Ring.Rat
 
-/-! Independent specification of the aligned FP32-output variants in Accurate Models v4, Section 4.1 (especially 4.1.1, 4.1.2, 4.1.6), Figures 2/3/5, and Table 3. -/
+/-! Independent specification of the aligned FP32-output variants (Accurate Models v4, Table 3). -/
 
 namespace TensorCore.IndependentSpec
 
@@ -109,8 +109,7 @@ noncomputable def bits (p : Parameters) (x : Input p) : Option (BitVec 32) := by
   classical
   exact if h : ∃ b, Result p x b then some (Classical.choose h) else none
 
-/-- Truncation to an `m`-bit mantissa within binary32's exponent range, specified by ordering the
-finite binary32 words whose low `23 − m` mantissa bits are zero. -/
+/-- Truncation to `m` mantissa bits, by ordering the finite FP32 words with low `23 − m` bits zero. -/
 def RoundsM (m : ℕ) (x : ℚ) (bits : BitVec 32) : Prop :=
   (bits.toNat / 2147483648 != 0) = decide (x < 0) ∧ bits.toNat % 2 ^ (23 - m) = 0 ∧
   ∃ d, IndependentSpec.value32 bits = some d ∧ Between x d ∧

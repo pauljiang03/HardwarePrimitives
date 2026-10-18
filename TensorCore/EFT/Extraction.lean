@@ -27,8 +27,6 @@ theorem overlap_recovery (t : BlockTrace) :
   unfold BlockTrace.overlap BlockTrace.retainedSum
   grind
 
-/-! Lemma IV.3 rests on one fact about nested grids: truncating to a fine grid equals truncating to a coarser grid and then truncating the remainder to the fine grid. -/
-
 /-- Lemma IV.3, summed: the aligned accumulator is `H + Σ φ(εᵢ)`. -/
 theorem accumulator_eq_retained (t : BlockTrace) :
     t.block.accumulator = t.retainedSum + sumQ t.retainedLowParts := by
@@ -56,7 +54,7 @@ theorem overlap_eq_retained_sub_outputResidual (t : BlockTrace) :
   unfold BlockTrace.overlap BlockTrace.outputResidual
   grind
 
-/-- Number of trailing zero bits of `n` (`0` for `n = 0`), by structural recursion on fuel. -/
+/-- Number of trailing zero bits of `n` (`0` for `n = 0`). -/
 def trailingZeroBitsAux : ℕ → ℕ → ℕ
   | 0, _ => 0
   | fuel + 1, n => if n ≠ 0 ∧ n % 2 = 0 then trailingZeroBitsAux fuel (n / 2) + 1 else 0
@@ -74,7 +72,6 @@ def BlockTrace.lowestLowBitExp (t : BlockTrace) : ℤ :=
 def BlockTrace.lowBits (t : BlockTrace) : List ℤ :=
   let q := pow2 t.lowestLowBitExp
   t.lowParts.map fun e => (e / q).floor
-
 
 def BlockTrace.scalarPredicate (t : BlockTrace) : Bool :=
   let ℓ := t.lowestLowBitExp
@@ -101,7 +98,6 @@ def BlockTrace.scalarChecks (t : BlockTrace) : List (String × Bool) :=
    ("H_fits_fp32", representable32 t.retainedSum),
    ("final_range", decide (absQ (t.retainedSum + sumQ t.lowParts) ≤ maxFinite32))]
 
-/-- Diagnostic conjunction is exactly the public predicate, including every guard. -/
 theorem scalarChecks_all (t : BlockTrace) :
     (t.scalarChecks.all fun c => c.2) = t.scalarPredicate := by
   simp [BlockTrace.scalarChecks, BlockTrace.scalarPredicate, Bool.and_assoc]
@@ -112,7 +108,7 @@ def BlockTrace.scalarCorrectedUnchecked (t : BlockTrace) : Option F32 :=
     (fp32Add t.output.value (-t.overlap)).bind fun h =>
       round32 .nearestEven (h + etot)
 
-/-- Safe public scalar correction: reject unless the sufficient predicate holds. -/
+/-- Scalar correction: `none` unless the sufficient predicate holds. -/
 def BlockTrace.scalarCorrected (t : BlockTrace) : Option F32 :=
   if t.scalarPredicate then t.scalarCorrectedUnchecked else none
 
@@ -125,7 +121,7 @@ theorem retained_add_low (t : BlockTrace) :
   unfold BlockTrace.overlap at h
   grind
 
-/-- Theorem IV.9 and Lemma IV.10 applied: under the predicate, the scalar branch computes exactly `RN(S)`. -/
+/-- Theorem IV.9 and Lemma IV.10: under the predicate, the scalar branch computes `RN(S)`. -/
 theorem scalarCorrectedUnchecked_eq (t : BlockTrace) (h : t.scalarPredicate = true) :
     t.scalarCorrectedUnchecked = round32 .nearestEven t.block.exactDot := by
   unfold BlockTrace.scalarPredicate at h
@@ -146,13 +142,11 @@ theorem scalarCorrectedUnchecked_eq (t : BlockTrace) (h : t.scalarPredicate = tr
   have := overlap_recovery t
   grind
 
-/-- Under the scalar predicate, public correction equals nearest-even rounding of the exact dot product. -/
 theorem scalarCorrected_eq (t : BlockTrace) (h : t.scalarPredicate = true) :
     t.scalarCorrected = round32 .nearestEven t.block.exactDot := by
   unfold BlockTrace.scalarCorrected
   rw [if_pos h, scalarCorrectedUnchecked_eq t h]
 
-/-- Public scalar correction returns `none` when its sufficient predicate fails. -/
 theorem scalarCorrected_rejects (t : BlockTrace) (h : t.scalarPredicate = false) :
     t.scalarCorrected = none := by simp [BlockTrace.scalarCorrected, h]
 
@@ -200,7 +194,7 @@ theorem scalarTcEft_eq_corrected (t : BlockTrace) (h : t.scalarPredicate = true)
   unfold BlockTrace.scalarTcEft BlockTrace.scalarCorrected
   rw [if_pos h, scalarCorrectedUnchecked_eq t h, corrected_eq_round_exactDot]
 
-/-- On a successful encoded-input evaluation, a scalar EFT result correctly rounds the independent ideal sum. -/
+/-- A scalar EFT result of a model evaluation is the correctly rounded exact dot product. -/
 theorem evalBlock_scalarTcEft_correct {p : Model} {x : BlockInput p} {t : BlockTrace} {z : ℚ}
     {b : F32} (h : evalBlock x = .ok t) (hz : exactDot x = some z) (hb : t.scalarTcEft = some b) :
     NearestEven32 z b := by

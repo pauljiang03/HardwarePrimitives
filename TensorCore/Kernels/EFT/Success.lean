@@ -26,7 +26,7 @@ private theorem unit_product (a b : ℚ) (ha : absQ a ≤ 1) (hb : absQ b ≤ 1)
     have h2 := Rat.mul_nonneg hn1 hn2
     grind
 
-/-- A concrete input-only success family, requiring no bound on the ideal: all decoded input operands and c have magnitude at most one. -/
+/-- Success with no bound on the exact result: all inputs and `c` have magnitude at most one. -/
 theorem tcEft_unitInputs_success {variant : Variant} {x : BlockInput variant.model} {D : F32}
     {b : PreparedBlock} {d : ℚ}
     (shape : x.products.length = variant.model.nfma)

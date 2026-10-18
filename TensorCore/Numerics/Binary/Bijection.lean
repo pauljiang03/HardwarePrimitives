@@ -51,7 +51,6 @@ def encodeBinaryRep (f : Format) (hf : f.WellFormed) (r : BinaryRep f) : FiniteB
     | none => simp [hd] at h
     | some d => exact ⟨d, rfl⟩⟩
 
-/-- Recover the sign, exponent, and mantissa fields of the generic binary encoder. -/
 theorem encodeBinary_fields (f : Format) (hf : f.WellFormed) (r : BinaryRep f) :
     binarySign f r.encode = r.negative ∧
     binaryExponentField f r.encode =
@@ -117,7 +116,6 @@ theorem decode_encodeBinaryRep (f : Format) (hf : f.WellFormed) (r : BinaryRep f
     simp only [decodeBinaryRep, encodeBinaryRep, hs, he, hk]
     congr 1 <;> split <;> simp_all <;> omega
 
-/-- Reassembling sign, exponent and mantissa reproduces the original finite word. -/
 theorem encode_decodeBinaryRep (f : Format) (hf : f.WellFormed) (b : FiniteBinaryWord f) :
     encodeBinaryRep f hf (decodeBinaryRep f hf b) = b := by
   apply Subtype.ext

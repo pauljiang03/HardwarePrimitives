@@ -5,13 +5,10 @@ deriving instance DecidableEq for Except
 
 /-! # Exact arithmetic
 
-Powers of two, magnitudes, sums, and the binary exponent `⌊log₂ |x|⌋` over exact rationals.
-Every matrix-core stage is evaluated on these exact values; only the stages named by the
-paper discard bits. -/
+Powers of two, magnitudes, sums, and the binary exponent `⌊log₂ |x|⌋` over exact rationals. -/
 
 namespace MatrixCore
 
-/-- `2^e` as an exact rational. -/
 def pow2 (e : ℤ) : ℚ := (2 : ℚ) ^ e
 
 theorem pow2_add (e f : ℤ) : pow2 (e + f) = pow2 e * pow2 f :=
@@ -69,13 +66,11 @@ theorem pow2_lt_iff {e f : ℤ} : pow2 e < pow2 f ↔ e < f := by
     grind
   · exact pow2_lt_of_lt
 
-/-- Multiplying an integer by `2^n` stays on the integer grid. -/
 theorem intCast_mul_pow2_nat (k : ℤ) (n : ℕ) :
     (k : ℚ) * pow2 (n : ℤ) = ((k * 2 ^ n : ℤ) : ℚ) := by
   rw [pow2_natCast, Rat.intCast_mul, Rat.intCast_pow]
   simp
 
-/-- Magnitude of an exact rational. -/
 def absQ (x : ℚ) : ℚ := if x < 0 then -x else x
 
 theorem absQ_nonneg (x : ℚ) : 0 ≤ absQ x := by unfold absQ; split <;> grind
@@ -114,7 +109,6 @@ theorem absQ_intCast (k : ℤ) : absQ (k : ℚ) = ((k.natAbs : ℕ) : ℚ) := by
     have : ((k.natAbs : ℕ) : ℤ) = k := by omega
     rw [← Rat.intCast_natCast, this]
 
-/-- Exact sum of a list of rationals. -/
 def sumQ : List ℚ → ℚ
   | [] => 0
   | x :: xs => x + sumQ xs
@@ -158,12 +152,11 @@ theorem sumQ_map_le (xs : List α) (f : α → ℚ) (B : ℚ) (h : ∀ x ∈ xs,
 
 /-! ## Binary exponent -/
 
-/-- `⌊log₂ x⌋` for positive `x`, from the bit lengths of numerator and denominator. -/
+/-- `⌊log₂ x⌋` for positive `x`. -/
 def log2Floor (x : ℚ) : ℤ :=
   let e : ℤ := (x.num.natAbs.log2 : ℤ) - (x.den.log2 : ℤ)
   if x < pow2 e then e - 1 else e
 
-/-- For positive `x`, `2^(log2Floor x) ≤ x < 2^(log2Floor x + 1)`. -/
 theorem log2Floor_spec {x : ℚ} (hx : 0 < x) :
     pow2 (log2Floor x) ≤ x ∧ x < pow2 (log2Floor x + 1) := by
   have hden : (0 : ℚ) < x.den := Rat.natCast_pos.mpr x.den_pos
@@ -218,7 +211,6 @@ theorem log2Floor_spec {x : ℚ} (hx : 0 < x) :
     rw [this]; exact ⟨Rat.le_of_lt lo, by assumption⟩
   · exact ⟨by grind, hi⟩
 
-/-- The binary exponent is determined by any binade containing `x`. -/
 theorem log2Floor_eq {x : ℚ} {e : ℤ} (h1 : pow2 e ≤ x) (h2 : x < pow2 (e + 1)) :
     log2Floor x = e := by
   have hx : 0 < x := by have := pow2_pos e; grind

@@ -1,7 +1,7 @@
 import TensorCore.Numerics.RoundTrip
 import TensorCore.Numerics.Binary.Bijection
 
-/-! Exact representability, bitwise round trips, and the signed numerical form of the finite bijection. -/
+/-! Exact representability and bitwise round trips. -/
 
 namespace TensorCore
 

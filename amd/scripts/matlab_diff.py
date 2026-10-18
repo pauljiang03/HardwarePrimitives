@@ -1,15 +1,6 @@
 #!/usr/bin/env python3
 """Differential test of the Lean model against the authors' MATLAB matrix-core models.
 
-The MATLAB Tensor Core v0.6 models (`MI100MC.m`, `MI210MC.m`, `MI300AMC.m` with
-`models/tools/Generic_BFMA_TC.m`) are fetched at a pinned commit, run in GNU Octave through
-`scripts/matlab/driver.m`, and compared with `mc_eval` on random inputs drawn as in the paper's
-Section 5: exponent-mantissa sampling over the normal and the subnormal exponent ranges, and
-independent bit sampling, with the paper's inner dimensions `k`.
-
-CDNA 3 is run twice: with the parameters exactly as shipped, and with the field that lets
-`Generic_BFMA_TC.m` read the RD-of-`S_acc` flag (`variant rdfix`).
-
 Usage: python3 scripts/matlab_diff.py [--cases N] [--seed S] [--profiles p1,p2,...]
 """
 import argparse
@@ -28,8 +19,7 @@ PATCHED = ROOT / ".lake" / "matlab-tensor-core-patched"
 REPO = "https://github.com/north-numerical-computing/MATLAB-tensor-core"
 COMMIT = "79143bd"
 
-# The special-value patch: the sign of an overflowing product's infinity is taken from the
-# overflowing products (not from `max(prd)`), and a NaN `c` stays NaN.
+# Special-value patch: an overflow takes the sign of the overflowing products; a NaN `c` stays NaN.
 SPECIAL_OLD = """        if any(prd >= thr) && any(prd <= -thr)
             d = NaN;   % overflow on both positive and negative sides
         elseif (any(prd>=thr) && c<=-thr) || (any(prd<=-thr) && c>=thr)
@@ -195,7 +185,7 @@ def paper_cases(profile):
 
 
 def matlab_value(fmt, w, xf32):
-    """The input value the MATLAB model receives: XF32 inputs arrive truncated to tf19."""
+    """The input value the MATLAB model receives: XF32 inputs arrive truncated to TF32."""
     if xf32:
         w &= ~((1 << 13) - 1)
     return decode(fmt, w)

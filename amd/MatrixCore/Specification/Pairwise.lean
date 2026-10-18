@@ -1,9 +1,6 @@
 import MatrixCore.Specification.Equivalence
 
-/-! # CDNA 2 meets the independent specification
-
-For the CDNA 2 models and every input, the model returns `w` exactly when `w` satisfies the
-specification's transcription of Fig. 2 (`Spec.PairwiseResult`). -/
+/-! # CDNA 2 meets the independent specification -/
 
 namespace MatrixCore.Spec
 
@@ -156,8 +153,7 @@ theorem blockBits_ok_iff {P : Model} (x : BlockInput P) (w : F32) :
     rw [if_neg (by omega), hp]
     simp only [hs, hd]; rfl
 
-/-- **Equivalence for CDNA 2.** On the CDNA 2 models and for every input, the model returns `w`
-exactly when `w` is the specification's result. -/
+/-- On the CDNA 2 models, the model returns `w` exactly when `w` is the specification's result. -/
 theorem pairwise_eq_spec {P : Model} {S : PairwiseParams} (hS : SupportedPairwise P S)
     (x : BlockInput P) (w : F32) :
     blockBits x = .ok w ↔
@@ -174,7 +170,6 @@ theorem pairwise_eq_spec {P : Model} {S : PairwiseParams} (hS : SupportedPairwis
     cases x.a.mapM fun w => (P.a.read w).toFinite <;> simp
     cases x.b.mapM fun w => (P.b.read w).toFinite <;> simp
     cases (MatrixCore.fp32.decode x.c).toFinite <;> simp
-  -- the model's side, for decoded inputs
   have hacc : ∀ (px : Prepared) (s : ℚ), accumulate P px = .ok s ↔ pairwiseSum P px = some s := by
     intro px s
     unfold accumulate

@@ -2,11 +2,7 @@ import MatrixCore
 
 /-! # Monotonicity in `c`, against the TC-EFT construction
 
-The TC-EFT paper lowers `c` from `1` to `1 − 2^-24` with `K` products of `2^-(24+p)`: on NVIDIA
-Tensor Cores `c` is the term holding the alignment exponent, so the smaller `c` lowers it, the
-products stop being truncated, and the output rises (any term holding that exponent would do). On AMD `c` is aligned separately (CDNA 3) or the sum is exact (CDNA 1), so
-the products `2^-24 = 0x0C00 · 0x0C00` are kept in both cases and the smaller `c` does not give a
-larger output. `evalBlock_c_monotone` proves this for every input. -/
+Lowering `c` from `1` to `1 − 2^-24` raises a Tensor Core output but not a matrix core output. -/
 
 open MatrixCore
 
@@ -32,7 +28,7 @@ example {a b : List (BitVec 16)} {c c' : F32} {t t' : BlockTrace cdna3F16}
     wordValue t.d ≤ wordValue t'.d :=
   evalBlock_c_monotone paper_models_monotone.2.2.2.2.2.2.1 h h' hc
 
-/-- And for inner products of any length. -/
+/-- CDNA 2 inner products of any length. -/
 example {a b : List (BitVec 16)} {c c' d d' : F32} (hlen : a.length = b.length)
     (h : dotBits cdna2F16 a b c = .ok d) (h' : dotBits cdna2F16 a b c' = .ok d')
     (hc : wordValue c ≤ wordValue c') : wordValue d ≤ wordValue d' :=

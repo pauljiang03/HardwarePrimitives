@@ -5,7 +5,7 @@ import TensorCore.TC.FinalRounding
 
 namespace TensorCore
 
-/-- Accepted FP64 DMMA arithmetic is correctly rounded in each of the four modes, with the original-input ideal and the output sign made explicit. -/
+/-- Accepted FP64 DMMA is correctly rounded in each of the four modes, with the IEEE output sign. -/
 theorem fp64Fma_correct {mode : BinaryRoundingMode}
     {x : InvocationInput (fp64Fma mode)} {t : InvocationTrace (fp64Fma mode)}
     (h : evalInvocation x = .ok t) :
@@ -37,7 +37,7 @@ theorem fp64Fma_success (mode : BinaryRoundingMode) (x : InvocationInput (fp64Fm
   rw [hconv]
   exact ⟨_, rfl⟩
 
-/-- IEEE 754 sign of an exact zero sum: `+0`, or `−0` toward negative, unless both addends share a sign. -/
+/-- IEEE 754 sign of an exact zero sum: the addends' common sign, else `−0` only toward negative. -/
 def fusedZeroNegative (mode : BinaryRoundingMode) (productNegative cNegative : Bool) : Bool :=
   if productNegative == cNegative then productNegative else decide (mode = .towardNegative)
 

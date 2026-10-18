@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Matrix-Core.
-
-1. Build the library, the paper's test vectors and the trust audit (`lake build`), optionally
-   from a clean build directory.
-2. Check every worked example under `examples/`.
-3. Elaborate every ```lean code block in the README, the results summary, the guide, the paper
-   notes and the test walkthrough, each as a standalone file.
+"""Build MatrixCore, check the examples and elaborate the Lean code blocks in the docs.
 
 Usage: python3 scripts/check.py [--clean]
 """

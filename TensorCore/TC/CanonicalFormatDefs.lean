@@ -1,7 +1,7 @@
 import TensorCore.TC.Models
 import TensorCore.TC.CanonicalDefs
 
-/-! BF16 and TF32 products with FP32 accumulation as models of the block semantics, with the numerical features of Accurate Models Table 3. -/
+/-! BF16 and TF32 models with FP32 accumulation (Accurate Models, Table 3). -/
 
 namespace TensorCore
 

@@ -64,7 +64,7 @@ theorem pair_decode_valid (p : TCModel) (hf : p.format.isIEEE=true)
   subst v
   exact ⟨decode_value p.format hf _ _ ha,decode_value p.format hf _ _ hb⟩
 
-/-- Actual preparation commutes with projection; the port checks shape at this boundary. -/
+/-- Preparation commutes with projection, given the shape check. -/
 theorem prepare_eq (p : TCModel) (hf : p.format.isIEEE=true)
     (x : TensorCore.BlockInput (model p)) (hshape : x.products.length=p.nfma) :
     (TCFloat.prepare p (inputPairs x) x.c.toNat).map block = TensorCore.prepare x := by
@@ -171,7 +171,7 @@ theorem trace_algorithm_eq (b : Block) (hb : ValidBlock b) (D : TensorCore.F32) 
     rw [ht]
     exact congrArg some (encoded_trace_eq hrel)
 
-/-- Universal encoded TC equality, including malformed product counts, nonfinite inputs, subnormals, signed zero and out-of-range accumulator rejection. -/
+/-- Encoded Tensor Core equality on every input, including malformed and rejected inputs. -/
 theorem tc_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
     (x : TensorCore.BlockInput (model p)) :
     Interface.tc p (inputPairs x) x.c.toNat =
@@ -190,7 +190,7 @@ theorem tc_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
   · have hs' : (x.products.length != p.nfma)=true := bne_iff_ne.mpr hs
     simp [Interface.tc,TCFloat.prepare,inputPairs,TensorCore.evalBlock,model,hs',Except.toOption]
 
-/-- Universal encoded EFT equality: identical validation success, branch and bits, for every supplied FP32 D. -/
+/-- Encoded EFT equality: the same validation, branch and bits, for every supplied FP32 D. -/
 theorem eft_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.eft p (inputPairs x) x.c.toNat D.toNat =
@@ -210,7 +210,7 @@ theorem eft_encoded_eq (p : TCModel) (hf : p.format.isIEEE=true)
     simp [Interface.eft,TCFloat.prepare,inputPairs,TensorCore.tcEftEncoded,
       TensorCore.prepareEncodedEFT,model,hs',Except.toOption]
 
-/-- The encoded TC and EFT interfaces commute with the same input translation. -/
+/-- The encoded Tensor Core and EFT interfaces commute with the same input translation. -/
 theorem universal_equivalence (p : TCModel) (hf : p.format.isIEEE=true)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tc p (inputPairs x) x.c.toNat =

@@ -88,7 +88,6 @@ def main():
     for name, expected in pins['sha256'].items():
         assert hashlib.sha256((ROOT / 'vendor/matlab-tensor-core-v0.5' / name).read_bytes()).hexdigest() == expected, name
     cases = []
-    # Include arbitrary, non-hardware FMA sizes and numbers of padding bits.
     configs = [(0, 0, None), (0, 2, -133), (0, 0, 4), (4, 0, None), (8, 1, -132), (16, 2, -133)]
     configs += [(k, e, f) for k in [1, 3, 7, 17, 37, 64]
                 for e in [0, 1, 2, 5, 9, 24] for f in [None, -132, 4]]
@@ -122,7 +121,7 @@ def main():
         cases.append((1, extra, None, [1,1,0x80000001]))
     for extra in [155, 156]:
         cases.append((1, extra, None, [0x7800,0x7800,1]))
-    # Explicit model-domain and parser checks (wrong count and special values).
+    # Model-domain and parser checks: wrong word count and special values.
     for words in [[0]*7, [0x7c00,0]*4+[0], [0]*8+[0x7f800000]]:
         cases.append((4, 0, None, words))
     rows = ['canonical ' + ' '.join(map(str, [k, e, 'none' if f is None else f, *words]))
@@ -153,7 +152,6 @@ def main():
         losses['alignment'] += alignment
         losses['output'] += output
         losses['both'] += alignment and output
-    # Published canonical device vectors, each row one source-defined block FMA.
     from check_device import read_hex_rows, read_bin, fp32_word_to_fp16
     device_reports = []
     for gpu, k, extra, floor in [('V100',4,0,None),('A100',8,1,-132),('H100',16,2,-133)]:

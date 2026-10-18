@@ -24,7 +24,6 @@ theorem floor_eq_of_bounds (x : ℚ) (z : ℤ) (h1 : (z : ℚ) ≤ x) (h2 : x < 
   have b : x.floor < z + 1 := Rat.floor_lt_iff.mpr (by rw [Rat.intCast_add, Rat.intCast_one]; exact h2)
   omega
 
-/-- The floor of a natural number scaled by `2^-d` is its quotient by `2^d`. -/
 theorem floor_natCast_mul_pow2_neg (N d : ℕ) :
     ((N : ℚ) * pow2 (-(d : ℤ))).floor = ((N / 2 ^ d : ℕ) : ℤ) := by
   have hnd := pow2_pos (-(d : ℤ))
@@ -47,7 +46,6 @@ theorem floor_natCast_mul_pow2_neg (N d : ℕ) :
     rw [Rat.intCast_natCast]
     simpa using this
 
-/-- Accumulator with `c_j`: every product is retained and `A_j = 1 + (K − j·2^p)·2^-(24+p)`, written as a natural coefficient on the grid `2^-(24+p)`. -/
 theorem construction_accumulator_range (prof : Model) (p K j : ℕ) (da db : Decoded)
     (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1)
@@ -238,14 +236,13 @@ theorem nonmonotone_range (prof : Model) (p K j : ℕ) (da db : Decoded)
       · have := hM ((K - 2 ^ p) / 2 ^ (p + 1))
         grind
 
-/-- Equation 9: with `1 ≤ j`, the witness condition `j ≤ 2^23 ∧ (j + 2)·2^p ≤ K` is `j ≤ min(2^23, ⌊K/2^p⌋ − 2)`. -/
+/-- Equation 9: for `1 ≤ j`, the witness condition is `j ≤ min(2^23, ⌊K/2^p⌋ − 2)`. -/
 theorem nonmonotone_range_iff (p K j : ℕ) (hj1 : 1 ≤ j) :
     (j ≤ 2 ^ 23 ∧ (j + 2) * 2 ^ p ≤ K) ↔ j ≤ min (2 ^ 23) (K / 2 ^ p - 2) := by
   have h : j + 2 ≤ K / 2 ^ p ↔ (j + 2) * 2 ^ p ≤ K := Nat.le_div_iff_mul_le (Nat.two_pow_pos p)
   rw [← h]
   omega
 
-/-- The FP32 encoding `3f800000 − j` decodes to `c_j` for `1 ≤ j ≤ 2^23`. -/
 theorem decode32_below (j : ℕ) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
     decode32 (BitVec.ofNat 32 (0x3f800000 - j)) = some (belowDecoded j) := by
   rw [decode32_eq, BitVec.toNat_ofNat, classifyNat_fp32]
@@ -260,7 +257,6 @@ theorem decode32_below (j : ℕ) (hj1 : 1 ≤ j) (hj2 : j ≤ 2 ^ 23) :
   congr 1
   · omega
   · omega
-
 
 /-- For C = 1 − j·2^-24: which j raise the output, the resulting output, and its maximum. -/
 theorem nonmonotone_range_encoded (K p j : ℕ) (eAlignMin : Option ℤ)

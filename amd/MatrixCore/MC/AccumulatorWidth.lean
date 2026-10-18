@@ -24,7 +24,6 @@ theorem machineAccumulate_exact (w : ℕ) (zs : List ℤ) (hw : 0 < w)
   rw [hb]
   apply BitVec.toInt_ofInt_eq_self hw <;> omega
 
-/-- Every prefix is exact under the same condition, even with cancellation. -/
 theorem machineAccumulate_prefix_exact (w : ℕ) (xs ys : List ℤ) (hw : 0 < w)
     (h : magnitudeSum (xs ++ ys) < 2 ^ (w - 1)) :
     (machineAccumulate w 0 xs).toInt = sumZ xs := by
@@ -37,7 +36,6 @@ theorem machineAccumulate_of_coefficient_bound (zs : List ℤ) (B c : ℕ)
     (machineAccumulate (B + c + 1) 0 zs).toInt = sumZ zs :=
   machineAccumulate_exact _ zs (by omega) (coefficient_width_sufficient zs B c hterm hcount)
 
-/-- A `w`-bit sum of two registers is exact when the exact sum fits. -/
 theorem bitVec_add_toInt (x y : BitVec w) (hw : 0 < w)
     (h : (x.toInt + y.toInt).natAbs < 2 ^ (w - 1)) : (x + y).toInt = x.toInt + y.toInt := by
   have hp : ((2 ^ (w - 1) : ℕ) : ℤ) = (2 : ℤ) ^ (w - 1) := by simp
@@ -46,7 +44,6 @@ theorem bitVec_add_toInt (x y : BitVec w) (hw : 0 < w)
   rw [hs]
   apply BitVec.toInt_ofInt_eq_self hw <;> omega
 
-/-- The exact sum of the aligned products is the integer sum placed on the alignment grid. -/
 theorem sumQ_truncMantissa_eq (padding : ℕ) (e : ℤ) (ps : List Unpacked) :
     sumQ (ps.map fun p => truncMantissa p.value e (23 + padding)) =
       (sumZ (alignedBits padding e ps) : ℚ) * pow2 (e - (23 + padding : ℕ)) := by

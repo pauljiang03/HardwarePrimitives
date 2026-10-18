@@ -6,7 +6,7 @@ namespace TensorCore.Datapath
 
 open EFMachine
 
-/-- Exponent registers: 9 bits, enough for the alignment exponent from the minimum alignment exponent −133 up to 254. -/
+/-- 9-bit exponent registers, enough for alignment exponents from −133 up to 254. -/
 abbrev Exp := BitVec 9
 
 /-- F = 23 + p: the mantissa bits each term keeps after alignment. -/
@@ -24,13 +24,13 @@ def eAlignMin : Variant → Exp
 /-- Carry bits for summing the K products and c: `K + 1 ≤ 2 ^ carryBits`. -/
 def carryBits (variant : Variant) : ℕ := variant.model.nfma.log2 + 1
 
-/-- An aligned term: two integer bits, the second for a product kept in denormalized form (whose significand can reach 2 or more), and F mantissa bits. -/
+/-- An aligned term: two integer bits (a denormalized product can reach 2) and F mantissa bits. -/
 def termWidth (variant : Variant) : ℕ := (alignBits variant).toNat + 2
 
 /-- The two's complement accumulator: an aligned term's width, the carry bits and a sign bit. -/
 def accWidth (variant : Variant) : ℕ := termWidth variant + carryBits variant + 1
 
-/-- A decoded input: sign, significand with its hidden bit, mantissa width, and exponent biased by 128. -/
+/-- A decoded input; the significand includes the hidden bit and the exponent is biased by 128. -/
 structure Input where
   negative : Bool
   significand : BitVec 11
@@ -54,7 +54,7 @@ def decodeInput (kind : InputKind) (bits : F32) : Option Input :=
     else some ⟨negative, m, mant, offset + 1⟩
   else some ⟨negative, ((1 : BitVec 11) <<< f.mantissaBits) + m, mant, e + offset⟩
 
-/-- A product or c: sign, significand with `mantissaBits` bits after the binary point, and exponent biased by 256. -/
+/-- A product or c, with `mantissaBits` bits after the binary point and exponent biased by 256. -/
 structure Term where
   negative : Bool
   significand : BitVec 24
@@ -100,14 +100,12 @@ def Term.signedAligned (variant : Variant) (e : Exp) (t : Term) : BitVec (accWid
 def accumulate (variant : Variant) (e : Exp) (ts : List Term) : BitVec (accWidth variant) :=
   ts.foldl (fun s t => s + t.signedAligned variant e) 0
 
-/-- Normalization and final truncation of an accumulator on the grid `2 ^ (e - 256 - F)`;
-`none` when the value exceeds the largest finite FP32 value. -/
+/-- Normalization and truncation to FP32 on the grid `2 ^ (e - 256 - F)`; `none` on overflow. -/
 def normalize (s : BitVec w) (e : Exp) (F : BitVec 5) : Option F32 :=
   let negative := s.msb
   let m := if negative then -s else s
   if m == 0 then some 0 else
     let F : Exp := F.setWidth 9
-    -- position of the leading one
     let lead : Exp := BitVec.ofNat 9 (w - 1) - m.clz.setWidth 9
     -- the FP32 exponent field is e + lead - F - 129: at least 255, or at least 1
     let overflow : Bool := F + 384 - lead ≤ e

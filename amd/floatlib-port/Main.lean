@@ -2,9 +2,8 @@ import MCFloat.Model
 
 /-! # `mc_floatlib`: evaluate inner products with the FloatLib implementation
 
-Same protocol as Matrix-Core's `mc_eval`: lines `<model> <a> <b> <c>` with comma-separated
-hexadecimal words; prints `F <hex>` for a finite result, `I+`/`I-` for an infinity, `N` for
-NaN, and `X` for a malformed line. -/
+Same protocol as `mc_eval`: lines `<model> <a> <b> <c>` of comma-separated hexadecimal words,
+answered by `F <hex>`, `I+`/`I-`, `N` (NaN) or `X` (malformed line). -/
 
 open MCFloat
 open FloatLib.Floats.Formats.BinaryInterchange

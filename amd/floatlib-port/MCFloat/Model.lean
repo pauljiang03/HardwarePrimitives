@@ -5,19 +5,8 @@ import Mathlib.Tactic
 
 /-! # AMD matrix cores on FloatLib
 
-An implementation of the CDNA 1, CDNA 2 and CDNA 3 blocks of Khattak, Mikaitis and Graziani,
-*Accurate Models of AMD Matrix Cores*, written against FloatLib rather than Matrix-Core's own
-numerics:
-
-* words are decoded and classified (finite, infinity, NaN) by FloatLib's format descriptors,
-  including its FNUZ fp8 formats and its tf32 layout for XF32 (tf19);
-* products are exact FloatLib dyadics;
-* every `fl{·}` is FloatLib's binary32 round-to-nearest-even of an exact rational, which yields
-  `±∞` on overflow; subnormal results are flushed with FloatLib's field accessors;
-* alignment, truncation and RD use mathlib's floor, and normalization FloatLib's `floorLog2`.
-
-A block maps input words to a FloatLib binary32 word. `MCFloat.Equivalence` proves that the
-observed result (finite word, infinity, NaN) is Matrix-Core's `blockOutcome` for every input. -/
+The CDNA 1, CDNA 2 and CDNA 3 blocks of Khattak, Mikaitis and Graziani, *Accurate Models of AMD
+Matrix Cores*, written against FloatLib's formats and rounding. -/
 
 namespace MCFloat
 open FloatLib.Floats.Formats.BinaryInterchange
@@ -33,8 +22,7 @@ def bits (w : F32) : ℕ := w.bits.toNat
 
 /-! ## Decoding -/
 
-/-- A finite operand or product: its exact value, its exponent (the minimum normal exponent for
-subnormals and zero), and whether its significand is below one. -/
+/-- A finite term; `exponent` is the minimum normal exponent for subnormals and zero. -/
 structure Term where
   dyadic : ExactDyadic
   exponent : ℤ
@@ -44,7 +32,6 @@ structure Term where
 def Term.value (t : Term) : ℚ := t.dyadic.toRat
 def Term.isZero (t : Term) : Bool := t.dyadic.significand == 0
 
-/-- Exact product: significands multiplied, exponents added. -/
 def Term.mul (a b : Term) : Term := ⟨a.dyadic.mul b.dyadic, a.exponent + b.exponent, false⟩
 
 /-- Flush to zero: the value of a term, or zero when its significand is below one. -/
@@ -56,7 +43,6 @@ inductive Value where
   | inf (negative : Bool)
   | nan
 
-/-- FloatLib's classification of a word: NaN, a signed infinity, or a finite term. -/
 def classifyModel {f : FloatFormat} (x : Model f) : Value :=
   if Model.isNaN x then .nan
   else if Model.isInf x then .inf (Model.signBit x)
@@ -70,12 +56,10 @@ def Value.finite? : Value → Option Term
   | .finite t => some t
   | _ => none
 
-/-- How an operand word is read. -/
 inductive Operand where
-  /-- A FloatLib format: binary32, binary16, bfloat16, e4m3fnuz, e5m2fnuz. -/
+  /-- A FloatLib format: FP32, FP16, BF16, E4M3 or E5M2 FNUZ. -/
   | fmt (f : FloatFormat)
-  /-- XF32: a binary32 word whose finite values are read as the tf32 word of its upper
-  nineteen bits (the significand truncated to ten mantissa bits). -/
+  /-- XF32: an FP32 word whose finite values are read as the TF32 word of its upper 19 bits. -/
   | xf32
 
 def Operand.read : Operand → ℕ → Value
@@ -85,9 +69,9 @@ def Operand.read : Operand → ℕ → Value
     | .finite _ => classify .tf32 (n / 2 ^ 13)
     | v => v
 
-/-! ## binary32 rounding -/
+/-! ## FP32 rounding -/
 
-/-- `fl{x}`: FloatLib's binary32 round-to-nearest-even of the exact value; `±∞` on overflow. -/
+/-- `fl{x}`: FloatLib's FP32 round-to-nearest-even of the exact value; `±∞` on overflow. -/
 def round32 (x : ℚ) : F32 :=
   Model.roundRatWithRounding .binary32 .nearestEven (decide (x < 0)) x.num.natAbs x.den
 
@@ -108,7 +92,7 @@ def truncGrid (x : ℚ) (g : ℤ) : ℚ :=
 /-- RD to a multiple of `2^g`. -/
 def rdGrid (x : ℚ) (g : ℤ) : ℚ := ⌊x / pow2 g⌋ * pow2 g
 
-/-- Leading-bit exponent of a nonzero rational, not below binary32's `−126`. -/
+/-- Leading-bit exponent of a nonzero rational, not below FP32's `−126`. -/
 def normExp (x : ℚ) : ℤ :=
   max (FloatLib.Numerics.RationalBinary.floorLog2 x.num.natAbs x.den) (-126)
 
@@ -119,8 +103,7 @@ inductive Kind where
   | exact
   /-- `pair_wise_sum`, subnormals flushed. -/
   | pairwise
-  /-- `global_alignment` (`interleaved = false`) or `odd_even_grouping` (`true`), with late
-  `c` and an optional cutoff on the shift of `c`. -/
+  /-- `global_alignment`, or `odd_even_grouping` when `interleaved`; `c` is added late. -/
   | late (interleaved : Bool) (cutoff : Option ℕ)
 
 structure MCModel where
@@ -195,7 +178,7 @@ def lateC (cutoff : Option ℕ) (eMax : Option ℤ) (s : ℚ) (c : Term) : ℚ :
 
 /-! ## Special values -/
 
-/-- A product or input before accumulation: a finite value, an infinity, or NaN. -/
+/-- A product or input before accumulation. -/
 inductive Ext where
   | fin (q : ℚ)
   | inf (negative : Bool)
@@ -210,8 +193,7 @@ def Value.ext : Value → Ext
 def Ext.isNaN : Ext → Bool | .nan => true | _ => false
 def Ext.isInf (s : Bool) : Ext → Bool | .inf t => t == s | _ => false
 
-/-- The result of a block with a special value: NaN dominates, `+∞` with `−∞` is NaN, and
-otherwise the infinity. -/
+/-- Block result with a special value: NaN dominates, `+∞` with `−∞` is NaN, else the infinity. -/
 def special (xs : List Ext) : F32 :=
   if xs.any Ext.isNaN then nan32
   else if xs.any (Ext.isInf false) && xs.any (Ext.isInf true) then nan32
@@ -219,8 +201,7 @@ def special (xs : List Ext) : F32 :=
   else if xs.any (Ext.isInf true) then Model.negInf .binary32
   else nan32
 
-/-- `a_ℓ · b_ℓ` with special values: IEEE rules for infinities and NaN; for finite operands an
-infinity when CDNA 3 sees `|p_ℓ| ≥ 2^128` or CDNA 2's conversion to binary32 overflows. -/
+/-- `a_ℓ · b_ℓ` with IEEE special values and the CDNA 3 and CDNA 2 product overflows. -/
 def product (P : MCModel) : Value → Value → Ext
   | .finite a, .finite b =>
     let q := (a.mul b).value
@@ -231,10 +212,9 @@ def product (P : MCModel) : Value → Value → Ext
   | .inf s, .inf t => .inf (s != t)
   | .inf s, .finite b | .finite b, .inf s => if b.isZero then .nan else .inf (s != b.dyadic.negative)
 
-/-! ## CDNA 2 binary32 arithmetic -/
+/-! ## CDNA 2 FP32 arithmetic -/
 
-/-- `fl{u + v}` on binary32 words: FloatLib RNE of the exact sum of finite words (subnormals
-flushed); NaN and infinities as in IEEE addition. -/
+/-- `fl{u + v}` on FP32 words, subnormals flushed; NaN and infinities as in IEEE addition. -/
 def add32 (u v : F32) : F32 :=
   match classifyModel u, classifyModel v with
   | .finite p, .finite q => fl true (p.value + q.value)
@@ -252,8 +232,7 @@ def pairwiseGroupSum : ℕ → List F32 → F32
     let h := xs.length / 2
     add32 (pairwiseGroupSum depth (xs.take h)) (pairwiseGroupSum depth (xs.drop h))
 
-/-- CDNA 2: inputs flushed, every product converted to binary32, the pairwise sum, then `c`
-added with a final `fl{·}`. -/
+/-- CDNA 2: flushed inputs, products rounded to FP32, the pairwise sum, then `c` and `fl{·}`. -/
 def pairwiseBlock (as bs : List Term) (c : Term) : F32 :=
   let leaves := List.zipWith (fun a b => fl true (a.flushed * b.flushed)) as bs
   let t := pairwiseGroupSum leaves.length leaves
@@ -263,7 +242,6 @@ def pairwiseBlock (as bs : List Term) (c : Term) : F32 :=
 
 /-! ## Blocks -/
 
-/-- The result word for finite inputs. -/
 def finiteBlock (P : MCModel) (as bs : List Term) (c : Term) : F32 :=
   let ps := List.zipWith Term.mul as bs
   if P.productLimit && ps.any (fun p => decide (pow2 128 ≤ |p.value|)) then
@@ -277,8 +255,7 @@ def finiteBlock (P : MCModel) (as bs : List Term) (c : Term) : F32 :=
       let s := if interleaved then groupedSum ps else alignedSum ps
       fl false (lateC cutoff s.1 s.2 c)
 
-/-- One block `d = Σ a_ℓ b_ℓ + c` on words; `none` when `a` or `b` does not have `N_FMA`
-entries. -/
+/-- One block `d = Σ a_ℓ b_ℓ + c` on words; `none` unless `a` and `b` have `N_FMA` entries. -/
 def block (P : MCModel) (a b : List ℕ) (c : ℕ) : Option F32 :=
   if a.length ≠ P.nfma ∨ b.length ≠ P.nfma then none
   else
@@ -298,8 +275,7 @@ def chunks (n : ℕ) : ℕ → List α → List (List α)
 
 def pad (n : ℕ) (xs : List ℕ) : List ℕ := xs ++ List.replicate ((n - xs.length % n) % n) 0
 
-/-- `d = Σ a_ℓ b_ℓ + c` in blocks of `N_FMA` (zero padded), each block's result word the next
-block's `c`; a NaN result is final. -/
+/-- `d = Σ a_ℓ b_ℓ + c` in zero-padded blocks of `N_FMA`, each output the next block's `c`. -/
 def dot (P : MCModel) (a b : List ℕ) (c : ℕ) : Option F32 :=
   if a.length ≠ b.length then none
   else

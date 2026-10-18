@@ -1,15 +1,7 @@
-"""Run Microsoft's MMA-Sim (https://github.com/microsoft/MMA-Sim, MIT licence, Copyright (c)
-Microsoft Corporation; the commit is pinned in vendor/mmasim/SOURCES.json) on batches of inner
-products, unmodified, through its own `dpa` entry points. Called by scripts/check_mmasim.py.
+"""Run MMA-Sim, unmodified, on batches of inner products through its `dpa` entry points.
 
-Usage (in a Python with torch; MMA-Sim is imported from the checkout, not installed):
-    run.py <MMA-Sim src dir> <in.jsonl> <out.txt>
-Each input line: {"cls": "MMA"|"WGMMA"|"TCGen05MMA", "arch": ..., "shape": ...,
-                  "kinst": k, "a": [words], "b": [words], "c": word}
-The K products are fed to consecutive instructions of `kinst` products each (dpa on each slice),
-each output the next instruction's accumulator, as a K loop of MMA instructions does.
-Output: one FP32 (or FP16) output word per line, in decimal, in input order.
-Cases with the same (cls, arch, shape, len(a)) are evaluated in one batched call."""
+Usage: run.py <MMA-Sim src dir> <in.jsonl> <out.txt>   (in a Python with torch)
+"""
 import json
 import sys
 from collections import defaultdict
@@ -19,9 +11,7 @@ import types  # noqa: E402
 import torch  # noqa: E402
 import mmasim.arithmetic  # noqa: E402
 
-# MMA-Sim's FP64 FMA module JIT-compiles a C++ kernel with -fopenmp, which Apple clang rejects.
-# Only FP64 instructions use it; it is replaced by a stub that fails if called. Everything this
-# cross-check runs is in mmasim/arithmetic/fdpa.py, imported unmodified.
+# Stub for the FP64 FMA module, whose C++ kernel needs -fopenmp (rejected by Apple clang).
 _fma = types.ModuleType('mmasim.arithmetic.fma')
 
 

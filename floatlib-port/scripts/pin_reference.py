@@ -2,11 +2,6 @@
 """Pin the FloatLib equivalence proofs to a reviewed revision of the parent library.
 
 Usage (from floatlib-port/): python3 scripts/pin_reference.py REVISION
-Rewrites reference-manifest.json from the parent dependency files at REVISION, updates the
-pinned revision and manifest checksum used by prepare_reference.py and the reports, and
-clears renamed-identifiers.json and the RENAMED_MODULES table of prepare_reference.py (renames
-before the new pin are part of it).
-Use this only after a deliberate change to the parent's behavior has been reviewed.
 """
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')

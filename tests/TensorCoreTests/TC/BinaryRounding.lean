@@ -1,8 +1,6 @@
 import TensorCore.TC.FinalRounding
 import TensorCoreTests.TC.Cases
 
-
-
 namespace TensorCore.Regression
 
 set_option maxRecDepth 16384
@@ -19,7 +17,6 @@ theorem binary_rounding_ties :
     (roundBinary tf19 .truncate (-(1 + 3 / 2048))).map BitVec.toNat = some 0x5fc01 ∧
     (roundBinary fp64 .nearestEven (1 / 3)).map BitVec.toNat = some 0x3fd5555555555555 := by
   decide +kernel
-
 
 theorem binary_rounding_boundaries :
     roundBinary fp16 .nearestEven 65520 = none ∧

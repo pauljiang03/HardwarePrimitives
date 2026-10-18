@@ -209,7 +209,7 @@ def main():
         add(f'{profile}/boundary-composition/{i}', 'boundary_composition', a, b, c, profile, stage)
     assert len({r['id'] for r in records}) == len(records)
 
-    # Reproduce the source's synthetic grid family with actual encoded FP16 operands in Lean. products, selects the grid, accumulates, and truncates for each (p,K,j).
+    # The source's synthetic grid family, as encoded FP16 blocks evaluated in Lean.
     families = []
     for p in range(5):
         for k in range(1, 100):
@@ -244,11 +244,9 @@ def main():
         compare_block(case, out)
         branches[out['correction']['branch']] += 1
         if case['_stage'] is not None:
-            # The manuscript chooses the finest nonzero residual grid.
             paper_accepted = case['_stage']['scalar_cr'] is not None
             if paper_accepted != out['model']['scalar_predicate']:
                 predicate_differences[case['cohort']] += 1
-    # The Lean predicate and the paper's generator both use the lowest bit actually set.
     if predicate_differences:
         raise SystemExit(f'Lean scalar predicate disagrees with the paper generator: {dict(predicate_differences)}')
     offset = len(records)

@@ -33,7 +33,7 @@ def add32WithLean (a b : F32) : Option F32 := do
     else none
   else none
 
-/-- Full scalar primitive preservation, including nonfinite rejection, exact range rejection, signed underflow, and normalization of exact zero. -/
+/-- Native addition agrees with `add32` on every input, including rejections and signed zeros. -/
 theorem add32WithLean_eq (a b : F32) : add32WithLean a b = add32 a b := by
   cases hx : decode32Word a with
   | none =>
@@ -89,7 +89,7 @@ def Components.scalarWithLean (c : Components) : Option F32 := do
 theorem Components.scalarWithLean_eq (c : Components) : c.scalarWithLean = c.scalar := by
   simp only [Components.scalarWithLean, Components.scalar, scalarSumWithLean_eq, add32WithLean_eq]
 
-/-- Algorithm 1 with native scalar additions, retaining bounded exact consolidation when the scalar guard refuses the scalar branch. -/
+/-- Algorithm 1 with native FP32 scalar additions. -/
 def tcEftWithLean (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Result := do
   let p ← prepare variant x D
   if p.terms.all (fun t => t.word.magnitude == 0) then return .allZero
@@ -101,7 +101,7 @@ def tcEftWithLean (variant : Variant) (x : BlockInput variant.model) (D : F32) :
     | some b => return .boundedExact b
     | none => return .outOfRange
 
-/-- Every input preserves the entire result, including branch tags and errors. -/
+/-- The same result as `tcEft` on every input, including branch tags and errors. -/
 theorem tcEftWithLean_eq (variant : Variant) (x : BlockInput variant.model) (D : F32) :
     tcEftWithLean variant x D = tcEft variant x D := by
   simp only [tcEftWithLean, tcEft, Components.scalarWithLean_eq]

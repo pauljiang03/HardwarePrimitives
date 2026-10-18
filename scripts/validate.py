@@ -132,7 +132,6 @@ def main():
     for i, (b, got) in enumerate(zip(blocks, actual)):
         want = block_oracle(b)
         assert got == want, (i, [hex(x) for x in b], got, want)
-    # Exact values, midpoint parity, signs, quarter points, binade and underflow boundaries.
     anchors = {0, 1, 2, 0x7ffffe, 0x7fffff, 0x800000, 0x800001, 0x3f7fffff,
                0x3f800000, 0x3f800001, 0x3fffffff, 0x7f7ffffe}
     anchors.update((e << 23) - 1 for e in range(1, 255))

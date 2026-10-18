@@ -3,11 +3,7 @@ import MatrixCore.MC.PairWiseSum
 import MatrixCore.MC.AcceptedDomain
 import MatrixCore.MC.Prepared
 
-/-! # Agreement of the special-value semantics with the finite model
-
-`blockOutcome` reports a finite output exactly when `evalBlock` accepts, with the same word; in
-every other case it reports an infinity or NaN. For CDNA 2 this includes binary32 special-value
-arithmetic inside the pairwise sum. -/
+/-! # Agreement of the special-value semantics with the finite model -/
 
 namespace MatrixCore
 
@@ -31,8 +27,6 @@ theorem mul_fin {a b : XVal} {q : ℚ} (h : mul a b = .fin q) :
 
 end XVal
 
-/-- The extended pairwise sum is finite exactly when every summand is, and then agrees with
-`pairwiseGroupSum`. -/
 theorem pairwiseGroupSumX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
     (pairwiseGroupSumX ftz n xs).toFin = (xs.mapM XVal.toFin).bind (pairwiseGroupSum ftz n)
   | _, [] => by simp [pairwiseGroupSumX, pairwiseGroupSum, XVal.toFin]
@@ -74,7 +68,6 @@ theorem pairwiseGroupSumX_toFin (ftz : Bool) : ∀ (n : ℕ) (xs : List XVal),
           rw [← hy, hys, List.take_left' rfl, List.drop_left' rfl]
           cases pairwiseGroupSum ftz n ys₁ <;> cases pairwiseGroupSum ftz n ys₂ <;> simp
 
-/-- Observation of an extended value through the final `fl{·}`. -/
 theorem finishOutcome_finite (ftz : Bool) (X : XVal) (d : F32) :
     finishOutcome ftz X = .finite d ↔ ∃ s, X.toFin = some s ∧ fl32 ftz s = some d := by
   cases X with
@@ -164,8 +157,7 @@ theorem combineSpecial_allFin {xs : List XVal} (h : ∀ v ∈ xs, ∃ q, v = .fi
   unfold combineSpecial
   simp [h1, h2, h3]
 
-/-- The special-value semantics reports a finite output exactly when the finite model accepts,
-with the same binary32 word. -/
+/-- The special-value semantics gives a finite word exactly when the finite model returns it. -/
 theorem blockOutcome_finite_iff {P : Model} (x : BlockInput P) (d : F32) :
     blockOutcome x = some (.finite d) ↔ blockBits x = .ok d := by
   constructor

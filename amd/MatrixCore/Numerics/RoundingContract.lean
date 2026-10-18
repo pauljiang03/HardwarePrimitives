@@ -1,16 +1,14 @@
 import MatrixCore.Numerics.Round32
 
-/-! # Correctness of binary32 RNE
+/-! # Correctness of FP32 RNE
 
-`rne32` returns the binary32 word whose value is nearest to the exact input among *all finite
-binary32 words*, with an even last bit on ties, and it overflows exactly at
+`rne32` returns the nearest finite FP32 value, ties to even, and overflows exactly at
 `2^128 − 2^103`. -/
 
 namespace MatrixCore
 
-/-! ## Encoding and decoding binary32 -/
+/-! ## Encoding and decoding FP32 -/
 
-/-- Decoding a constructed word returns its sign, significand, and exponent. -/
 theorem decode_encode32 (negative : Bool) (e : ℤ) (m : ℕ) (he1 : -126 ≤ e) (he2 : e ≤ 127)
     (hm : m < 16777216) (hn : 8388608 ≤ m ∨ e = -126) :
     fp32.decode (encode32 negative e m) = .finite ⟨negative, m, e, 23⟩ := by
@@ -47,7 +45,6 @@ theorem decode_encode32 (negative : Bool) (e : ℤ) (m : ℕ) (he1 : -126 ≤ e)
     simp only [h1, h2, ↓reduceIte, Datum.finite.injEq, Unpacked.mk.injEq, true_and]
     exact ⟨by omega, by omega, trivial⟩
 
-/-- Every finite binary32 word decodes to `±m · 2^(e−23)` with `m < 2^24` and `−126 ≤ e ≤ 127`. -/
 theorem decode32_finite_fields {w : F32} {x : Unpacked} (h : fp32.decode w = .finite x) :
     x.t = 23 ∧ x.m < 16777216 ∧ -126 ≤ x.e ∧ x.e ≤ 127 ∧ (8388608 ≤ x.m ∨ x.e = -126) := by
   unfold Format.decode Format.decodeNat at h
@@ -70,7 +67,7 @@ theorem decode32_finite_fields {w : F32} {x : Unpacked} (h : fp32.decode w = .fi
       exact ⟨rfl, by simp only; omega, by simp only; omega, by simp only; omega,
         Or.inl (by simp only; omega)⟩
 
-/-- Arithmetic form of every finite binary32 value. -/
+/-- Arithmetic form of every finite FP32 value. -/
 def FiniteValue32 (y : ℚ) : Prop :=
   ∃ k e : ℤ, -126 ≤ e ∧ e ≤ 127 ∧ k.natAbs < 16777216 ∧ y = (k : ℚ) * pow2 (e - 23)
 
@@ -105,7 +102,6 @@ theorem pow2_split (e : ℤ) (n : ℕ) : pow2 e = ((2 ^ n : ℕ) : ℚ) * pow2 (
 theorem le_div_of_mul_le {x a q : ℚ} (hq : 0 < q) (h : x * q ≤ a) : x ≤ a / q :=
   Rat.not_lt.mp fun h' => by have := (Rat.div_lt_iff hq).mp h'; grind
 
-/-- Magnitude bounds of the rounding binade: `a < 2^(e+1)`, and `2^e ≤ a` above the subnormal range. -/
 theorem normExp_bounds {a : ℚ} (ha : 0 < a) :
     a < pow2 (normExp a + 1) ∧ (normExp a ≠ -126 → pow2 (normExp a) ≤ a) ∧ -126 ≤ normExp a := by
   obtain ⟨hlo, hhi⟩ := log2Floor_spec ha
@@ -120,7 +116,6 @@ theorem normExp_bounds {a : ℚ} (ha : 0 < a) :
 theorem pow2_shift (e : ℤ) (n : ℕ) : pow2 (e + n) = ((2 ^ n : ℕ) : ℚ) * pow2 e := by
   rw [pow2_add, pow2_natCast, Rat.mul_comm]
 
-/-- Scaled magnitude `a / 2^(e−23)` lies below `2^24`, and at least `2^23` in the normal range. -/
 theorem scaled_bounds {a : ℚ} (ha : 0 < a) :
     a / pow2 (normExp a - 23) < 16777216 ∧
       (normExp a ≠ -126 → (8388608 : ℚ) ≤ a / pow2 (normExp a - 23)) ∧
@@ -137,11 +132,10 @@ theorem scaled_bounds {a : ℚ} (ha : 0 < a) :
     apply le_div_of_mul_le hq; rw [e2] at h2; exact h2 hne
   · rw [Rat.div_def]; exact Rat.mul_nonneg (Rat.le_of_lt ha) (Rat.le_of_lt (Rat.inv_pos.mpr hq))
 
-/-- The rounded magnitude `rneInt(a / 2^(e−23)) · 2^(e−23)` with `e = normExp a`. -/
+/-- The rounded magnitude of `a`. -/
 def rneMagnitude (a : ℚ) : ℚ :=
   (rneInt (a / pow2 (normExp a - 23)) : ℚ) * pow2 (normExp a - 23)
 
-/-- The rounded signed value. -/
 def rneValue (x : ℚ) : ℚ := if x < 0 then -rneMagnitude (absQ x) else rneMagnitude (absQ x)
 
 theorem dist_scale (a q : ℚ) (hq : 0 < q) (j : ℤ) :
@@ -151,7 +145,6 @@ theorem dist_scale (a q : ℚ) (hq : 0 < q) (j : ℤ) :
   congr 1
   grind
 
-/-- Nearest property on the grid `2^(e−23)` against every finite value, strict off the grid. -/
 theorem grid_nearest {a : ℚ} (e : ℤ) (hbinade : e ≠ -126 → pow2 e ≤ a)
     {y : ℚ} (hy : FiniteValue32 y) :
     absQ (a - rneInt (a / pow2 (e - 23)) * pow2 (e - 23)) ≤ absQ (a - y) ∧
@@ -256,8 +249,7 @@ theorem rneFields_spec {a : ℚ} (ha : 0 < a) :
 
 /-! ## Correctness -/
 
-/-- Nearest finite binary32 value to `x`, ties to an even last bit, compared against every
-finite binary32 word. -/
+/-- `w` is a nearest finite FP32 value to `x`, with an even last bit on ties. -/
 def NearestEven32 (x : ℚ) (w : F32) : Prop :=
   ∃ d, value32 w = some d ∧
     (∀ v y, value32 v = some y → absQ (x - d) ≤ absQ (x - y)) ∧
@@ -290,7 +282,6 @@ theorem value32_zero : value32 0 = some 0 := by
   rw [this, value32_encode32 false (-126) 0 (by decide) (by decide) (by decide) (Or.inr rfl)]
   simp
 
-/-- Successful conversion of a nonzero input: the encoded fields. -/
 theorem rne32_some {x : ℚ} {w : F32} (hx : x ≠ 0) (h : rne32 x = some w) :
     (rneFields (absQ x)).1 ≤ 127 ∧ w = encode32 (decide (x < 0)) (rneFields (absQ x)).1 (rneFields (absQ x)).2 := by
   unfold rne32 at h
@@ -302,7 +293,6 @@ theorem rne32_some {x : ℚ} {w : F32} (hx : x ≠ 0) (h : rne32 x = some w) :
     simp only [Option.some.injEq] at h
     exact ⟨by omega, h.symm⟩
 
-/-- The value of a successful conversion is the rounded value. -/
 theorem rne32_value {x : ℚ} {w : F32} (h : rne32 x = some w) : value32 w = some (rneValue x) := by
   by_cases hx : x = 0
   · subst hx
@@ -318,7 +308,7 @@ theorem rne32_value {x : ℚ} {w : F32} (h : rne32 x = some w) : value32 w = som
     · simp only [hn, decide_true, ↓reduceIte, Rat.neg_mul]; rw [h4]
     · simp only [hn, decide_false, Bool.false_eq_true, ↓reduceIte]; rw [h4]
 
-/-- Correct rounding: a successful `fl{x}` is the nearest finite binary32 value, ties to even. -/
+/-- Correct rounding: a successful `fl{x}` is the nearest finite FP32 value, ties to even. -/
 theorem rne32_nearestEven {x : ℚ} {w : F32} (h : rne32 x = some w) : NearestEven32 x w := by
   refine ⟨rneValue x, rne32_value h, ?_, ?_⟩
   · intro v y hv
@@ -369,7 +359,6 @@ theorem rne32_nearestEven {x : ℚ} {w : F32} (h : rne32 x = some w) : NearestEv
 
 /-! ## Overflow threshold -/
 
-/-- Values from `2^24 − 1/2` up to `2^24` round to `2^24` (the odd neighbour `2^24 − 1` loses ties). -/
 theorem rneInt_top {t : ℚ} (h1 : 16777216 - 1 / 2 ≤ t) (h2 : t < 16777216) :
     rneInt t = 16777216 := by
   have hf1 : (16777215 : ℤ) ≤ t.floor := Rat.le_floor_iff.mpr (by

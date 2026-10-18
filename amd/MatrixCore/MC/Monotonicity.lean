@@ -3,22 +3,8 @@ import MatrixCore.MC.Chain
 
 /-! # Monotonicity in `c`
 
-On NVIDIA Tensor Cores every term, products and `c` alike, is aligned to the largest exponent and
-truncated, so perturbing whichever term holds that exponent can change how much of the others
-survives and raise the output when the term is lowered (the TC-EFT paper's flowback; its
-construction perturbs `c`). On AMD `c` never takes part in the products' alignment, so on every
-configuration of the paper the output is monotone in `c`: for the same `a` and `b`, a larger `c` never gives a smaller `d`
-(`evalBlock_c_monotone`), and the same holds for inner products of any length
-(`dotBits_c_monotone`).
-
-* SFMA and CDNA 1: `d = fl{Σ p_ℓ + c}`, and RNE is monotone.
-* CDNA 2: `c` is flushed (monotone), added to the pairwise sum of the products, and rounded.
-* CDNA 3: `c` is aligned *after* the products (late addition), so `e_max` and `S_{p_i,sum}` do
-  not depend on `c`; each branch of the late addition is monotone, and so is the switch between
-  them: when `e_c` passes `e_max`, the RD of `S_{p_i,sum}` to 32 and of `S_acc` to 31
-  mantissa bits loses less than the step of `c`.
-
-Monotonicity in the *products* is different: see `MatrixCore.MC.ProductMonotonicity`. -/
+On every configuration of the paper a larger `c` never gives a smaller output, for single blocks
+and for inner products of any length. -/
 
 namespace MatrixCore
 
@@ -43,7 +29,6 @@ theorem flValue_mono {ftz : Bool} {x y v w : ℚ} (hx : flValue ftz x = some v)
   · exact rneValue_mono h
   · exact flushValue_mono (rneValue_mono h)
 
-/-- The final `fl{·}` is monotone. -/
 theorem fl32_mono {ftz : Bool} {s s' : ℚ} {d d' : F32} (h : fl32 ftz s = some d)
     (h' : fl32 ftz s' = some d') (hs : s ≤ s') : wordValue d ≤ wordValue d' := by
   apply flValue_mono (ftz := ftz) _ _ hs
@@ -61,12 +46,10 @@ theorem rdGrid_mono {x y : ℚ} (g : ℤ) (h : x ≤ y) : rdGrid x g ≤ rdGrid 
     exact Rat.mul_le_mul_of_nonneg_right h (Rat.le_of_lt (Rat.inv_pos.mpr hq))
   exact Rat.intCast_le_intCast.mpr (floor_mono this)
 
-/-- RD is at least every grid point below its argument. -/
 theorem le_rdGrid {x y : ℚ} {g : ℤ} (hy : OnGrid y g) (h : y ≤ x) : y ≤ rdGrid x g := by
   have := rdGrid_mono g h
   rwa [rdGrid_of_onGrid hy] at this
 
-/-- RD on a coarser grid gives a smaller value. -/
 theorem rdGrid_coarse (x : ℚ) {g g' : ℤ} (hg : g ≤ g') : rdGrid x g' ≤ rdGrid x g :=
   le_rdGrid ((rdGrid_onGrid x g').mono hg) (rdGrid_bounds x g').1
 
@@ -93,8 +76,6 @@ theorem normalizeRD_onGrid (k : ℕ) {x : ℚ} (hx : x ≠ 0) :
     OnGrid (normalizeRD k x) (normExp (absQ x) - k) := by
   unfold normalizeRD; rw [if_neg hx]; exact rdGrid_onGrid _ _
 
-/-- Subnormal-aware normalization followed by RD is monotone: the grid of each binade contains
-the grid of every larger binade, and the binade boundaries lie on both. -/
 theorem normalizeRD_mono (k : ℕ) {x y : ℚ} (h : x ≤ y) : normalizeRD k x ≤ normalizeRD k y := by
   by_cases hx : x = 0
   · subst hx
@@ -132,10 +113,9 @@ theorem normalizeRD_mono (k : ℕ) {x y : ℚ} (h : x ≤ y) : normalizeRD k x �
     have := normalizeRD_le k x
     grind
 
-/-! ## `c` as a binary32 value -/
+/-! ## `c` as an FP32 value -/
 
-/-- `v` is a finite binary32 value and `eC` its exponent for the late addition: `−126` for zero
-and subnormals. -/
+/-- `v` is a finite FP32 value with late-addition exponent `eC` (`−126` for zero and subnormals). -/
 structure C32 (v : ℚ) (eC : ℤ) : Prop where
   emin : -126 ≤ eC
   lt : absQ v < pow2 (eC + 1)
@@ -164,7 +144,6 @@ theorem c32_of_decode {P : Model} (hcz : P.cZeroExp = some (-126)) {w : F32} {c 
     · have := Unpacked.value_onGrid c
       rwa [ht] at this
 
-/-- A value of exponent at most `e` is at most `2^(e+1) − 2^(e−23)` in magnitude. -/
 theorem C32.le {v : ℚ} {eC e : ℤ} (hc : C32 v eC) (he : eC ≤ e) :
     absQ v ≤ 16777215 * pow2 (e - 23) := by
   obtain ⟨k, hk⟩ := hc.grid
@@ -233,8 +212,6 @@ theorem alignedSum_facts {padding : ℕ} {ps : List Unpacked} {e : ℤ} {S : ℚ
         have h3 := pow2_le_of_le (show p.e + 2 ≤ e' + 2 by have := maxExp_le he p hp hm; omega)
         grind
 
-/-- `S_{p_i,sum}` lies on the alignment grid and is at most `|ps| · 2^(e_max+2)` plus two RD
-steps. -/
 theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
     ((productSum P ps).1 = none → (productSum P ps).2 = 0) ∧
     (∀ e, (productSum P ps).1 = some e →
@@ -303,8 +280,7 @@ theorem productSum_facts (P : Model) {ps : List Unpacked} (hb : ∀ p ∈ ps, p.
 
 /-! ## The late addition of `c` -/
 
-/-- The CDNA 3 late-addition parameters: one padding bit, `e_{c=0} = −126`, `(24, 32, RD)` and 31
-mantissa bits after normalization, a cutoff (if any) beyond 24, and at most 16 products. -/
+/-- The parameters of the CDNA 3 late addition of `c`. -/
 structure LateModel (P : Model) : Prop where
   padding : P.padding = 1
   cZero : P.cZeroExp = some (-126)
@@ -314,7 +290,6 @@ structure LateModel (P : Model) : Prop where
   cut : ∀ n, P.late.cCutoff = some n → 24 ≤ n
   nfma : P.nfma ≤ 16
 
-/-- `s'_c` on the product grid, between `−2^(e+1)` and `2^(e+1) − 2^(e−23)`. -/
 theorem shiftedC_bounds {P : Model} (hL : LateModel P) {e eC : ℤ} {c : Unpacked}
     (hc : C32 c.value eC) (he : eC ≤ e) :
     OnGrid (shiftedC P e eC c) (e - 24) ∧ shiftedC P e eC c ≤ 16777215 * pow2 (e - 23) ∧
@@ -359,7 +334,7 @@ theorem shiftedC_mono {P : Model} (hL : LateModel P) {e eC eC' : ℤ} {c c' : Un
     have hn24 := hL.cut n hn
     by_cases h1 : e - eC > n <;> by_cases h2 : e - eC' > n <;> simp only [h1, h2, ↓reduceIte]
     · exact Rat.le_refl
-    · -- `c` is cut off, `c'` is not: `c' ≥ 0`
+    · -- only `c` is cut off
       have hge := hc'.ge (by omega)
       have hp := pow2_le_of_le (show eC + 1 ≤ eC' by omega)
       apply le_rdGrid (OnGrid.zero _)
@@ -367,7 +342,7 @@ theorem shiftedC_mono {P : Model} (hL : LateModel P) {e eC eC' : ℤ} {c c' : Un
       by_cases hneg : c'.value < 0
       · rw [absQ_of_neg hneg] at hge; grind
       · grind
-    · -- `c'` is cut off, `c` is not: `c ≤ 0`
+    · -- only `c'` is cut off
       have hge := hc.ge (by omega)
       have hp := pow2_le_of_le (show eC' + 1 ≤ eC by omega)
       have := (rdGrid_bounds c.value (e - ((24 : ℕ) : ℤ))).1
@@ -378,8 +353,7 @@ theorem shiftedC_mono {P : Model} (hL : LateModel P) {e eC eC' : ℤ} {c c' : Un
     · exact rdGrid_mono _ hv
   · exact rdGrid_mono _ hv
 
-/-- **The late addition is monotone in `c`.** With `e_max` and `S_{p_i,sum}` fixed, a larger `c`
-gives a larger `S_acc`, within either branch and across the switch at `e_c = e_max`. -/
+/-- With `e_max` and `S_{p_i,sum}` fixed, the late addition is monotone in `c`. -/
 theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : ℚ}
     (hpn : eMax = none → pSum = 0)
     (hps : ∀ e, eMax = some e → OnGrid pSum (e - 24) ∧ absQ pSum < pow2 (e + 7))
@@ -406,7 +380,7 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
     · -- both before `e_max`
       have := shiftedC_mono (e := e) hL h32 h32' hv
       grind
-    · -- the switch: `c` before `e_max`, `c'` after
+    · -- `c` before `e_max`, `c'` after
       obtain ⟨hsg, hsu, _⟩ := shiftedC_bounds hL h32 h1
       have hle := h32.le h1
       have hneq : eC' ≠ -126 := by have := h32.emin; omega
@@ -452,7 +426,7 @@ theorem lateSum_mono {P : Model} (hL : LateModel P) {eMax : Option ℤ} {pSum : 
               2147483648 * pow2 (normExp (absQ T) - ((31 : ℕ) : ℤ)) := by
             rw [pow2_split _ 31]; rfl
           grind
-    · -- the switch back: `c` after `e_max`, `c'` before
+    · -- `c` after `e_max`, `c'` before
       obtain ⟨_, _, hsl⟩ := shiftedC_bounds hL h32' h2
       have hneq : eC ≠ -126 := by have := h32'.emin; omega
       have hge := h32.ge hneq
@@ -514,7 +488,6 @@ theorem prepare_same {P : Model} {a : List P.a.Word} {b : List P.b.Word} {c c' :
   cases hC' : (fp32.decode c').toFinite <;> rw [hC'] at h' <;> simp at h'
   rw [← h, ← h']; exact ⟨rfl, rfl⟩
 
-/-- Flushing a decoded binary32 value is `flushValue` of its value. -/
 theorem flush_value32 {w : F32} {c : Unpacked} (h : (fp32.decode w).toFinite = some c) :
     c.flush.value = flushValue c.value := by
   obtain ⟨ht, hm, he1, _, hn⟩ := decode32_finite_fields (toFinite_some h)
@@ -568,7 +541,7 @@ theorem pairwiseSum_c {P : Model} {px px' : Prepared} {s s' : ℚ} (ha : px.a = 
       subst h; subst h'
       grind
 
-/-- A model whose output is monotone in `c`: every configuration of the paper. -/
+/-- The models covered by the monotonicity theorem: every configuration of the paper. -/
 def MonotoneModel (P : Model) : Prop :=
   P.accumulation = .correctRounding ∨ P.accumulation = .pairWiseSum ∨
     ((P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping) ∧ LateModel P)
@@ -628,8 +601,7 @@ theorem accumulate_c_mono {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     have := Rat.mul_le_mul_of_nonneg_right hl (Rat.le_of_lt (pow2_pos (e + 2)))
     grind
 
-/-- **Monotonicity in `c`.** On every configuration of the paper, for the same `a` and `b`, a
-larger `c` never gives a smaller output. -/
+/-- For the same `a` and `b`, a larger `c` never gives a smaller output. -/
 theorem evalBlock_c_monotone {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     {b : List P.b.Word} {c c' : F32} {t t' : BlockTrace P}
     (h : evalBlock (P := P) ⟨a, b, c⟩ = .ok t) (h' : evalBlock (P := P) ⟨a, b, c'⟩ = .ok t')
@@ -653,7 +625,7 @@ theorem runBlocks_c_monotone {P : Model} (hP : MonotoneModel P) :
     obtain ⟨t', us', he', hr', rfl⟩ := runBlocks_cons h'
     exact runBlocks_c_monotone hP rest t.d t'.d us us' hr hr' (evalBlock_c_monotone hP he he' hc)
 
-/-- **Inner products are monotone in `c`.** -/
+/-- Inner products are monotone in `c`. -/
 theorem dotBits_c_monotone {P : Model} (hP : MonotoneModel P) {a : List P.a.Word}
     {b : List P.b.Word} {c c' d d' : F32} (hlen : a.length = b.length)
     (h : dotBits P a b c = .ok d) (h' : dotBits P a b c' = .ok d')

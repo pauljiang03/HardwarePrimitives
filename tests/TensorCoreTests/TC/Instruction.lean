@@ -8,7 +8,7 @@ set_option maxHeartbeats 4000000
 
 def zeros (n : ℕ) : List (F16 × F16) := List.replicate n (0, 0)
 
-/-- The published V100 rows fill k positions 0–3 of a k = 16 WMMA: the instruction variant returns the output of its single block FMA (R3 here), as `single_block_output` proves in general. -/
+/-- R3 in positions 0–3 of a `k = 16` V100 WMMA: the output of its single block FMA. -/
 theorem v100_instruction_single_block :
     v100Wmma16.output 0x3f7fffff (List.replicate 4 (0x3e00, 0x3d00) ++ zeros 12) = some 0x4107ffff ∧
     outputBits r3 = .ok 0x4107ffff := by decide +kernel
@@ -30,7 +30,6 @@ theorem ampere_instruction_order_matters :
     ampereWmma16.output 0x3f800000
       ((0x0001, 0x3c00) :: zeros 7 ++ (0xbc00, 0x3c00) :: zeros 7) = some 0 := by
   decide +kernel
-
 
 theorem instruction_wrong_width :
     v100Wmma16.output 0 (List.replicate 15 (0x3c00, 0x3c00)) = none ∧

@@ -1,11 +1,6 @@
 import MatrixCore
 
-/-! # Larger products: when the output can fall, by how much, and when it is correctly rounded
-
-Concrete blocks for the theorems of `MatrixCore.MC.AlignmentMonotonicity`,
-`MatrixCore.MC.LossCondition`, `MatrixCore.MC.NonmonotoneFamily` and
-`MatrixCore.MC.LosslessAlignment`. Every `decide +kernel` evaluates the model in the kernel; the
-other examples apply the general theorems, to every input or to the concrete blocks. -/
+/-! # Larger products: when the output can fall, by how much, and when it is correctly rounded -/
 
 open MatrixCore
 
@@ -21,15 +16,13 @@ example : blockBits (P := cdna3F16)
       ⟨0x3C01 :: List.replicate 7 0x0C00, 0x3C00 :: List.replicate 7 0x0C00, 0x3F800000⟩ =
       .ok 0x40001002 := by decide +kernel
 
-/-- For every input: with the same `c` and `e_max`, larger products never lower a CDNA 3 fp16
-output. -/
+/-- Same `c` and `e_max`: larger products never lower a CDNA 3 FP16 output. -/
 example {x x' : BlockInput cdna3F16} {t t' : BlockTrace cdna3F16} (h : evalBlock x = .ok t)
     (h' : evalBlock x' = .ok t') (hp : productsLE x x' = true) (hc : x.c = x'.c)
     (he : maxExp t.prepared.p = maxExp t'.prepared.p) : wordValue t.d ≤ wordValue t'.d :=
   cdna3F16_product_monotone h h' hp hc he
 
-/-- For every input of every fp8 combination: with the same `c` and both group exponents, larger
-products never lower the output. -/
+/-- Every FP8 combination, same `c` and group exponents: larger products never lower the output. -/
 example (fa fb : Format) {x x' : BlockInput (cdna3FP8 fa fb)} {t t' : BlockTrace (cdna3FP8 fa fb)}
     (h : evalBlock x = .ok t) (h' : evalBlock x' = .ok t') (hp : productsLE x x' = true)
     (hc : x.c = x'.c)
@@ -46,20 +39,18 @@ def xLow : BlockInput cdna3F16 :=
 def xHigh : BlockInput cdna3F16 :=
   ⟨0x0001 :: List.replicate 7 0x0C00, 0x7800 :: List.replicate 7 0x0C00, 0⟩
 
-/-- Where the hypothesis fails, the output really falls: `cdna3F16_nonmonotonic` raises `e_max`
-from `−10` to `1`. -/
+/-- Where the hypothesis fails, the output falls: `e_max` rises from `−10` to `1`. -/
 example : (evalBlock xLow).map (fun t => alignmentExponents cdna3F16 t.prepared.p) =
       .ok [some (-10)] ∧
     (evalBlock xHigh).map (fun t => alignmentExponents cdna3F16 t.prepared.p) = .ok [some 1] ∧
     blockBits xLow = .ok 0x3B0006F8 ∧ blockBits xHigh = .ok 0x3B000000 := by decide +kernel
 
-/-- The theorem says so for every non-monotone pair: the alignment exponents differ. -/
+/-- For every non-monotone pair, the alignment exponents differ. -/
 example : ∃ t t', evalBlock xLow = .ok t ∧ evalBlock xHigh = .ok t' ∧
     alignmentExponents cdna3F16 t.prepared.p ≠ alignmentExponents cdna3F16 t'.prepared.p :=
   aligned_nonmonotone_alignment_changes (Or.inl rfl) cdna3F16_nonmonotonic
 
-/-- fp8 E4M3 (Algorithm 2): `cdna3E4M3_nonmonotonic` raises the exponent of the odd group from
-`−3` to `0`; the even group has only zero products. -/
+/-- FP8 E4M3: `cdna3E4M3_nonmonotonic` raises the odd group's exponent from `−3` to `0`. -/
 example : (evalBlock (P := cdna3FP8 e4m3fnuz e4m3fnuz)
       ⟨0x2F :: List.replicate 15 0, 0x40 :: List.replicate 15 0, 0x33000000⟩).map
       (fun t => alignmentExponents (cdna3FP8 e4m3fnuz e4m3fnuz) t.prepared.p) =
@@ -85,8 +76,7 @@ example {x x' : BlockInput cdna2F16} {t t' : BlockTrace cdna2F16} (h : evalBlock
     wordValue t.d ≤ wordValue t'.d :=
   cdna2F16_product_monotone h h' hp hc hn hn'
 
-/-- Where the hypothesis fails, the output really falls: the first block of
-`cdna2F16_nonmonotonic` has the subnormal operand `0x0200 = 2^-15`, flushed to zero. -/
+/-- Where the hypothesis fails: `cdna2F16_nonmonotonic` flushes the subnormal operand `0x0200`. -/
 example : (evalBlock (P := cdna2F16) ⟨[0x0200, 0, 0, 0], [0xD200, 0, 0, 0], 0⟩).map
       (fun t => decide (∀ u ∈ t.prepared.a ++ t.prepared.b, u.m = 0 ∨ 2 ^ u.t ≤ u.m)) =
       .ok false ∧
@@ -102,12 +92,10 @@ def gainAndLosses {P : Model} (x x' : BlockInput P) : Except ModelError (ℚ × 
   let t' ← evalBlock x'
   return (t.gain t', t.accumulationLoss, t'.accumulationLoss)
 
-/-- `cdna3F16_nonmonotonic`: `Δ = 2^-29`; nothing is lost at `e_max = −10`, and the seven products
-`2^-24` are lost at `e_max = 1`, so `R' − R = 7·2^-24 > Δ`. -/
+/-- `cdna3F16_nonmonotonic`: `R' − R = 7·2^-24 > Δ = 2^-29`. -/
 example : gainAndLosses xLow xHigh = .ok (pow2 (-29), 0, 7 * pow2 (-24)) := by decide +kernel
 
-/-- Both values of `S_acc` are binary32 values (`2097598·2^-30` and `2^-9`), so the condition is
-necessary and sufficient here, and it holds. -/
+/-- Both `S_acc` are FP32 values, so the loss condition is necessary and sufficient here. -/
 example {t t' : BlockTrace cdna3F16} (h : evalBlock xLow = .ok t) (h' : evalBlock xHigh = .ok t') :
     wordValue t'.d < wordValue t.d ∧ t.gain t' < t'.accumulationLoss - t.accumulationLoss := by
   have hs : (evalBlock xLow).map (·.sAcc) = .ok (((2097598 : ℕ) : ℚ) * pow2 (-30)) := by
@@ -137,8 +125,7 @@ example {P : Model} {x x' : BlockInput P} {t t' : BlockTrace P} (h : evalBlock x
     t.gain t' < t'.accumulationLoss - t.accumulationLoss :=
   (output_decrease_requires_loss h h' hlt).2
 
-/-- The drop of `cdna3F16_nonmonotonic`, `d − d' = 223·2^-29`, and the bound of
-`aligned_output_drop_le`, `22511·2^-34`. -/
+/-- The drop of `cdna3F16_nonmonotonic` and the bound of `aligned_output_drop_le`. -/
 example : (do
       let t ← evalBlock xLow
       let t' ← evalBlock xHigh
@@ -148,7 +135,7 @@ example : (do
       Except ModelError (ℚ × ℚ)) = .ok (223 * pow2 (-29), 22511 * pow2 (-34)) := by
   decide +kernel
 
-/-- For every pair of CDNA 3 fp16 blocks: the drop is within the two error bounds minus `Δ`. -/
+/-- For every pair of CDNA 3 FP16 blocks: the drop is within the two error bounds minus `Δ`. -/
 example {x x' : BlockInput cdna3F16} {t t' : BlockTrace cdna3F16} (h : evalBlock x = .ok t)
     (h' : evalBlock x' = .ok t') :
     wordValue t.d - wordValue t'.d ≤
@@ -158,13 +145,11 @@ example {x x' : BlockInput cdna3F16} {t t' : BlockTrace cdna3F16} (h : evalBlock
 
 /-! ## The family and its threshold -/
 
-/-- `cdna3F16_nonmonotonic` is the member with lead `0x3C01 · 0x17FE` (`m_a m_b = 2^21 − 2`) and
-`n = 7`. -/
+/-- `cdna3F16_nonmonotonic` is the member with lead `0x3C01 · 0x17FE` and `n = 7`. -/
 example : cdna3F16LeadBlock 0x3C01 0x17FE 7 = xLow ∧ cdna3F16LeadBlock 0x0001 0x7800 7 = xHigh := by
   decide
 
-/-- Lead `0x3C30 · 0x17A4`, `m_a m_b = 1072 · 1956 = 2^21 − 320`: the threshold is `64 n > 320`.
-At `n = 5` the outputs are equal, at `n = 6` the output falls. -/
+/-- Lead `0x3C30 · 0x17A4` (threshold `64 n > 320`): equal outputs at `n = 5`, a drop at `n = 6`. -/
 example : blockBits (cdna3F16LeadBlock 0x3C30 0x17A4 5) = .ok 0x3B000000 ∧
     blockBits (cdna3F16LeadBlock 0x0001 0x7800 5) = .ok 0x3B000000 ∧
     blockBits (cdna3F16LeadBlock 0x3C30 0x17A4 6) = .ok 0x3B000100 ∧
@@ -180,8 +165,7 @@ example : ¬ ProductNonmonotone (cdna3F16LeadBlock 0x3C30 0x17A4 5)
   rw [hiff 5 (by decide), hiff 6 (by decide)]
   decide
 
-/-- Lead `0x3DA8 · 0x15A8`, `m_a m_b = 1448² = 2^21 − 448`: `64 n > 448` needs `n ≥ 8`, so no
-member with `n ≤ 7` is non-monotone. -/
+/-- Lead `0x3DA8 · 0x15A8` (threshold `64 n > 448`): no member with `n ≤ 7` is non-monotone. -/
 example : ∀ n ≤ 7, ¬ ProductNonmonotone (cdna3F16LeadBlock 0x3DA8 0x15A8 n)
     (cdna3F16LeadBlock 0x0001 0x7800 n) := by
   intro n hn
@@ -194,8 +178,7 @@ example : ∀ n ≤ 7, ¬ ProductNonmonotone (cdna3F16LeadBlock 0x3DA8 0x15A8 n)
 example : blockBits (cdna3F16LeadBlock 0x3DA8 0x15A8 7) = .ok 0x3B000000 ∧
     blockBits (cdna3F16LeadBlock 0x0001 0x7800 7) = .ok 0x3B000000 := by decide +kernel
 
-/-- The member of `cdna3F16_nonmonotonic` (`m_a m_b = 2^21 − 2`): non-monotone exactly when
-`n ≥ 1`. -/
+/-- The lead of `cdna3F16_nonmonotonic`: non-monotone exactly when `n ≥ 1`. -/
 example : ∀ n ≤ 7, (ProductNonmonotone (cdna3F16LeadBlock 0x3C01 0x17FE n)
     (cdna3F16LeadBlock 0x0001 0x7800 n) ↔ 1 ≤ n) := by
   intro n hn
@@ -206,9 +189,7 @@ example : ∀ n ≤ 7, (ProductNonmonotone (cdna3F16LeadBlock 0x3C01 0x17FE n)
 
 /-! ## Correct rounding when the alignment loses nothing -/
 
-/-- `1 + 7·(1 + 2^-10)²·2^-4` (`0x3C00 · 0x3C00` and seven `0x3401 · 0x3401`): `e_max = 0`, every
-product lies on the grid `2^-24`, and `c = 0`. The exact sum `24131591·2^-24` is a tie between
-two binary32 values. -/
+/-- `e_max = 0`, every product on the grid `2^-24`, `c = 0`; the exact sum is an FP32 tie. -/
 def xTie : BlockInput cdna3F16 :=
   ⟨0x3C00 :: List.replicate 7 0x3401, 0x3C00 :: List.replicate 7 0x3401, 0⟩
 
@@ -233,13 +214,11 @@ example {t : BlockTrace cdna3F16} (h : evalBlock xTie = .ok t) :
   exact LosslessAlignment.of_c_zero he hc (fun eZ hZ => by simp [cdna3F16] at hZ; omega)
     (fun p hp => Unpacked.onGrid_of_le (hg p hp))
 
-/-- CDNA 2: in `fl{1 + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` with `p = (1 + 2^-10, 2^-10, 2^-20, 0)`
-every product and every partial sum is a binary32 value, so the output is `fl{Σ p_ℓ + c}`. -/
+/-- CDNA 2: every product and partial sum of `p = (1 + 2^-10, 2^-10, 2^-20, 0)` is an FP32 value. -/
 def xPair : BlockInput cdna2F16 :=
   ⟨[0x3C00, 0x3C00, 0x1400, 0], [0x3C01, 0x1400, 0x1400, 0], 0x3F800000⟩
 
-/-- The theorem: the output of `xPair` is `fl{Σ p_ℓ + c}`, from the exact conversions and partial
-sums. -/
+/-- The theorem: the output of `xPair` is `fl{Σ p_ℓ + c}`. -/
 example {t : BlockTrace cdna2F16} (h : evalBlock xPair = .ok t) :
     fl32 true t.prepared.exact = some t.d := by
   have hconv : (evalBlock xPair).map (fun t => decide (t.prepared.p.mapM

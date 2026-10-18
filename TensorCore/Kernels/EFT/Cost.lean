@@ -1,11 +1,9 @@
 import TensorCore.Kernels.EFT.Correctness
 import TensorCore.Kernels.EFT.Grid
 
-/-! Operation counts of the 576-bit TC-EFT. -/
+/-! Operation counts of the 576-bit TC-EFT (source-level operations, not processor cycles). -/
 
 namespace TensorCore.EFMachine
-
-/-! Source-level operation counts, not processor cycles. -/
 
 structure OperationCount where
   inputDecodes : ℕ
@@ -33,13 +31,12 @@ theorem operationCount_bounds (variant : Variant) :
     b.conversions ≤ 41 ∧ b.guardCoefficientAdds ≤ 17 ∧ b.residualBitScans ≤ 17 ∧
     b.scalarDecodes ≤ 38 := by cases variant <;> decide
 
-/-- Each direct conversion needs at most one leading scan; each nonzero residual needs at most one trailing scan. -/
+/-- At most 580 bit-scan probes: one leading scan per conversion, one trailing scan per residual. -/
 theorem bitScan_total_bound (variant : Variant) :
     10 * ((operationCount variant.model.nfma).conversions +
       (operationCount variant.model.nfma).residualBitScans) ≤ 580 := by
   cases variant <;> decide
 
-/-- The actual decoded and extracted list lengths discharge the loop bounds. -/
 theorem extraction_loop_bounds {variant : Variant} {x : BlockInput variant.model} {D : F32}
     {p : Prepared} {c : Components} (hp : prepare variant x D = .ok p) (hc : extract p = some c) :
     p.terms.length ≤ 17 ∧ c.coarse.length = variant.model.nfma + 1 ∧
@@ -50,7 +47,7 @@ theorem extraction_loop_bounds {variant : Variant} {x : BlockInput variant.model
   simp only [List.length_map, hlen]
   exact ⟨by have h := variant_count variant; omega, trivial, trivial⟩
 
-/-- Under the execution preconditions each sumWords call executes exactly one checked addition per list element. -/
+/-- The number of checked additions in one `sumWords` call. -/
 def sumWordsAdds : List Word → ℕ
   | [] => 0
   | _ :: xs => sumWordsAdds xs + 1

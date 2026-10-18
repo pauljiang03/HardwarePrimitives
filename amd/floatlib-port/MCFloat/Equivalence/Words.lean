@@ -1,10 +1,9 @@
 import MCFloat.Equivalence.Decode
 
-/-! # Observed binary32 words
+/-! # Observed FP32 words
 
-`observe` reads a FloatLib binary32 word as Matrix-Core's `Outcome` (finite word, signed
-infinity, NaN) using FloatLib's classification. `fl{·}` words are observed as Matrix-Core's
-`roundOutcome`, and as its extended value `XVal.fl`. -/
+`observe` reads a FloatLib FP32 word as a `MatrixCore` `Outcome`; `fl{·}` words observe as
+`roundOutcome`. -/
 
 set_option linter.unusedSimpArgs false
 set_option linter.unreachableTactic false
@@ -12,14 +11,12 @@ set_option linter.unreachableTactic false
 namespace MCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-/-- The observed result of a FloatLib binary32 word. -/
 def observe (w : MCFloat.F32) : MatrixCore.Outcome :=
   match MCFloat.classifyModel w with
   | .finite _ => .finite (BitVec.ofNat 32 (MCFloat.bits w))
   | .inf s => .infinity s
   | .nan => .nan
 
-/-- A word and a Matrix-Core extended value agree. -/
 def WordX (w : MCFloat.F32) : MatrixCore.XVal → Prop
   | .fin q => ∃ t, MCFloat.classifyModel w = .finite t ∧ t.value = q
   | .inf s => MCFloat.classifyModel w = .inf s
@@ -48,7 +45,6 @@ theorem decode_rne32 {x : ℚ} {w : MatrixCore.F32} (h : MatrixCore.rne32 x = so
   cases hd : MatrixCore.fp32.decode w <;> simp [hd, MatrixCore.Datum.toFinite] at hv
   exact ⟨_, rfl⟩
 
-/-- `fl{·}` words are finite: a binary32 encoding with a value. -/
 theorem decode_fl32 {ftz : Bool} {x : ℚ} {d : MatrixCore.F32} (h : MatrixCore.fl32 ftz x = some d) :
     ∃ u, MatrixCore.fp32.decode d = .finite u := by
   unfold MatrixCore.fl32 at h

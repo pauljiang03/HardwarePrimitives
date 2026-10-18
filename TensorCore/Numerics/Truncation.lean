@@ -7,7 +7,6 @@ namespace TensorCore
 theorem alignment_value (x : ℚ) (e : ℤ) :
     truncGrid x e = (truncBits x e : ℚ) * pow2 e := rfl
 
-/-- Strict signed bounds, valid for every positive binary grid and either input sign. -/
 theorem alignment_residual_bounds (x : ℚ) (e : ℤ) :
     -pow2 e < x - truncGrid x e ∧ x - truncGrid x e < pow2 e := by
   have hq := pow2_pos e
@@ -135,7 +134,6 @@ theorem truncGrid_split (x : ℚ) (a : ℤ) (τ : ℕ) :
     rw [h2, truncGrid_neg] at h
     grind
 
-/-- A term already on the grid keeps its coefficient. -/
 theorem truncBits_of_grid (k e : ℤ) : truncBits ((k : ℚ) * pow2 e) e = k := by
   have hne := Rat.ne_of_gt (pow2_pos e)
   unfold truncBits
@@ -146,7 +144,6 @@ theorem truncBits_of_grid (k e : ℤ) : truncBits ((k : ℚ) * pow2 e) e = k := 
     omega
   · rw [Rat.mul_div_cancel hne, Rat.floor_intCast]
 
-/-- Truncation never increases the magnitude of a scaled value. -/
 theorem truncBits_abs_le (x : ℚ) (e : ℤ) :
     ((truncBits x e).natAbs : ℚ) ≤ absQ x / pow2 e := by
   have hp := pow2_pos e
@@ -166,8 +163,6 @@ theorem truncBits_abs_le (x : ℚ) (e : ℤ) :
     have hf : 0 ≤ (x / pow2 e).floor := Rat.le_floor_iff.mpr hn
     rw [← Rat.intCast_natCast, Int.natAbs_of_nonneg hf, absQ_of_nonneg (by grind)]
     exact Rat.floor_le _
-
-/-- Two integer magnitude bits plus F mantissa bits suffice for each aligned term. -/
 
 theorem truncGrid_abs_le (x : ℚ) (e : ℤ) : absQ (truncGrid x e) ≤ absQ x := by
   have hq := pow2_pos e

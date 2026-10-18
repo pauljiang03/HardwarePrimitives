@@ -8,23 +8,8 @@ import MatrixCore.MC.AprioriBounds
 
 /-! # Per-model contracts
 
-Everything proved about one accepted block, bundled so that downstream proofs take one
-hypothesis and use named fields:
-
-* `BlockContract`: every model — shape, decoded operands, `S_acc`, `d = fl{S_acc}` within
-  `flBound` of `S_acc`, a finite output, and nearest-even rounding of `S_acc` where subnormals are
-  supported;
-* `CorrectRoundingContract` (SFMA, CDNA 1): `S_acc` is the exact sum and `d` its nearest-even
-  rounding, within half an ulp;
-* `PairwiseContract` (CDNA 2): `S_acc` is `c` plus the pairwise sum of the products, and `d` is
-  within `pairwiseBound` plus the final `flBound` of the exact sum;
-* `AlignedContract` (CDNA 3): `S_acc` is Algorithm 1 or 2 with its error bounds, `d` is within
-  `alignedBound` plus half an ulp of the exact sum, and the register width at which fixed-width
-  accumulation gives the same block.
-
-Each model has a theorem `<model>_contract`. `runBlocks_all` and `dotBits_blocks` carry any
-of them to every block of an inner product, and `dotBits_error_bound` sums the blocks' error
-bounds into one for the inner product. -/
+What is proved about one accepted block, bundled per configuration and carried to every block of
+an inner product. -/
 
 namespace MatrixCore
 
@@ -34,14 +19,13 @@ namespace MatrixCore
 structure BlockContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop where
   lengths : x.a.length = P.nfma ∧ x.b.length = P.nfma
   prepared : prepare x = some t.prepared
-  /-- `c` is the decoding of the input word. -/
   c : (fp32.decode x.c).toFinite = some t.prepared.c
   /-- Every operand has a significand below 2, so every product has one below 4. -/
   operands : (∀ u ∈ t.prepared.a, u.m < 2 ^ (u.t + 1)) ∧ (∀ u ∈ t.prepared.b, u.m < 2 ^ (u.t + 1))
   products : ∀ p ∈ t.prepared.p, p.m < 2 ^ (p.t + 2)
   accumulated : accumulate P t.prepared = .ok t.sAcc
   inRange : absQ t.sAcc < overflowThreshold32
-  /-- `d = fl{S_acc}`, flushing subnormal results where subnormals are unsupported. -/
+  /-- `d = fl{S_acc}`. -/
   output : fl32 (!P.subnormals) t.sAcc = some t.d
   /-- The output is finite. -/
   value : value32 t.d = some (wordValue t.d)
@@ -61,13 +45,10 @@ theorem evalBlock_contract {P : Model} {x : BlockInput P} {t : BlockTrace P}
 
 structure CorrectRoundingContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop
     extends BlockContract x t where
-  /-- `S_acc` is the exact `Σ p_ℓ + c`. -/
   exact : t.sAcc = t.prepared.exact
-  /-- `d` is the binary32 value nearest to the exact sum, ties to even. -/
   nearest : NearestEven32 t.prepared.exact t.d
-  /-- `|exact − d|` is at most half an ulp of the exact sum. -/
   error : absQ (t.prepared.exact - wordValue t.d) ≤ halfUlp32 t.prepared.exact
-  /-- From the inputs alone: `|exact − d| ≤ 2^-24 (Σ|p_ℓ| + |c|) + 2^-150`. -/
+  /-- From the inputs alone. -/
   apriori : absQ (t.prepared.exact - wordValue t.d) ≤ pow2 (-24) * t.prepared.absSum + pow2 (-150)
 
 theorem correctRounding_contract {P : Model} (hacc : P.accumulation = .correctRounding)
@@ -84,14 +65,12 @@ theorem correctRounding_contract {P : Model} (hacc : P.accumulation = .correctRo
 
 structure PairwiseContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop
     extends BlockContract x t where
-  /-- `S_acc` is `c` plus the pairwise sum of the rounded products (`pairwiseSum_four`,
-  `pairwiseSum_two`). -/
+  /-- `S_acc` is `c` plus the pairwise sum of the rounded products. -/
   tree : pairwiseSum P t.prepared = some t.sAcc
   /-- Input flushing, product conversion, the pairwise sum and the final `fl{·}`. -/
   error : absQ (t.prepared.exact - wordValue t.d) ≤
     pairwiseBound P t.prepared + flBound (!P.subnormals) t.sAcc
-  /-- From the inputs alone (`x'` the inputs after flushing):
-  `|exact − d| ≤ |exact − exact'| + 2^-21 (Σ|p'_ℓ| + |c'|) + 2^-120`. -/
+  /-- From the inputs alone, after flushing subnormals. -/
   apriori : absQ (t.prepared.exact - wordValue t.d) ≤
     absQ (t.prepared.exact - (if P.subnormals then t.prepared else t.prepared.flushed).exact) +
       pow2 (-21) * (if P.subnormals then t.prepared else t.prepared.flushed).absSum + pow2 (-120)
@@ -128,13 +107,11 @@ structure AlignedContract {P : Model} (x : BlockInput P) (t : BlockTrace P) (w :
   sum : t.sAcc = alignedAccumulation P t.prepared
   /-- Error of `S_acc` against the exact `Σ p_ℓ + c`, by branch. -/
   sumError : AlignedErrorBounds P t.prepared
-  /-- Error of `d` against the exact `Σ p_ℓ + c`. -/
   error : absQ (t.prepared.exact - wordValue t.d) ≤
     alignedBound P t.prepared + flBound (!P.subnormals) t.sAcc
   /-- Accumulating in `w`-bit registers gives the same block. -/
   register : evalBlockMachine w x = .ok t
-  /-- From the inputs alone: `|exact − d| ≤ 2^-23 (Σ|p_ℓ| + |c|) + (n + 4)·2^(e_max − 24) + 2^-149`,
-  with `e_max` the largest product exponent. -/
+  /-- From the inputs alone. -/
   apriori : absQ (t.prepared.exact - wordValue t.d) ≤ pow2 (-23) * t.prepared.absSum +
     (t.prepared.p.length + 4) * gridTerm (productSum P t.prepared.p).1 + pow2 (-149)
 
@@ -197,9 +174,7 @@ theorem cdna3FP8_contract (fa fb : Format) {x : BlockInput (cdna3FP8 fa fb)}
 
 /-! ## Inner products -/
 
-/-- **Chaining.** An accepted inner product is a run of linked blocks, each satisfying any
-property `Q` that accepted blocks have (for example a model's contract), and its output
-accounts for the exact products and `c` up to the blocks' residuals. -/
+/-- An accepted inner product is a run of linked blocks, each with any property `Q` of blocks. -/
 theorem dotBits_blocks (P : Model) {Q : BlockInput P → BlockTrace P → Prop}
     (hQ : ∀ x t, evalBlock x = .ok t → Q x t)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
@@ -219,9 +194,7 @@ theorem dotBits_contract (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c 
   obtain ⟨ts, hr, hd, hc, hall, _⟩ := dotBits_blocks P (fun _ _ h => evalBlock_contract h) hlen h
   exact ⟨ts, hr, hd, hc, hall⟩
 
-/-- **Error of an inner product.** If every accepted block's residual `exact − d` is bounded by
-`B`, the accepted inner product's output is within the sum of the blocks' bounds of the initial
-`c` plus all products. -/
+/-- Error of an inner product: at most the sum of the blocks' residual bounds `B`. -/
 theorem dotBits_error_bound (P : Model) {B : BlockTrace P → ℚ}
     (hB : ∀ x t, evalBlock x = .ok t → absQ t.residual ≤ B t)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}

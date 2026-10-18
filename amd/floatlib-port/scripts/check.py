@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Run every check of the FloatLib implementation.
-
-1. Verify the Matrix-Core sources against the pinned manifest and prepare `reference-compat/`.
-2. `lake build`: the implementation, the equivalence proofs, the audit and the examples. The
-   build fails on any error; warnings outside the generated reference copy are reported.
-3. Compare `mc_floatlib` with Matrix-Core's `mc_eval` on random inner products.
+"""Run every check of the FloatLib implementation: reference sources, build, comparison.
 
 Usage: python3 scripts/check.py [--cases N] [--seed S]
 """

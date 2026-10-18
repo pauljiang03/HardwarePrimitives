@@ -4,7 +4,6 @@ import TensorCore.TC.StageResiduals
 
 namespace TensorCore
 
-/-- Execute a fixed-input schedule; the state type can be encoded floating-point values. -/
 def foldState (step : σ → α → σ) : σ → List α → σ
   | s, [] => s
   | s, a :: as => foldState step (step s a) as
@@ -13,7 +12,6 @@ def foldLoss (step : σ → α → σ) (loss : σ → α → ℚ) : σ → List 
   | _, [] => 0
   | s, a :: as => loss s a + foldLoss step loss (step s a) as
 
-/-- Induction for arbitrary finite lists, with an explicit local contract. -/
 theorem fold_residual_ledger
     (value : σ → ℚ) (step : σ → α → σ) (loss : σ → α → ℚ)
     (contribution : α → ℚ)
@@ -29,7 +27,7 @@ theorem fold_residual_ledger
     have h' := ih (step s a)
     grind
 
-/-- Every later c must be the decoded *encoded* output of the previous call. -/
+/-- Each later `c` is the decoded encoded output of the previous call. -/
 def EncodedChain : Finite32 → List BlockTrace → Prop
   | _, [] => True
   | d, t :: ts => t.block.c = d.decoded ∧ EncodedChain t.output ts
@@ -38,7 +36,7 @@ def lastOutput : Finite32 → List BlockTrace → Finite32
   | d, [] => d
   | _, t :: ts => lastOutput t.output ts
 
-/-- Block-trace specialization of the ledger, with a checked encoded-boundary premise. -/
+/-- Residual ledger of block traces chained through their encoded outputs. -/
 theorem encoded_trace_ledger (initial : Finite32) (ts : List BlockTrace)
     (chain : EncodedChain initial ts) :
     initial.value + sumQ (ts.map fun t => t.block.exactProducts) =

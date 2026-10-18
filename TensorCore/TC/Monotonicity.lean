@@ -14,7 +14,6 @@ theorem oneDecoded_value : oneDecoded.value = 1 := by decide +kernel
 theorem belowOneDecoded_value : belowOneDecoded.value = 16777215 * pow2 (-24) := by
   decide +kernel
 
-/-- In the construction, the alignment exponent is C's exponent when no product's exponent exceeds it. -/
 theorem construction_alignExp (prof : Model) (K : ℕ) (da db c : Decoded)
     (hc : c.significand ≠ 0) (_hu : (denormalizedMul da db).significand ≠ 0)
     (hs : (denormalizedMul da db).exponent ≤ c.exponent) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ c.exponent) :
@@ -56,7 +55,6 @@ theorem denormalizedMul_significand_ne_zero (da db : Decoded) (p : ℕ)
   simp at hval
   grind
 
-/-- Accumulator with `c = 1`: every product truncates to zero. -/
 theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1) :
@@ -97,7 +95,6 @@ theorem construction_accumulator_one (prof : Model) (p K : ℕ) (da db : Decoded
   have : ((23 + p : ℕ) : ℤ) + -(23 + p) = 0 := by omega
   rw [this, pow2_zero]
 
-/-- Accumulator with `c' = 1 − 2^-24`: every product is retained. -/
 theorem construction_accumulator_below (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hval : (denormalizedMul da db).value = pow2 (-(24 + p))) (hscale : (denormalizedMul da db).exponent ≤ -1) :
@@ -268,7 +265,6 @@ theorem nonmonotone_perturbation (prof : Model) (p K : ℕ) (da db : Decoded)
       constructor
       · intro h; omega
       · intro h; omega
-
 
 /-- Lowering C from 1 to its FP32 predecessor raises the output exactly when K ≥ 3·2^p. -/
 theorem nonmonotone_encoded (K p : ℕ) (eAlignMin : Option ℤ) (hfl : ∀ f ∈ eAlignMin, f ≤ -1)

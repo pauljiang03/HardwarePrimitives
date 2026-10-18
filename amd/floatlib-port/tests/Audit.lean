@@ -3,11 +3,8 @@ import MCFloat
 
 /-! # Trust audit
 
-* Every theorem in the `MCFloat` namespace depends only on Lean's standard axioms.
-* The executable implementation (`MCFloat.Model` and `mc_floatlib`'s `dot`) reaches no
-  declaration from a Matrix-Core module: it is built on FloatLib, mathlib and the standard
-  library alone. It does reach FloatLib's decoder and rounder.
-* A negative control checks that the independence audit detects a Matrix-Core dependency. -/
+Every `MCFloat` theorem uses only Lean's standard axioms, and the executable implementation reaches
+no `MatrixCore` declaration. -/
 
 open Lean Elab Command
 
@@ -17,7 +14,6 @@ def moduleOf (env : Environment) (n : Name) : Option Name := do
   let idx ← env.getModuleIdxFor? n
   env.header.moduleNames[idx.toNat]?
 
-/-- Every constant reachable from `root` through types and bodies. -/
 partial def reach (env : Environment) (n : Name) : StateM NameSet Unit := do
   if (← get).contains n then return
   modify (·.insert n)
@@ -68,7 +64,7 @@ elab "axiom_audit" : command => do
     unless deps.all allowed.contains do throwError "nonstandard axioms in {n}: {deps}"
   logInfo m!"axiom_audit: {roots.size} theorems, standard axioms only"
 
-/-- Negative control: a definition that uses Matrix-Core must be reported. -/
+/-- Negative control: a definition that uses `MatrixCore` must be reported. -/
 def badImplementation : ℚ := MatrixCore.pow2 3 + MCFloat.pow2 3
 
 elab "negative_control" : command => do

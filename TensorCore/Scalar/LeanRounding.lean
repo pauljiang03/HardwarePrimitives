@@ -15,7 +15,7 @@ def AccuracyRepresents (a : Accuracy) (t : ℚ) (m : ℕ) : Prop :=
   | .inexact .eq => 2 * (t - (m : ℚ)) = 1
   | .inexact .gt => 1 < 2 * (t - (m : ℚ))
 
-/-- Lean's rounding decision agrees with the rational nearest-even reference whenever the supplied metadata describes the exact input. -/
+/-- Lean's rounding decision equals `rneInt` when the metadata describes the exact input. -/
 theorem accuracy_round_eq_rne (a : Accuracy) (t : ℚ) (m : ℕ)
     (h : AccuracyRepresents a t m) :
     (a.roundToNearestEven m : ℤ) = rneInt t := by
@@ -40,7 +40,6 @@ theorem accuracy_round_eq_rne (a : Accuracy) (t : ℚ) (m : ℕ)
       rw [if_pos (Or.inl ha)]
       omega
 
-/-- One shift preserves the meaning of the retained mantissa and residual bits. -/
 theorem shiftRightOne_represents (em : ExtendedMantissa) (t : ℚ)
     (h : AccuracyRepresents em.accuracy t em.mantissa) :
     AccuracyRepresents em.shiftRightOne.accuracy (t / 2) em.shiftRightOne.mantissa := by
@@ -83,7 +82,6 @@ theorem shiftRightOne_represents (em : ExtendedMantissa) (t : ℚ)
     rw [he] at hm <;> simp only [Rat.natCast_ofNat] at hm
   all_goals grind
 
-/-- Arbitrarily many shifts retain enough information for exact nearest-even rounding; this is not restricted to any floating-point format. -/
 theorem shiftRight_represents (em : ExtendedMantissa) (t : ℚ) (n : ℕ)
     (h : AccuracyRepresents em.accuracy t em.mantissa) :
     AccuracyRepresents (em >>> n).accuracy (t / pow2 (n : ℤ)) (em >>> n).mantissa := by
@@ -102,7 +100,6 @@ theorem shiftRight_represents (em : ExtendedMantissa) (t : ℚ) (n : ℕ)
       grind
     simpa [HShiftRight.hShiftRight, Nat.repeat, pow2_succ, he] using hs
 
-/-- Lean's exact mantissa plus shifts agrees with our rational rounding on every nonnegative dyadic coefficient. -/
 theorem shifted_round_eq_rne (m n : ℕ) :
     ((ExtendedMantissa.ofMantissaAndAccuracy m .exact >>> n).roundedMantissa : ℤ) =
       rneInt ((m : ℚ) / pow2 (n : ℤ)) := by
@@ -113,7 +110,6 @@ theorem shifted_round_eq_rne (m n : ℕ) :
       Rat.floor_intCast (m : ℤ)
   · rfl
 
-/-- The binade selected by the rational reference agrees with the integer logarithm used by Lean's logical model. -/
 theorem magnitudeExponent_dyadic (m : ℕ) (e : ℤ) (hm : 0 < m) :
     magnitudeExponent ((m : ℚ) * pow2 e) = (m.log2 : ℤ) + e := by
   apply magnitudeExponent_eq_of_bounds
@@ -126,7 +122,6 @@ theorem magnitudeExponent_dyadic (m : ℕ) (e : ℤ) (hm : 0 < m) :
     exact (Rat.mul_lt_mul_right (pow2_pos e)).mpr
       (Rat.natCast_lt_natCast.mpr Nat.lt_log2_self)
 
-/-- Exponent selection agrees, including the gradual-underflow floor. -/
 theorem targetExponent32_eq (m : ℕ) (e : ℤ) (hm : 0 < m) :
     Float.Model.Format.binary32.targetExponent (Float.Model.totalExponent m e) =
       binaryNormExp fp32 ((m : ℚ) * pow2 e) - fp32.mantissaBits := by
@@ -136,7 +131,6 @@ theorem targetExponent32_eq (m : ℕ) (e : ℤ) (hm : 0 < m) :
     Float.Model.Format.minExponent, fp32, Format.emin]
   omega
 
-/-- Left alignment in Lean's model preserves the exact dyadic value. -/
 theorem decreaseExponent_value (m : ℕ) (e target : ℤ) :
     ((decreaseExponent m e target).1 : ℚ) * pow2 (decreaseExponent m e target).2 =
       (m : ℚ) * pow2 e := by
@@ -145,7 +139,6 @@ theorem decreaseExponent_value (m : ℕ) (e target : ℤ) :
   congr 2
   omega
 
-/-- The first alignment and rounding pass computes the reference coefficient on any coarser dyadic grid. -/
 theorem shiftToExponent_round_eq (m : ℕ) (e target : ℤ) (he : e ≤ target) :
     ((shiftToExponent m e .exact target).1.roundedMantissa : ℤ) =
       rneInt ((m : ℚ) * pow2 e / pow2 target) := by
@@ -161,7 +154,6 @@ theorem shiftToExponent_round_eq (m : ℕ) (e target : ℤ) (he : e ≤ target) 
   have hne := Rat.ne_of_gt (pow2_pos target)
   grind
 
-/-- The second pass is exactly the single-bit carry of binary32 precision. -/
 theorem secondPass32 (k : ℕ) (e : ℤ) (hk : k ≤ 2 ^ 24) (he : -149 ≤ e) :
     shiftToTargetExponent Float.Model.Format.binary32 k e .exact =
       if k = 2 ^ 24 then (⟨2 ^ 23, false, false⟩, e + 1)
@@ -193,7 +185,6 @@ theorem secondPass32 (k : ℕ) (e : ℤ) (hk : k ≤ 2 ^ 24) (he : -149 ≤ e) :
     simp [shiftToTargetExponent, shiftToExponent, hn, hc, HShiftRight.hShiftRight,
       Nat.repeat, ExtendedMantissa.ofMantissaAndAccuracy]
 
-/-- The first normalization pass selects the same exponent and nearest-even coefficient as the independent rational reference. -/
 theorem firstPass32 (m : ℕ) (e : ℤ) (hm : 0 < m) :
     let q := Float.Model.Format.binary32.targetExponent (Float.Model.totalExponent m e)
     let d := decreaseExponent m e q

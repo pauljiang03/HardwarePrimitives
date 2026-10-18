@@ -49,7 +49,6 @@ theorem returned_residual_identity (t : BlockTrace) :
 theorem recovered_eq_exactDot (t : BlockTrace) : t.recovered = t.block.exactDot :=
   (returned_residual_identity t).symm
 
-/-- This is substitution into the executable converter, not a nearest-value correctness proof. -/
 theorem corrected_eq_round_exactDot (t : BlockTrace) :
     t.corrected = round32 .nearestEven t.block.exactDot := by
   unfold BlockTrace.corrected
@@ -112,7 +111,6 @@ theorem evalBlock_c {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : decode32 x.c = some t.block.c :=
   prepare_c (evalBlock_prepared h)
 
-/-- Preparation retains the encoded input's model, even if later evaluation rejects it. -/
 theorem prepare_model {p : Model} {x : BlockInput p} {b : PreparedBlock}
     (hp : prepare x = some b) : b.model = p := by
   unfold prepare at hp
@@ -125,7 +123,6 @@ theorem prepare_model {p : Model} {x : BlockInput p} {b : PreparedBlock}
       simp [hc, hps] at hp
       rw [← hp]
 
-/-- The model of a successful trace is the model of its input. -/
 theorem evalBlock_model {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : t.block.model = p :=
   prepare_model (evalBlock_prepared h)

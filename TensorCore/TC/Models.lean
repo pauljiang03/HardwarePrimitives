@@ -4,7 +4,6 @@ import TensorCore.TC.Invocation
 
 namespace TensorCore
 
-/-- Source-backed FP32-output families. -/
 @[implicit_reducible] def alignedInvocation (input : OperandEncoding) (K F : ℕ) (eAlignMin : Option ℤ) : InvocationSpec :=
   ⟨input, fp32, K, .aligned F eAlignMin .early, [], ⟨fp32, .truncate⟩⟩
 
@@ -16,7 +15,7 @@ def hopperBF16Invocation : InvocationSpec := alignedInvocation (packedIEEE bf16)
 def hopperTF32MmaInvocation : InvocationSpec := alignedInvocation tf32Register 8 25 (some (-133))
 def hopperTF32WmmaInvocation : InvocationSpec := alignedInvocation tf32Register 4 25 (some (-133))
 
-/-- Finite-domain binary64 fused arithmetic, with an explicit rounding direction. -/
+/-- Finite-domain FP64 fused arithmetic, with an explicit rounding direction. -/
 def fp64Fma (mode : BinaryRoundingMode) : InvocationSpec :=
   ⟨packedIEEE fp64, fp64, 1, .fused, [], ⟨fp64, mode⟩⟩
 

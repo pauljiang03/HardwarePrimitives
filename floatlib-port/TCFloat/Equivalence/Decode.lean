@@ -31,7 +31,7 @@ theorem signBit_eq (f : FloatFormat) (n : Nat) (hn : n < 2^f.bitWidth) :
   rw [← Nat.pos_iff_ne_zero, Nat.div_pos_iff]
   simp [hp]
 
-/-- Full decoder equivalence, including rejection of NaNs/infinities and all metadata. -/
+/-- Decoder equivalence, including NaN and infinity rejection and all metadata. -/
 theorem decode_project (f : FloatFormat) (hf : f.isIEEE = true)
     (n : Nat) (hn : n < 2^f.bitWidth) :
     (decode f n).map project = (TensorCore.classifyNat (format f) n).finite := by
@@ -58,7 +58,6 @@ theorem decode_project (f : FloatFormat) (hf : f.isIEEE = true)
         FloatLib.Numerics.Dyadic.signedSignificand,TensorCore.Classification.finite]
       exact_mod_cast (Nat.one_le_iff_ne_zero.mpr he)
 
-/-- Successful FloatLib decode produces consistent exponent metadata. -/
 theorem decode_value (f : FloatFormat) (hf : f.isIEEE = true)
     (n : Nat) (t : Term) (ht : decode f n = some t) :
     t.value = (project t).value := by
@@ -105,7 +104,7 @@ theorem decode_values (f : FloatFormat) (n : Nat) (hn : n < 2^f.bitWidth) :
   | some d =>
     by_cases hz : d.significand=0 <;> simp [hz,Term.value]
 
-/-- Universal FP32 numerical decoder equality, including special-value rejection. -/
+/-- FP32 decoder equality on every word, including special-value rejection. -/
 theorem value32_eq (b : TensorCore.F32) : TCFloat.value32 b.toNat = TensorCore.value32 b := by
   have hn : b.toNat < 2^FloatFormat.binary32.bitWidth := b.isLt
   have hp := decode_project .binary32 (by decide) b.toNat hn

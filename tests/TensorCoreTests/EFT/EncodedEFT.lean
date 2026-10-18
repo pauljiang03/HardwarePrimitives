@@ -14,7 +14,7 @@ theorem encoded_eft_branches :
     tcEftEncoded supportOverflow 0x4e800000 =
       .ok (.consolidated (.exactReference 0x4e800003)) := by decide +kernel
 
-/-- Signed zero and even an unrelated finite supplied D take the TC-EFT paper's +0 shortcut. -/
+/-- All-zero blocks take the +0 shortcut for any finite `D`. -/
 theorem encoded_eft_all_zero :
     tcEftEncoded (⟨List.replicate 4 (0, 0), 0x80000000⟩ : V100Input) 0x80000000 =
       .ok .allZero ∧
@@ -22,7 +22,7 @@ theorem encoded_eft_all_zero :
       .ok .allZero ∧
     EncodedEFTResult.allZero.bits = some 0 := by decide +kernel
 
-/-- The accumulator is included in the all-zero test; arbitrary finite D is permitted. -/
+/-- The all-zero test includes `c`. -/
 theorem encoded_eft_nonzero_c :
     tcEftEncoded (⟨List.replicate 4 (0, 0), 0x3f800000⟩ : V100Input) 0x40000000 =
       .ok (.consolidated (.scalar 0x3f800000)) := by decide +kernel

@@ -28,10 +28,8 @@ def Classification.finite : Classification → Option Decoded
 @[implicit_reducible] def decode16 (x : F16) : Option Decoded := (classify fp16 x).finite
 @[implicit_reducible] def decode32 (x : F32) : Option Decoded := (classify fp32 x).finite
 
-/-- Width-free restatement used by the encoding proofs. -/
 theorem decode32_eq (x : F32) : decode32 x = (classifyNat fp32 x.toNat).finite := rfl
 
-/-- Numerical projection for encoded boundaries. -/
 def value32 (x : F32) : Option ℚ := (decode32 x).map Decoded.value
 
 structure Finite32 where

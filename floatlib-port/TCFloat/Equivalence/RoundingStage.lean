@@ -278,7 +278,7 @@ theorem round32_rne_nonzero (s : Bool) (x : Rat) (hx : x ≠ 0) (hr : |x| ≤ TC
           not_lt.mpr he.2.1,TensorCore.carry,hcarry]
         exact encode_normal s _ _ he.1 he.2.1 hlok (by omega)
 
-/-- Universal bit-for-bit converter equivalence. -/
+/-- Bit-for-bit FP32 rounding equivalence, for every rational and rounding mode. -/
 theorem round32_eq (m : TensorCore.RoundingMode) (x : Rat) :
     TCFloat.round32 (mode m) x = (TensorCore.round32 m x).map BitVec.toNat := by
   by_cases hr : |x| ≤ TCFloat.maxFinite32

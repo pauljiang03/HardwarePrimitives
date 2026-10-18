@@ -1,8 +1,6 @@
 import TensorCore.TC.CanonicalFormats
 import TensorCoreTests.TC.Cases
 
-
-
 namespace TensorCore.Regression
 
 set_option maxRecDepth 16384
@@ -34,7 +32,7 @@ theorem h100_bf16_published_row :
     (invocationBits (p := hopperBF16Invocation) ⟨h100Bf16Row, 0x3f342579⟩).map BitVec.toNat =
       some 0x3f3cc4dd := by decide +kernel
 
-/-- A100 and H100 TF32 row 1: the same four register-word pairs give `3f36f7de` on A100 and, with a different accumulator input, `3f9888df` on H100, through both the model and the descriptor. -/
+/-- A100 and H100 TF32 row 1: device outputs `3f36f7de` and `3f9888df`. -/
 theorem tf32_published_rows :
     (tf32InvocationBits 4 24 (some (-132)) tf32Row 0x3efe7b25).map BitVec.toNat =
       some 0x3f36f7de ∧
@@ -45,7 +43,7 @@ theorem tf32_published_rows :
     (evalBlock (⟨tf32UnpackPairs tf32Row, 0x3f795773⟩ : BlockInput hopperTF32WmmaF32)).toOption.map
       (fun t => t.output.bits.toNat) = some 0x3f9888df := by decide +kernel
 
-/-- A register word with a nonzero low bit is not a TF32 value: the descriptor rejects it, while the model would accept the truncated value word. -/
+/-- The descriptor rejects a TF32 register word with a nonzero low bit. -/
 theorem tf32_unpadded_rejected :
     tf32Padded 0x3f7aa001 = false ∧
     tf32InvocationBits 4 24 (some (-132)) [(0x3f7aa001, 0x3f194000), (0, 0), (0, 0), (0, 0)] 0 =

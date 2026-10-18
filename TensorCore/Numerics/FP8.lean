@@ -2,16 +2,8 @@ import TensorCore.Numerics.Format
 
 /-! The 8-bit formats E4M3 and E5M2, as NVIDIA Ada, Hopper and Blackwell Tensor Cores take them.
 
-E5M2 follows IEEE 754: its all-ones exponent encodes the infinities and NaNs. E4M3 is the "fn"
-variant: it has no infinities, its all-ones exponent holds finite values up to 448, and its only
-NaNs are `S.1111.111`. Both use the existing decoders: E5M2 the IEEE classification, E4M3 the
-`finiteTopNaN` rule of `ValueFormat`.
-
-The block model decodes its operands with the IEEE classification, so it takes E4M3 values in a
-9-bit layout, `e4m3x`, whose exponent field has one more bit: E4M3's top binade is then an ordinary
-binade, and the bias, the minimum exponent and the subnormals are E4M3's. `widenE4M3` maps each E4M3
-word to its `e4m3x` word, and `e4m3_decode_widen` proves, for all 256 words, that the two decodings
-agree (as `tf32Unpack` does for TF32 register words and the `tf19` layout). -/
+E5M2 follows IEEE 754; E4M3 has no infinities and its only NaNs are `S.1111.111`. The block model
+takes E4M3 values in the 9-bit IEEE layout `e4m3x`, which decodes them identically. -/
 
 namespace TensorCore
 
@@ -24,18 +16,14 @@ namespace TensorCore
 /-- E4M3 values: the all-ones exponent is finite except `S.1111.111`, the only NaNs. -/
 def e4m3Values : ValueFormat := ⟨e4m3, .finiteTopNaN⟩
 
-/-- E4M3 operands as 8-bit words. -/
 def e4m3Encoding : OperandEncoding := ⟨e4m3Values, 0⟩
 
-/-- E5M2 operands as 8-bit words. -/
 def e5m2Encoding : OperandEncoding := packedIEEE e5m2
 
-/-- E4M3 values in a 9-bit layout with IEEE classification: E4M3's bias and fields, with one more
-exponent bit. -/
+/-- E4M3 values in a 9-bit IEEE layout: E4M3's bias and fields, with one more exponent bit. -/
 @[implicit_reducible] def e4m3x : Format := ⟨3, 5, 7⟩
 
-/-- The `e4m3x` word of an E4M3 word: the sign moves to bit 8, the exponent and mantissa fields are
-unchanged, and the NaNs `S.1111.111` become the NaNs `S.11111.111`. -/
+/-- The `e4m3x` word of an E4M3 word: the sign moves to bit 8 and the NaNs become `S.11111.111`. -/
 def widenE4M3 (w : BitVec 8) : BitVec 9 :=
   BitVec.ofNat 9 (w.toNat / 128 * 256 + if w.toNat % 128 = 127 then 255 else w.toNat % 128)
 
@@ -48,7 +36,6 @@ theorem e4m3_decode_widen (w : BitVec 8) :
   have hw := h w.toNat w.isLt
   rwa [BitVec.ofNat_toNat, BitVec.setWidth_eq] at hw
 
-/-- The E5M2 decoding of a word is its IEEE decoding. -/
 theorem e5m2_decode (w : BitVec 8) : e5m2Encoding.decode w = (classify e5m2 w).finite :=
   packedIEEE_decode e5m2 w
 
@@ -81,17 +68,12 @@ theorem e5m2_max :
     (e5m2Encoding.decode 0xfb).map Decoded.value = some (-57344) := by
   decide +kernel
 
-/-! ## Conversion to FP16
+/-! ## Conversion to FP16 -/
 
-H100, H200 and B200 run an FP8 `mma.sync` on the FP16 Tensor Core after converting the operands to
-FP16 (`TensorCore.TC.MmaSyncFP8`). Both FP8 formats convert exactly. -/
-
-/-- The FP16 word of an E5M2 word: the E5M2 word followed by eight zero bits (same sign, same
-exponent field and bias, the two mantissa bits extended by zeros). -/
+/-- The FP16 word of an E5M2 word: the E5M2 word followed by eight zero bits. -/
 def e5m2ToF16 (w : BitVec 8) : F16 := BitVec.ofNat 16 (w.toNat * 256)
 
-/-- The FP16 word with the value of an E4M3 word. Normal E4M3 values move from bias 7 to bias 15;
-the E4M3 subnormals `M · 2^-9` are FP16 normals; the NaNs `S.1111.111` become `S.11111.1000000000`. -/
+/-- The FP16 word with the value of an E4M3 word; E4M3 subnormals become FP16 normals. -/
 def e4m3ToF16 (w : BitVec 8) : F16 :=
   let n := w.toNat
   let s := n / 128 * 32768
@@ -105,8 +87,7 @@ def e4m3ToF16 (w : BitVec 8) : F16 :=
     else if M < 4 then s + 7 * 1024 + (M - 2) * 512
     else s + 8 * 1024 + (M - 4) * 256
 
-/-- Converting E4M3 to FP16 keeps every value: a finite word maps to a finite word with the same
-value, a NaN to a NaN, and the sign bit (so `−0` to `−0`) is kept. -/
+/-- Converting E4M3 to FP16 keeps every value, every NaN and the sign bit. -/
 theorem e4m3ToF16_exact (w : BitVec 8) :
     (decode16 (e4m3ToF16 w)).map Decoded.value = (e4m3Encoding.decode w).map Decoded.value ∧
     (classify fp16 (e4m3ToF16 w) = .nan ↔ e4m3Values.classifyNat w.toNat = .nan) ∧

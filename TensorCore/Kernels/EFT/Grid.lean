@@ -6,7 +6,7 @@ namespace TensorCore.EFMachine
 
 set_option exponentiation.threshold 1024
 
-/-- Specification of the maximum exponent: zero terms are ignored, before any shift or normalization. -/
+/-- The largest exponent of a nonzero term, at least `initial`. -/
 def maxBiasedExp (ts : List Term) (initial : ℕ) : ℕ :=
   ts.foldl (fun e t => if t.word.magnitude = 0 then e else max e t.biasedExp.toNat) initial
 

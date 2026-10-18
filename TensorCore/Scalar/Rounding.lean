@@ -67,7 +67,7 @@ def RoundSpec (f : BinaryFormat) (cfg : Context) (zeroSign : Bool) (x : ℚ)
       r.bits = if f.layout.maxFinite < u ∧ overflowToInfinity cfg.mode (decide (x < 0)) = true
         then infinity f (decide (x < 0)) else maxFiniteWord f (decide (x < 0))
 
-/-- All finite rational inputs have a specified result, including zero, overflow, gradual underflow, and precision loss; no success premise is assumed. -/
+/-- Rounding meets `RoundSpec` for every rational input, with no success premise. -/
 theorem round_correct (f : BinaryFormat) (cfg : Context) (zeroSign : Bool) (x : ℚ) :
     RoundSpec f cfg zeroSign x (round f cfg zeroSign x) := by
   by_cases hz : x = 0
@@ -107,7 +107,7 @@ theorem round_underflow_inexact (f : BinaryFormat) (cfg : Context) (s : Bool) (x
     (round f cfg s x).flags.underflow = true → (round f cfg s x).flags.inexact = true := by
   by_cases hz : x = 0 <;> by_cases hr : absQ x ≤ f.layout.maxFinite <;> simp [round, hz, hr]
 
-/-- The overflow flag exactly matches unbounded-exponent precision rounding, including inputs just above the largest finite value that do not overflow. -/
+/-- Overflow is flagged exactly when unbounded-exponent rounding exceeds `maxFinite`. -/
 theorem round_overflow_iff (f : BinaryFormat) (cfg : Context) (s : Bool) (x : ℚ) :
     (round f cfg s x).flags.overflow = true ↔
       f.layout.maxFinite < precisionMagnitude f.layout cfg.mode (decide (x < 0)) (absQ x) := by

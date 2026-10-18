@@ -3,4 +3,4 @@ import TensorCore.TC
 import TensorCore.EFT
 import TensorCore.Kernels
 
-/-! # Tensor-core arithmetic and TC-EFT -/
+/-! # Tensor Core arithmetic and TC-EFT -/

@@ -29,7 +29,7 @@ example : modelBits tiny = .ok 0x3f800000 := by decide +kernel
 example : tcEftEncoded tiny 0x3f800000 =
     .ok (.consolidated (.scalar 0x3f800002)) := by decide +kernel
 
-/-- The same executable evaluator has a symbolic, input-parametric recovery law. -/
+/-- On every input, the exact dot product is the output value plus the residual. -/
 example {p : Model} {x : BlockInput p} {t : BlockTrace} (h : evalBlock x = .ok t) :
     exactDot x = some (t.output.value + t.residual) :=
   evalBlock_residual_identity h

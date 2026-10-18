@@ -2,9 +2,7 @@ import MCFloat.Equivalence.Special
 
 /-! # One block
 
-For every pair of models that correspond (`Corresponds`), and for all input words, the FloatLib
-block observes as Matrix-Core's `blockOutcome`: the same finite word, the same infinity, or
-NaN. -/
+For corresponding models and all input words, the FloatLib block observes as `blockOutcome`. -/
 
 set_option linter.unusedSimpArgs false
 set_option linter.unreachableTactic false
@@ -109,7 +107,7 @@ theorem pairwise_agree (Q : MatrixCore.Model) (hs : Q.subnormals = false)
 
 /-! ## Finite inputs -/
 
-/-- An MCFloat model and a Matrix-Core model describe the same block. -/
+/-- An MCFloat model and a `MatrixCore` model describe the same block. -/
 structure Corresponds (P : MCFloat.MCModel) (Q : MatrixCore.Model) : Prop where
   a : OperandAgree P.a Q.a
   b : OperandAgree P.b Q.b
@@ -247,8 +245,7 @@ theorem mapM_map {f : β → Option γ} {g : α → β} (l : List α) :
   | nil => rfl
   | cons x l ih => simp [List.mapM_cons, ih]
 
-/-- **One block.** For corresponding models and any input words, the FloatLib block's result
-word observes as Matrix-Core's `blockOutcome`. -/
+/-- For corresponding models and any input words, the FloatLib block observes as `blockOutcome`. -/
 theorem block_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (x : MatrixCore.BlockInput Q) :
     (MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat).map observe =

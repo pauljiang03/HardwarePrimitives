@@ -14,7 +14,7 @@ def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 
 def build_reference():
     SOURCE.mkdir(parents=True,exist_ok=True)
-    # Copy the current implementation, preserving caches but removing stale source modules.
+    # Refresh the source modules but keep the build cache.
     for name in ['TensorCore', 'Main', 'tests']:
         dest = SOURCE/name
         if dest.exists(): shutil.rmtree(dest)
@@ -56,13 +56,13 @@ def execute_pair(name,rows,decode=False):
 def block_rows():
     for row in (PORT/'test-results/eft-paper/inputs.txt').read_text().splitlines():yield row
     for row in (PORT/'test-results/scalar-coverage.txt').read_text().splitlines():yield row
-    # Feature fixtures converted to the shared packed-word EFT interface. supplied D is intentional: correction must also work independently of model D.
+    # Feature fixtures in the packed-word EFT interface; D = 0 checks independence from the model D.
     paths=[*sorted((PORT/'test-results/validation').glob('*.txt')),
            *[PORT/f'test-results/{gpu}-{fmt}.txt' for gpu in ['A100','H100'] for fmt in ['bf16','tf32']]]
     for path in paths:
         for row in path.read_text().splitlines():
             fmt,k,extra,floor,*ws=row.split(); k=int(k)
-            if len(ws)!=2*k+1:continue  # shared paper CLI rejects malformed shape at parsing
+            if len(ws)!=2*k+1:continue  # the shared CLI rejects malformed shapes at parsing
             if fmt=='canonical':fmt='fp16'
             if fmt=='tf32':ws=[str(int(w)//8192) for w in ws[:-1]]+[ws[-1]]
             yield ' '.join(['block',fmt,str(k),extra,floor,*ws,'0'])

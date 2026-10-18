@@ -49,7 +49,6 @@ theorem grid_finiteValue (f : Format) (k ℓ : ℤ)
   refine ⟨k, ℓ + f.mantissaBits, by omega, by omega, hk, ?_⟩
   rw [show ℓ + f.mantissaBits - f.mantissaBits = ℓ by omega]
 
-/-- The full grid/range condition of Theorem IV.8; no artificial upper bound on ℓ. -/
 theorem grid_finiteValue_of_range (f : Format) (hf : f.WellFormed) (k ℓ : ℤ)
     (h1 : f.emin - f.mantissaBits ≤ ℓ) (hk : k.natAbs < 2 ^ (f.mantissaBits + 1))
     (hr : absQ ((k : ℚ) * pow2 ℓ) ≤ f.maxFinite) : f.FiniteValue ((k : ℚ) * pow2 ℓ) := by
@@ -77,7 +76,6 @@ def naiveSumBinaryFrom (f : Format) : ℚ → List ℚ → Option ℚ
 
 def naiveSumBinary (f : Format) (ts : List ℚ) : Option ℚ := naiveSumBinaryFrom f 0 ts
 
-/-- Every prefix remains representable, including under cancellation and gradual underflow. -/
 theorem naiveSumBinaryFrom_exact (f : Format) (hf : f.WellFormed) (ℓ : ℤ)
     (h1 : f.emin - f.mantissaBits ≤ ℓ) (a : ℤ) (zs : List ℤ)
     (hbound : a.natAbs + magnitudeSum zs < 2 ^ (f.mantissaBits + 1))
@@ -109,7 +107,7 @@ theorem naiveSumBinaryFrom_exact (f : Format) (hf : f.WellFormed) (ℓ : ℤ)
     simp only [List.map_cons, naiveSumBinaryFrom, hstep, Option.bind_some, ih']
     rw [show a + z + sumZ zs = a + sumZ (z :: zs) by simp only [sumZ]; omega]
 
-/-- TC-EFT paper Theorem IV.8 with exactly its minimum-grid, coefficient, and absolute-range conditions. -/
+/-- Theorem IV.8, with its minimum-grid, coefficient and absolute-range conditions. -/
 theorem naiveSumBinary_exact (f : Format) (hf : f.WellFormed) (ℓ : ℤ)
     (h1 : f.emin - f.mantissaBits ≤ ℓ) (zs : List ℤ)
     (hbound : magnitudeSum zs < 2 ^ (f.mantissaBits + 1))
@@ -118,7 +116,6 @@ theorem naiveSumBinary_exact (f : Format) (hf : f.WellFormed) (ℓ : ℤ)
   simpa [naiveSumBinary] using naiveSumBinaryFrom_exact f hf ℓ h1 0 zs
     (by simpa using hbound) (by simpa using hrange)
 
-/-- A convenient grid upper bound discharges the separate absolute-range obligation. -/
 theorem coefficient_range_of_grid (f : Format) (ℓ : ℤ) (L : ℕ)
     (h2 : ℓ ≤ f.emax - f.mantissaBits) (hL : L < 2 ^ (f.mantissaBits + 1)) :
     (L : ℚ) * pow2 ℓ ≤ f.maxFinite := by
@@ -136,7 +133,6 @@ theorem naiveSum64_exact (ℓ : ℤ) (h1 : -1074 ≤ ℓ) (zs : List ℤ)
   naiveSumBinary_exact fp64 (by decide) ℓ h1 zs hbound hrange
 
 set_option maxRecDepth 4096 in
-/-- Generic binary summation specialized to FP32 agrees with the FP32 API, including failure results. -/
 theorem binaryAdd_fp32 (x y : ℚ) : binaryAdd fp32 x y = fp32Add x y := rfl
 
 theorem naiveSumBinaryFrom_fp32 (a : ℚ) (ts : List ℚ) :
@@ -152,7 +148,7 @@ theorem naiveSumBinaryFrom_fp32 (a : ℚ) (ts : List ℚ) :
 theorem naiveSumBinary_fp32 (ts : List ℚ) : naiveSumBinary fp32 ts = naiveSum32 ts :=
   naiveSumBinaryFrom_fp32 0 ts
 
-/-- Explicit any-order form of Theorem IV.8, relative to the original coefficient sum. -/
+/-- Theorem IV.8 in any summation order. -/
 theorem naiveSumBinary_exact_perm (f : Format) (hf : f.WellFormed) (ℓ : ℤ)
     (h1 : f.emin - f.mantissaBits ≤ ℓ) (xs ys : List ℤ) (hperm : xs.Perm ys)
     (hbound : magnitudeSum xs < 2 ^ (f.mantissaBits + 1))

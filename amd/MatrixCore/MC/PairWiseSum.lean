@@ -2,9 +2,7 @@ import MatrixCore.MC.AcceptedDomain
 
 /-! # `pair_wise_sum`: CDNA 2
 
-The CDNA 2 block is `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` for groups of four and
-`fl{c + fl{p₁ + p₂}}` for groups of two, where every `p_ℓ` is first converted to binary32 and
-every `fl{·}` flushes subnormal results to zero. -/
+Closed forms of the pairwise sum for groups of two and four, and flush to zero in `fl{·}`. -/
 
 namespace MatrixCore
 
@@ -19,8 +17,7 @@ theorem pairwiseGroupSum_four (ftz : Bool) (n : ℕ) (q₁ q₂ q₃ q₄ : ℚ)
   simp only [pairwiseGroupSum, List.length_cons, List.length_nil]
   simp [pairwiseGroupSum_two]
 
-/-- A group of four: `S_acc = c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}`, with each `p_ℓ = fl{a_ℓ b_ℓ}`
-of the flushed inputs; the block output is `fl{S_acc}`. -/
+/-- A group of four: `S_acc = c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}` with `p_ℓ = fl{a_ℓ b_ℓ}`. -/
 theorem pairwiseSum_four (P : Model) (x : Prepared) (p₁ p₂ p₃ p₄ : Unpacked)
     (hp : (if P.subnormals then x else x.flushed).p = [p₁, p₂, p₃, p₄]) :
     pairwiseSum P x = do
@@ -53,8 +50,6 @@ theorem pairwiseSum_two (P : Model) (x : Prepared) (p₁ p₂ : Unpacked)
 
 /-! ## Flush to zero -/
 
-/-- A finite binary32 value is zero, subnormal (`isSubnormal32`, magnitude below `2^-126`), or
-normal (magnitude at least `2^-126`). -/
 theorem value32_subnormal {w : F32} {y : ℚ} (h : value32 w = some y) :
     (isSubnormal32 w = true → y ≠ 0 ∧ absQ y < pow2 (-126)) ∧
       (isSubnormal32 w = false → y = 0 ∨ pow2 (-126) ≤ absQ y) := by
@@ -112,8 +107,7 @@ theorem value32_signedZero32 (w : F32) : value32 (signedZero32 w) = some 0 := by
   generalize w.toNat / 2147483648 % 2 = s at hs
   rcases (by omega : s = 0 ∨ s = 1) with rfl | rfl <;> decide +kernel
 
-/-- `fl{·}` with flush to zero never produces a subnormal value: either the RNE value, which is
-zero or normal, or a zero replacing an RNE value below `2^-126`. -/
+/-- With flush to zero, `fl{·}` is the RNE value if that is zero or normal, and zero otherwise. -/
 theorem flValue_true {x v : ℚ} (h : flValue true x = some v) :
     (v = rneValue x ∧ (v = 0 ∨ pow2 (-126) ≤ absQ v)) ∨
       (v = 0 ∧ rneValue x ≠ 0 ∧ absQ (rneValue x) < pow2 (-126)) := by

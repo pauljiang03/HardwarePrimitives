@@ -107,7 +107,7 @@ theorem leadingZeros_eq (m : BitVec 576) : leadingZeros m = m.clz := by
   rw [Nat.mod_eq_of_lt (show 576 - m.clz.toNat < 2 ^ 576 by omega)]
   omega
 
-/-- Specification instrumentation: record exactly the probes made by scanBoundary. -/
+/-- `scanBoundary` with the list of probes it makes. -/
 def scanBoundaryTrace (test : ℕ → Bool) : ℕ → ℕ → ℕ → ℕ × List ℕ
   | 0, lo, _ => (lo, [])
   | fuel + 1, lo, hi =>

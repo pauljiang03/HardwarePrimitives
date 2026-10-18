@@ -43,7 +43,7 @@ def Format.WellFormed (f : Format) : Prop := 0 < f.mantissaBits ∧ 1 < f.expone
 instance (f : Format) : Decidable f.WellFormed := inferInstanceAs (Decidable (_ ∧ _))
 
 @[implicit_reducible] def bf16 : Format := ⟨7, 8, 127⟩
-/-- Packed mathematical TF32 value format; register storage is defined separately. -/
+/-- TF32 values as a 19-bit format; the 32-bit register layout is `tf32Register`. -/
 @[implicit_reducible] def tf19 : Format := ⟨10, 8, 127⟩
 @[implicit_reducible] def fp64 : Format := ⟨52, 11, 1023⟩
 
@@ -55,7 +55,7 @@ def Format.maxFinite (f : Format) : ℚ :=
 /-- A decoded significand, including a subnormal, has magnitude below two. -/
 def Decoded.Bounded (d : Decoded) : Prop := absQ d.value < 2 * pow2 d.exponent
 
-/-- Arithmetic form of every finite FP32 value: an integer coefficient of magnitude below `2^24` on the quantum `2^(e-23)` with `-126 ≤ e ≤ 127`. -/
+/-- Finite FP32 values in arithmetic form. -/
 def FiniteValue32 (z : ℚ) : Prop :=
   ∃ k e : ℤ, -126 ≤ e ∧ e ≤ 127 ∧ k.natAbs < 2 ^ 24 ∧ z = (k : ℚ) * pow2 (e - 23)
 
@@ -64,7 +64,6 @@ def Format.FiniteValue (f : Format) (z : ℚ) : Prop :=
   ∃ k e : ℤ, f.emin ≤ e ∧ e ≤ f.emax ∧ k.natAbs < 2 ^ (f.mantissaBits + 1) ∧
     z = (k : ℚ) * pow2 (e - f.mantissaBits)
 
-/-- An explicit bijection package, with executable functions and both inverse laws. -/
 structure BinaryBijection (α β : Type) where
   encode : α → β
   decode : β → α

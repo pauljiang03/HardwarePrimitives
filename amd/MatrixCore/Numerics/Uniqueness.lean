@@ -1,16 +1,15 @@
 import MatrixCore.Numerics.RoundingContract
 
-/-! # Uniqueness of the binary32 RNE word
+/-! # Uniqueness of the FP32 RNE word
 
-A word that is nearest to `x` among all finite binary32 words, has an even last bit on ties, and
-carries the sign of `x`, is the word returned by `rne32`. -/
+A nearest finite FP32 word with an even last bit on ties and the sign of `x` is the word that
+`rne32` returns. -/
 
 namespace MatrixCore
 
-/-- Sign bit of a binary32 word. -/
 def sign32 (w : F32) : Bool := w.toNat / 2147483648 % 2 == 1
 
-/-- Correctly rounded binary32 result: nearest value, even on ties, sign of the input. -/
+/-- Correctly rounded FP32 result: nearest value, even on ties, sign of the input. -/
 def RoundsNearestEven32 (x : ℚ) (w : F32) : Prop := NearestEven32 x w ∧ sign32 w = decide (x < 0)
 
 theorem sign32_encode32 (negative : Bool) (e : ℤ) (m : ℕ) (hm : m < 16777216) (he1 : -126 ≤ e)
@@ -30,7 +29,6 @@ theorem rne32_rounds {x : ℚ} {w : F32} (h : rne32 x = some w) : RoundsNearestE
 
 /-! ## Words are determined by sign and value -/
 
-/-- Fields of a binary32 word. -/
 theorem decode32_eq (w : F32) :
     fp32.decode w =
       let M := w.toNat % 8388608
@@ -40,7 +38,7 @@ theorem decode32_eq (w : F32) :
       else .finite (if E = 0 then ⟨neg, M, -126, 23⟩ else ⟨neg, 8388608 + M, (E : ℤ) - 127, 23⟩) := by
   rfl
 
-/-- Significand and exponent of a finite binary32 word from its fields. -/
+/-- Significand and exponent of a finite FP32 word from its fields. -/
 def fields32 (E M : ℕ) : ℕ × ℤ := if E = 0 then (M, -126) else (8388608 + M, (E : ℤ) - 127)
 
 theorem fields32_spec {E M : ℕ} (hE : E < 255) (hM : M < 8388608) :
@@ -82,7 +80,6 @@ theorem decode32_fields_eq (w : F32) :
   have : w.toNat < 4294967296 := this
   omega
 
-/-- Normalized binary32 significands and exponents are unique. -/
 theorem normalized_unique {m₁ m₂ : ℕ} {e₁ e₂ : ℤ}
     (hm₁ : m₁ < 16777216) (hm₂ : m₂ < 16777216) (he₁ : -126 ≤ e₁) (he₂ : -126 ≤ e₂)
     (hn₁ : 8388608 ≤ m₁ ∨ e₁ = -126) (hn₂ : 8388608 ≤ m₂ ∨ e₂ = -126)
@@ -114,7 +111,6 @@ theorem normalized_unique {m₁ m₂ : ℕ} {e₁ e₂ : ℤ}
     exact_mod_cast this
   · exact absurd (key hm₂ he₂ hn₁ hgt h.symm) hz
 
-/-- Two finite words with the same sign bit and the same value are equal. -/
 theorem value32_injective {w₁ w₂ : F32} {y : ℚ} (h₁ : value32 w₁ = some y)
     (h₂ : value32 w₂ = some y) (hs : sign32 w₁ = sign32 w₂) : w₁ = w₂ := by
   obtain ⟨hE₁, ha₁⟩ := value32_abs h₁
@@ -161,8 +157,6 @@ theorem value32_injective {w₁ w₂ : F32} {y : ℚ} (h₁ : value32 w₁ = som
 
 /-! ## Ties -/
 
-/-- A finite value as close to `a` as the RNE value, but different from it, is the mirror image
-`(2t − k)·q` of the RNE grid point `k·q` about `a = t·q`. -/
 theorem grid_tie {a : ℚ} (e : ℤ) (hbinade : e ≠ -126 → pow2 e ≤ a)
     {y : ℚ} (hy : FiniteValue32 y)
     (htie : absQ (a - y) = absQ (a - rneInt (a / pow2 (e - 23)) * pow2 (e - 23)))
@@ -192,7 +186,6 @@ theorem grid_tie {a : ℚ} (e : ℤ) (hbinade : e ≠ -126 → pow2 e ≤ a)
     have hlt : ey < e := by omega
     have hae : pow2 e ≤ a := hbinade (by omega)
     have hn := (grid_nearest e hbinade ⟨j, ey, hey1, hey2, hj, rfl⟩).1
-    -- the off-grid value is strictly farther than `2^e`, which is no closer than the RNE point
     have hysmall : (j : ℚ) * pow2 (ey - 23) < pow2 e := by
       have hjle : (j : ℚ) ≤ 16777215 := by
         have : j ≤ 16777215 := by omega
@@ -226,7 +219,6 @@ theorem value32_parity (w : F32) :
   · rw [if_pos h0]; dsimp only; omega
   · rw [if_neg h0]; dsimp only; omega
 
-/-- `m·2^(f−23) = n·2^(g−23)` with `f < g` gives `m = n·2^(g−f)`. -/
 theorem scale_nat {m n : ℕ} {f g : ℤ} (hfg : f < g)
     (h : (m : ℚ) * pow2 (f - 23) = (n : ℚ) * pow2 (g - 23)) : m = n * 2 ^ (g - f).toNat := by
   have hsplit : pow2 (g - 23) = ((2 ^ (g - f).toNat : ℕ) : ℚ) * pow2 (f - 23) := by
@@ -235,7 +227,6 @@ theorem scale_nat {m n : ℕ} {f g : ℤ} (hfg : f < g)
   have h' := mul_right_cancel_pos (pow2_ne_zero _) h
   exact_mod_cast h'
 
-/-- Every correctly rounded word has the value `rne32` produces. -/
 theorem nearestEven32_value {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = some w₀)
     (h : NearestEven32 x w) : value32 w = some (rneValue x) := by
   obtain ⟨d, hd, hnear, htie⟩ := h
@@ -250,7 +241,6 @@ theorem nearestEven32_value {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = some w₀
   · rw [hdr]
   exfalso
   have heven := htie w₀ (rneValue x) hr (Ne.symm hdr) hdist.symm
-  -- `x ≠ 0`: at zero the only nearest value is zero
   have hx : x ≠ 0 := by
     intro hx0; subst hx0
     rw [rneValue_zero] at hdist hdr
@@ -258,7 +248,6 @@ theorem nearestEven32_value {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = some w₀
     have : 0 - d = 0 := absQ_eq_zero.mp this
     exact hdr (by grind)
   have ha := absQ_pos hx
-  -- move to the magnitude `a = |x|`
   have hfin := value32_finiteValue hd
   let y' := if x < 0 then -d else d
   have hy' : FiniteValue32 y' := by
@@ -294,7 +283,6 @@ theorem nearestEven32_value {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = some w₀
   have hkeven : k % 2 = 0 := by
     have := (rneMagnitude_nearest ha hy').2 hmag hne'
     rw [hT, hK] at this; exact this
-  -- `J = 2t − k` with `|t − k| ≤ 1/2`, so `J = k ± 1`: odd and positive
   have hJk : J = k + 1 ∨ J = k - 1 := by
     have hJne : J ≠ k := by
       intro hJ'; subst hJ'
@@ -314,7 +302,6 @@ theorem nearestEven32_value {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = some w₀
     have : (0 : ℚ) ≤ ((J + k : ℤ) : ℚ) := by push_cast; rw [hJ]; grind
     exact Rat.intCast_le_intCast.mp (by simpa using this)
   have hJpos : 1 ≤ J := by omega
-  -- the word's significand equals `J` up to a power of two; normalization forces equality
   obtain ⟨hE, habs⟩ := value32_abs hd
   have hM : w.toNat % 8388608 < 8388608 := Nat.mod_lt _ (by decide)
   obtain ⟨b, c, n, _, _⟩ := fields32_spec hE hM
@@ -365,8 +352,7 @@ theorem roundsNearestEven32_unique {x : ℚ} {w w₀ : F32} (h₀ : rne32 x = so
     (h : RoundsNearestEven32 x w) : w = w₀ :=
   value32_injective (nearestEven32_value h₀ h.1) (rne32_value h₀) (by rw [h.2, rne32_sign h₀])
 
-/-- Inside the finite range, `rne32` is characterized by correct rounding: nearest finite value,
-even last bit on ties, and the sign of the input. -/
+/-- Inside the finite range, `rne32` is characterized by correct rounding. -/
 theorem rne32_iff {x : ℚ} {w : F32} (hx : absQ x < overflowThreshold32) :
     rne32 x = some w ↔ RoundsNearestEven32 x w := by
   constructor

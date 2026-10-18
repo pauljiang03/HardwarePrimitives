@@ -4,15 +4,7 @@ import MatrixCore.MC.CorrectRounding
 
 /-! # Error of the block output
 
-The distance of `d` from the exact `Σ p_ℓ + c` of Eq. (1), for each configuration. Every `fl{·}`
-is within `flBound` of its argument: half an ulp, plus `2^-126` where results are flushed.
-
-* SFMA and CDNA 1: `|exact − d| ≤ halfUlp32 exact`.
-* CDNA 2: input flushing, the conversion of each product, every partial sum of the pairwise sum,
-  and the final `fl{·}` (`pairwiseBound` sums them, evaluated at the computed intermediate
-  values).
-* CDNA 3: the error of `S_acc` (`alignedBound`, by the branches of Algorithms 1 and 2) plus half an
-  ulp of `S_acc`. -/
+The distance of `d` from the exact `Σ p_ℓ + c`, for each configuration. -/
 
 namespace MatrixCore
 
@@ -94,8 +86,7 @@ theorem correctRounding_error {P : Model} (hacc : P.accumulation = .correctRound
 
 /-! ## CDNA 2 -/
 
-/-- Error bound of the pairwise sum of a group: one `flBound` per partial sum, at the computed
-operands. -/
+/-- Error bound of a pairwise group sum: one `flBound` per partial sum, at the computed operands. -/
 def pairwiseGroupSumBound (ftz : Bool) : ℕ → List ℚ → ℚ
   | _, [] => 0
   | _, [_] => 0
@@ -178,8 +169,7 @@ theorem mapM_flValue_error (ftz : Bool) : ∀ (l : List Unpacked) (ps : List ℚ
           p.value + sumQ (l.map Unpacked.value) - (q + sumQ qs) by grind] at this
         grind
 
-/-- CDNA 2 error bound: the effect of flushing subnormal inputs, the conversion of each
-product, and the pairwise sum, at the computed values. -/
+/-- CDNA 2 error bound: input flushing, product conversion and the pairwise sum. -/
 def pairwiseBound (P : Model) (x : Prepared) : ℚ :=
   let x' := if P.subnormals then x else x.flushed
   absQ (x.exact - x'.exact) + sumQ (x'.p.map fun p => flBound (!P.subnormals) p.value) +
@@ -237,7 +227,7 @@ theorem pairwise_error {P : Model} (hacc : P.accumulation = .pairWiseSum)
 
 /-! ## CDNA 3 -/
 
-/-- Error bound of `S_acc` in Algorithms 1 and 2, by branch (`alignedAccumulation_error`). -/
+/-- Error bound of `S_acc` in Algorithms 1 and 2, by branch. -/
 def alignedBound (P : Model) (x : Prepared) : ℚ :=
   let s := productSum P x.p
   let F : ℕ := 23 + P.padding

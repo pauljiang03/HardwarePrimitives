@@ -37,8 +37,7 @@ theorem supported_valid_success (variant : Variant) (x : BlockInput (implementat
       bits (parameters variant) (supportedInput variant x) = some t.output.bits := by
   cases variant <;> exact valid_success x hv (Nat.le_refl 23)
 
-/-- B200's FP8 block FMAs have a binary32 block output, so the specification equality covers them
-too, with E4M3 operands in the `e4m3x` layout. -/
+/-- B200's FP8 block FMAs have an FP32 block output, so the specification equality covers them. -/
 theorem blackwell_fp8_eq_spec :
     (∀ x : BlockInput blackwellE4M3F32, (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parametersOf blackwellE4M3F32) (inputOf x)) ∧

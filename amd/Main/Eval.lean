@@ -2,10 +2,8 @@ import MatrixCore
 
 /-! # `mc_eval`: evaluate inner products from words
 
-Reads lines `<model> <a> <b> <c>`, where `model` names a model of the library (for example
-`cdna3F16`), `a` and `b` are comma-separated hexadecimal words and
-`c` is a hexadecimal binary32 word, and prints the observed result of `dotOutcome`:
-`F <hex>` for a finite word, `I+`/`I-` for an infinity, `N` for NaN, `X` for a malformed line. -/
+Reads lines `<model> <a> <b> <c>` (a model name such as `cdna3F16`, comma-separated hex words `a`
+and `b`, a hex FP32 word `c`) and prints `F <hex>`, `I+`/`I-`, `N`, or `X` for a malformed line. -/
 
 open MatrixCore
 

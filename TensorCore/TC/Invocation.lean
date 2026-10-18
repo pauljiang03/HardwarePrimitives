@@ -6,9 +6,9 @@ import TensorCore.TC.Block
 namespace TensorCore
 
 inductive CPlacement where
-  /-- Early accumulation: c is aligned and added together with the products. -/
+  /-- Early accumulation: `c` is aligned and added together with the products. -/
   | early
-  /-- Late accumulation: convert the product accumulator through these stages, then add c exactly. -/
+  /-- Late accumulation: round the product accumulator through these stages, then add `c` exactly. -/
   | late (stages : List RoundingStage)
   deriving Repr, DecidableEq
 
@@ -68,7 +68,6 @@ def PreparedInvocation.exactDot {p : InvocationSpec} (b : PreparedInvocation p) 
 def invocationIdeal {p : InvocationSpec} (x : InvocationInput p) : Option ℚ :=
   (prepareInvocation x).map PreparedInvocation.exactDot
 
-/-- Reuse the proved denormalized-product/grid primitive. -/
 def PreparedInvocation.alignedBlock {p : InvocationSpec} (b : PreparedInvocation p)
     (F : ℕ) (eAlignMin : Option ℤ) (includeC : Bool) : PreparedBlock :=
   ⟨⟨p.input.valueFormat.layout, p.nfma, F, eAlignMin, 23⟩, b.products,
@@ -140,7 +139,7 @@ def evalInvocation {p : InvocationSpec} (x : InvocationInput p) :
 
 def v100Invocation : InvocationSpec := v100F16F32.toInvocation 23
 
-/-- Numerical observation includes rejection as `none`; error constructors are API-specific. -/
+/-- Output bits, with every rejection as `none`. -/
 def invocationBits {p : InvocationSpec} (x : InvocationInput p) : Option (BitVec p.output.format.width) :=
   (evalInvocation x).toOption.map fun t => t.output.bits
 

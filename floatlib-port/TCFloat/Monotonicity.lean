@@ -1,6 +1,6 @@
 import TCFloat.DirectedRounding
 
-/-! Parameterized TC nonmonotonicity. -/
+/-! Parameterized Tensor Core nonmonotonicity. -/
 namespace TCFloat
 set_option maxRecDepth 2048
 set_option maxHeartbeats 800000
@@ -11,7 +11,6 @@ private theorem pow2_add' (e f : Int) : pow2 (e+f) = pow2 e*pow2 f :=
 private theorem pow2_div' (e f : Int) : pow2 e / pow2 f = pow2 (e-f) :=
   (zpow_sub₀ (by norm_num) _ _).symm
 
-/-- Truncating an integer multiple of the alignment quantum preserves it exactly. -/
 theorem truncGrid_integer (z : Int) (e : Int) :
     truncGrid ((z : ℚ)*pow2 e) e = (z : ℚ)*pow2 e := by
   have hp := (pow2_pos' e).ne'
@@ -31,7 +30,6 @@ private theorem alignment_replicate (t : Term) (k : Nat) :
     · simp [hz]
     · by_cases hk : k = 0 <;> simp [hz,hk]
 
-/-- A leading nonzero C selects eta if each repeated product's exponent is no larger. -/
 theorem construction_alignExp (M : TCModel) (K : Nat) (a b c : Term)
     (hc : c.dyadic.significand ≠ 0) (hs : (a.mul b).exponent ≤ c.exponent)
     (hf : ∀ f ∈ M.eAlignMin, f ≤ c.exponent) :
@@ -52,7 +50,6 @@ def belowOneTerm : Term := ⟨⟨false,16777215,-24⟩,-1,23⟩
 theorem oneTerm_value : oneTerm.value = 1 := by decide +kernel
 theorem belowOneTerm_value : belowOneTerm.value = 1-pow2 (-24) := by decide +kernel
 
-/-- With C=1 all products of the family fall below the alignment quantum. -/
 theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
     (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1) :
@@ -79,7 +76,6 @@ theorem construction_accumulator_one (M : TCModel) (p K : Nat) (a b : Term)
   simp only [Block.accumulator, Block.aligned, Block.terms, List.map_cons, List.map_replicate,
     List.sum_cons, List.sum_replicate, hq, oneTerm_value, hone, hterm, nsmul_zero, add_zero]
 
-/-- Lowering C by one FP32 step exposes all K product contributions. -/
 theorem construction_accumulator_below (M : TCModel) (p K : Nat) (a b : Term)
     (hp : M.padding = p) (hf : ∀ f ∈ M.eAlignMin, f ≤ -1)
     (hv : (a.mul b).value = pow2 (-(24+(p:Int)))) (hs : (a.mul b).exponent ≤ -1) :
@@ -130,7 +126,6 @@ private theorem truncGrid_above_one (x : ℚ) (hx : 0 ≤ x) :
   norm_num
   constructor <;> intro h <;> linarith
 
-/-- The executable RTZ converter crosses 1 at the next FP32 number above 1. -/
 theorem round32_rtz_above_one (x : ℚ) (hx : (1:ℚ)/2 ≤ x) (hx2 : x < 2) :
     ∃ bits y, round32 .towardZero x = some bits ∧ value32 bits = some y ∧
       (1 < y ↔ 1+pow2 (-23) ≤ x) := by
@@ -240,7 +235,7 @@ private theorem prepare_replicate (M : TCModel) (K aw bw c : Nat) (a b d : Term)
   simp at hm
   simp [prepare, hk, hc, hm]
 
-/-- The parameterized theorem at the actual encoded FP16 entry point, with arbitrary K/p. -/
+/-- The threshold theorem at the encoded FP16 entry point, for any K and p. -/
 theorem nonmonotone_encoded (K p : Nat) (eAlignMin : Option Int)
     (hf : ∀ f ∈ eAlignMin, f ≤ -1) (aw bw : Nat) (a b : Term)
     (ha : decode .binary16 aw = some a) (hb : decode .binary16 bw = some b)

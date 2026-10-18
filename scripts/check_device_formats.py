@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the published A100 and H100 BF16 and TF32 vectors through the InvocationSpec descriptors and through the proved BF16 and TF32 models."""
+"""Replay the published A100 and H100 BF16 and TF32 vectors through the descriptors and models."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 from pathlib import Path

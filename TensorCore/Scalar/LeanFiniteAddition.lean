@@ -82,7 +82,6 @@ theorem pack_unpack32_nonzero (a : F32) (ha : NonzeroFinite32 a) :
     by_cases hs : a.toNat / 2147483648 = 0 <;>
       simp [Format.width, hs, show ¬ (8388608 + a.toNat % 8388608 : ℤ) < 8388608 by omega] <;> omega
 
-
 theorem finiteValue32_ne_zero (a : F32) (ha : NonzeroFinite32 a) : finiteValue32 a ≠ 0 := by
   have hp : 0 < (mantissa32 a : ℚ) * pow2 (exponent32 a) :=
     Rat.mul_pos (Rat.natCast_pos.mpr ha.2) (pow2_pos _)
@@ -136,7 +135,6 @@ def nativeFiniteAdd32 (a b : F32)
     (ha : a.toNat / 8388608 % 256 < 255) (hb : b.toNat / 8388608 % 256 < 255) : F32 :=
   if a = 0x80000000 ∧ b = 0x80000000 then 0
   else nativeAdd32 a b (native32Valid_finite a ha) (native32Valid_finite b hb)
-
 
 /-- Every finite encoded pair uses native addition, with the EFT zero convention. -/
 theorem nativeFiniteAdd32_round (a b : F32)

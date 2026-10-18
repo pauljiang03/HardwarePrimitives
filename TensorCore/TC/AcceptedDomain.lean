@@ -4,7 +4,6 @@ import TensorCore.TC.Canonical
 
 namespace TensorCore
 
-/-- Truncation and nearest-even rounding return decodable finite FP32 words for inputs within range. -/
 theorem round32_finite_exists (mode : RoundingMode) (x : ℚ) (hr : absQ x ≤ maxFinite32) :
     ∃ bits d, round32 mode x = some bits ∧ decode32 bits = some d := by
   by_cases hz : x = 0

@@ -48,8 +48,7 @@ theorem bits_eq_of_result {p : Parameters} {x : Input p} {b : F32}
   rw [dif_pos ⟨b, h⟩]
   exact congrArg some (result_unique (Classical.choose_spec (show ∃ b, Result p x b from ⟨b, h⟩)) h)
 
-/-- Every encoded input of a model with a binary32 block output: successful output bits and all
-rejection cases agree. -/
+/-- Output bits and rejections agree on every input of a model with an FP32 block output. -/
 theorem evalBlock_eq_spec {p : Model} (x : BlockInput p) (hw : 23 ≤ p.outputMantissaBits) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bits (parametersOf p) (inputOf x) := by

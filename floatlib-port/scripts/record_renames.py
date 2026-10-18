@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate renamed-identifiers.json after renaming parent declarations.
-
-For every parent dependency of the FloatLib equivalence proofs, compare the code tokens of the
-current file with the pinned revision's file (from git history). The token streams must have the
-same length; every differing position must be an identifier (never a string literal). Restoring the
-recorded positions must reproduce the pinned token hash in reference-manifest.json.
-Run from floatlib-port/ after a rename; then run prepare_reference.py.
-"""
+"""Regenerate renamed-identifiers.json after a parent rename (run from floatlib-port/)."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 import hashlib, json, subprocess

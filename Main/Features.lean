@@ -118,9 +118,7 @@ where
     | a :: b :: rest => (a, b) :: pairUp rest
     | _ => []
 
-/-- A named model of the replay, with the conversion from input words to its operand words: FP16 and
-BF16 as 16-bit words, E5M2 as 8-bit words, E4M3 as 8-bit words widened to `e4m3x`, TF32 as
-register words whose thirteen low bits must be zero. -/
+/-- A named replay model with the conversion from input words to its operand words. -/
 private structure ReplayModel where
   model : Model
   word : ℕ → Option model.Word
@@ -150,7 +148,7 @@ private def replayModel : String → Option ReplayModel
   | "hopper-e5m2" => some ⟨hopperE5M2F32, plainWord _⟩
   | "blackwell-e4m3" => some ⟨blackwellE4M3F32, e4m3Word⟩
   | "blackwell-e5m2" => some ⟨blackwellE5M2F32, plainWord _⟩
-  -- Negative controls: Ada and Hopper FP8 with a binary32 block output.
+  -- Negative controls: Ada and Hopper FP8 with an FP32 block output.
   | "ada-e4m3-fp32-output" => some ⟨{adaE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
   | "ada-e5m2-fp32-output" => some ⟨{adaE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
   | "hopper-e4m3-fp32-output" => some ⟨{hopperE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
@@ -187,8 +185,7 @@ where
     let g := xs.take n
     (g ++ List.replicate (n - g.length) pad) :: go fuel (xs.drop n)
 
-/-- A descriptor's block FMAs chained in increasing `k`, zero pairs padding the last one; each
-output word is the next accumulator input. -/
+/-- Block FMAs chained in increasing `k`; each output word is the next accumulator input. -/
 private def chainInvocation (p : InvocationSpec) (c : ℕ)
     (ps : List (p.input.Word × p.input.Word)) : Option ℕ :=
   (groups p.nfma (0, 0) ps).foldlM
@@ -201,9 +198,7 @@ private def replayChain (name : String) (ns : List ℕ) : Option Json := do
     let ps ← parsePairs p ns.dropLast
     return bitsJson (chainInvocation p c ps)
 
-/-- The operand words of a model given by its parameters: FP16 and BF16 as 16-bit words, TF32
-as register words whose thirteen low bits must be zero, E5M2 as 8-bit words, E4M3 as 8-bit words
-widened to `e4m3x`. -/
+/-- Input format and operand-word conversion for `model-dot` rows. -/
 private def paramFormat : String → Option (TensorCore.Format × (ℕ → Option ℕ))
   | "fp16" => some (fp16, fun n => if n < 2 ^ 16 then some n else none)
   | "bf16" => some (bf16, fun n => if n < 2 ^ 16 then some n else none)
@@ -212,9 +207,8 @@ private def paramFormat : String → Option (TensorCore.Format × (ℕ → Optio
   | "e4m3" => some (e4m3x, fun n => if n < 256 then some (widenE4M3 (BitVec.ofNat 8 n)).toNat else none)
   | _ => none
 
-/-- `Model.dot` of a model given by its parameters: input format, FMA size, mantissa bits after
-alignment, minimum alignment exponent (or `none`) and block-output mantissa bits, then `c` and the
-operand pairs. -/
+/-- `Model.dot` from parameters: format, FMA size, mantissa bits after alignment, minimum
+alignment exponent (or `none`), output mantissa bits, then `c` and the operand pairs. -/
 private def paramDot (args : List String) : Option Json := do
   match args with
   | fmt :: k :: f :: e :: m :: c :: ws =>
@@ -231,8 +225,7 @@ private def paramDot (args : List String) : Option Json := do
       return bitsJson ((p.dot (BitVec.ofNat 32 cw) ps).map BitVec.toNat)
   | _ => none
 
-/-- The FP8 `mma.sync` model of H100, H200 and B200 (`mmaSyncFP8Dot`): format, instruction size
-`k` (32 or 16), `c`, then the operand pairs as 8-bit words. -/
+/-- FP8 `mma.sync` of H100, H200 and B200: format, `k` (32 or 16), `c`, then 8-bit operand pairs. -/
 private def mmaSyncDot (args : List String) : Option Json := do
   match args with
   | fmt :: k :: c :: ws =>

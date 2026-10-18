@@ -44,14 +44,14 @@ theorem extraction_and_rounding_boundaries :
     (Word.round32 ⟨false, maxMagnitude32⟩) = some 0x7f7fffff ∧
     (Word.round32 ⟨false, maxMagnitude32 + 1⟩) = none := by decide +kernel
 
-/-- Minimum TF32 product occupies the least workspace bit; BF16 needs no host underflow. -/
+/-- The smallest TF32 products. -/
 theorem tiny_products :
     (EFMachine.tcEft .ampereTF32 ⟨[(1, 1)] ++ List.replicate 3 (0, 0), 0⟩ 0).map
       Result.bits = .ok (some 0) ∧
     (EFMachine.tcEft .ampereTF32 ⟨[(0x40001, 1)] ++ List.replicate 3 (0, 0), 0⟩ 0).map
       Result.bits = .ok (some 0x80000000) := by decide +kernel
 
-/-- Every workspace bit is a possible support boundary, including positions far above FP32's range and shifts that cannot be represented by an eight-bit count. -/
+/-- Single-bit scans at every workspace position. -/
 theorem single_bit_scans : ∀ i : Fin 576,
     leadingZeros ((1 : Magnitude) <<< i.val) = BitVec.ofNat 576 (575 - i.val) ∧
     trailingZeros ((1 : Magnitude) <<< i.val) = BitVec.ofNat 576 i.val := by decide +kernel

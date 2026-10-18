@@ -2,12 +2,7 @@ import MatrixCore.Numerics.Exact
 
 /-! # Fixed-point alignment operations
 
-The paper describes every lossy alignment step in fixed point: a significand is shifted to a
-reference exponent `e` and kept to `k` *mantissa bits*. On exact values this is a projection
-onto the grid of multiples of `2^(e-k)`. Two projections occur:
-
-* truncation of the magnitude (multi-term alignment of products, truncation to 24 mantissa bits);
-* RD, rounding toward −∞ (two-operand alignment of `s_c` and `S_{p_i,sum}` on CDNA 3). -/
+Truncation and RD (rounding toward −∞) onto the grid of multiples of `2^g`. -/
 
 namespace MatrixCore
 
@@ -36,7 +31,6 @@ theorem floor_bounds (t : ℚ) : (t.floor : ℚ) ≤ t ∧ t < (t.floor : ℚ) +
 theorem div_mul_pow2 (x : ℚ) (g : ℤ) : x / pow2 g * pow2 g = x :=
   Rat.div_mul_cancel (pow2_ne_zero g)
 
-/-- RD never rounds up and loses less than one grid step. -/
 theorem rdGrid_bounds (x : ℚ) (g : ℤ) : rdGrid x g ≤ x ∧ x < rdGrid x g + pow2 g := by
   have ⟨h1, h2⟩ := floor_bounds (x / pow2 g)
   have hp := pow2_pos g
@@ -56,14 +50,12 @@ theorem truncGrid_onGrid (x : ℚ) (g : ℤ) : OnGrid (truncGrid x g) g := by
   · exact ⟨-((-x / pow2 g).floor), by rw [Rat.intCast_neg, Rat.neg_mul]⟩
   · exact ⟨_, rfl⟩
 
-/-- A value already on the grid is fixed by RD. -/
 theorem rdGrid_of_onGrid {x : ℚ} {g : ℤ} (h : OnGrid x g) : rdGrid x g = x := by
   obtain ⟨k, rfl⟩ := h
   unfold rdGrid
   rw [Rat.mul_div_cancel (pow2_ne_zero g)]
   simp
 
-/-- A value already on the grid is fixed by truncation. -/
 theorem truncGrid_of_onGrid {x : ℚ} {g : ℤ} (h : OnGrid x g) : truncGrid x g = x := by
   obtain ⟨k, rfl⟩ := h
   unfold truncGrid
@@ -74,7 +66,6 @@ theorem truncGrid_of_onGrid {x : ℚ} {g : ℤ} (h : OnGrid x g) : truncGrid x g
     rw [Rat.floor_intCast, Rat.intCast_neg, Rat.neg_mul, Rat.neg_neg]
   · rw [Rat.mul_div_cancel (pow2_ne_zero g), Rat.floor_intCast]
 
-/-- Coarser grids contain finer-grid points: multiples of `2^g'` are multiples of `2^g` when `g ≤ g'`. -/
 theorem OnGrid.mono {x : ℚ} {g g' : ℤ} (h : OnGrid x g') (hg : g ≤ g') : OnGrid x g := by
   obtain ⟨k, rfl⟩ := h
   refine ⟨k * 2 ^ (g' - g).toNat, ?_⟩
@@ -100,7 +91,6 @@ theorem onGrid_sumQ {xs : List ℚ} {g : ℤ} (h : ∀ x ∈ xs, OnGrid x g) : O
   | cons x xs ih =>
     exact (h x (by simp)).add (ih fun y hy => h y (by simp [hy]))
 
-/-- Truncation keeps the sign and never increases the magnitude; it loses less than one step. -/
 theorem truncGrid_bounds (x : ℚ) (g : ℤ) :
     absQ (truncGrid x g) ≤ absQ x ∧ absQ (x - truncGrid x g) < pow2 g ∧
       (0 ≤ x → 0 ≤ truncGrid x g ∧ truncGrid x g ≤ x) ∧
@@ -152,7 +142,6 @@ theorem truncGrid_zero (g : ℤ) : truncGrid 0 g = 0 :=
 theorem rdGrid_zero (g : ℤ) : rdGrid 0 g = 0 :=
   rdGrid_of_onGrid (OnGrid.zero g)
 
-/-- Integers times `2^g` are on every grid at or below `g`. -/
 theorem onGrid_intCast_mul (k : ℤ) (g g' : ℤ) (h : g' ≤ g) : OnGrid ((k : ℚ) * pow2 g) g' :=
   OnGrid.mono ⟨k, rfl⟩ h
 

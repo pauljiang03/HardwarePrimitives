@@ -65,7 +65,6 @@ theorem operand_decode_bounded {s : OperandEncoding} {bits : s.Word} {d : Decode
     (h : s.decode bits = some d) : d.Bounded :=
   valueFormat_decode_bounded _ _ _ (padded_decode_value h)
 
-/-- A nonzero finite encoding has exponent at least the format's minimum normal exponent. -/
 theorem classifyNat_scale_lower (f : Format) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) (hnz : d.significand ≠ 0) :
     1 - f.bias ≤ d.exponent := by
@@ -86,7 +85,6 @@ theorem classifyNat_scale_lower (f : Format) (n : ℕ) (d : Decoded)
       change 1 - f.bias ≤ ((n / 2 ^ f.mantissaBits % 2 ^ f.exponentBits : ℕ) : ℤ) - f.bias
       omega
 
-/-- Nonzero finite decoded values retain the format's mantissa width and bounded exponent. -/
 theorem classifyNat_metadata (f : Format) (he : 2 ≤ f.exponentBits) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) (hnz : d.significand ≠ 0) :
     d.mantissaBits = f.mantissaBits ∧ 1 - f.bias ≤ d.exponent ∧

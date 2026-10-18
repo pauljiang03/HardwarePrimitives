@@ -55,7 +55,6 @@ theorem tf19Fp32_contract (K padding carryBits : ℕ) (eAlignMin : Option ℤ)
   have he : 23 + padding + 3 + carryBits = 26 + padding + carryBits := by omega
   simpa [he, tf19Fp32Model] using this
 
-/-- The BF16 descriptors are the BF16 models embedded as invocations. -/
 theorem a100BF16_descriptor : a100BF16Invocation = a100BF16F32.toInvocation 24 := rfl
 theorem hopperBF16_descriptor : hopperBF16Invocation = hopperBF16F32.toInvocation 25 := rfl
 
@@ -65,7 +64,6 @@ theorem bf16Fp32_invocation_compatible (K padding : ℕ) (eAlignMin : Option ℤ
       (evalBlock x).toOption.map (fun t => t.output.bits) :=
   legacy_invocation_bits x (23 + padding) (by change bf16.WellFormed; decide) rfl (Nat.le_refl 23)
 
-/-- A padded TF32 register word decodes as its value word under the `tf19` model. -/
 theorem tf32Register_decode (K padding : ℕ) (eAlignMin : Option ℤ) (w : tf32Register.Word)
     (hp : tf32Padded w = true) :
     tf32Register.decode w = (tf19Fp32Model K padding eAlignMin).decode (tf32Unpack w) := by
@@ -151,7 +149,6 @@ private theorem finite32_some' {bits : F32} {d : Decoded} (hd : decode32 bits = 
     rfl
 
 set_option maxRecDepth 4096 in
-/-- A padded-word descriptor and the model of its value layout compute the same block. -/
 theorem padded_prepared_bits (f : Format) (pad K F : ℕ) (eAlignMin : Option ℤ)
     (ps : List (Decoded × Decoded)) (c : Decoded) :
     (evalInvocationPrepared (p := alignedInvocation ⟨⟨f, .ieee⟩, pad⟩ K F eAlignMin)
@@ -198,7 +195,6 @@ theorem tf32_invocation_bits (K padding : ℕ) (eAlignMin : Option ℤ)
       | none => rfl
       | some ps' => exact padded_prepared_bits tf19 13 K (23 + padding) eAlignMin ps' c'
 
-/-- The same statement for any descriptor input. -/
 theorem tf32_input_bits (K padding : ℕ) (eAlignMin : Option ℤ)
     (x : InvocationInput (alignedInvocation tf32Register K (23 + padding) eAlignMin))
     (hp : ∀ pair ∈ x.products, tf32Padded pair.1 = true ∧ tf32Padded pair.2 = true) :

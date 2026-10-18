@@ -42,7 +42,6 @@ def roundedSignificand (mode : RoundingMode) (m : ℚ) : ℤ :=
 /-- A coefficient of `2^24` carries into the next binade. -/
 def carry (e k : ℤ) : ℤ × ℤ := if k = 2 ^ 24 then (e + 1, k / 2) else (e, k)
 
-/-- Conversion core. -/
 def round32Core (mode : RoundingMode) (x : ℚ) : Option F32 :=
   if x = 0 then some 0
   else
@@ -53,11 +52,10 @@ def round32Core (mode : RoundingMode) (x : ℚ) : Option F32 :=
 def round32 (mode : RoundingMode) (x : ℚ) : Option F32 :=
   if absQ x > maxFinite32 then none else round32Core mode x
 
-/-- Exponent of the quantum of an encoded output: `E - 150` for a normal encoding with exponent field `E`, and `-149` for a subnormal or zero encoding. -/
+/-- Quantum exponent of an FP32 word: `E - 150` for a normal exponent field `E`, else `-149`. -/
 def outputUlpExponent (b : F32) : ℤ :=
   max (((b.toNat / 2 ^ 23 % 2 ^ 8 : ℕ) : ℤ) - 127) emin32 - 23
 
-/-- Success in the public conversion implies the *accumulator* range condition. -/
 theorem round32_range {mode : RoundingMode} {x : ℚ} {b : F32}
     (h : round32 mode x = some b) : absQ x ≤ maxFinite32 := by
   unfold round32 at h
@@ -71,7 +69,7 @@ def magnitudeRounded (mode : RoundingMode) (m : ℚ) : ℚ :=
 def signedRounded (mode : RoundingMode) (x : ℚ) : ℚ :=
   if x < 0 then -magnitudeRounded mode (absQ x) else magnitudeRounded mode (absQ x)
 
-/-- Independent mathematical contract: finite result, nearest finite value, and an even low encoding bit whenever another distinct value is equally near. -/
+/-- Nearest finite FP32 value, ties to an even low bit. -/
 def NearestEven32 (x : ℚ) (b : F32) : Prop :=
   ∃ d : ℚ, value32 b = some d ∧
     (∀ y : ℚ, FiniteValue32 y → absQ (x - d) ≤ absQ (x - y)) ∧

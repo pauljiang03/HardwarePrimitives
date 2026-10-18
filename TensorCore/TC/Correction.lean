@@ -37,7 +37,7 @@ theorem correctedSchedule_correct (initial : Finite32) (ts : List BlockTrace)
   rw [← encoded_trace_ledger initial ts chain]
   exact round32_nearestEven_correct _ hr
 
-/-- Every successful executable schedule has a correctly rounded correction when its exact ideal sum is in the specified finite range. -/
+/-- A successful schedule's correction is correctly rounded when its exact sum is in range. -/
 theorem runBlocks_corrected_correct (p : Model) (initial : Finite32)
     (ps : List (List (p.Word × p.Word))) (ts : List BlockTrace)
     (h : runBlocks p initial.bits ps = .ok ts)

@@ -1,10 +1,9 @@
 import MatrixCore.Numerics.Format
 
-/-! # Rounding to binary32
+/-! # Rounding to FP32
 
-`fl{·}` of the paper: normalization followed by round-to-nearest, ties-to-even (RNE) into
-binary32, with gradual underflow. A result that rounds beyond the largest finite value is an
-overflow (`none`); the special-value layer reports it as an infinity. -/
+`fl{·}` of the paper: round-to-nearest, ties-to-even (RNE) into FP32 with gradual underflow;
+an overflow gives `none`. -/
 
 namespace MatrixCore
 
@@ -13,38 +12,34 @@ def rneInt (t : ℚ) : ℤ :=
   if 1 < 2 * (t - t.floor) ∨ (2 * (t - t.floor) = 1 ∧ t.floor % 2 = 1) then t.floor + 1
   else t.floor
 
-/-- Exponent of the binade in which a nonzero magnitude is rounded: `⌊log₂ a⌋`, but not below
-binary32's minimum normal exponent `−126` (gradual underflow). Also the paper's
-*subnormal-aware normalization*. -/
+/-- Binade exponent of a nonzero magnitude, not below `−126` (subnormal-aware normalization). -/
 def normExp (a : ℚ) : ℤ := max (log2Floor a) (-126)
 
-/-- binary32 word from a sign, an exponent `−126 ≤ e ≤ 127`, and an integer significand
-`m < 2^24` with `23` mantissa bits (`m < 2^23` only for `e = −126`). -/
+/-- FP32 word of a sign, an exponent `e ∈ [−126, 127]`, and a significand `m < 2^24`. -/
 def encode32 (negative : Bool) (e : ℤ) (m : ℕ) : F32 :=
   BitVec.ofNat 32 ((if negative then 2147483648 else 0) +
     (if m < 8388608 then m else (e + 127).toNat * 8388608 + (m - 8388608)))
 
-/-- RNE significand and exponent of a nonzero magnitude, before the exponent-range check;
-the significand `2^24` is carried into the next binade. -/
+/-- RNE exponent and significand of a nonzero magnitude, before the overflow check. -/
 def rneFields (a : ℚ) : ℤ × ℕ :=
   let e := normExp a
   let k := rneInt (a / pow2 (e - 23))
   if k = 16777216 then (e + 1, 8388608) else (e, k.toNat)
 
-/-- `fl{x}`: binary32 RNE. `none` exactly when the rounded magnitude exceeds the finite range. -/
+/-- `fl{x}`: FP32 RNE; `none` exactly when the rounded magnitude exceeds the finite range. -/
 def rne32 (x : ℚ) : Option F32 :=
   if x = 0 then some 0
   else
     let (e, m) := rneFields (absQ x)
     if e > 127 then none else some (encode32 (decide (x < 0)) e m)
 
-/-- Largest finite binary32 magnitude, `(2 − 2^-23)·2^127`. -/
+/-- Largest finite FP32 magnitude, `(2 − 2^-23)·2^127`. -/
 def maxFinite32 : ℚ := 16777215 * pow2 104
 
 /-- RNE overflows at and above `maxFinite32 + 2^103 = 2^128 − 2^103`. -/
 def overflowThreshold32 : ℚ := pow2 128 - pow2 103
 
-/-- A binary32 word whose exponent field is zero and mantissa nonzero. -/
+/-- An FP32 word with zero exponent field and nonzero mantissa. -/
 def isSubnormal32 (w : F32) : Bool :=
   w.toNat / 8388608 % 256 == 0 && w.toNat % 8388608 != 0
 
@@ -74,7 +69,6 @@ theorem intCast_le_or_succ_le (j k : ℤ) : (j : ℚ) ≤ k ∨ (k : ℚ) + 1 �
     have h' := Rat.intCast_le_intCast.mpr this
     simpa [Rat.intCast_add, Rat.intCast_one] using h'
 
-/-- The selected integer is within one half. -/
 theorem rneInt_dist (t : ℚ) : 2 * absQ (t - rneInt t) ≤ 1 := by
   have h := floor_bounds t
   rcases rneInt_cases t with ⟨hk, hc⟩ | ⟨hk, hc⟩ <;> rw [hk] <;>
@@ -118,17 +112,14 @@ theorem rneInt_nonneg {t : ℚ} (h : 0 ≤ t) : 0 ≤ rneInt t := by
   have : (0 : ℤ) ≤ t.floor := Rat.le_floor_iff.mpr (by simpa using h)
   rcases rneInt_cases t with ⟨hk, _⟩ | ⟨hk, _⟩ <;> omega
 
-/-- RNE of a value below an integer bound `n` is at most `n`. -/
 theorem rneInt_le_of_lt {t : ℚ} {n : ℤ} (h : t < n) : rneInt t ≤ n := by
   have hf : t.floor < n := Rat.floor_lt_iff.mpr h
   rcases rneInt_cases t with ⟨hk, _⟩ | ⟨hk, _⟩ <;> omega
 
-/-- RNE of a value at least an integer bound `n` is at least `n`. -/
 theorem le_rneInt_of_le {t : ℚ} {n : ℤ} (h : (n : ℚ) ≤ t) : n ≤ rneInt t := by
   have hf : n ≤ t.floor := Rat.le_floor_iff.mpr h
   rcases rneInt_cases t with ⟨hk, _⟩ | ⟨hk, _⟩ <;> omega
 
-/-- RNE of an integer is itself. -/
 theorem rneInt_intCast (k : ℤ) : rneInt (k : ℚ) = k := by
   unfold rneInt
   rw [Rat.floor_intCast]

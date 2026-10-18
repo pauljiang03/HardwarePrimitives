@@ -6,7 +6,6 @@ namespace TensorCore.EFMachine
 
 set_option exponentiation.threshold 1024
 
-/-- A shape-correct block with finite inputs and finite supplied D always prepares. -/
 theorem prepare_exists {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
     (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
@@ -51,7 +50,6 @@ theorem Prepared.ideal_allZero {p : Prepared}
     have hs := ih (by intro u hu; exact ht u (by simp [hu]))
     simp [sumQ, hv, hs, Rat.zero_add]
 
-/-- Full bounded execution terminates without workspace overflow. -/
 theorem tcEft_prepared {variant : Variant} {x : BlockInput variant.model} {D : F32} {p : Prepared}
     (hp : prepare variant x D = .ok p) :
     ∃ r, tcEft variant x D = .ok r ∧
@@ -76,7 +74,7 @@ theorem tcEft_prepared {variant : Variant} {x : BlockInput variant.model} {D : F
       | none => exact ⟨.outOfRange, by rw [if_neg hz, hc]; dsimp +instances only; rw [hb, hf]; rfl, hf.symm.trans hr⟩
       | some b => exact ⟨.boundedExact b, by rw [if_neg hz, hc]; dsimp +instances only; rw [hb, hf]; rfl, hf.symm.trans hr⟩
 
-/-- Universal finite-input theorem for all eight variants and any finite supplied D. -/
+/-- Correct rounding for all eight variants, every finite block and every finite `D`. -/
 theorem tcEft_correct {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
     (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :
@@ -87,7 +85,7 @@ theorem tcEft_correct {variant : Variant} {x : BlockInput variant.model} {D : F3
   obtain ⟨r, hr, hb⟩ := tcEft_prepared hp
   exact ⟨r, hr, by simpa [hv] using hb⟩
 
-/-- Useful success family: every shape-correct finite block whose *independent* ideal is within the finite FP32 interval. -/
+/-- Success with the nearest-even result whenever the exact dot product is in the FP32 range. -/
 theorem tcEft_success {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
     (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d)
@@ -111,6 +109,5 @@ theorem tcEft_range_iff {variant : Variant} {x : BlockInput variant.model} {D : 
   · intro h
     obtain ⟨r, b, hr, hb, _⟩ := tcEft_success hlen hx hD h
     exact ⟨r, b, hr, hb⟩
-
 
 end TensorCore.EFMachine

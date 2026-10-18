@@ -3,7 +3,7 @@ import TensorCore.EFT.ExtractionGrid
 import TensorCore.EFT.Encoded
 import TensorCoreTests.EFT.EFT
 
-/-! Kernel regressions for generic scalar consolidation: subnormals, precision and range boundaries, the bit-span condition, and the FP64-to-FP32 double-rounding trap. -/
+/-! Kernel regressions for generic scalar consolidation, including FP64-to-FP32 double rounding. -/
 
 namespace TensorCore.Regression
 

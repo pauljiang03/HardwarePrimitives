@@ -2,23 +2,11 @@ import MCFloat.Equivalence
 
 /-! # Contracts of the FloatLib implementation
 
-Matrix-Core's per-model contracts and chaining theorems, stated for the FloatLib
-implementation: whenever a FloatLib block or inner product returns a finite word,
-
-* the same input is an accepted Matrix-Core block (or run of blocks) with the same word;
-* the word is FloatLib's own `fl{S_acc}` (`MCFloat.fl`), and on SFMA and CDNA 1 FloatLib's own
-  round-to-nearest-even of the exact `Σ a_ℓ b_ℓ + c` (`MCFloat.round32`);
-* the block satisfies its model's contract (`CorrectRoundingContract`, `PairwiseContract`,
-  `AlignedContract`), including the output error bound and the bound from the inputs alone, and
-  every block of an inner product does, with the loss accounting and the error bound of the whole
-  inner product against the exact `c + Σ_ℓ a_ℓ b_ℓ`;
-* the output is monotone in `c`, for blocks and inner products.
-
-Everything is transported through `block_agree` and `dot_agree`. -/
+The `MatrixCore` per-model contracts, error bounds and monotonicity results, transported to the
+FloatLib implementation through `block_agree` and `dot_agree`. -/
 
 namespace MCFloat.Equivalence
 
-/-- A finite FloatLib binary32 word. -/
 def Finite (w : MCFloat.F32) : Prop := ∃ v, MCFloat.classifyModel w = .finite v
 
 theorem observe_finite {w : MCFloat.F32} (hf : Finite w) :
@@ -30,7 +18,6 @@ theorem observe_finite {w : MCFloat.F32} (hf : Finite w) :
 theorem toNat_ofNat_bits (w : MCFloat.F32) : (BitVec.ofNat 32 (MCFloat.bits w)).toNat = MCFloat.bits w := by
   rw [BitVec.toNat_ofNat, Nat.mod_eq_of_lt (bits_lt w)]
 
-/-- A finite FloatLib block output is an accepted Matrix-Core block with the same word. -/
 theorem block_finite {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {x : MatrixCore.BlockInput Q} {w : MCFloat.F32}
     (hw : MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat = some w)
@@ -46,7 +33,6 @@ theorem block_finite {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Correspon
     simp only [Except.map, Except.ok.injEq] at hbits
     exact ⟨t, rfl, by rw [hbits, toNat_ofNat_bits]⟩
 
-/-- The FloatLib word is FloatLib's `fl{S_acc}` of the corresponding Matrix-Core block. -/
 theorem bits_fl {Q : MatrixCore.Model} {x : MatrixCore.BlockInput Q} {t : MatrixCore.BlockTrace Q}
     (ht : MatrixCore.evalBlock x = .ok t) :
     MCFloat.bits (MCFloat.fl (!Q.subnormals) t.sAcc) = t.d.toNat := by
@@ -54,8 +40,7 @@ theorem bits_fl {Q : MatrixCore.Model} {x : MatrixCore.BlockInput Q} {t : Matrix
   unfold refWord
   rw [(MatrixCore.evalBlock_contract ht).output]
 
-/-- **Transport.** A finite FloatLib block output satisfies every property `C` of accepted
-Matrix-Core blocks, and is FloatLib's `fl{S_acc}`. -/
+/-- A finite FloatLib block output is FloatLib's `fl{S_acc}` and satisfies every property `C`. -/
 theorem floatlib_block {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {C : MatrixCore.BlockInput Q → MatrixCore.BlockTrace Q → Prop} {x : MatrixCore.BlockInput Q}
     (hC : ∀ t, MatrixCore.evalBlock x = .ok t → C x t) {w : MCFloat.F32}
@@ -66,7 +51,7 @@ theorem floatlib_block {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresp
   obtain ⟨t, ht, hb⟩ := block_finite h hw hf
   exact ⟨t, ht, hb, by rw [bits_fl ht, hb], hC t ht⟩
 
-/-- Every model: the block contract. -/
+/-- On every model, a finite FloatLib block output satisfies the block contract. -/
 theorem floatlib_contract {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {x : MatrixCore.BlockInput Q} {w : MCFloat.F32}
     (hw : MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat = some w)
@@ -76,7 +61,7 @@ theorem floatlib_contract {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corr
       MatrixCore.BlockContract x t :=
   floatlib_block h (fun _ ht => MatrixCore.evalBlock_contract ht) hw hf
 
-/-! ## SFMA and CDNA 1: FloatLib's nearest-even rounding of the exact sum -/
+/-! ## SFMA and CDNA 1 -/
 
 theorem floatlib_correctRounding {P : MCFloat.MCModel} {Q : MatrixCore.Model}
     (h : Corresponds P Q) (hacc : Q.accumulation = .correctRounding)
@@ -166,7 +151,6 @@ theorem floatlib_cdna3XF32 {x : MatrixCore.BlockInput MatrixCore.cdna3XF32} {w :
   floatlib_block (C := fun x t => MatrixCore.AlignedContract x t 29) cdna3XF32
     (fun _ ht => MatrixCore.cdna3XF32_contract ht) hw hf
 
-/-- CDNA 3 binary8, for any corresponding fp8 operand formats. -/
 theorem floatlib_cdna3FP8 {a b : FloatLib.Floats.Formats.BinaryInterchange.FloatFormat}
     {fa fb : MatrixCore.Format} (ha : OperandAgree (.fmt a) (.packed fa))
     (hb : OperandAgree (.fmt b) (.packed fb)) {x : MatrixCore.BlockInput (MatrixCore.cdna3FP8 fa fb)}
@@ -180,10 +164,7 @@ theorem floatlib_cdna3FP8 {a b : FloatLib.Floats.Formats.BinaryInterchange.Float
 
 /-! ## Inner products -/
 
-/-- **Chaining.** A finite FloatLib inner product is a run of linked, accepted Matrix-Core blocks
-ending in the same word; every block satisfies any property `C` of accepted blocks (such as the
-model's contract), and the initial `c` plus every block's products equal the output plus every
-block's residual. -/
+/-- A finite FloatLib inner product is a chain of accepted blocks, each satisfying `C`. -/
 theorem floatlib_dot_blocks {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {C : MatrixCore.BlockInput Q → MatrixCore.BlockTrace Q → Prop}
     (hC : ∀ x t, MatrixCore.evalBlock x = .ok t → C x t)
@@ -214,9 +195,7 @@ theorem floatlib_dot_contract {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : 
     floatlib_dot_blocks h (fun _ _ ht => MatrixCore.evalBlock_contract ht) hw hf
   exact ⟨ts, hr, hl, hc, hall⟩
 
-/-- **Error of a FloatLib inner product.** If every accepted block's residual `exact − d` is
-bounded by `B` (for example by the `error` field of the model's contract), a finite FloatLib inner
-product is within the sum of the blocks' bounds of the initial `c` plus all products. -/
+/-- Error of a finite FloatLib inner product, given a bound `B` on every block's residual. -/
 theorem floatlib_dot_error {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {B : MatrixCore.BlockTrace Q → ℚ}
     (hB : ∀ x t, MatrixCore.evalBlock x = .ok t → MatrixCore.absQ t.residual ≤ B t)
@@ -239,8 +218,7 @@ theorem ofNat_bits_eq {w : MCFloat.F32} {d : MatrixCore.F32} (h : MCFloat.bits w
 
 /-! ## Monotonicity in `c` -/
 
-/-- **Monotonicity.** For the same `a` and `b`, a FloatLib block never returns a smaller finite
-value for a larger `c`, on every configuration of the paper. -/
+/-- For fixed `a` and `b`, a finite FloatLib block output is monotone in `c`. -/
 theorem floatlib_c_monotone {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (hQ : MatrixCore.MonotoneModel Q) {a : List Q.a.Word} {b : List Q.b.Word} {c c' : MatrixCore.F32}
     {w w' : MCFloat.F32}
@@ -254,7 +232,7 @@ theorem floatlib_c_monotone {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Co
   rw [ofNat_bits_eq hb, ofNat_bits_eq hb']
   exact MatrixCore.evalBlock_c_monotone hQ ht ht' hc
 
-/-- The same for inner products of any length. -/
+/-- For fixed `a` and `b`, a finite FloatLib inner product is monotone in `c`. -/
 theorem floatlib_dot_c_monotone {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (hQ : MatrixCore.MonotoneModel Q) {a : List Q.a.Word} {b : List Q.b.Word}
     {c c' : MatrixCore.F32} {w w' : MCFloat.F32}
@@ -287,8 +265,7 @@ theorem floatlib_correctRounding_monotone {P : MCFloat.MCModel} {Q : MatrixCore.
   rw [ofNat_bits_eq hb, ofNat_bits_eq hb']
   exact MatrixCore.correctRounding_exact_monotone hacc hov hs ht ht' he
 
-/-- A Matrix-Core non-monotone pair is one for the FloatLib implementation: the FloatLib blocks
-return the same words, the larger products giving the smaller output. -/
+/-- A `MatrixCore` non-monotone pair is also non-monotone for the FloatLib blocks. -/
 theorem floatlib_nonmonotone {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     {x x' : MatrixCore.BlockInput Q} (hn : MatrixCore.ProductNonmonotone x x') :
     ∃ w w', MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat = some w ∧
@@ -302,7 +279,7 @@ theorem floatlib_nonmonotone {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : C
 
 /-! ## The exact inner product -/
 
-/-- **Error of a FloatLib inner product against the exact `c + Σ_ℓ a_ℓ b_ℓ`.** -/
+/-- Error of a finite FloatLib inner product against the exact `c + Σ_ℓ a_ℓ b_ℓ`. -/
 theorem floatlib_dot_exact_error {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (hn : 0 < Q.nfma) {B : MatrixCore.BlockTrace Q → ℚ}
     (hB : ∀ x t, MatrixCore.evalBlock x = .ok t → MatrixCore.absQ t.residual ≤ B t)

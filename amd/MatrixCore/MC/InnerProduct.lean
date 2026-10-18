@@ -2,10 +2,7 @@ import MatrixCore.MC.Contract
 
 /-! # Inner products of the input vectors
 
-The blocks of an inner product cover the input vectors: their exact products add up to
-`Σ_ℓ a_ℓ b_ℓ` over the whole vectors, the zero padding contributing nothing
-(`runBlocks_products`). The loss accounting and the error bounds of an inner product are
-therefore statements about the exact inner product `exactDot P a b c = c + Σ_ℓ a_ℓ b_ℓ`. -/
+The residual ledger and error bounds of an inner product, against the exact `c + Σ_ℓ a_ℓ b_ℓ`. -/
 
 namespace MatrixCore
 
@@ -36,7 +33,6 @@ theorem decodeNat_zero {f : Format} {u : Unpacked} (h : f.decodeNat 0 = .finite 
     · simp at h
     · simp at h; rw [← h]
 
-/-- A zero word is worth zero (or does not decode to a finite value). -/
 theorem InputFormat.wordValue_zero (i : InputFormat) : i.wordValue 0 = 0 := by
   unfold InputFormat.wordValue
   cases i with
@@ -79,7 +75,6 @@ theorem mapM_products {P : Model} : ∀ (xa : List P.a.Word) (xb : List P.b.Word
             simp only [List.zipWith_cons_cons, sumQ, ih, InputFormat.wordValue, hx, hy,
               Option.map_some, Option.getD_some]
 
-/-- The exact products of an accepted block are `Σ a_ℓ b_ℓ` of its operand words. -/
 theorem evalBlock_products {P : Model} {xa : List P.a.Word} {xb : List P.b.Word} {c : F32}
     {t : BlockTrace P} (h : evalBlock (P := P) ⟨xa, xb, c⟩ = .ok t) :
     t.prepared.products = exactProducts P xa xb := by
@@ -139,7 +134,6 @@ theorem padToBlocks_length (n : ℕ) (xs : List (BitVec w)) :
     (padToBlocks n xs).length = xs.length + (n - xs.length % n) % n := by
   simp [padToBlocks]
 
-/-- The blocks' exact products add up to `Σ_ℓ a_ℓ b_ℓ` of the whole vectors. -/
 theorem blocks_products (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word} {b : List P.b.Word}
     (hlen : a.length = b.length) :
     sumQ ((blocks P a b).map fun ab => exactProducts P ab.1 ab.2) = exactProducts P a b := by
@@ -161,8 +155,7 @@ theorem blocks_products (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word} {b : L
     | succ m ih => simp only [List.replicate_succ, sumQ, ih]; decide +kernel
   rw [hz]; grind
 
-/-- **Exact inner product.** The blocks of an accepted inner product have exact products
-`Σ_ℓ a_ℓ b_ℓ` over the whole vectors. -/
+/-- The exact products of an accepted inner product's blocks add up to `Σ_ℓ a_ℓ b_ℓ`. -/
 theorem runBlocks_products (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word}
     {b : List P.b.Word} {c : F32} {ts : List (BlockTrace P)} (hlen : a.length = b.length)
     (h : runBlocks P c (blocks P a b) = .ok ts) :
@@ -179,8 +172,7 @@ theorem dotBits_exact_ledger (P : Model) (hn : 0 < P.nfma) {a : List P.a.Word}
   unfold exactDot
   rw [← runBlocks_products P hn hlen hr, hl]
 
-/-- **Error of an inner product.** If every accepted block's residual is bounded by `B`, the
-output is within the sum of the blocks' bounds of the exact `c + Σ_ℓ a_ℓ b_ℓ`. -/
+/-- Error against the exact `c + Σ_ℓ a_ℓ b_ℓ`: at most the sum of the blocks' bounds `B`. -/
 theorem dotBits_exact_error (P : Model) (hn : 0 < P.nfma) {B : BlockTrace P → ℚ}
     (hB : ∀ x t, evalBlock x = .ok t → absQ t.residual ≤ B t)
     {a : List P.a.Word} {b : List P.b.Word} {c d : F32}

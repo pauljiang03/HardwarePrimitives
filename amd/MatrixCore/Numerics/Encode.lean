@@ -2,9 +2,7 @@ import MatrixCore.Numerics.Format
 
 /-! # Exact encoding
 
-Encode a rational value that the format represents exactly. Used to write inputs by their
-decoded values; a value the format cannot represent gives `none`, so an inexact input can never
-enter a test silently. -/
+Encodes a rational that the format represents exactly; any other value gives `none`. -/
 
 namespace MatrixCore
 
@@ -27,10 +25,8 @@ def Format.encodeExact (f : Format) (v : ℚ) : Option (BitVec f.width) :=
       let w := f.pack (decide (v < 0)) E (m % 2 ^ f.mantissaBits)
       if (f.decode w).toFinite.map Unpacked.value = some v then some w else none
 
-/-- binary32 word of an exactly representable value. -/
 def fp32Exact (v : ℚ) : Option F32 := fp32.encodeExact v
 
-/-- Input word of an exactly representable value. -/
 def InputFormat.encodeExact : (i : InputFormat) → ℚ → Option i.Word
   | .packed f, v => f.encodeExact v
   | .xf32, v => fp32.encodeExact v

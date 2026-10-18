@@ -89,7 +89,6 @@ if not report['snapshot_stable'] or not report['workspace_matches_snapshot']:
     report['publication_skipped'] = True
     (root / 'tmp/clean-build-unpublished.json').write_text(json.dumps(report, indent=2) + '\n')
     raise SystemExit(f'Source changed during validation; reports not published. Validated copy retained: {target}')
-# Publish reports from the same fresh source run.
 generated = ['docs/axioms.txt']
 generated += ['data/regressions/' + name for name in [
     'feature-report.json', 'device-formats-report.json', 'device-replay-report.json', 'device-report.json',

@@ -1,22 +1,5 @@
 #!/usr/bin/env python3
-"""Replay the recorded outputs of Ada, L40S, H100, H200 and B200 (Accurate Models toolbox, commit
-79143bd) through the Lean models and their invocation descriptors, and the H100 and H200 FP8
-outputs of the toolbox's release v0.1 through the FP8 mma.sync model.
-
-Every vendored file is hash-checked first. FP16, BF16 and TF32 rows are one block FMA each; FP8
-rows hold 32 products. The accumulator input follows each recording:
-  * FP16, BF16, TF32, and Ada/L40S FP8 (mma.sync, QMMA): c accumulated in the block FMA;
-  * H100 and H200 FP8 (79143bd): the Hopper block FMA from a zero accumulator, as the toolbox's
-    validation script reads these rows (wgmma with D = 0); the c file is not used;
-  * B200 FP8 (79143bd), recorded with the toolbox's mma.sync harness: c added after the products in
-    binary32 with round-to-nearest-even. The rows are replayed through the FP8 mma.sync model
-    (mmaSyncFP8Dot: two interleaved FP16 block FMAs, then c), and through the B200 block FMA from
-    c = 0 followed by the addition of c (Model.dotThenAdd); a control shows that the B200 block FMA
-    holding c disagrees with them;
-  * H100 and H200 FP8 of release v0.1 (same inputs, other outputs): the FP8 mma.sync model with c
-    from the c file; a control shows that the Hopper 13-bit block FMA disagrees with them.
-Before the replay, an independent Python decoder of E4M3 and E5M2 is compared with the Lean
-decoders on all 256 words of each format."""
+"""Replay recorded Ada, L40S, H100, H200 and B200 outputs through the Lean models and descriptors."""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 from fractions import Fraction as Q
@@ -72,8 +55,7 @@ def align_exp(words, c, fmt):
 
 
 def fp8_value(bits, fmt):
-    """Independent decoder: E5M2 is IEEE-like; E4M3 has no infinities and its only NaNs are
-    S.1111.111. Returns None for a NaN or an infinity."""
+    """Independent decoder (E4M3: no infinities, NaNs only S.1111.111); None for NaN or infinity."""
     frac, exps, bias = FP8[fmt]
     sign = -1 if bits >> 7 else 1
     e, m = (bits >> frac) & ((1 << exps) - 1), bits & ((1 << frac) - 1)
@@ -105,8 +87,7 @@ def fp32_word_to_fp8(word, fmt):
 
 
 def operand(word, fmt):
-    """Input word for the Lean command and its kind: zero, subnormal, top (E4M3's top binade), or
-    normal."""
+    """Lean input word and its kind: zero, subnormal, top (E4M3's top binade) or normal."""
     if fmt == 'fp16':
         h = fp32_word_to_fp16(word)
         kind = 'zero' if h & 0x7fff == 0 else 'subnormal' if (h >> 10) & 0x1f == 0 else 'normal'
@@ -183,7 +164,7 @@ def main():
                 c_words = [0] * n
             elif fp8 and arch == 'blackwell':
                 convention = ('recorded with the toolbox\'s mma.sync harness: c added after the '
-                              'products in binary32 with round-to-nearest-even (mmaSyncFP8Dot; '
+                              'products in FP32 with round-to-nearest-even (mmaSyncFP8Dot; '
                               'also Model.dotThenAdd)')
             else:
                 convention = 'c accumulated in the block FMA'
@@ -230,15 +211,14 @@ def main():
                 c=dict(zero=sum(c & 0x7fffffff == 0 for c in c_words),
                        subnormal=sum(c & 0x7fffffff != 0 and (c >> 23) & 0xff == 0 for c in c_words)))
             if fp8 and arch != 'blackwell':
-                # Negative control: the same model with a binary32 block output.
+                # Negative control: the same model with an FP32 block output.
                 control = run([line.replace(f' {model} ', f' {model}-fp32-output ', 1)
                                for line in model_lines], f'replay-{key}-control.txt')
                 report[key]['fp32_output_control_mismatches'] = sum(
                     r.get('bits') != d for r, d in zip(control, d_words))
                 assert report[key]['fp32_output_control_mismatches'] > 0, key
             if fp8 and arch == 'blackwell':
-                # The FP8 mma.sync model of the recording harness, and a control: the B200 block
-                # FMA holding c (the tcgen05.mma model) disagrees with the recorded rows.
+                # Control: the B200 block FMA holding c (tcgen05.mma) disagrees with these rows.
                 mma = run(mma_lines, f'replay-{key}-mma-sync.txt')
                 mma_mismatches = sum(r.get('bits') != d for r, d in zip(mma, d_words))
                 report[key]['mma_sync_model'] = f'mma-sync {NAME[fmt]} 32 (mmaSyncFP8Dot)'

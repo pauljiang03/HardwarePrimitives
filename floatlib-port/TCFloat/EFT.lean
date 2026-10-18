@@ -8,7 +8,6 @@ private theorem sum_coefficients (zs : List Int) (q : ℚ) :
   | nil => simp
   | cons z zs ih => simp only [List.map_cons, List.sum_cons, Int.cast_add, ih, add_mul]
 
-/-- Every prefix fits the source coefficient bound, so sequential FP32 addition is exact. -/
 theorem naiveSumFrom_exact (zs : List Int) (a e : Int) (hmin : -149 ≤ e) (hmax : e ≤ 104)
     (hbound : a.natAbs + (zs.map Int.natAbs).sum < 2^24) :
     naiveSumFrom ((a : ℚ)*pow2 e) (zs.map fun (z : Int) => (z : ℚ)*pow2 e) =
@@ -64,7 +63,7 @@ theorem scalar_success_iff (t : Trace) : t.scalar.isSome = true ↔ t.scalarPred
       exact h.2
     rwa [retained_add_low] at hh
 
-/-- Both consolidation branches return precisely FloatLib RNE of the independent ideal. -/
+/-- Both consolidation branches return FloatLib's RNE of the exact ideal. -/
 theorem algorithm_correct (t : Trace) : t.algorithm.1 = round32 .nearestEven t.block.ideal := by
   unfold Trace.algorithm
   cases hs : t.scalar with

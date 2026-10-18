@@ -2,8 +2,7 @@ import MCFloat.Equivalence.Block
 
 /-! # Inner products
 
-Chaining blocks: for any inner dimension and any input words, the FloatLib inner product
-observes as Matrix-Core's `dotOutcome`. -/
+For any inner dimension and any input words, the FloatLib inner product observes as `dotOutcome`. -/
 
 set_option linter.unusedSimpArgs false
 
@@ -110,8 +109,8 @@ theorem fold_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds
         simp only [Option.bind_eq_bind, Option.bind_some, ← hb]
         exact ih w' _ rfl
 
-/-- **Inner products.** For corresponding models, any inner dimension and any input words, the
-FloatLib inner product observes as Matrix-Core's `dotOutcome`. -/
+/-- For corresponding models and any input words, the FloatLib inner product observes as
+`dotOutcome`. -/
 theorem dot_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (a : List Q.a.Word) (b : List Q.b.Word) (c : MatrixCore.F32) :
     (MCFloat.dot P (a.map BitVec.toNat) (b.map BitVec.toNat) c.toNat).map observe =

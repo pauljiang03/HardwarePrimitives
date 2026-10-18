@@ -4,8 +4,8 @@ import FloatLib.Floats.Formats.BinaryInterchange.DirectedSemantics.Rational.Loga
 
 /-! # Arithmetic bridges
 
-Matrix-Core's exact-arithmetic helpers (written without mathlib) equal their mathlib and FloatLib
-counterparts used by `MCFloat`. -/
+The `MatrixCore` exact-arithmetic helpers (written without mathlib) equal their mathlib and
+FloatLib counterparts. -/
 
 namespace MCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
@@ -44,7 +44,6 @@ theorem real_ratio (x : ℚ) : (x.num.natAbs : ℝ) / x.den = ((|x| : ℚ) : ℝ
 theorem cast_pow2 (e : ℤ) : ((MCFloat.pow2 e : ℚ) : ℝ) = (2 : ℝ) ^ e := by
   simp [MCFloat.pow2]
 
-/-- FloatLib's binary logarithm of a rational is Matrix-Core's `log2Floor` of its magnitude. -/
 theorem floorLog2_eq (x : ℚ) (hx : x ≠ 0) :
     RationalBinary.floorLog2 x.num.natAbs x.den = MatrixCore.log2Floor |x| := by
   obtain ⟨hl, hu⟩ := MatrixCore.log2Floor_spec (x := |x|) (abs_pos.mpr hx)

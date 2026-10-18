@@ -1,16 +1,8 @@
 import MCFloat.Equivalence.Dot
 
-/-! # FloatLib implementation ≡ Matrix-Core
+/-! # FloatLib implementation ≡ MatrixCore
 
-Every MCFloat model corresponds to the Matrix-Core model of the same name, so for every
-architecture and input format of the paper:
-
-* `block_agree`: one block observes as `blockOutcome` for any input words;
-* `dot_agree`: an inner product of any length observes as `dotOutcome`;
-* `blockBits_agree`: where Matrix-Core's finite-domain `blockBits` returns a word, the FloatLib
-  block returns the same word.
-
-The proofs use only Lean's standard axioms (`tests/Audit.lean`). -/
+Every MCFloat model corresponds to the `MatrixCore` model of the same name. -/
 
 namespace MCFloat.Equivalence
 
@@ -65,7 +57,7 @@ theorem cdna3XF32 : Corresponds MCFloat.cdna3XF32 MatrixCore.cdna3XF32 :=
     rules_of rfl (by simp [MCFloat.cdna3XF32, MatrixCore.cdna3XF32]) (by simp [MatrixCore.cdna3XF32]),
     rfl, rfl, ⟨rfl, rfl, rfl⟩⟩
 
-/-- CDNA 3 binary8 for any combination of corresponding fp8 operand formats. -/
+/-- CDNA 3 FP8, for any corresponding FP8 operand formats. -/
 theorem cdna3FP8 {a b : FloatLib.Floats.Formats.BinaryInterchange.FloatFormat}
     {fa fb : MatrixCore.Format} (ha : OperandAgree (.fmt a) (.packed fa))
     (hb : OperandAgree (.fmt b) (.packed fb)) :
@@ -87,7 +79,7 @@ theorem cdna3E5M2E4M3 : Corresponds (MCFloat.cdna3FP8 .e5m2fnuz .e4m3fnuz)
     (MatrixCore.cdna3FP8 MatrixCore.e5m2fnuz MatrixCore.e4m3fnuz) :=
   cdna3FP8 operand_e5m2fnuz operand_e4m3fnuz
 
-/-- On Matrix-Core's finite domain the FloatLib block returns the same binary32 word. -/
+/-- On the `MatrixCore` finite domain, the FloatLib block returns the same FP32 word. -/
 theorem blockBits_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)
     (x : MatrixCore.BlockInput Q) (d : MatrixCore.F32) (hd : MatrixCore.blockBits x = .ok d) :
     ∃ w, MCFloat.block P (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c.toNat = some w ∧

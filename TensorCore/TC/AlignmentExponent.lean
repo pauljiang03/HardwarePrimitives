@@ -155,7 +155,6 @@ theorem prepared_coefficient_bound (b : PreparedBlock) (F : ℕ)
     rw [hq]
     exact aligned_term_coefficient_bound t alignExp F (ht t hmem) hle
 
-/-- Capacity follows from finite decoded inputs and shape, before any output-range check. -/
 theorem prepare_coefficient_capacity {p : Model} {x : BlockInput p} {b : PreparedBlock}
     (hp : prepare x = some b) (hshape : x.products.length = p.nfma) (F carryBits : ℕ)
     (hF : p.alignMantissaBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits) :
@@ -166,7 +165,6 @@ theorem prepare_coefficient_capacity {p : Model} {x : BlockInput p} {b : Prepare
   · exact prepared_coefficient_bound b F (by rw [hprof, hF]) hb.2
   · simpa [PreparedBlock.alignedBits, hb.1, hshape] using hcount
 
-/-- Width derived from decoded inputs, with c included in the member count. -/
 theorem evalBlock_coefficient_capacity {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) (F carryBits : ℕ)
     (hF : p.alignMantissaBits = F) (hcount : p.nfma + 1 ≤ 2 ^ carryBits) :
@@ -192,7 +190,7 @@ theorem evalBlock_machinePrefix {p : Model} {x : BlockInput p} {t : BlockTrace}
   rw [← hsplit]
   exact evalBlock_coefficient_capacity h F carryBits hF hcount
 
-/-- The conservative V100 bound is 29 signed bits: 25 magnitude bits per term, three carry bits for five terms, and one sign bit. -/
+/-- V100: 29 signed bits, 25 magnitude bits per term, three carry bits for five terms, one sign bit. -/
 theorem evalV100_machineAccumulator {x : BlockInput v100F16F32} {t : BlockTrace}
     (h : evalV100 x = .ok t) : t.block.machineAccumulator 29 = t.block.accumulator :=
   evalBlock_machineAccumulator h 23 3 rfl (by decide)

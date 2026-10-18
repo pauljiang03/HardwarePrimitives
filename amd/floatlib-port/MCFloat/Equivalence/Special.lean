@@ -1,9 +1,9 @@
 import MCFloat.Equivalence.Stages
 
-/-! # Special values and CDNA 2 binary32 arithmetic
+/-! # Special values
 
-FloatLib's special-value results, products with special values, and the pairwise sums of
-binary32 additions observe as Matrix-Core's `combineSpecial`, `productX` and `pairwiseGroupSumX`. -/
+FloatLib's special-value results and products with special values observe as `combineSpecial`
+and `productX`. -/
 
 set_option linter.unusedSimpArgs false
 set_option linter.unreachableTactic false
@@ -34,7 +34,6 @@ theorem observe_special (xs : List MCFloat.Ext) :
   simp only [List.any_map, Function.comp_def, h1, h2]
   split_ifs <;> simp [observe_nan32, observe_posInf, observe_negInf]
 
-/-- FloatLib's `isInf` on a binary32 word is its classification as an infinity. -/
 theorem isInf_classify (w : MCFloat.F32) :
     Model.isInf w = (match MCFloat.classifyModel w with | .inf _ => true | _ => false) := by
   unfold MCFloat.classifyModel

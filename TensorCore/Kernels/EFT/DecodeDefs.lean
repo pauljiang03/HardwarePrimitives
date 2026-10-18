@@ -46,7 +46,7 @@ structure Term where
   support : Grid
   deriving Repr, DecidableEq
 
-/-- Exact 11-by-11-bit multiplication; conversion to the common dyadic grid uses a ten-bit shift, which includes the full BF16/TF32 exponent span. -/
+/-- Exact 11-by-11-bit product, shifted onto the common dyadic grid. -/
 def product (a b : Factor) : Term :=
   let biasedExp := a.biasedExp + b.biasedExp
   let grid := biasedExp - (a.mantissaBits + b.mantissaBits) - 240

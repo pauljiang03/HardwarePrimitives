@@ -4,7 +4,6 @@ import TensorCore.Numerics.RoundOp
 
 namespace TensorCore
 
-/-- `classifyNat fp32` with every format constant evaluated. -/
 theorem classifyNat_fp32 (n : ℕ) : classifyNat fp32 n =
     if n / 8388608 % 256 = 255 then
       (if n % 8388608 = 0 then .infinity (n / 2147483648 != 0) else .nan)
@@ -67,7 +66,7 @@ theorem encode32_toNat (negative : Bool) (e k : ℤ) (hk0 : 0 ≤ k) (hk1 : k < 
   simp only [Nat.reducePow]
   split <;> split <;> omega
 
-/-- The constructed encoding decodes to the intended finite value, and its low bit is the parity of the coefficient. -/
+/-- `encode32` decodes to the intended value, and its low bit is the coefficient's parity. -/
 theorem encode32_value (negative : Bool) (e k : ℤ)
     (he1 : -126 ≤ e) (he2 : e ≤ 127) (hk0 : 0 ≤ k) (hk1 : k < 2 ^ 24)
     (hsub : 2 ^ 23 ≤ k ∨ e = -126) :
@@ -126,7 +125,6 @@ theorem encode32_value (negative : Bool) (e k : ℤ)
       cases negative <;> simp [Int.max_eq_left he0, Int.max_eq_left hk0', hk']
     · rcases hsgn' with h | h <;> subst h <;> omega
 
-/-- The output quantum agrees with the encoding exponent, including subnormal/zero. -/
 theorem encode32_ulpExponent (negative : Bool) (e k : ℤ)
     (he1 : -126 ≤ e) (he2 : e ≤ 127) (hk0 : 0 ≤ k) (hk1 : k < 2 ^ 24)
     (hsub : 2 ^ 23 ≤ k ∨ e = -126) :

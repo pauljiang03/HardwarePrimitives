@@ -65,7 +65,6 @@ theorem Term.truncBits_eq (variant : Variant) (e : Exp) (t : Term) (ht : t.Valid
     have hn : 0 < t.significand.toNat := by
       have : t.significand.toNat ≠ 0 := fun h => hz (BitVec.eq_of_toNat_eq h)
       omega
-    -- |value| / 2^g is the shifted significand over 2^(e - exponent)
     have hq : (t.significand.toNat : ℚ) * pow2 (((t.biasedExp.toNat : ℤ) - 256) - t.mantissaBits.toNat) /
         pow2 ((e.toNat : ℤ) - 256 - (alignBits variant).toNat) =
         ((t.significand.toNat * 2 ^ ((alignBits variant).toNat - t.mantissaBits.toNat) : ℕ) : ℚ) /
@@ -137,7 +136,6 @@ theorem accumulate_toInt (variant : Variant) (e : Exp) (ts : List Term)
   · rw [List.length_map, hlen]
     exact Nat.lt_log2_self
 
-/-- Specification of the alignment exponent fold. -/
 theorem alignFold_spec (ts : List Term) (init : Exp) :
     let r := ts.foldl (fun e t => if t.significand == 0 then e
       else if e ≤ t.biasedExp then t.biasedExp else e) init

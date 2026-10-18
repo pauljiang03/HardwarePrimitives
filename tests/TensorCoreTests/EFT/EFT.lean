@@ -4,7 +4,6 @@ import TensorCoreTests.TC.Cases
 
 namespace TensorCore.Regression
 
-
 structure EftSnapshot where
   extractionExponent : ℤ
   lowParts : List ℚ
@@ -27,12 +26,12 @@ theorem r2_eft : eftSnapshot r2 = .ok
     ⟨-22, [0, 0, 1 / 8388608, 1 / 8388608, 0], 1 / 4194304, true,
       some 0x40300801, some 0x40300801⟩ := by decide +kernel
 
-/-- R3: the only low part is c's `15·2^-24`; the scalar branch corrects `4107ffff` to `41080000`. -/
+/-- R3: the scalar branch corrects `4107ffff` to `41080000`. -/
 theorem r3_eft : eftSnapshot r3 = .ok
     ⟨-20, [15 / 16777216, 0, 0, 0, 0], 0, true, some 0x41080000, some 0x41080000⟩ := by
   decide +kernel
 
-/-- The TC-EFT §V-D cancellation example: output `449fbe50`, low parts `5/16384` and `15/8192`, no overlap, and the tie resolved to `449fbe62` by the scalar branch. -/
+/-- The TC-EFT §V-D cancellation example. -/
 def cancellationExample : V100Input :=
   ⟨[(0xd83d, 0x5a03), (0x5061, 0x5722), (0x444c, 0x49d5), (0x5810, 0x5976)], 0x4416cfe5⟩
 
@@ -42,7 +41,7 @@ theorem cancellation_eft :
       ⟨-9, [5 / 16384, 0, 0, 15 / 8192, 0], 0, true, some 0x449fbe62, some 0x449fbe62⟩ := by
   decide +kernel
 
-/-- Three products near `128` on a `2^-15` grid next to a `2^-48` product exceed the 24-bit coefficient bound on the common grid. -/
+/-- Low parts that exceed the 24-bit coefficient bound on the common grid. -/
 def supportOverflow : V100Input :=
   ⟨[(0x5bff, 0x37ff), (0x5bff, 0x37ff), (0x5bff, 0x37ff), (1, 1)], 0x4e800000⟩
 
@@ -52,7 +51,6 @@ theorem predicate_rejected :
       .ok (false, none) ∧
     ((snapshot supportOverflow).map fun s => s.correctedBits) = .ok (some 0x4e800003) := by
   decide +kernel
-
 
 def subnormalAccumulator : V100Input :=
   ⟨[(0x3c00, 0x3c00), (0x0001, 0x3c00), (0, 0), (0, 0)], 0x00000001⟩
@@ -75,7 +73,7 @@ theorem scalar_public_r3 :
     ((evalBlock r3).map fun t => t.scalarCorrected.map BitVec.toNat) =
       .ok (some 0x41080000) := by decide +kernel
 
-/-- Seed 20260906, finite-bit V100 sample 250: the unchecked branch changes an already correctly rounded model output to its neighbor. -/
+/-- Seed 20260906, V100 sample 250: the unchecked branch breaks a correctly rounded output. -/
 def broadFiniteCounterexample : V100Input :=
   ⟨[(0x210f, 0x4553), (0x5a5b, 0x9753), (0x9a0b, 0xd06e), (0xd68c, 0x1eb6)],
     0x238ac5ec⟩

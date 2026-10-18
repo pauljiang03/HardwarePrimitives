@@ -56,7 +56,6 @@ theorem representable_add_exact (a b : ℚ) (h : representable (a+b) = true) :
 theorem scalar_rejects (t : Trace) (h : t.scalarPredicate = false) : t.scalar = none := by
   simp [Trace.scalar, h]
 
-/-- Local flowback identity for arbitrary term changes, with both grids explicit. -/
 theorem flowback_identity (ts us : List Term) (q q' : Int) :
     (us.map fun t => truncGrid t.value q').sum =
       (ts.map fun t => truncGrid t.value q).sum +
@@ -65,7 +64,7 @@ theorem flowback_identity (ts us : List Term) (q q' : Int) :
       ((ts.map fun t => truncGrid t.value q').sum -
        (ts.map fun t => truncGrid t.value q).sum) := by ring
 
-/-- A fixed-grid TC accumulator is monotone in each summand. -/
+/-- Truncation to a fixed grid is monotone. -/
 theorem truncGrid_mono (e : Int) : Monotone (fun x => truncGrid x e) := by
   have hp : 0 < pow2 e := zpow_pos (by norm_num) _
   intro a b hab

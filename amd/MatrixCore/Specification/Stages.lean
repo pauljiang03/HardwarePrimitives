@@ -26,7 +26,6 @@ theorem intCast_shiftRD_add (V W : ℤ) (g g' h : ℤ) :
       rdGrid ((V : ℚ) * pow2 g) h + rdGrid ((W : ℚ) * pow2 g') h := by
   rw [Rat.intCast_add, Rat.add_mul, shiftRD_eq, shiftRD_eq]
 
-/-- `c` on the grid of `S'_{p_i,sum}`. -/
 theorem c_onGrid (c : Unpacked) (ec : ℤ) (k : ℕ) (hc : c.t ≤ k)
     (hec : c.m ≠ 0 → ec = c.e) : OnGrid c.value (ec - k) := by
   by_cases hm : c.m = 0
@@ -71,8 +70,6 @@ theorem cExp_some {P : Model} {c : Unpacked} {x : ℤ} (h : MatrixCore.cExp P c 
 
 theorem F_cast (n : ℕ) : ((23 + n : ℕ) : ℤ) = 23 + (n : ℤ) := by omega
 
-/-- The late addition of `c` (Algorithm 1 lines 3–11), for a product sum `S` on the grid
-`2^(e_max − F)`. -/
 theorem lateC_eq (P : Model) (e : Option ℤ) (S : ℤ) (c : Unpacked)
     (hc : c.t ≤ P.late.sumMantissaBits) (hS : e = none → S = 0) :
     lateC (lateOf P) e S (numOf c) =
@@ -232,7 +229,6 @@ theorem maxExp_odd_even : ∀ l : List Unpacked,
     generalize maxExp (oddIndexed r) = u; generalize maxExp (evenIndexed r) = v
     cases x <;> cases y <;> cases u <;> cases v <;> simp [joinExp] <;> omega
 
-/-- One group's sum, shifted to the common `e_max` and RD. -/
 theorem part_eq (padding : ℕ) (qs : List Unpacked) (e : ℤ) :
     ((groupPart (23 + padding) (qs.map numOf) e : ℤ) : ℚ) * pow2 (e - (23 + padding : ℕ)) =
       rdMantissa (alignedSum padding qs).2 e (23 + padding) := by

@@ -109,7 +109,6 @@ theorem roundedSignificand_bounds (mode : RoundingMode) (m : ℚ)
       grind
     exact hscale
 
-/-- Carry preserves the value and produces a coefficient that fits the encoding. -/
 theorem carry_spec (e k : ℤ) (he1 : -126 ≤ e) (he2 : e ≤ 127)
     (hk0 : 0 ≤ k) (hk1 : k ≤ 16777216)
     (hsub : 8388608 ≤ k ∨ e = -126) (htop : e = 127 → k ≤ 16777215) :

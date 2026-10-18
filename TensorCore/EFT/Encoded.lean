@@ -1,10 +1,10 @@
 import TensorCore.EFT.TcEft
 
-/-! TC-EFT Algorithm 1 with its paper interface: encoded operands, an explicit model, and a supplied finite FP32 output D. -/
+/-! TC-EFT Algorithm 1 on encoded operands, with a supplied finite FP32 output D. -/
 
 namespace TensorCore
 
-/-- Lines 3–6: decode operands and supplied D, preserving metadata of the denormalized products. -/
+/-- Algorithm 1, lines 3–6: decode the operands and the supplied D. -/
 def prepareEncodedEFT {p : Model} (x : BlockInput p) (D : F32) : Except ModelError BlockTrace :=
   if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare x with
@@ -13,7 +13,7 @@ def prepareEncodedEFT {p : Model} (x : BlockInput p) (D : F32) : Except ModelErr
       | none => .error .nonfiniteOutput
       | some d => .ok ⟨b, d⟩
 
-/-- The TC-EFT paper's zero shortcut is distinct from the two consolidation branches. -/
+/-- The all-zero shortcut is distinct from the two consolidation branches. -/
 inductive EncodedEFTResult where
   | allZero
   | consolidated (result : TcEftResult)
@@ -74,7 +74,7 @@ theorem allZeroTerms_exactDot {b : PreparedBlock} (h : b.allZeroTerms = true) : 
     simp only [List.map_cons, sumQ, hz t (by simp), Rat.zero_add]
     exact ih (by intro u hu; exact hz u (by simp [hu]))
 
-/-- Bit equality for the trace algorithm, including rejection outside the finite ideal range. -/
+/-- The trace algorithm's bits are the nearest-even FP32 rounding of the exact dot product. -/
 theorem tcEft_bits_eq_round (t : BlockTrace) :
     t.tcEft.bits = round32 .nearestEven t.block.exactDot := by
   unfold BlockTrace.tcEft
@@ -100,7 +100,6 @@ theorem tcEftEncoded_agrees {p : Model} {x : BlockInput p} {D : F32} {t : BlockT
     rfl
   · rfl
 
-/-- Nonzero inputs preserve the trace algorithm's branch as well as its bits. -/
 theorem tcEftEncoded_nonzero {p : Model} {x : BlockInput p} {D : F32} {t : BlockTrace}
     (h : prepareEncodedEFT x D = .ok t) (hz : t.block.allZeroTerms = false) :
     tcEftEncoded x D = .ok (.consolidated t.tcEft) := by
@@ -110,7 +109,7 @@ theorem tcEftEncoded_allZero {p : Model} {x : BlockInput p} {D : F32} {t : Block
     (h : prepareEncodedEFT x D = .ok t) (hz : t.block.allZeroTerms = true) :
     tcEftEncoded x D = .ok .allZero := by simp [tcEftEncoded, h, hz]
 
-/-- Returned bits round the independent decoded original-input ideal, for any finite D. -/
+/-- Returned bits are the nearest-even FP32 rounding of the exact dot product, for any finite D. -/
 theorem tcEftEncoded_correct {p : Model} {x : BlockInput p} {D b : F32}
     {r : EncodedEFTResult} (h : tcEftEncoded x D = .ok r) (hb : r.bits = some b) :
     ∃ z, exactDot x = some z ∧ NearestEven32 z b := by
@@ -124,7 +123,7 @@ theorem tcEftEncoded_correct {p : Model} {x : BlockInput p} {D b : F32}
     exact ⟨t.block.exactDot, by simp [exactDot, (prepareEncodedEFT_spec ht).2.1],
       tcEft_correct t b ha⟩
 
-/-- After finite input decoding, an encoding exists exactly when the independent ideal fits. -/
+/-- Bits are returned exactly when the exact dot product is within the FP32 range. -/
 theorem tcEftEncoded_bits_isSome_iff {p : Model} {x : BlockInput p} {D : F32}
     {t : BlockTrace} (h : prepareEncodedEFT x D = .ok t) :
     (tcEftEncoded x D).map (fun r => r.bits.isSome) = .ok true ↔
@@ -139,7 +138,6 @@ theorem tcEftEncoded_bits_isSome_iff {p : Model} {x : BlockInput p} {D : F32}
   rw [hm]
   simpa [exactDot, (prepareEncodedEFT_spec h).2.1] using tcEft_bits_isSome_iff t
 
-/-- A model evaluation supplies exactly the same decoded trace at this public interface. -/
 theorem prepareEncodedEFT_of_evalBlock {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) : prepareEncodedEFT x t.output.bits = .ok t := by
   have hs : x.products.length = p.nfma := by

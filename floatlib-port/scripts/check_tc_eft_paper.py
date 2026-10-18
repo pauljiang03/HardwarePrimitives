@@ -1,4 +1,3 @@
-# Compare the FloatLib executable with the pinned paper oracles.
 #!/usr/bin/env python3
 """Reproduce the pinned TC-EFT paper suites and compare their exact cases with Lean."""
 if not __debug__:
@@ -172,7 +171,7 @@ def main():
         add(f'{profile}/boundary-composition/{i}', 'boundary_composition', a, b, c, profile, stage)
     assert len({r['id'] for r in records}) == len(records)
 
-    # Reproduce the source's synthetic grid family with actual encoded FP16 operands in Lean. products, selects the grid, accumulates, and truncates for each (p,K,j).
+    # The source's synthetic grid family, with encoded FP16 operands in Lean.
     families = []
     for p in range(5):
         for k in range(1, 100):

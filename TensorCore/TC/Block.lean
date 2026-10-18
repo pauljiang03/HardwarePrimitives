@@ -12,7 +12,6 @@ structure BlockInput (p : Model) where
   c : F32
   deriving Repr, DecidableEq
 
-/-- Decoded operands together with the model that fixes their alignment semantics. -/
 structure PreparedBlock where
   model : Model
   products : List (Decoded × Decoded)
@@ -29,7 +28,7 @@ def prepare {p : Model} (x : BlockInput p) : Option PreparedBlock :=
   | some c, some ps => some ⟨p, ps, c⟩
   | _, _ => none
 
-/-- Ideal sum from decoded operands, without multiplication into denormalized form, alignment, or correction. -/
+/-- Exact sum of the decoded products, without alignment or truncation. -/
 def PreparedBlock.exactProducts (b : PreparedBlock) : ℚ :=
   sumQ (b.products.map fun (a, b) => a.value * b.value)
 
@@ -42,12 +41,12 @@ def PreparedBlock.terms (b : PreparedBlock) : List DenormalizedProduct :=
   ⟨b.c.significand, b.c.exponent, b.c.mantissaBits⟩ ::
     b.products.map fun (a, b) => denormalizedMul a b
 
-/-- A nonempty maximum ignores zero terms; none explicitly represents an all-zero block. -/
+/-- Largest exponent of a nonzero term; `none` for an all-zero block. -/
 def maxTermExp (ts : List DenormalizedProduct) : Option ℤ :=
   (ts.filterMap fun t => if t.significand = 0 then none else some t.exponent).foldl
     (fun acc e => some (match acc with | none => e | some v => max v e)) none
 
-/-- Alignment exponent `eta`: the largest exponent of a nonzero term, raised to the model's minimum alignment exponent. -/
+/-- Alignment exponent `eta`: the largest nonzero-term exponent, raised to `eAlignMin`. -/
 def PreparedBlock.alignExp (b : PreparedBlock) : Option ℤ :=
   b.model.applyEAlignMin (maxTermExp b.terms)
 
@@ -68,7 +67,7 @@ def PreparedBlock.alignmentResiduals (b : PreparedBlock) : List ℚ :=
 def PreparedBlock.extractReference (b : PreparedBlock) (d : ℚ) : ℚ :=
   (b.accumulator - d) + sumQ b.alignmentResiduals
 
-/-- All trace fields except the accepted input/output are derived by definitions. -/
+/-- An accepted block and its output; every other trace quantity is derived. -/
 structure BlockTrace where
   block : PreparedBlock
   output : Finite32
@@ -86,7 +85,7 @@ inductive ModelError where
   | nonfiniteOutput
   deriving Repr, DecidableEq
 
-/-- The accumulator truncated to binary32, then to the model's block-output mantissa bits. -/
+/-- The accumulator truncated to FP32, then to the model's block-output mantissa bits. -/
 def evalPrepared (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate b.accumulator with
   | none => .error .accumulatorOutOfRange
@@ -113,7 +112,6 @@ theorem prepareProducts_replicate (p : Model) (a b : p.Word) (da db : Decoded) (
     simp [prepareProducts] at ih'
     simp [prepareProducts, List.replicate_succ, List.mapM_cons, ha, hb, ih']
 
-/-- Coefficients of a block with one repeated operand pair. -/
 theorem construction_alignedBits (prof : Model) (K : ℕ) (da db c : Decoded) :
     (PreparedBlock.mk prof (List.replicate K (da, db)) c).alignedBits =
       truncBits c.value (PreparedBlock.mk prof (List.replicate K (da, db)) c).alignGridExponent ::

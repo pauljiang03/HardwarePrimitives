@@ -9,7 +9,7 @@ namespace TensorCore
 def BlockTrace.extractionExponent (t : BlockTrace) : ℤ :=
   max t.block.alignGridExponent (outputUlpExponent t.output.bits)
 
-/-- Coarse retained components `hᵢ = trunc_qE(Tᵢ)` (Lemma IV.1). c is term zero. -/
+/-- Coarse retained components `hᵢ = trunc_qE(Tᵢ)` (Lemma IV.1); `c` is term zero. -/
 def BlockTrace.coarse (t : BlockTrace) : List ℚ :=
   t.block.terms.map fun x => truncGrid x.value t.extractionExponent
 
@@ -23,7 +23,7 @@ def BlockTrace.retainedSum (t : BlockTrace) : ℚ := sumQ t.coarse
 /-- Signed overlap correction `ε_o = D − H` (Lemma IV.4). -/
 def BlockTrace.overlap (t : BlockTrace) : ℚ := t.output.value - t.retainedSum
 
-/-- The overlapping bits of the low components, `φ(εᵢ) = trunc_qA(εᵢ)`: the parts of `εᵢ` that the alignment grid retains. -/
+/-- Overlapping bits of the low components, `φ(εᵢ) = trunc_qA(εᵢ)`. -/
 def BlockTrace.retainedLowParts (t : BlockTrace) : List ℚ :=
   t.lowParts.map fun e => truncGrid e t.block.alignGridExponent
 

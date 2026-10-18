@@ -24,7 +24,6 @@ private theorem mapM_origin (f : α → Option β) (xs : List α) (ys : List β)
         · obtain ⟨a, ha, hd⟩ := ih zs ht z hz
           exact ⟨a, by simp [ha], hd⟩
 
-/-- Every prepared factor pair comes from an original encoded pair. -/
 theorem prepareProducts_origin (p : Model) (xs : List (p.Word × p.Word))
     (ys : List (Decoded × Decoded)) (h : prepareProducts p xs = some ys) :
     ∀ y ∈ ys, ∃ x ∈ xs, p.decode x.1 = some y.1 ∧ p.decode x.2 = some y.2 := by

@@ -26,7 +26,7 @@ def BinaryRep.value {f : Format} (r : BinaryRep f) : ℚ :=
   (if r.negative then -(r.significand : ℚ) else r.significand) *
     pow2 (r.exponent - f.mantissaBits)
 
-/-- Domain: exactly words whose IEEE classification is finite, with both zero words. -/
+/-- Words whose IEEE classification is finite, including both zeros. -/
 abbrev FiniteBinaryWord (f : Format) := { bits : BitVec f.width // ∃ d, (classify f bits).finite = some d }
 
 structure SignedFiniteValue (f : Format) where

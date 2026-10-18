@@ -1,6 +1,6 @@
 import TensorCore.Numerics.EncodingProperties
 
-/-! Specification and correctness of the FP32 converter. -/
+/-! Integer rounding and binary exponents. -/
 
 namespace TensorCore
 
@@ -17,7 +17,6 @@ theorem rneInt_cases (t : ℚ) :
       ¬(1 < 2 * (t - t.floor) ∨ (2 * (t - t.floor) = 1 ∧ t.floor % 2 = 1))) := by
   unfold rneInt; split <;> simp [*]
 
-/-- Integers are at least one apart, stated over the rationals. -/
 theorem intCast_le_or_succ_le (j k : ℤ) : (j : ℚ) ≤ k ∨ (k : ℚ) + 1 ≤ j := by
   by_cases h : j ≤ k
   · exact Or.inl (Rat.intCast_le_intCast.mpr h)
@@ -136,9 +135,8 @@ theorem magnitudeExponent_spec (x : ℚ) (hx : 0 < x) :
     rw [this]; exact ⟨Rat.le_of_lt lo, by assumption⟩
   · exact ⟨by grind, hi⟩
 
-/-! Grid geometry used by the nearest-value proof. -/
+/-! ## Grid geometry -/
 
-/-- Scaling a grid distance by the quantum. -/
 theorem dist_scale (m : ℚ) (q : ℚ) (hq : 0 < q) (j : ℤ) :
     absQ (m - j * q) = absQ (m / q - j) * q := by
   rw [← absQ_mul_pos _ q hq]
@@ -146,7 +144,6 @@ theorem dist_scale (m : ℚ) (q : ℚ) (hq : 0 < q) (j : ℤ) :
   congr 1
   grind
 
-/-- Every finite value with exponent at least `e` is an integer multiple of `2^(e-23)`. -/
 theorem magnitudeExponent_eq_of_bounds (x : ℚ) (e : ℤ) (h1 : pow2 e ≤ x)
     (h2 : x < pow2 (e + 1)) : magnitudeExponent x = e := by
   have hx : 0 < x := by have := pow2_pos e; grind

@@ -3,19 +3,12 @@ import MatrixCore.MC.Prepared
 
 /-! # Error of the CDNA 3 accumulation
 
-Bounds for each lossy stage of Algorithms 1 and 2:
-
-* aligning the products to `e_max` with `23 + padding` mantissa bits loses less than
-  `2^(e_max − 23 − padding)` per product, and odd/even grouping adds two RD steps of the same size;
-* when `e_c ≤ e_max`, `s'_c` differs from `c` by less than `2^(e_max − 24)`;
-* when `e_c > e_max`, both RD steps round down: `S_acc ≤ S_{p_i,sum} + c`, by less than
-  `2^(e_c − 32) + 2^(e' − 31)`, where `e'` is the exponent of the normalized sum. -/
+Bounds for each lossy stage of Algorithms 1 and 2, and for `S_acc`. -/
 
 namespace MatrixCore
 
 /-! ## Product alignment -/
 
-/-- Truncating each term on one grid loses less than one grid step per term. -/
 theorem sumQ_trunc_error (ps : List Unpacked) (g : ℤ) :
     absQ (sumQ (ps.map Unpacked.value) - sumQ (ps.map fun p => truncGrid p.value g)) ≤
       ps.length * pow2 g := by
@@ -67,7 +60,6 @@ theorem productSum_error (P : Model) {ps : List Unpacked} {e : ℤ} {S : ℚ}
       simp only [Prod.mk.injEq, Option.some.injEq] at h
       obtain ⟨rfl, rfl⟩ := h
       obtain ⟨hsum, hlen⟩ := sumQ_odd_even Unpacked.value ps
-      -- each group: alignment error, then the RD to the common grid
       have group : ∀ (l : List Unpacked) (eg : Option ℤ) (Sg : ℚ),
           alignedSum P.padding l = (eg, Sg) → (∀ v, eg = some v → v ≤ e') →
           absQ (sumQ (l.map Unpacked.value) - rdGrid Sg (e' - (23 + P.padding : ℕ))) ≤
@@ -130,8 +122,7 @@ theorem productSum_error (P : Model) {ps : List Unpacked} {e : ℤ} {S : ℚ}
 
 /-! ## Late addition of `c` -/
 
-/-- `s'_c` is within one step of `2^(e_max − 24)` of `c`. With the binary8 cutoff, `s'_c = 0` only
-for `|c| < 2^(e_c + 1) ≤ 2^(e_max − 25)`. -/
+/-- `s'_c` differs from `c` by less than one alignment step, also with the FP8 cutoff. -/
 theorem shiftedC_error (P : Model) {eMax eC : ℤ} (c : Unpacked) (hcut : ∀ n, P.late.cCutoff = some n → P.late.cMantissaBits ≤ n)
     (hc : absQ c.value < pow2 (eC + 1)) :
     absQ (c.value - shiftedC P eMax eC c) < pow2 (eMax - P.late.cMantissaBits) := by
@@ -151,8 +142,7 @@ theorem shiftedC_error (P : Model) {eMax eC : ℤ} (c : Unpacked) (hcut : ∀ n,
     · exact hrd'
   · exact hrd'
 
-/-- When `e_c > e_max`, `S_acc` rounds `S_{p_i,sum} + c` down, by less than
-`2^(e_c − 32) + 2^(e' − 31)`. -/
+/-- When `e_c > e_max`, `S_acc` rounds `S_{p_i,sum} + c` down, by less than two RD steps. -/
 theorem shiftedSum_bounds (P : Model) (eC : ℤ) (S : ℚ) (c : Unpacked) :
     let T := rdGrid S (eC - P.late.sumMantissaBits) + c.value
     shiftedSum P eC S c ≤ S + c.value ∧
@@ -169,7 +159,6 @@ theorem shiftedSum_bounds (P : Model) (eC : ℤ) (S : ℚ) (c : Unpacked) :
     have h2 := rdGrid_bounds T (normExp (absQ T) - P.late.accMantissaBits)
     constructor <;> grind
 
-/-- `S_acc` of Algorithms 1 and 2 against the exact `S_{p_i,sum} + c`. -/
 theorem lateSum_cases (P : Model) (eMax : Option ℤ) (S : ℚ) (c : Unpacked) :
     (cExp P c = none ∧ lateSum P eMax S c = S) ∨
     (∃ e eC, eMax = some e ∧ cExp P c = some eC ∧ eC ≤ e ∧
@@ -218,13 +207,7 @@ theorem cExp_none {P : Model} {c : Unpacked} (h : cExp P c = none) : c.value = 0
   · rename_i hm; exact (Unpacked.value_eq_zero_iff c).mpr hm
   · simp at h
 
-/-- Error of `S_acc` (Algorithms 1 and 2) against the exact `Σ p_ℓ + c` of Eq. (1), with
-`F = 23 + padding`, `n` products, and `T = S'_{p_i,sum} + s_c` in the second branch:
-
-* `e_c ≤ e_max`: `|S_acc − (Σ p_ℓ + c)| < (n + 2)·2^(e_max − F) + 2^(e_max − 24)`;
-* `e_c > e_max`: `S_acc` is below `Σ p_ℓ + c` up to the product error, by less than
-  `(n + 2)·2^(e_max − F) + 2^(e_c − 32) + 2^(e' − 31)`, `e'` the normalized exponent of `T`;
-* no product exponent (all products zero): the second branch with no product error. -/
+/-- Error of `S_acc` (Algorithms 1 and 2) against the exact `Σ p_ℓ + c`, by branch. -/
 theorem alignedAccumulation_error (P : Model) (x : Prepared)
     (hcut : ∀ n, P.late.cCutoff = some n → P.late.cMantissaBits ≤ n)
     (hc : ∀ eC, cExp P x.c = some eC → absQ x.c.value < pow2 (eC + 1)) :

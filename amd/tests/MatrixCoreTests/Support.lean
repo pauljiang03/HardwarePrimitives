@@ -1,9 +1,8 @@
 import MatrixCore
 
-/-! Test inputs written as decoded values.
+/-! # Test support
 
-Every input value is encoded exactly or the test fails to produce an observation, so a value
-that a format cannot represent cannot enter a test silently. -/
+Inputs written as decoded values; a value the format cannot represent gives no observation. -/
 
 namespace MatrixCoreTests
 
@@ -55,8 +54,7 @@ def observe (P : Model) (ps : List (In × In)) (c : In) : Option Obs := do
   let o ← dotOutcome P a b cw
   return toObs o
 
-/-- Operands `(a, b)` with `a · b = p`, splitting the exponent of `p` evenly so that both are
-normal whenever `p` is a product of two normal values; then `e_a + e_b = ⌊log₂ |p|⌋`. -/
+/-- Operands `(a, b)` with `a · b = p`, splitting the exponent of `p` evenly. -/
 def splitProduct (p : ℚ) : In × In :=
   if p = 0 then (.v 0, .v 1)
   else
@@ -67,7 +65,6 @@ def splitProduct (p : ℚ) : In × In :=
 def observeP (P : Model) (ps : List ℚ) (c : In) : Option Obs :=
   observe P (ps.map splitProduct) c
 
-/-- `2^e`. -/
 abbrev p2 (e : ℤ) : ℚ := pow2 e
 
 /-- `Σ_{ℓ=lo}^{hi} 2^{-ℓ}`. -/

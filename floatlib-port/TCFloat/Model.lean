@@ -3,7 +3,7 @@ import FloatLib.Numerics.Exact.Dyadic.Order
 import Mathlib.Data.Rat.Floor
 import Mathlib.Tactic
 
-/-! Independent FP32-output TC semantics. -/
+/-! Independent FP32-output Tensor Core semantics. -/
 namespace TCFloat
 open FloatLib.Floats.Formats.BinaryInterchange
 abbrev ExactDyadic := FloatLib.Numerics.Dyadic
@@ -19,7 +19,7 @@ def ofNat (f : FloatFormat) (n : Nat) : Model f := Model.ofBits (BitVec.ofNat _ 
 
 def value32 (n : Nat) : Option ℚ := (ofNat .binary32 n).toRat?
 
-/-- Source finite-accumulator domain, before FloatLib rounding (including RTZ). -/
+/-- FloatLib FP32 rounding (RNE or RTZ), on the source's finite-accumulator domain. -/
 def round32 (mode : Mode) (x : ℚ) : Option Nat :=
   if |x| > maxFinite32 then none else
     some (Model.roundRatWithRounding .binary32 mode (x.num < 0) x.num.natAbs x.den).bits.toNat
@@ -115,7 +115,7 @@ def naiveSumFrom (a : ℚ) : List ℚ → Option ℚ
   | [] => some a
   | x :: xs => (add32 a x).bind fun s => naiveSumFrom s xs
 
-/-- Trailing zero bits of `n` (`0` for `n = 0`), by structural recursion on a fuel argument. -/
+/-- Trailing zero bits of `n` (`0` for `n = 0`), with fuel. -/
 def trailingZeroBitsAux : Nat → Nat → Nat
   | 0, _ => 0
   | fuel + 1, n => if n ≠ 0 ∧ n % 2 = 0 then trailingZeroBitsAux fuel (n / 2) + 1 else 0
@@ -157,7 +157,7 @@ def Trace.algorithm (t : Trace) : Option Nat × String :=
     | some bits => (some bits, "exactReference")
     | none => (none, "outOfRange")
 
-/-- Uses supplied finite D; never invokes the TC model or original-input ideal. -/
+/-- Uses the supplied finite D; never invokes the Tensor Core model or the original-input ideal. -/
 def Trace.encodedAlgorithm (t : Trace) : Option Nat × String :=
   if t.block.terms.all (fun x => x.dyadic.significand == 0) then (some 0, "allZero")
   else t.algorithm

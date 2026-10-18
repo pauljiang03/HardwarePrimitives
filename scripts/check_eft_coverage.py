@@ -60,7 +60,6 @@ def cases():
             words = [fp32_word_to_fp16(x) for pair in zip(a, b) for x in pair] + [c]
             yield dict(cohort='published', device=device, k=k, extra=extra,
                        index=index, words=words, measured=d)
-    # Additional application-like signed blocks, cancellation and padded partial tails.
     rng = random.Random(SEED + 1)
     for device, k, extra in CONFIGS:
         for index in range(160):
@@ -89,7 +88,6 @@ def cases():
             assert abs(val32(words[-1])) <= 1
             yield dict(cohort='application_small', device=device, k=k, extra=extra,
                        index=index, words=words)
-    # Exact counterexample, coefficient overflow, nonfinite inputs and finite overflow.
     adversarial = [
         ('subnormal_accumulator', [0x3c00, 0x3c00, 1, 0x3c00, 0, 0, 0, 0, 1]),
         ('support_overflow', [0x5bff, 0x37ff]*3 + [1, 1, 0x4e800000]),
@@ -104,7 +102,7 @@ def cases():
 
 
 def low_support(parts):
-    """Independent oracle: exponent of the lowest bit actually set in the NONZERO low parts."""
+    """Independent oracle: exponent of the lowest bit actually set in the nonzero low parts."""
     exponents = []
     for q in parts:
         if q:
@@ -150,7 +148,6 @@ def main():
             assert oracle is not None and out['bits'] == oracle['bits'], (case, out, oracle)
             if 'measured' in case:
                 assert case['measured'] == out['bits'], (case, out)
-            # Ideal comes only from original encoded operands in the independent oracle.
             expected = nearest(oracle['ideal'])
             assert out['accepted'] == (not out['failed']), (case, out)
             assert out['corrected'] == out['tceft'], (case, out)
@@ -166,7 +163,6 @@ def main():
             support, mag = low_support(parts)
             tighter_pass = mag < 2**24 and (support is None or -149 <= support <= 104)
             tally['tighter_support_bound_passes'] += tighter_pass
-            # The Lean predicate uses the lowest bit actually set, as this independent oracle does.
             bit_checks = {'lowest_bit_min', 'lowest_bit_max', 'low_bits_on_grid', 'low_bits_sum_below_2pow24'}
             if not (bit_checks & set(out['failed'])) != tighter_pass:
                 raise SystemExit(f'Lean low-bit checks disagree with the oracle: {case} {out}')
@@ -175,7 +171,7 @@ def main():
             if case.get('name') == 'subnormal_accumulator':
                 assert (out['unchecked'], expected, out['corrected']) == (0x3f800000, 0x3f800001, None)
         records.append(record)
-    # A changed sufficient predicate must be separately named; baseline is a strict gate.
+    # Strict baseline gate: a changed sufficient predicate must be named separately.
     for (device, _, _), accepted, changed in zip(CONFIGS, [86, 24, 1], [1885, 1919, 2093]):
         assert totals[f'finite_bits/{device}']['scalar_accepted'] == accepted
         assert totals[f'finite_bits/{device}']['failures'] == {'low_bits_sum_below_2pow24': 1000 - accepted}

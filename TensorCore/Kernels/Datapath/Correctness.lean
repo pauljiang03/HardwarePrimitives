@@ -204,7 +204,7 @@ theorem accumulator_eq (variant : Variant) (ts : List Term) (b : PreparedBlock)
     rw [hgrid]
     rfl
 
-/-- The bitvector datapath returns the integer model's output word, or the same error, on every input. -/
+/-- The bitvector datapath returns the model's output word, or the same error, on every input. -/
 theorem evalBlock_eq (variant : Variant) (x : BlockInput variant.model) :
     Datapath.evalBlock variant x = (TensorCore.evalBlock x).map (·.output.bits) := by
   unfold Datapath.evalBlock TensorCore.evalBlock

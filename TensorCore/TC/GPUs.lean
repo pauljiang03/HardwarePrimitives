@@ -6,39 +6,9 @@ import TensorCore.TC.CanonicalFormats
 
 /-! # Ada, H200, B200 and the FP8 block FMAs
 
-*Accurate Models* (Table 3) gives Ada (RTX 1000 Ada and L40S) the FP16, BF16 and TF32 numerical
-features of A100, and B200 those of H100; H200 is a Hopper GPU like H100. Its FP8 rows give the
-FP8 block FMAs:
-
-| GPU | Instruction | N_FMA | Mantissa bits after alignment | Block output |
-| --- | --- | --- | --- | --- |
-| Ada, L40S | `mma.sync` (QMMA) | 16 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
-| H100, H200 | `wgmma` (QGMMA) | 32 | 13, ten fewer than FP32 | truncated to a 13-bit mantissa |
-| B200 | `tcgen05.mma` (UTCQMMA) | 32 | 25: the 23-bit mantissa plus 2 padding bits | binary32 |
-
-All truncate, and Table 3 lists no minimum alignment exponent for them. The block output of Ada
-and Hopper truncated to a 13-bit mantissa is the Accurate Models toolbox's (`GEMM.m` keeps as many
-output mantissa bits as the alignment keeps when that is fewer than 23). The FP8 `mma.sync` path of
-H100, H200 and B200 (FP8 converted to FP16 and run on the FP16 Tensor Core) and the RTX PRO 6000's
-FP8 `mma.sync` are modeled in `TensorCore.TC.MmaSyncFP8`. Not modeled: FP4 and FP6, and the other
-Blackwell instructions.
-
-The toolbox's FP8 models keep their default minimum alignment exponents, −132 on Ada and −133 on
-Hopper and Blackwell. On FP8 inputs no nonzero term has an exponent below −126, so these are
-inactive: `fp8_eAlignMin_inactive` proves that both choices give the same output word, or the same
-error, for every input.
-
-`Model.dot` sums a long inner product with consecutive block FMAs, as the toolbox does. The
-recorded FP8 outputs of the toolbox (commit 79143bd, `scripts/check_device_replay.py`) agree with
-these models as follows. The Ada and L40S rows agree with the Ada block FMAs with `c` accumulated
-inside. The H100 and H200 rows agree with the Hopper block FMAs from a zero accumulator, which is
-how the toolbox's validation script reads them (`wgmma` with `D = 0`); they hold no information
-about `c`. The B200 rows were recorded with the toolbox's `mma.sync` harness: they agree with the
-FP8 `mma.sync` model (`mmaSyncFP8Dot`), and also with the B200 block FMA from `c = 0` followed by
-the binary32 addition of `c` (`Model.dotThenAdd`), and not with the B200 block FMA that holds `c`.
-So no recorded output covers `c` inside the FP8 block FMA of `wgmma` or `tcgen05.mma`; the
-evidence there is the cross-check against MMA-Sim (`scripts/check_mmasim.py`), an independent
-simulator, not hardware. -/
+Ada and B200 reuse the FP16, BF16 and TF32 models of A100 and H100 respectively (*Accurate
+Models*, Table 3), and H200 uses the Hopper models. The FP8 block FMAs of Ada, Hopper and B200 all
+truncate, and Table 3 lists no minimum alignment exponent for them. -/
 
 namespace TensorCore
 
@@ -51,8 +21,7 @@ namespace TensorCore
 /-- Ada TF32 → FP32: A100's features. -/
 @[implicit_reducible] def adaTF32F32 : Model := a100TF32F32
 
-/-- B200 FP16 → FP32: H100's features. H200's models are the Hopper models, `hopperF16F32` and
-the others. -/
+/-- B200 FP16 → FP32: H100's features. -/
 @[implicit_reducible] def blackwellF16F32 : Model := hopperF16F32
 /-- B200 BF16 → FP32: H100's features. -/
 @[implicit_reducible] def blackwellBF16F32 : Model := hopperBF16F32
@@ -80,7 +49,6 @@ the others. -/
 def widenE4M3Pairs (ps : List (BitVec 8 × BitVec 8)) : List (BitVec 9 × BitVec 9) :=
   ps.map fun (a, b) => (widenE4M3 a, widenE4M3 b)
 
-/-- A model with `e4m3x` operands decodes widened pairs exactly as E4M3 decodes the original pairs. -/
 theorem prepareProducts_widenE4M3 (K : ℕ) (F : ℤ) (e : Option ℤ) (m : ℕ)
     (ps : List (BitVec 8 × BitVec 8)) :
     prepareProducts (⟨e4m3x, K, F, e, m⟩ : Model) (widenE4M3Pairs ps) =
@@ -95,15 +63,13 @@ theorem prepareProducts_widenE4M3 (K : ℕ) (F : ℤ) (e : Option ℤ) (m : ℕ)
 
 /-! ## The block output -/
 
-/-- The block outputs: 13 mantissa bits on Ada and Hopper FP8, binary32 elsewhere. -/
 theorem fp8_outputMantissaBits :
     adaE4M3F32.outputMantissaBits = 13 ∧ adaE5M2F32.outputMantissaBits = 13 ∧
     hopperE4M3F32.outputMantissaBits = 13 ∧ hopperE5M2F32.outputMantissaBits = 13 ∧
     blackwellE4M3F32.outputMantissaBits = 23 ∧ blackwellE5M2F32.outputMantissaBits = 23 :=
   ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩
 
-/-- On Ada and Hopper FP8 a block returns the binary32 truncation of its accumulator with the ten
-low mantissa bits cleared. -/
+/-- Ada and Hopper FP8: the FP32 truncation of the accumulator with the ten low mantissa bits cleared. -/
 theorem fp8_output_thirteen_bits {p : Model} (hp : p.outputMantissaBits = 13) {x : BlockInput p}
     {t : BlockTrace} (h : evalBlock x = .ok t) :
     ∃ bits, round32 .truncate t.block.accumulator = some bits ∧
@@ -115,8 +81,6 @@ theorem fp8_output_thirteen_bits {p : Model} (hp : p.outputMantissaBits = 13) {x
 
 /-! ## The minimum alignment exponent -/
 
-/-- With an input format of bias at most 64, every nonzero term of a prepared block has exponent at
-least −126. -/
 theorem prepare_terms_lower (p : Model) (hbias : p.input.bias ≤ 64) (x : BlockInput p)
     (b : PreparedBlock) (h : prepare x = some b) :
     ∀ t ∈ b.terms, t.significand ≠ 0 → -126 ≤ t.exponent := by
@@ -145,8 +109,6 @@ theorem prepare_terms_lower (p : Model) (hbias : p.input.bias ≤ 64) (x : Block
         change -126 ≤ pair.1.exponent + pair.2.exponent
         omega
 
-/-- Two prepared blocks with the same accumulator and the same block-output width return the same
-output word, or the same error. -/
 theorem evalPrepared_bits_of_accumulator {b b' : PreparedBlock}
     (h : b.accumulator = b'.accumulator) (hw : b.model.outputMantissaBits = b'.model.outputMantissaBits) :
     (evalPrepared b).toOption.map (fun t => t.output.bits) =
@@ -157,8 +119,7 @@ theorem evalPrepared_bits_of_accumulator {b b' : PreparedBlock}
   · rfl
   · split <;> rfl
 
-/-- With an input format of bias at most 64, a minimum alignment exponent of at most −126 changes
-nothing: removing it gives the same output word, or the same error, for every input. -/
+/-- A minimum alignment exponent of at most −126 is inactive for input formats of bias at most 64. -/
 theorem evalBlock_eAlignMin_inactive (p : Model) (hbias : p.input.bias ≤ 64)
     (hf : ∀ f ∈ p.eAlignMin, f ≤ -126) (x : BlockInput p) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
@@ -204,8 +165,7 @@ theorem evalBlock_eAlignMin_inactive (p : Model) (hbias : p.input.bias ≤ 64)
         rw [he]
         rfl
 
-/-- The toolbox's minimum alignment exponents (−132 on Ada, −133 on Hopper and Blackwell) are
-inactive on every FP8 model: with them, every input gives the same output word, or the same error. -/
+/-- The toolbox's minimum alignment exponents (−132, −133) are inactive on every FP8 model. -/
 theorem fp8_eAlignMin_inactive :
     (∀ x : BlockInput adaE4M3F32,
       (evalBlock (⟨x.products, x.c⟩ : BlockInput {adaE4M3F32 with eAlignMin := some (-132)})).toOption.map
@@ -246,15 +206,12 @@ theorem fp8_eAlignMin_inactive :
 
 /-! ## Recursive summation of block FMAs -/
 
-/-- The block FMAs of an inner product of any length, as the Accurate Models toolbox forms them
-(`GEMM.m`): the products in increasing `k`, padded with zero pairs to a multiple of N_FMA, in
-consecutive groups of N_FMA. -/
+/-- Blocks as the toolbox's `GEMM.m` forms them: increasing `k`, zero-padded to a multiple of N_FMA. -/
 def Model.blocksOf (p : Model) (ps : List (p.Word × p.Word)) : List (List (p.Word × p.Word)) :=
   let n := (ps.length + p.nfma - 1) / p.nfma
   chunks p.nfma n (ps ++ List.replicate (n * p.nfma - ps.length) (0, 0))
 
-/-- `c + Σ aᵢbᵢ` by recursive summation of block FMAs: each block's output is the next block's
-`c`, and the result is the last block's output (`c` when there are no products). -/
+/-- `c + Σ aᵢbᵢ` by recursive summation of block FMAs; `c` when there are no products. -/
 def Model.dot (p : Model) (c : F32) (ps : List (p.Word × p.Word)) : Option F32 :=
   match runBlocks p c (p.blocksOf ps) with
   | .ok ts => some ((ts.getLast?.map fun t => t.output.bits).getD c)
@@ -279,11 +236,11 @@ theorem Model.dot_one_block (p : Model) (hK : 0 < p.nfma) (c : F32)
   simp only [runBlocks]
   cases evalBlock (⟨ps, c⟩ : BlockInput p) <;> rfl
 
-/-- `d + c` in binary32, rounded to nearest even. -/
+/-- `d + c` in FP32, rounded to nearest even. -/
 def addFp32 (d c : F32) : Option F32 := do
   round32 .nearestEven ((← value32 d) + (← value32 c))
 
-/-- `addBinary32` returns the binary32 value nearest the exact sum, ties to even. -/
+/-- `addFp32` returns the FP32 value nearest the exact sum, ties to even. -/
 theorem addFp32_nearestEven {d c o : F32} {u v : ℚ} (hd : value32 d = some u)
     (hc : value32 c = some v) (h : addFp32 d c = some o) : NearestEven32 (u + v) o := by
   simp only [addFp32, hd, hc, Option.bind_eq_bind, Option.bind_some] at h
@@ -292,20 +249,13 @@ theorem addFp32_nearestEven {d c o : F32} {u v : ℚ} (hd : value32 d = some u)
   cases Option.some.inj hb
   exact hn
 
-/-- The block FMAs from `c = 0`, then `c` added in binary32 with round-to-nearest-even. The
-recorded B200 FP8 outputs (recorded through `mma.sync`, which adds `c` after the products) agree
-with it on the B200 block FMA. -/
+/-- The block FMAs from `c = 0`, then `c` added in FP32 with round-to-nearest-even. -/
 def Model.dotThenAdd (p : Model) (c : F32) (ps : List (p.Word × p.Word)) : Option F32 := do
   addFp32 (← p.dot 0 ps) c
 
-/-! ## Invocation descriptors
+/-! ## Invocation descriptors -/
 
-The same FP8 block FMAs as descriptors: E4M3 decoded by its own encoding rather than `e4m3x`, the
-13-bit block output as a truncation stage to a format with 13 mantissa bits, and the late
-accumulation of `c` that the recorded B200 outputs show as an accumulator input added after the
-block (`CPlacement.late`) with a round-to-nearest-even output stage. The replay checks the descriptors against the models. -/
-
-/-- Binary32's exponent range with 13 mantissa bits: the block output of Ada and Hopper FP8. -/
+/-- FP32's exponent range with 13 mantissa bits: the block output of Ada and Hopper FP8. -/
 @[implicit_reducible] def fp32Mantissa13 : Format := ⟨13, 8, 127⟩
 
 /-- An FP8 descriptor with a 13-bit block output. -/
@@ -319,8 +269,7 @@ def hopperE5M2Invocation : InvocationSpec := narrowInvocation e5m2Encoding 32
 def blackwellE4M3Invocation : InvocationSpec := alignedInvocation e4m3Encoding 32 25 none
 def blackwellE5M2Invocation : InvocationSpec := alignedInvocation e5m2Encoding 32 25 none
 
-/-- A B200 FP8 block from `c = 0` truncated to binary32, then `c` added and the sum rounded to
-nearest even, as the recorded B200 FP8 outputs (`mma.sync`) add `c`. -/
+/-- A B200 FP8 block from `c = 0` truncated to FP32, then `c` added with round-to-nearest-even. -/
 @[implicit_reducible] def thenAddInvocation (input : OperandEncoding) : InvocationSpec :=
   ⟨input, fp32, 32, .aligned 25 none (.late [⟨fp32, .truncate⟩]), [], ⟨fp32, .nearestEven⟩⟩
 

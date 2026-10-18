@@ -3,7 +3,7 @@ import TensorCore.Numerics.Binary.RoundOp
 import TensorCore.Numerics.FormatProperties
 import TensorCore.Numerics.Rounding
 
-/-! Finite values and constructed encodings of an arbitrary well-formed IEEE-style `Format` (TC-EFT Definition II.1 for FP16, BF16, tf19, FP32, and FP64). -/
+/-! Finite values and encodings of a well-formed IEEE-style `Format` (TC-EFT Definition II.1). -/
 
 namespace TensorCore
 
@@ -63,7 +63,6 @@ theorem classifyNat_finiteValue (f : Format) (hf : f.WellFormed) (n : ℕ) (d : 
         · rw [Int.natAbs_natCast]; omega
       · simp [Decoded.value]
 
-/-- The constructed encoding fits the word and has the stated fields. -/
 theorem encodeBinary_toNat (f : Format) (hf : f.WellFormed) (negative : Bool) (e k : ℤ)
     (hk0 : 0 ≤ k) (hk1 : k < ((2 ^ (f.mantissaBits + 1) : ℕ) : ℤ)) (_he1 : f.emin ≤ e)
     (he2 : e ≤ f.emax) :
@@ -135,7 +134,6 @@ theorem encodeBinary_parity (f : Format) (hf : f.WellFormed) (negative : Bool) (
   generalize hmv : (e + f.bias).toNat * P = M at *
   cases negative <;> simp only [Bool.false_eq_true, ↓reduceIte] <;> split <;> omega
 
-/-- The payload of a constructed encoding is below `2^(p+E)`. -/
 theorem encodeBinary_payload_lt (f : Format) (hf : f.WellFormed) (e k : ℤ)
     (_hk0 : 0 ≤ k) (hk1 : k < ((2 ^ (f.mantissaBits + 1) : ℕ) : ℤ)) (_he1 : f.emin ≤ e)
     (he2 : e ≤ f.emax) :
@@ -196,7 +194,6 @@ theorem encodeBinary_value (f : Format) (hf : f.WellFormed) (negative : Bool) (e
   generalize hWv : 2 ^ f.exponentBits = W at *
   generalize hP1 : 2 ^ (f.mantissaBits + 1) = P1 at *
   have hPWpos : 0 < P * W := Nat.mul_pos hP (by omega)
-  -- The three fields of the word, for either sign.
   have hsgn : ∀ pay, pay < P * W →
       ((if negative then P * W else 0) + pay) % P = pay % P ∧
       ((if negative then P * W else 0) + pay) / P % W = pay / P % W ∧

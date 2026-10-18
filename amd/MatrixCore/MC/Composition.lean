@@ -2,9 +2,8 @@ import MatrixCore.MC.Special
 
 /-! # Inner products of any length and the MFMA operation
 
-An instruction with inner dimension `k` evaluates each element `d_ij` in `⌈k / N_FMA⌉`
-blocks: the vectors are padded with zeros to a multiple of `N_FMA`, and each block's output is
-the next block's `c` (recursive accumulation, as in the paper's GEMM model). -/
+An inner product of length `k` is evaluated in `⌈k / N_FMA⌉` zero-padded blocks, each block's
+output being the next block's `c`. -/
 
 namespace MatrixCore
 
@@ -31,15 +30,14 @@ def dotBits (P : Model) (a : List P.a.Word) (b : List P.b.Word) (c : F32) :
   if a.length ≠ b.length then .error .wrongLength
   else (blocks P a b).foldlM (fun c ab => blockBits (P := P) ⟨ab.1, ab.2, c⟩) c
 
-/-- A binary32 word as an observation. -/
+/-- An FP32 word as an observation. -/
 def observe32 (w : F32) : Outcome :=
   match fp32.decode w with
   | .finite _ => .finite w
   | .infinity s => .infinity s
   | .nan => .nan
 
-/-- Observed inner product for any input words, starting from the observation of `c` (so
-`k = 0` returns `c`). A NaN stays NaN; an infinity is passed on as the next block's `c`. -/
+/-- Observed inner product for any input words; an infinity is passed on as the next `c`. -/
 def dotOutcome (P : Model) (a : List P.a.Word) (b : List P.b.Word) (c : F32) : Option Outcome :=
   if a.length ≠ b.length then none
   else (blocks P a b).foldlM (fun o ab =>

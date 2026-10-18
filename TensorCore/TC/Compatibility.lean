@@ -4,7 +4,6 @@ import TensorCore.TC.InvocationProperties
 
 namespace TensorCore
 
-
 def BlockInput.toInvocation {p : Model} (x : BlockInput p) (F : ℕ) :
     InvocationInput (p.toInvocation F) := ⟨x.products, x.c⟩
 

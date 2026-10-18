@@ -2,8 +2,8 @@ import MCFloat.Equivalence.Words
 
 /-! # Accumulation stages
 
-Given operands that agree (`TermAgree`), FloatLib's products, `e_max`, aligned and grouped sums,
-and late addition of `c` compute Matrix-Core's values. -/
+For agreeing operands, FloatLib's products, `e_max`, aligned and grouped sums, and late addition
+of `c` compute the `MatrixCore` values. -/
 
 set_option linter.unusedSimpArgs false
 set_option linter.unreachableTactic false
@@ -11,7 +11,6 @@ set_option linter.unreachableTactic false
 namespace MCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-/-- A FloatLib product and a Matrix-Core product agree. -/
 structure ProdAgree (t : MCFloat.Term) (u : MatrixCore.Unpacked) : Prop where
   value : t.value = u.value
   exponent : t.exponent = u.e

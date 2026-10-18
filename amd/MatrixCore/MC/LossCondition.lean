@@ -3,47 +3,22 @@ import MatrixCore.MC.AprioriBounds
 
 /-! # When a rise of the products lowers the output
 
-The output of a block is `d = fl{S_acc}`. Write `R = (Σ p_ℓ + c) − S_acc` for the loss of the
-accumulation (`BlockTrace.accumulationLoss`): on CDNA 3 the loss of the alignment of the products
-and of the late accumulation of `c`, on CDNA 2 that of flushing, of the conversions of the
-products and of the pairwise sums, and zero on CDNA 1. From one block to another the exact sum
-changes by the gain `Δ` (`BlockTrace.gain`), which is nonnegative when every product is at least
-as large and `c` is the same (`gain_nonneg`), and
-
-  `S'_acc − S_acc = Δ − (R' − R)`.
-
-This is the AMD counterpart of the TC-EFT paper's flowback condition, with the roles reversed:
-there a smaller `c` raises the output only if the products recovered by the finer alignment grid
-(the flowback `ω`) exceed the decrease `ΔA` of the aligned `c`; here larger products lower the
-output only if the growth `R' − R` of the loss exceeds the gain `Δ`.
-
-* An output decrease requires `R' − R > Δ`, that is `S'_acc < S_acc`, on every configuration
-  (`output_decrease_requires_loss`).
-* The condition is sufficient when both values of `S_acc` are binary32 values, which the final
-  RNE returns unchanged (`output_decrease_of_loss`, `output_decrease_iff`).
-* On CDNA 3, with every product at least as large and the same `c`, `R' − R > Δ` needs a change of
-  an alignment exponent (`aligned_loss_exceeds_gain_changes_alignment`).
-* The drop `d − d'` on CDNA 3 is at most the two blocks' error bounds minus the gain, from the
-  computed values (`aligned_output_drop_le`) or from the inputs alone
-  (`aligned_output_drop_apriori`). -/
+Larger products lower the output only if the accumulation loss grows by more than the gain of
+the exact sum. -/
 
 namespace MatrixCore
 
-/-- The loss of the accumulation of an evaluated block, `R = (Σ p_ℓ + c) − S_acc`. -/
+/-- The accumulation loss `R = (Σ p_ℓ + c) − S_acc`. -/
 def BlockTrace.accumulationLoss {P : Model} (t : BlockTrace P) : ℚ := t.prepared.exact - t.sAcc
 
-/-- The gain `Δ = (Σ p'_ℓ + c') − (Σ p_ℓ + c)` of the exact sum from the block of `t` to that of
-`t'`. -/
+/-- The gain `Δ = (Σ p'_ℓ + c') − (Σ p_ℓ + c)` of the exact sum from `t` to `t'`. -/
 def BlockTrace.gain {P : Model} (t t' : BlockTrace P) : ℚ := t'.prepared.exact - t.prepared.exact
 
-/-- The change of `S_acc` is the gain minus the growth of the loss:
-`S'_acc − S_acc = Δ − (R' − R)`. -/
+/-- `S'_acc − S_acc = Δ − (R' − R)`. -/
 theorem sAcc_sub_eq_gain_sub_loss {P : Model} (t t' : BlockTrace P) :
     t'.sAcc - t.sAcc = t.gain t' - (t'.accumulationLoss - t.accumulationLoss) := by
   unfold BlockTrace.gain BlockTrace.accumulationLoss; grind
 
-/-- On CDNA 3 the loss is that of Algorithm 1 or 2: `R = (Σ p_ℓ + c) − S_acc` with `S_acc` of
-the alignment and the late accumulation of `c`. -/
 theorem aligned_accumulationLoss {P : Model}
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
@@ -63,9 +38,7 @@ theorem gain_nonneg {P : Model} {x x' : BlockInput P} {t t' : BlockTrace P}
 
 /-! ## Necessary and sufficient conditions -/
 
-/-- **An output decrease requires the loss to grow by more than the gain.** On every
-configuration, if the output of the second block is smaller, then `S'_acc < S_acc`, that is
-`R' − R > Δ`. -/
+/-- An output decrease requires the loss to grow by more than the gain. -/
 theorem output_decrease_requires_loss {P : Model} {x x' : BlockInput P} {t t' : BlockTrace P}
     (h : evalBlock x = .ok t) (h' : evalBlock x' = .ok t') (hlt : wordValue t'.d < wordValue t.d) :
     t'.sAcc < t.sAcc ∧ t.gain t' < t'.accumulationLoss - t.accumulationLoss := by
@@ -76,7 +49,6 @@ theorem output_decrease_requires_loss {P : Model} {x x' : BlockInput P} {t t' : 
   have := sAcc_sub_eq_gain_sub_loss t t'
   exact ⟨hs, by grind⟩
 
-/-- The RNE of a finite binary32 value is the value itself. -/
 theorem rneValue_of_finiteValue32 {y : ℚ} (hy : FiniteValue32 y) : rneValue y = y := by
   by_cases h0 : y = 0
   · subst h0; exact rneValue_zero
@@ -94,7 +66,6 @@ theorem rneValue_of_finiteValue32 {y : ℚ} (hy : FiniteValue32 y) : rneValue y 
     rw [hm]
     unfold absQ; split <;> grind
 
-/-- Without flushing, the value of `fl{s}` is the RNE value of `s`. -/
 theorem wordValue_of_fl32_false {s : ℚ} {d : F32} (h : fl32 false s = some d) :
     wordValue d = rneValue s := by
   rw [fl32_false] at h
@@ -102,7 +73,6 @@ theorem wordValue_of_fl32_false {s : ℚ} {d : F32} (h : fl32 false s = some d) 
   rw [rne32_value h]
   rfl
 
-/-- On a model with subnormals, an accepted block whose `S_acc` is a binary32 value returns it. -/
 theorem evalBlock_output_of_finiteValue32 {P : Model} (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) (hv : FiniteValue32 t.sAcc) :
     wordValue t.d = t.sAcc := by
@@ -110,9 +80,7 @@ theorem evalBlock_output_of_finiteValue32 {P : Model} (hs : P.subnormals = true)
   rw [hs] at hd
   rw [wordValue_of_fl32_false hd, rneValue_of_finiteValue32 hv]
 
-/-- **The condition is sufficient when both `S_acc` are binary32 values.** On a model with
-subnormals (CDNA 1, CDNA 3), if `R' − R > Δ` and both values of `S_acc` are finite binary32
-values, which the final RNE returns unchanged, then the output of the second block is smaller. -/
+/-- With subnormals, the condition is sufficient when both values of `S_acc` are FP32 values. -/
 theorem output_decrease_of_loss {P : Model} (hs : P.subnormals = true) {x x' : BlockInput P}
     {t t' : BlockTrace P} (h : evalBlock x = .ok t) (h' : evalBlock x' = .ok t')
     (hv : FiniteValue32 t.sAcc) (hv' : FiniteValue32 t'.sAcc)
@@ -122,17 +90,14 @@ theorem output_decrease_of_loss {P : Model} (hs : P.subnormals = true) {x x' : B
   have := sAcc_sub_eq_gain_sub_loss t t'
   grind
 
-/-- **Necessary and sufficient.** On a model with subnormals, when both values of `S_acc` are
-binary32 values, the output falls exactly when the loss grows by more than the gain. -/
+/-- With subnormals and FP32 values of `S_acc`, the output falls iff the loss outgrows the gain. -/
 theorem output_decrease_iff {P : Model} (hs : P.subnormals = true) {x x' : BlockInput P}
     {t t' : BlockTrace P} (h : evalBlock x = .ok t) (h' : evalBlock x' = .ok t')
     (hv : FiniteValue32 t.sAcc) (hv' : FiniteValue32 t'.sAcc) :
     wordValue t'.d < wordValue t.d ↔ t.gain t' < t'.accumulationLoss - t.accumulationLoss :=
   ⟨fun hlt => (output_decrease_requires_loss h h' hlt).2, output_decrease_of_loss hs h h' hv hv'⟩
 
-/-- **On CDNA 3 the loss outgrows the gain only through a change of alignment exponent.** With
-the same `c` and every product at least as large, `R' − R > Δ` requires different alignment
-exponents (`e_max`, or a group exponent with odd/even grouping). -/
+/-- On CDNA 3 the loss outgrows the gain only through a change of alignment exponent. -/
 theorem aligned_loss_exceeds_gain_changes_alignment {P : Model}
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     {x x' : BlockInput P} {t t' : BlockTrace P} (h : evalBlock x = .ok t)
@@ -146,16 +111,12 @@ theorem aligned_loss_exceeds_gain_changes_alignment {P : Model}
 
 /-! ## How far the output can fall -/
 
-/-- Two outputs within `B` and `B'` of their exact sums differ by at most `B + B' − Δ`. -/
 theorem drop_le_of_errors {e e' d d' B B' : ℚ} (h : absQ (e - d) ≤ B) (h' : absQ (e' - d') ≤ B') :
     d - d' ≤ B + B' - (e' - e) := by
   rw [absQ_le_iff] at h h'
   grind
 
-/-- **How far a CDNA 3 output can fall.** For any two accepted blocks of Algorithm 1 or 2, the
-drop `d − d'` is at most the sum of the two blocks' error bounds (`alignedBound` of `S_acc` and
-half an ulp of the final RNE) minus the gain `Δ`; with every product at least as large and the
-same `c`, `Δ ≥ 0` (`gain_nonneg`). -/
+/-- How far a CDNA 3 output can fall: both blocks' error bounds minus the gain `Δ`. -/
 theorem aligned_output_drop_le {P : Model}
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     (hcut : ∀ n, P.late.cCutoff = some n → P.late.cMantissaBits ≤ n) (hcz : P.cZeroExp ≠ none)
@@ -166,9 +127,7 @@ theorem aligned_output_drop_le {P : Model}
         (alignedBound P t'.prepared + flBound (!P.subnormals) t'.sAcc) - t.gain t' :=
   drop_le_of_errors (aligned_error hacc hcut hcz h) (aligned_error hacc hcut hcz h')
 
-/-- **How far a CDNA 3 output can fall, from the inputs alone.** With `A = Σ|p_ℓ| + |c|` and `n`
-products per block, the drop `d − d'` is at most
-`2^-23 (A + A') + (n + 4)·2^(e_max − 24) + (n' + 4)·2^(e'_max − 24) + 2^-148 − Δ`. -/
+/-- How far a CDNA 3 output can fall, from the inputs alone. -/
 theorem aligned_output_drop_apriori {P : Model} (hL : LateModel P)
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     (hsub : P.subnormals = true) {x x' : BlockInput P} {t t' : BlockTrace P}

@@ -7,16 +7,7 @@ import TensorCore.TC.GPUs
 
 /-! # The independent specification with an `m`-bit block output
 
-`Rounds` selects the output word by ordering all finite binary32 values: the one of largest
-magnitude between zero and the accumulated value, with the accumulated value's sign. With a block
-output of `m < 23` mantissa bits (Ada and Hopper FP8, `m = 13`), the same ordering runs over the
-words whose low `23 − m` mantissa bits are zero (`RoundsM`, defined with the rest of the
-specification in `Specification/Defs.lean`, so the independence audit covers it). `evalBlock_eq_specM` proves that the
-model's output word, and every rejection, agree with this specification on every encoded input of
-every model, with no hypothesis on the output width; `machine_eq_specM` and `runBlocks_eq_specM`
-extend it to modular accumulator widths and to every finite schedule of blocks. `bitsM_eq_bits`
-shows that the specification is the one of `Rounds` when `23 ≤ m`, so `evalBlock_eq_spec` is the
-case of a binary32 block output. -/
+The model's output word and every rejection agree with `RoundsM` for every block-output width. -/
 
 namespace TensorCore.IndependentSpec
 
@@ -29,8 +20,6 @@ theorem between_of_truncated {x d d' : ℚ} (h : Between x d)
   · have := h'.1 h2; left; exact ⟨h1, this.1, by grind⟩
   · have := h'.2 h3; right; exact ⟨h1, by grind, this.2⟩
 
-/-- The model's final stage satisfies `RoundsM`: binary32 truncation, then the low `23 − m`
-mantissa bits cleared. -/
 theorem roundsM_of_round32 (m : ℕ) (x : ℚ) (b : F32) (h : round32 .truncate x = some b) :
     RoundsM m x (truncateMantissa32 m b) := by
   obtain ⟨hs, d, hd, hbet, hmax⟩ := round32_rounds x b h
@@ -110,8 +99,7 @@ theorem bitsM_eq_of_result {p : Parameters} {m : ℕ} {x : Input p} {b : F32}
   rw [dif_pos ⟨b, h⟩]
   exact congrArg some (resultM_unique (Classical.choose_spec (show ∃ b, ResultM p m x b from ⟨b, h⟩)) h)
 
-/-- Every encoded input of every model, whatever its block-output width: successful output bits
-and all rejection cases agree with the independent specification. -/
+/-- Output bits and rejections agree with the specification on every input of every model. -/
 theorem evalBlock_eq_specM {p : Model} (x : BlockInput p) :
     (evalBlock x).toOption.map (fun t => t.output.bits) =
       bitsM (parametersOf p) p.outputMantissaBits (inputOf x) := by
@@ -126,7 +114,7 @@ theorem evalBlock_eq_specM {p : Model} (x : BlockInput p) :
       contradiction
     simp [bitsM, hn, Except.toOption]
 
-/-- With at least 23 output mantissa bits the specification is `Rounds`, the binary32 one. -/
+/-- With at least 23 output mantissa bits the specification is `Rounds`, the FP32 one. -/
 theorem roundsM_iff_rounds {m : ℕ} (hm : 23 ≤ m) (x : ℚ) (b : F32) : RoundsM m x b ↔ Rounds x b := by
   have h1 : 23 - m = 0 := by omega
   unfold RoundsM Rounds
@@ -147,8 +135,7 @@ theorem bitsM_eq_bits {p : Parameters} {m : ℕ} (hm : 23 ≤ m) (x : Input p) :
     unfold bitsM bits
     rw [dif_neg hn, dif_neg he]
 
-/-- Adequate modular accumulator widths inherit the specification equality, for every output
-width. -/
+/-- Adequate modular accumulator widths inherit the specification equality, for every output width. -/
 theorem machine_eq_specM {p : Model} (x : BlockInput p) (w F carryBits : ℕ)
     (hF : p.alignMantissaBits = F) (hc : p.nfma + 1 ≤ 2 ^ carryBits) (hw : F + 3 + carryBits ≤ w) :
     (evalBlockMachine w x).toOption.map (fun t => t.output.bits) =
@@ -165,8 +152,7 @@ noncomputable def runChainM (p : Parameters) (m : ℕ) : BitVec 32 →
     let tail ← runChainM p m d rest
     return d :: tail
 
-/-- All intermediate outputs of every finite schedule, and failures, agree with the specification,
-for every block-output width. -/
+/-- Intermediate outputs and failures of every schedule agree, for every block-output width. -/
 theorem runBlocks_eq_specM (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word))) :
     (runBlocks p c blocks).toOption.map (fun ts => ts.map fun t => t.output.bits) =
       runChainM (parametersOf p) p.outputMantissaBits c blocks := by
@@ -185,7 +171,6 @@ theorem runBlocks_eq_specM (p : Model) (c : F32) (blocks : List (List (p.Word ×
       | error e => simp [runBlocks, he, ht, Except.toOption] at hr ⊢; rw [← hr]; rfl
       | ok ts => simp [runBlocks, he, ht, Except.toOption] at hr ⊢; rw [← hr]; rfl
 
-/-- The Ada and Hopper FP8 instances. -/
 theorem fp8_eq_spec :
     (∀ x : BlockInput adaE4M3F32, (evalBlock x).toOption.map (·.output.bits) =
       bitsM (parametersOf adaE4M3F32) 13 (inputOf x)) ∧

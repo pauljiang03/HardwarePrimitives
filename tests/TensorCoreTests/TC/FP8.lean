@@ -1,14 +1,12 @@
 import TensorCore
 
-/-! FP8 encodings and block FMAs: every special and boundary encoding of E4M3 and E5M2, the
-widened E4M3 layout, the 13-bit block output, recursive summation and the B200 recording
-convention. -/
+/-! FP8 encodings and block FMAs: E4M3 and E5M2 boundary encodings and the 13-bit block output. -/
 
 namespace TensorCoreTests.FP8
 
 open TensorCore
 
-/-! ## E4M3: no infinities, NaN only at `S.1111.111`, largest value 448 -/
+/-! ## E4M3 -/
 
 example : e4m3Values.classifyNat 0x00 = .zero false ∧ e4m3Values.classifyNat 0x80 = .zero true := by
   decide +kernel
@@ -31,8 +29,7 @@ example : e4m3Values.classifyNat 0x78 = .normal ⟨8, 8, 3⟩ ∧
     e4m3Encoding.decode 0x7f = none ∧ e4m3Encoding.decode 0xff = none := by
   decide +kernel
 
-/-- The IEEE decoding of the E4M3 layout would wrongly make `0x78` an infinity: E4M3 needs its own
-rule. -/
+/-- IEEE decoding of the E4M3 layout would wrongly make `0x78` an infinity. -/
 example : classifyNat e4m3 0x78 = .infinity false ∧ e4m3Values.classifyNat 0x78 ≠ .infinity false := by
   decide +kernel
 
@@ -50,7 +47,7 @@ example : widenE4M3 0x7e = 0x07e ∧ widenE4M3 0xfe = 0x17e ∧ widenE4M3 0x7f =
 example : classify e4m3x 0x0ff = .nan ∧ (classify e4m3x 0x078).finite = some ⟨8, 8, 3⟩ := by
   decide +kernel
 
-/-! ## E5M2: IEEE-like, largest value 57344 -/
+/-! ## E5M2 -/
 
 example : classifyNat e5m2 0x00 = .zero false ∧ classifyNat e5m2 0x80 = .zero true ∧
     classifyNat e5m2 0x7c = .infinity false ∧ classifyNat e5m2 0xfc = .infinity true ∧
@@ -70,8 +67,7 @@ example : (e5m2Encoding.decode 0x01).map Decoded.value = some (1 / 65536) ∧
 
 /-! ## The 13-bit block output of Ada and Hopper FP8 -/
 
-/-- `1·1 + 1·1 + 2^-9·2^-4 = 2 + 2^-13`: the 13-bit block output keeps `2`, a binary32 output
-would keep `2 + 2^-13`. -/
+/-- `1·1 + 1·1 + 2^-9·2^-4 = 2 + 2^-13`. -/
 def narrowCase : List (BitVec 9 × BitVec 9) :=
   [(widenE4M3 0x38, widenE4M3 0x38), (widenE4M3 0x38, widenE4M3 0x38),
     (widenE4M3 0x01, widenE4M3 0x18)] ++ List.replicate 13 (0, 0)
@@ -80,7 +76,7 @@ example : (evalBlock (⟨narrowCase, 0⟩ : BlockInput adaE4M3F32)).toOption.map
     some 0x40000000 := by
   decide +kernel
 
-/-- Ada E4M3 with a binary32 block output instead. -/
+/-- Ada E4M3 with an FP32 block output instead. -/
 @[implicit_reducible] def adaE4M3Fp32Output : Model := ⟨e4m3x, 16, 13, none, 23⟩
 
 example : (evalBlock (⟨narrowCase, 0⟩ : BlockInput adaE4M3Fp32Output)).toOption.map (·.output.bits) =
@@ -89,12 +85,11 @@ example : (evalBlock (⟨narrowCase, 0⟩ : BlockInput adaE4M3Fp32Output)).toOpt
 
 /-! ## Recursive summation and the B200 recording convention -/
 
-/-- Thirty-two products of one on Ada: two block FMAs of sixteen, `16 + 16 = 32`. -/
+/-- Thirty-two products of one on Ada: two block FMAs of sixteen. -/
 example : adaE4M3F32.dot 0 (List.replicate 32 (widenE4M3 0x38, widenE4M3 0x38)) = some 0x42000000 := by
   decide +kernel
 
-/-- `c = 2^24 + 2` and one product of one on B200: inside the block FMA the sum `2^24 + 3` is
-truncated to `2^24 + 2`; added after it, `2^24 + 3` rounds to the even `2^24 + 4`. -/
+/-- B200, `c = 2^24 + 2` and one product of one: inside the block FMA and added after it. -/
 example :
     blackwellE4M3F32.dot 0x4b800001 ((widenE4M3 0x38, widenE4M3 0x38) :: List.replicate 31 (0, 0)) =
       some 0x4b800001 ∧

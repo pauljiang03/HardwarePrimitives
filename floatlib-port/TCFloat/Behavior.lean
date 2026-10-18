@@ -17,7 +17,7 @@ def flowback (p : TCModel) (ps : List (Term × Term)) (c c' : Term) : ℚ :=
 def accumulatorShift (p : TCModel) (ps : List (Term × Term)) (c c' : Term) : ℚ :=
   truncGrid c.value (Block.q ⟨p,c,ps⟩) - truncGrid c'.value (Block.q ⟨p,c',ps⟩)
 
-/-- The grids the model selects, not an assumption that the grids stay fixed. -/
+/-- The accumulator after changing C, on the grids the model selects rather than fixed grids. -/
 theorem perturbed_accumulator (p : TCModel) (ps : List (Term × Term)) (c c' : Term) :
     (Block.accumulator ⟨p,c',ps⟩) = (Block.accumulator ⟨p,c,ps⟩) +
       flowback p ps c c' - accumulatorShift p ps c c' := by
@@ -80,23 +80,23 @@ theorem total_error_bound (t : Trace) :
   rw [he] at hs
   linarith
 
-/-- Full encoded FloatLib computation, suitable for closed kernel-checked examples. -/
+/-- The encoded FloatLib computation on words, for kernel-checked examples. -/
 def evalWords (p : TCModel) (ps : List (Nat × Nat)) (c : Nat) : Option Nat :=
   (prepare p ps c).bind Block.evaluate
 
-/-- Decreasing C by one FP32 step increases the TC output: the actual V100 model. -/
+/-- V100: decreasing C by one FP32 step increases the Tensor Core output. -/
 theorem v100_nonmonotonic :
     evalWords v100 (List.replicate 4 (0x0c00,0x0c00)) 0x3f800000 = some 0x3f800000 ∧
     evalWords v100 (List.replicate 4 (0x0c00,0x0c00)) 0x3f7fffff = some 0x3f800001 := by
   decide +kernel
 
-/-- The same phenomenon with the padding bit of the A100 model. -/
+/-- A100, with its padding bit: the same non-monotonicity. -/
 theorem a100_nonmonotonic :
     evalWords a100 (List.replicate 8 (0x0c00,0x0800)) 0x3f800000 = some 0x3f800000 ∧
     evalWords a100 (List.replicate 8 (0x0c00,0x0800)) 0x3f7fffff = some 0x3f800001 := by
   decide +kernel
 
-/-- The same phenomenon with the two padding bits of the H100 model. -/
+/-- H100, with its two padding bits: the same non-monotonicity. -/
 theorem h100_nonmonotonic :
     evalWords h100 (List.replicate 16 (0x0c00,0x0400)) 0x3f800000 = some 0x3f800000 ∧
     evalWords h100 (List.replicate 16 (0x0c00,0x0400)) 0x3f7fffff = some 0x3f800001 := by

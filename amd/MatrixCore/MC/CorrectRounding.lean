@@ -2,9 +2,7 @@ import MatrixCore.MC.AcceptedDomain
 
 /-! # `correct_rounding`: CDNA 1 and the SFMA
 
-On CDNA 1 the products are kept in full precision and accumulated with `c` exactly (a Kulisch
-accumulator); the only rounding is the final RNE. The output is therefore the binary32 value
-nearest to the exact `Σ a_ℓ b_ℓ + c` of Eq. (1), and it is sign-symmetric. -/
+The output is the FP32 value nearest to the exact `Σ a_ℓ b_ℓ + c`, and it is sign-symmetric. -/
 
 namespace MatrixCore
 
@@ -25,8 +23,7 @@ theorem accumulate_correctRounding {P : Model} (hacc : P.accumulation = .correct
     (hov : P.productOverflow = false) (x : Prepared) : accumulate P x = .ok x.exact := by
   unfold accumulate; simp [hov, hacc]
 
-/-- CDNA 1 and SFMA: an accepted block returns the binary32 value nearest to the exact
-`Σ a_ℓ b_ℓ + c`, ties to even. -/
+/-- CDNA 1 and SFMA: an accepted block returns the FP32 value nearest the exact `Σ a_ℓ b_ℓ + c`. -/
 theorem correctRounding_nearestEven {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
@@ -37,8 +34,7 @@ theorem correctRounding_nearestEven {P : Model} (hacc : P.accumulation = .correc
   refine ⟨he, ?_⟩
   rw [← he]; exact evalBlock_nearestEven h hs
 
-/-- CDNA 1 and SFMA accept exactly the finite inputs of the right shape whose exact sum lies
-below the overflow threshold `2^128 − 2^103`; products themselves may exceed `2^128`. -/
+/-- CDNA 1 and SFMA accept exactly the finite inputs with exact sum below the overflow threshold. -/
 theorem correctRounding_success_iff {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (x : BlockInput P) :
     (∃ t, evalBlock x = .ok t) ↔
@@ -82,7 +78,6 @@ theorem rneValue_neg (x : ℚ) : rneValue (-x) = -rneValue x := by
     · have : -x < 0 := by grind
       simp [h, this]
 
-/-- With every input of a correctly rounded block negated, the output value is negated. -/
 theorem correctRounding_value {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :

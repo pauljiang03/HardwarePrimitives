@@ -7,13 +7,11 @@ namespace TensorCore.EFMachine
 
 set_option exponentiation.threshold 1024
 
-/-- A word whose value is representable in FP32 rounds to it exactly. -/
 theorem Word.round32_of_finite {x : Word} (h : FiniteValue32 x.value) :
     ∃ b, x.round32 = some b ∧ TensorCore.value32 b = some x.value := by
   obtain ⟨b, hb, hv⟩ := round32_exact_of_finite h
   exact ⟨b, by rw [x.round32_eq]; exact hb, hv⟩
 
-/-- Left-to-right FP32 summation of encoded words follows the value-level naive sum. -/
 theorem foldlM_add32 (bs : List F32) (vs : List ℚ) (acc : F32) (a s : ℚ)
     (hacc : TensorCore.value32 acc = some a) (hbs : bs.map TensorCore.value32 = vs.map some)
     (hs : naiveSum32From a vs = some s) :
@@ -45,7 +43,6 @@ theorem foldlM_add32 (bs : List F32) (vs : List ℚ) (acc : F32) (a s : ℚ)
           obtain ⟨r, hr', hvr⟩ := ih vs r1 s1 hv1 hbs hs
           exact ⟨r, by simp [List.foldlM, hadd, hr'], hvr⟩
 
-/-- An accepted unsigned magnitude sum is the exact sum of the magnitudes. -/
 theorem magnitudeSumWords_toNat {ms : List Magnitude} {s : Magnitude}
     (h : magnitudeSumWords ms = some s) : s.toNat = (ms.map BitVec.toNat).sum := by
   induction ms generalizing s with
@@ -71,7 +68,6 @@ theorem magnitudeSumWords_toNat {ms : List Magnitude} {s : Magnitude}
 def Word.stepsAt (x : Word) (e : Magnitude) : ℤ :=
   if x.negative then -((x.magnitude >>> e).toNat : ℤ) else ((x.magnitude >>> e).toNat : ℤ)
 
-/-- A magnitude with no set bit below `2^e` is that many `2^e`-steps. -/
 theorem Word.value_eq_stepsAt {x : Word} {e : Magnitude}
     (h : ((x.magnitude >>> e) <<< e) = x.magnitude) :
     x.value = (x.stepsAt e : ℚ) * pow2 ((e.toNat : ℤ) - 272) := by
@@ -103,7 +99,6 @@ theorem natAbs_le_magnitudeSum {zs : List ℤ} {z : ℤ} (h : z ∈ zs) : z.natA
     · omega
     · have := ih h; omega
 
-/-- Every word rounds exactly when every value is representable in FP32. -/
 theorem mapM_round32 (xs : List Word) (hx : ∀ x ∈ xs, FiniteValue32 x.value) :
     ∃ bs, xs.mapM Word.round32 = some bs ∧
       bs.map TensorCore.value32 = (xs.map Word.value).map some := by
@@ -150,7 +145,6 @@ theorem magnitudeSum_stepsAt (xs : List Word) (e : Magnitude) :
     · exact Int.natAbs_natCast _
     · exact (Int.natAbs_neg _).trans (Int.natAbs_natCast _)
 
-/-- Under the guard's conditions on a common grid `ell`, the scalar branch returns RN of the exact sum. -/
 theorem Components.scalar_of_conditions {p : Prepared} {c : Components} {ell s : Magnitude}
     (hc : extract p = some c) (hguard : c.scalarGuard = true)
     (h1 : 123 ≤ ell.toNat) (h2 : ell.toNat ≤ 376)
@@ -200,7 +194,6 @@ theorem Components.scalar_of_guard {variant : Variant} {x : BlockInput variant.m
   exact Components.scalar_of_conditions hc hg (BitVec.le_def.mp h1) (BitVec.le_def.mp h2)
     hgrid hs (by have := BitVec.lt_def.mp hs24; simpa using this) hov hret hout
 
-/-- When the guard accepts, the scalar branch returns a value. -/
 theorem Components.scalar_isSome_of_guard {variant : Variant} {x : BlockInput variant.model} {D : F32}
     {p : Prepared} {c : Components} (hp : prepare variant x D = .ok p) (hc : extract p = some c)
     (hg : c.scalarGuard = true) : c.scalar.isSome = true := by

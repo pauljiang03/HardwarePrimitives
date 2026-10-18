@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the Matrix-Core sources against the pinned manifest and copy them into
-`reference-compat/` for the equivalence proofs.
-
-The equivalence layer compiles the first-principles definitions inside this project. Each
-`MatrixCore` source file is compared, as a sequence of Lean code tokens (comments and whitespace
-ignored), with `reference-manifest.json`; any change to code fails preparation until it is
-re-pinned with `--pin`. The copy differs from the source only in the notation module, whose
-`ℕ`, `ℤ`, `ℚ` notations become scoped to `MatrixCore` (same expansions) so that they do not
-collide with mathlib's.
+"""Verify the `MatrixCore` sources against the pinned manifest and copy them to `reference-compat/`.
 
 Usage: python3 scripts/prepare_reference.py [--pin]
 """

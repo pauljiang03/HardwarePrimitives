@@ -4,7 +4,7 @@ import TensorCore.TC.Invocation
 
 namespace TensorCore
 
-/-- Canonical FP16 products and FP32 c and output, with any FMA size and any number of padding bits beyond the baseline 23 mantissa bits. -/
+/-- FP16 products, FP32 c and output, and `F = 23 + padding` mantissa bits after alignment. -/
 @[implicit_reducible] def fp16Fp32Model (K padding : ℕ) (eAlignMin : Option ℤ := none) : Model :=
   ⟨fp16, K, (23 + padding : ℕ), eAlignMin, 23⟩
 

@@ -1,10 +1,6 @@
 import MatrixCore.MC.Eval
 
-/-! # Accepted domain of a block
-
-A block evaluates exactly when `a` and `b` have `N_FMA` entries, every operand is finite, the
-accumulation stage succeeds, and `S_acc` lies below the binary32 overflow threshold. The output
-is then `fl{S_acc}`. -/
+/-! # Accepted domain of a block -/
 
 namespace MatrixCore
 
@@ -15,7 +11,6 @@ theorem fl32_isSome_iff (ftz : Bool) (x : ℚ) :
     (fl32 ftz x).isSome ↔ absQ x < overflowThreshold32 := by
   rw [← rne32_isSome_iff]; unfold fl32; cases rne32 x <;> simp
 
-/-- Every accepted evaluation decomposes into its stages. -/
 theorem evalBlock_ok {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) :
     x.a.length = P.nfma ∧ x.b.length = P.nfma ∧ prepare x = some t.prepared ∧
@@ -55,8 +50,7 @@ theorem evalBlock_success_iff {P : Model} (x : BlockInput P) :
     rw [if_neg (by omega), hp]
     simp only [hs, hd]
 
-/-- The output of an accepted block on a model with subnormals is the nearest binary32 value to
-`S_acc`, ties to even. -/
+/-- With subnormals, an accepted block outputs the FP32 value nearest `S_acc`, ties to even. -/
 theorem evalBlock_nearestEven {P : Model} {x : BlockInput P} {t : BlockTrace P}
     (h : evalBlock x = .ok t) (hs : P.subnormals = true) : NearestEven32 t.sAcc t.d := by
   obtain ⟨_, _, _, _, hd⟩ := evalBlock_ok h

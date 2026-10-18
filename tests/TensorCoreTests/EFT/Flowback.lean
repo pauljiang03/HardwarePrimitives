@@ -8,7 +8,7 @@ namespace TensorCore.Regression
 set_option maxRecDepth 16384
 set_option maxHeartbeats 4000000
 
-/-- The V100 Table III witness in Definition III.3's terms: `c = 1`, `c' = 1 − 2^-24`, four products `2^-24`. -/
+/-- The V100 Table III witness in Definition III.3's terms. -/
 theorem v100_witness_flowback :
     flowback v100F16F32 (List.replicate 4 (halfDecoded (-12), halfDecoded (-12)))
       oneDecoded belowOneDecoded = 4 / 16777216 ∧
@@ -19,7 +19,6 @@ theorem v100_witness_flowback :
     (evalPrepared ⟨v100F16F32, List.replicate 4 (halfDecoded (-12), halfDecoded (-12)),
       belowOneDecoded⟩).map (fun t => t.output.bits.toNat) = .ok 0x3f800001 := by
   decide +kernel
-
 
 theorem flowback_without_increase :
     flowback (fp16Fp32Model 2 0 none) (List.replicate 2 (halfDecoded (-12), halfDecoded (-12)))
@@ -40,7 +39,7 @@ theorem v100_products_not_monotone :
     (by simp [v100F16F32]) (by decide) (by decide +kernel) (by decide +kernel)
     (by decide) (by decide)
 
-/-- Algorithm 1 on the EFT cases: R3 takes the scalar branch, the coefficient-bound and subnormal-accumulator cases take the exact reference branch. -/
+/-- Algorithm 1 on R3 (scalar branch) and the two exact-reference cases. -/
 theorem tcEft_cases :
     (evalBlock r3).map (fun t => (t.tcEft, t.extractionExponent - t.block.alignGridExponent)) =
       .ok (.scalar 0x41080000, 3) ∧
@@ -49,7 +48,7 @@ theorem tcEft_cases :
       .ok (.exactReference 0x3f800001) := by
   decide +kernel
 
-/-- TC-EFT Table V for `K = 4` (`n = 5` terms), and the implemented scalar consolidation's `n + 2` operations, including its initial addition to zero. -/
+/-- TC-EFT Table V for `K = 4`, and the `n + 2` operations of scalar consolidation. -/
 theorem table_v_ledger :
     referenceLedger 4 = ⟨10, 5, 4, 5, 4, 1, 4, 2, 1⟩ ∧ scalarBranchOperations 4 = 7 := by
   decide

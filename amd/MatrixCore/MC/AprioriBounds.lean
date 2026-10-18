@@ -2,16 +2,7 @@ import MatrixCore.MC.Monotonicity
 
 /-! # Error bounds from the inputs alone
 
-The bounds of `MatrixCore.MC.ErrorBounds` use values from the computation (the exponent of an
-intermediate sum, the partial sums of the CDNA 2 pairwise sum). Here they are bounded by the
-inputs alone, with `A = Σ|p_ℓ| + |c|` (`Prepared.absSum`), `u = 2^-24`, and `n` products:
-
-* SFMA and CDNA 1: `|exact − d| ≤ 2^-24 A + 2^-150`;
-* CDNA 3: `|exact − d| ≤ 2^-23 A + (n + 4)·2^(e_max − 24) + 2^-149`, where `e_max` is the largest
-  product exponent `e_a + e_b` (products are denormalized, so `2^(e_max)` can exceed the products'
-  magnitudes, and the alignment error is measured against it);
-* CDNA 2 (`n ≤ 4`): `|exact − d| ≤ |exact − exact'| + 2^-21 A' + 2^-120`, where `exact'` and `A'`
-  are those of the inputs after flushing subnormals (the flush itself can lose a whole product). -/
+Bounds on `|exact − d|` in terms of `Σ|p_ℓ| + |c|`, the number of products and `e_max`. -/
 
 namespace MatrixCore
 
@@ -153,7 +144,6 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
   have h158 := pow2_pos (-158)
   have hl0 : (0 : ℚ) ≤ x.p.length := by exact_mod_cast Nat.zero_le _
   have hl16 : (x.p.length : ℚ) ≤ 16 := by exact_mod_cast hn
-  -- the RD step of `S_{p_i,sum}` to `2^(e_c − 32)`
   have hstep : pow2 (eC - ((32 : ℕ) : ℤ)) ≤ pow2 (-32) * absQ x.c.value + pow2 (-158) := by
     by_cases he : eC = -126
     · rw [he, show (-126 : ℤ) - ((32 : ℕ) : ℤ) = -158 by omega]
@@ -233,8 +223,7 @@ theorem alignedAccumulation_apriori {P : Model} (hL : LateModel P) (x : Prepared
       rw [c30, c156, c158, hAdef]
       grind
 
-/-- **CDNA 3 from the inputs.** `|exact − d| ≤ 2^-23 (Σ|p_ℓ| + |c|) + (n + 4)·2^(e_max − 24) +
-2^-149`. -/
+/-- CDNA 3 error bound from the inputs alone. -/
 theorem aligned_apriori {P : Model} (hL : LateModel P)
     (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
     (hsub : P.subnormals = true) {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
@@ -280,15 +269,15 @@ theorem aligned_apriori {P : Model} (hL : LateModel P)
 
 /-! ## CDNA 2 -/
 
-/-- Relative error growth of a pairwise sum with `h` levels of rounding: `(1 + 2^-24)^h − 1`. -/
+/-- Relative error growth of a pairwise sum with `h` levels of rounding. -/
 def gam (h : ℕ) : ℚ := (1 + pow2 (-24)) ^ h - 1
 
-/-- Absolute (flush) error count of a pairwise sum with `h` levels of rounding. -/
+/-- Absolute error count of a pairwise sum with `h` levels of rounding. -/
 def kap : ℕ → ℚ
   | 0 => 0
   | h + 1 => 2 * (1 + pow2 (-24)) * kap h + 1
 
-/-- Absolute error of one `fl{·}`: `2^-150`, plus `2^-126` where results are flushed. -/
+/-- Absolute error of one `fl{·}`, with or without flushing. -/
 def eta (ftz : Bool) : ℚ := pow2 (-150) + if ftz then pow2 (-126) else 0
 
 theorem one_le_pow_u (h : ℕ) : 1 ≤ (1 + pow2 (-24)) ^ h := by
@@ -348,8 +337,7 @@ theorem pairwiseGroupSum_short (ftz : Bool) (d : ℕ) {xs : List ℚ} {t : ℚ} 
     simp only [sumQ]
     rw [show ∀ y : ℚ, y + 0 - y = 0 from fun y => by grind]; decide +kernel
 
-/-- **Pairwise sum from its summands.** A pairwise sum with `h` levels of rounding is within
-`γ_h Σ|x| + κ_h η` of the exact sum of its summands. -/
+/-- Error bound of a pairwise sum with `h` levels of rounding, from its summands. -/
 theorem pairwiseGroupSum_apriori (ftz : Bool) : ∀ (h d : ℕ) (xs : List ℚ) (t : ℚ), xs.length ≤ 2 ^ h →
     pairwiseGroupSum ftz d xs = some t →
       absQ (sumQ xs - t) ≤ gam h * sumQ (xs.map absQ) + kap h * eta ftz := by
@@ -468,8 +456,7 @@ theorem lin_pairwise {X F d1 d2 d3 Pp C Q Tt Sv E k L : ℚ}
   have m1 := Rat.mul_le_mul_of_nonneg_right hL hE
   grind
 
-/-- **CDNA 2 from the inputs** (`N_FMA ≤ 4`). With `x'` the inputs after flushing subnormals,
-`|exact − d| ≤ |exact − exact'| + 2^-21 (Σ|p'_ℓ| + |c'|) + 2^-120`. -/
+/-- CDNA 2 error bound (`N_FMA ≤ 4`) from the inputs after flushing subnormals. -/
 theorem pairwise_apriori {P : Model} (hacc : P.accumulation = .pairWiseSum) (hn : P.nfma ≤ 4)
     {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
     absQ (t.prepared.exact - wordValue t.d) ≤

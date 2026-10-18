@@ -5,7 +5,6 @@ import TensorCore.EFT.Extraction
 
 namespace TensorCore.EFMachine
 
-/-- No multiplication wrap: even the largest 11-bit significands fit in 22 bits. -/
 theorem multiplySignificands_exact (a b : BitVec 11) :
     (multiplySignificands a b).toNat = a.toNat * b.toNat := by
   have ha := a.isLt
@@ -17,7 +16,6 @@ theorem multiplySignificands_exact (a b : BitVec 11) :
     Nat.mod_eq_of_lt (show a.toNat < 2 ^ 24 by omega),
     Nat.mod_eq_of_lt (show b.toNat < 2 ^ 24 by omega), Nat.mod_eq_of_lt hprod]
 
-/-- The machine coarse component is the quotient times its binary grid. -/
 theorem splitMagnitude_coarse (m : BitVec 24) (gap : BitVec 8) :
     (splitMagnitude m gap).coarse.toNat = m.toNat / 2 ^ gap.toNat * 2 ^ gap.toNat := by
   have hm := m.isLt
@@ -33,7 +31,6 @@ theorem splitMagnitude_coarse (m : BitVec 24) (gap : BitVec 8) :
     rw [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow,
       Nat.shiftLeft_eq, Nat.mod_eq_of_lt (by omega)]
 
-/-- The low component is the exact remainder; subtraction never underflows. -/
 theorem splitMagnitude_low (m : BitVec 24) (gap : BitVec 8) :
     (splitMagnitude m gap).low.toNat = m.toNat % 2 ^ gap.toNat := by
   have hc := splitMagnitude_coarse m gap
@@ -49,7 +46,6 @@ theorem splitMagnitude_low (m : BitVec 24) (gap : BitVec 8) :
     rw [hc]
     omega
 
-/-- Independent integer reconstruction, valid for every magnitude and every gap. -/
 theorem splitMagnitude_reconstruct (m : BitVec 24) (gap : BitVec 8) :
     (splitMagnitude m gap).coarse.toNat + (splitMagnitude m gap).low.toNat = m.toNat := by
   rw [splitMagnitude_coarse, splitMagnitude_low]
@@ -57,13 +53,11 @@ theorem splitMagnitude_reconstruct (m : BitVec 24) (gap : BitVec 8) :
   rw [Nat.mul_comm] at h
   omega
 
-/-- A strict residual bound on the actual machine output. -/
 theorem splitMagnitude_low_lt (m : BitVec 24) (gap : BitVec 8) :
     (splitMagnitude m gap).low.toNat < 2 ^ gap.toNat := by
   rw [splitMagnitude_low]
   exact Nat.mod_lt _ (Nat.two_pow_pos _)
 
-/-- The only executed shift branch uses a count strictly smaller than the word width. -/
 theorem splitMagnitude_shift_bound (gap : BitVec 8) (h : ¬ gap ≥ 24) : gap.toNat < 24 := by
   simpa [BitVec.le_def] using h
 

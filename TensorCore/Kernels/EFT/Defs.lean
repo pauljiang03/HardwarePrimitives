@@ -85,7 +85,7 @@ def Components.scalarGuard (c : Components) : Bool :=
   c.overlap.exact32.isSome && c.retained.exact32.isSome &&
   (c.recovered.magnitude ≤ maxMagnitude32)
 
-/-- Naive summation in the specified left-to-right ordering, including encoded FP32 boundaries. -/
+/-- Naive left-to-right FP32 summation. -/
 def scalarSum (xs : List Word) : Option F32 := do
   let bs ← xs.mapM Word.round32
   bs.foldlM add32 0
@@ -111,7 +111,7 @@ def Result.bits : Result → Option F32
   | .scalar b | .boundedExact b => some b
   | .outOfRange => none
 
-/-- Full bounded Algorithm 1, on each of the eight supported variants with encoded inputs. -/
+/-- Bounded Algorithm 1 on encoded inputs, for each of the eight variants. -/
 def tcEft (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Result := do
   let p ← prepare variant x D
   if p.terms.all (fun t => t.word.magnitude == 0) then return .allZero

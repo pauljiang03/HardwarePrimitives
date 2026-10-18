@@ -7,13 +7,13 @@ import TensorCore.TC.ErrorBounds
 
 namespace TensorCore
 
-/-- Definition III.2: for fixed decoded products, a smaller finite accumulator input never produces a larger accepted output. -/
+/-- Definition III.2: for fixed products, a smaller accumulator input never gives a larger output. -/
 def MonotoneInAccumulator (prof : Model) (products : List (Decoded × Decoded)) : Prop :=
   ∀ (c c' : Decoded) (t t' : BlockTrace),
     evalPrepared ⟨prof, products, c⟩ = .ok t → evalPrepared ⟨prof, products, c'⟩ = .ok t' →
     c'.value < c.value → t'.output.value ≤ t.output.value
 
-/-- Definition III.3: the flowback `ω = Σᵢ (trunc_{q'A}(Tᵢ) − trunc_{qA}(Tᵢ))` of the products between the alignment grids selected by `c` and by `c'`. -/
+/-- Definition III.3: `ω = Σᵢ (trunc_{q'A}(Tᵢ) − trunc_{qA}(Tᵢ))`, between the grids of `c` and `c'`. -/
 def flowback (prof : Model) (products : List (Decoded × Decoded)) (c c' : Decoded) : ℚ :=
   sumQ (products.map fun (a, b) =>
     truncGrid (denormalizedMul a b).value (PreparedBlock.mk prof products c').alignGridExponent -
@@ -40,8 +40,7 @@ theorem perturbed_accumulator (prof : Model) (products : List (Decoded × Decode
   rw [hc, hc']
   grind
 
-/-- With a binary32 block output, the value of an accepted output is the signed truncation of the
-accumulator. -/
+/-- With an FP32 block output, the output value is the signed truncation of the accumulator. -/
 theorem evalPrepared_output_value {b : PreparedBlock} {t : BlockTrace}
     (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputMantissaBits) :
     t.output.value = signedRounded .truncate b.accumulator := by
@@ -66,7 +65,6 @@ theorem evalPrepared_output_value {b : PreparedBlock} {t : BlockTrace}
     rw [hd] at hd'
     exact Option.some.inj hd'
 
-/-- Truncation of magnitudes is monotone within the finite range. -/
 theorem magnitudeRounded_trunc_monotone (x y : ℚ) (hx : 0 ≤ x) (hxy : x ≤ y)
     (hy : y ≤ maxFinite32) :
     magnitudeRounded .truncate x ≤ magnitudeRounded .truncate y := by
@@ -170,7 +168,6 @@ theorem signedRounded_trunc_monotone (x y : ℚ) (hxy : x ≤ y) (hx : absQ x �
       exact hxy
     exact magnitudeRounded_trunc_monotone (absQ x) (absQ y) (absQ_nonneg x) hab hy
 
-/-- A representable value is its own truncation. -/
 theorem signedRounded_trunc_of_finite (x : ℚ) (h : FiniteValue32 x) :
     signedRounded .truncate x = x := by
   by_cases hz : x = 0
@@ -185,7 +182,7 @@ theorem signedRounded_trunc_of_finite (x : ℚ) (h : FiniteValue32 x) :
     rw [hv] at hd'
     exact (Option.some.inj hd').symm
 
-/-- Equation 6: the accepted outputs compare exactly as the truncations of `Aacc` and `Aacc + ω − ΔA`. -/
+/-- Equation 6: the outputs compare as the truncations of `Aacc` and `Aacc + ω − ΔA`. -/
 theorem output_condition (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded) (t t' : BlockTrace)
     (h : evalPrepared ⟨prof, products, c⟩ = .ok t)
@@ -230,7 +227,6 @@ theorem flowback_sufficient (prof : Model) (products : List (Decoded × Decoded)
     perturbed_accumulator prof products c c']
   grind
 
-/-- When both accumulator inputs are retained exactly on their grids, `ΔA = c − c'`. -/
 theorem accumulatorShift_of_exact (prof : Model) (products : List (Decoded × Decoded))
     (c c' : Decoded)
     (hc : truncGrid c.value (PreparedBlock.mk prof products c).alignGridExponent = c.value)
@@ -239,7 +235,7 @@ theorem accumulatorShift_of_exact (prof : Model) (products : List (Decoded × De
   unfold accumulatorShift
   rw [hc, hc']
 
-/-- Theorem III.4 as a failure of Definition III.2: the construction's products are not monotone in the accumulator input once `K ≥ 3·2^p`. -/
+/-- Theorem III.4: the construction is not monotone in the accumulator input once `K ≥ 3·2^p`. -/
 theorem construction_not_monotone (prof : Model) (p K : ℕ) (da db : Decoded)
     (hF : prof.alignMantissaBits = 23 + p) (hfl : ∀ f ∈ prof.eAlignMin, f ≤ -1)
     (hw : 23 ≤ prof.outputMantissaBits)

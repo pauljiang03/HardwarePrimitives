@@ -2,10 +2,7 @@ import MatrixCore.Numerics.Grid
 
 /-! # Floating-point formats and decoding
 
-The formats of the paper's Table 1, their bit layouts, and decoding of words into exact values.
-A finite value is kept *unpacked*, as the paper writes it: `x = (−1)^σ · s · 2^e`, where the
-significand `s = m / 2^t` is held as the integer `m` with `t` mantissa bits, and `e` is the
-exponent (the minimum normal exponent for subnormals and zero). -/
+The formats of Table 1 and the decoding of words into exact values `(−1)^σ · (m / 2^t) · 2^e`. -/
 
 namespace MatrixCore
 
@@ -13,13 +10,11 @@ namespace MatrixCore
 inductive Specials where
   /-- IEEE 754: the all-ones exponent field holds ±∞ (zero mantissa) and NaN. -/
   | ieee
-  /-- FNUZ (finite, no negative zero, AMD CDNA 3 fp8): every exponent field is finite and
-  the negative-zero word is the only NaN. -/
+  /-- FNUZ (CDNA 3 FP8): every exponent field is finite; the negative-zero word is the only NaN. -/
   | fnuz
   deriving Repr, DecidableEq
 
-/-- A binary interchange layout: sign, `exponentBits`-bit biased exponent, `mantissaBits` stored
-mantissa bits. -/
+/-- A binary layout: a sign bit, a biased exponent field, and the stored mantissa bits. -/
 structure Format where
   exponentBits : ℕ
   mantissaBits : ℕ
@@ -45,17 +40,15 @@ def emax (f : Format) : ℤ :=
 
 end Format
 
-/-- binary32 (fp32): the format of `c` and `d` on every variant. -/
+/-- FP32: the format of `c` and `d` on every variant. -/
 @[implicit_reducible] def fp32 : Format := ⟨8, 23, 127, .ieee⟩
-/-- binary16 (fp16). -/
 @[implicit_reducible] def fp16 : Format := ⟨5, 10, 15, .ieee⟩
-/-- bfloat16 (bf16). -/
 @[implicit_reducible] def bf16 : Format := ⟨8, 7, 127, .ieee⟩
-/-- tf19 (TensorFloat-32 values; AMD XF32): binary32's exponent with 10 mantissa bits. -/
+/-- TF32 values (AMD XF32): FP32's exponent range with 10 mantissa bits. -/
 @[implicit_reducible] def tf19 : Format := ⟨8, 10, 127, .ieee⟩
-/-- fp8-E4M3 FNUZ: precision 4, minimum normal `2^-7`, maximum `240`. -/
+/-- FP8 E4M3 FNUZ: precision 4, minimum normal `2^-7`, maximum `240`. -/
 @[implicit_reducible] def e4m3fnuz : Format := ⟨4, 3, 8, .fnuz⟩
-/-- fp8-E5M2 FNUZ: precision 3, minimum normal `2^-15`, maximum `57344`. -/
+/-- FP8 E5M2 FNUZ: precision 3, minimum normal `2^-15`, maximum `57344`. -/
 @[implicit_reducible] def e5m2fnuz : Format := ⟨5, 2, 16, .fnuz⟩
 
 abbrev F32 := BitVec 32
@@ -74,7 +67,6 @@ structure Unpacked where
 
 namespace Unpacked
 
-/-- Exact value. -/
 def value (x : Unpacked) : ℚ :=
   (if x.negative then -(x.m : ℚ) else (x.m : ℚ)) * pow2 (x.e - x.t)
 
@@ -83,8 +75,7 @@ def sig (x : Unpacked) : ℚ := (x.m : ℚ) / pow2 x.t
 
 def isZero (x : Unpacked) : Bool := x.m == 0
 
-/-- Products are kept in full precision and *denormalized*: the significands are multiplied and
-the exponents added, so `s_p = s_a s_b ∈ [0, 4)` and `e_p = e_a + e_b`. -/
+/-- Exact product, not normalized: `s_p = s_a s_b ∈ [0, 4)` and `e_p = e_a + e_b`. -/
 def mul (a b : Unpacked) : Unpacked :=
   ⟨a.negative != b.negative, a.m * b.m, a.e + b.e, a.t + b.t⟩
 
@@ -125,7 +116,6 @@ theorem value_neg_iff (x : Unpacked) : x.value < 0 ↔ x.negative = true ∧ x.m
       have := Rat.mul_pos this hp
       grind
 
-/-- The value is an integer multiple of `2^(e - t)`. -/
 theorem value_onGrid (x : Unpacked) : OnGrid x.value (x.e - x.t) := by
   unfold value
   cases x.negative
@@ -177,17 +167,16 @@ def decode (f : Format) (w : BitVec f.width) : Datum := f.decodeNat w.toNat
 
 end Format
 
-/-- Finite value of a binary32 word, if any. -/
+/-- Finite value of an FP32 word, if any. -/
 def value32 (w : F32) : Option ℚ := (fp32.decode w).toFinite.map Unpacked.value
 
 /-! ## Matrix-core operand formats -/
 
 /-- How an MFMA instruction reads an input word of `A` or `B`. -/
 inductive InputFormat where
-  /-- The word is a value of the format (fp32, fp16, bf16, fp8 FNUZ). -/
+  /-- The word is a value of the format (FP32, FP16, BF16, FP8 FNUZ). -/
   | packed (f : Format)
-  /-- CDNA 3 XF32: a binary32 word whose significand is reduced to tf19's ten mantissa bits by
-  truncation. -/
+  /-- CDNA 3 XF32: an FP32 word truncated to `tf19`'s 10 mantissa bits. -/
   | xf32
   deriving Repr, DecidableEq
 
@@ -204,7 +193,7 @@ def format : InputFormat → Format
   | .packed f => f
   | .xf32 => tf19
 
-/-- Truncate a binary32 significand to `10` mantissa bits, toward zero. -/
+/-- Truncate an FP32 significand to 10 mantissa bits, toward zero. -/
 def truncateXF32 (x : Unpacked) : Unpacked := ⟨x.negative, x.m / 2 ^ 13, x.e, 10⟩
 
 def read : (i : InputFormat) → i.Word → Datum

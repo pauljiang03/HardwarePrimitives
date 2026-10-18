@@ -28,7 +28,7 @@ def twoBlockCorrection : Except ModelError (Option F32) := do
 theorem two_block_corrected : twoBlockCorrection = .ok (some 0xb3800000) := by
   decide +kernel
 
-/-- A finite value-level midpoint check independently documents the handoff correction. -/
+/-- Midpoint distances behind the handoff correction. -/
 theorem r4_midpoint_distances :
     absQ ((1 - 3 * pow2 (-25)) - (1 - pow2 (-23))) = pow2 (-25) ∧
     absQ ((1 - 3 * pow2 (-25)) - (1 - pow2 (-24))) = pow2 (-25) := by decide +kernel

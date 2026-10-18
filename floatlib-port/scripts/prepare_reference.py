@@ -64,8 +64,6 @@ def imports(data):
             for module in line.split() if module.startswith('TensorCore.')]
 
 # Identifiers renamed after the pinned revision, as [token index, current, pinned] per file.
-# Restoring exactly these positions must reproduce the pinned token hash, so a passing check
-# shows each parent source differs from the pin only by these renames.
 RENAMED_POSITIONS = json.loads((PORT / 'renamed-identifiers.json').read_text())
 
 

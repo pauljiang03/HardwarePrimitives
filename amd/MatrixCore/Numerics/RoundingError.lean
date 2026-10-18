@@ -1,16 +1,15 @@
 import MatrixCore.Numerics.RoundingContract
 
-/-! # Error of binary32 RNE
+/-! # Error of FP32 RNE
 
-`fl{x}` is within half a unit in the last place of `x`: `|x − fl{x}| ≤ 2^(e − 24)`, where
-`e = max(⌊log₂ |x|⌋, −126)`. Hence `|x − fl{x}| ≤ 2^-24 |x| + 2^-150`. -/
+`fl{x}` is within half an ulp of `x`, hence `|x − fl{x}| ≤ 2^-24 |x| + 2^-150`. -/
 
 namespace MatrixCore
 
-/-- The value of a binary32 word, `0` for an infinity or NaN. -/
+/-- Value of an FP32 word, `0` for an infinity or NaN. -/
 def wordValue (w : F32) : ℚ := (value32 w).getD 0
 
-/-- Half a binary32 unit in the last place of `x` (the subnormal spacing below `2^-126`). -/
+/-- Half an FP32 ulp of `x`; `2^-150` below the normal range. -/
 def halfUlp32 (x : ℚ) : ℚ := if x = 0 then 0 else pow2 (normExp (absQ x) - 24)
 
 theorem halfUlp32_nonneg (x : ℚ) : 0 ≤ halfUlp32 x := by
@@ -115,8 +114,6 @@ theorem rneMagnitude_nonneg {a : ℚ} (ha : 0 ≤ a) : 0 ≤ rneMagnitude a := b
     exact_mod_cast rneInt_nonneg this
   exact Rat.mul_nonneg h0 (Rat.le_of_lt hq)
 
-/-- The rounded magnitude stays in its binade: at most `2^(e+1)`, and at least `2^e` above the
-subnormal range. -/
 theorem rneMagnitude_bounds {a : ℚ} (ha : 0 < a) :
     rneMagnitude a ≤ pow2 (normExp a + 1) ∧
       (normExp a ≠ -126 → pow2 (normExp a) ≤ rneMagnitude a) := by

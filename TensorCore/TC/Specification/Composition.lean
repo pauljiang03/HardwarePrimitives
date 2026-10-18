@@ -6,8 +6,7 @@ import TensorCore.TC.Composition
 
 namespace TensorCore.IndependentSpec
 
-/-- All encoded intermediate outputs, and failures, agree for every finite schedule of a model
-with a binary32 block output. -/
+/-- Intermediate outputs and failures agree for every schedule of a model with an FP32 block output. -/
 theorem runBlocks_eq_spec (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word)))
     (hw : 23 ≤ p.outputMantissaBits) :
     (runBlocks p c blocks).toOption.map (fun ts => ts.map fun t => t.output.bits) =
@@ -27,7 +26,6 @@ theorem runBlocks_eq_spec (p : Model) (c : F32) (blocks : List (List (p.Word × 
       | error e => simp [runBlocks, he, ht, Except.toOption] at hr ⊢; rw [← hr]; rfl
       | ok ts => simp [runBlocks, he, ht, Except.toOption] at hr ⊢; rw [← hr]; rfl
 
-/-- Projection of the preceding stronger theorem to just the final output bits. -/
 theorem schedule_last_eq_spec (p : Model) (c : F32)
     (blocks : List (List (p.Word × p.Word))) (hw : 23 ≤ p.outputMantissaBits) :
     (runBlocks p c blocks).toOption.map (fun ts =>

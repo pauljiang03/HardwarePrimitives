@@ -21,7 +21,7 @@ theorem tcEft_agrees {variant : Variant} {x : BlockInput variant.model} {D : F32
   obtain ⟨r, hr, hb⟩ := tcEft_correct hlen hs hd
   rw [hr, Except.map, hb, tcEft_bits_eq_round]
 
-/-- Conforming model outputs are a corollary, rather than an execution dependency. -/
+/-- Agreement when `D` is the model's own output word. -/
 theorem tcEft_of_evalBlock {variant : Variant} {x : BlockInput variant.model} {t : BlockTrace}
     (ht : evalBlock x = .ok t) :
     (tcEft variant x t.output.bits).map Result.bits = .ok t.tcEft.bits :=

@@ -1,7 +1,7 @@
 import TensorCore.TC.Specification.Composition
 import TensorCoreTests.TC.Cases
 
-/-! Deliberately incorrect evaluators and encoded witnesses separating them from the independent Accurate Models specification. -/
+/-! Deliberately incorrect evaluators and witnesses separating them from the Accurate Models specification. -/
 
 namespace TensorCore.IndependentSpec.Controls
 

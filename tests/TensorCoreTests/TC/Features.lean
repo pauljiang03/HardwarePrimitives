@@ -46,7 +46,7 @@ theorem padding_range_boundary :
     ((evalBlock x0).toOption.map fun t => t.output.bits) = some (BitVec.ofNat 32 0x7f7fffff) ∧
     evalBlock x104 = .error .accumulatorOutOfRange := by decide +kernel
 
-/-- A maximum-scale FP16 product with minimum subnormal c needs 156 padding bits, not 155, to retain c during alignment. -/
+/-- A maximum-scale FP16 product with minimum subnormal `c` needs 156 padding bits. -/
 theorem source_padding_boundary :
     let x155 : BlockInput (fp16Fp32Model 1 155) := ⟨[(0x7800, 0x7800)], 1⟩
     let x156 : BlockInput (fp16Fp32Model 1 156) := ⟨[(0x7800, 0x7800)], 1⟩

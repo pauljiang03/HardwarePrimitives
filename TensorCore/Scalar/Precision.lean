@@ -30,7 +30,7 @@ theorem coefficient_correct (mode : BinaryRoundingMode) (negative : Bool) (t : �
   | towardNegative => cases negative <;> first | exact hf | exact hc
   | towardPositive => cases negative <;> first | exact hf | exact hc
 
-/-- Optimality plus even tie breaking determines one integer, not a set of convenient witnesses that could alter exception behavior. -/
+/-- `IntegerRound` determines the integer uniquely. -/
 theorem integerRound_unique (mode : BinaryRoundingMode) (negative : Bool) (t : ℚ)
     (k : ℤ) (h : IntegerRound mode negative t k) :
     k = binaryCoefficient mode negative t := by
@@ -154,7 +154,7 @@ theorem precisionMagnitude_le_max (f : Format) (hf : f.WellFormed)
   rw [precisionMagnitude, if_neg hz, hmj]
   exact Rat.mul_le_mul_of_nonneg_right (Rat.intCast_le_intCast.mpr hc) (Rat.le_of_lt hq)
 
-/-- The normal-precision result is nearest among all bounded-significand dyadics, even when a competitor uses a different exponent. -/
+/-- The nearest-even result is nearest among all bounded-significand dyadics, of any exponent. -/
 theorem precision_nearest_all (f : Format) (m : ℚ) (hm : 0 < m)
     (j e : ℤ) (hj : j.natAbs < 2 ^ (f.mantissaBits + 1)) :
     absQ (m - precisionMagnitude f .nearestEven false m) ≤
@@ -182,7 +182,7 @@ theorem precision_nearest_all (f : Format) (m : ℚ) (hm : 0 < m)
     rw [absQ_of_nonneg h2]
     grind
 
-/-- Directed precision rounding is a greatest lower bound over every bounded- significand dyadic, rather than only competitors on the selected grid. -/
+/-- Truncation gives the greatest bounded-significand dyadic at most `m`, of any exponent. -/
 theorem precision_floor_all (f : Format) (m : ℚ) (hm : 0 < m) :
     precisionMagnitude f .truncate false m ≤ m ∧
     ∀ j e : ℤ, j.natAbs < 2 ^ (f.mantissaBits + 1) →
@@ -209,7 +209,7 @@ theorem precision_floor_all (f : Format) (m : ℚ) (hm : 0 < m) :
       have hp := pow2_pos (b - f.mantissaBits - 1)
       grind
 
-/-- The corresponding least-upper-bound characterization, with unrestricted exponents. -/
+/-- Rounding up gives the least bounded-significand dyadic at least `m`, of any exponent. -/
 theorem precision_ceil_all (f : Format) (m : ℚ) (hm : 0 < m) :
     m ≤ precisionMagnitude f .towardPositive false m ∧
     ∀ j e : ℤ, j.natAbs < 2 ^ (f.mantissaBits + 1) →

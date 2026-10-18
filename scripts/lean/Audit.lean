@@ -1,7 +1,7 @@
 import Lean
 import TensorCoreTests
 
-/-! Axiom audit generated from the environment: every theorem in the `TensorCore` namespace, including generated regression theorems, is listed with the axioms its proof depends on. -/
+/-! Axiom audit: every theorem in the `TensorCore` namespace, with the axioms its proof uses. -/
 
 open Lean Elab Command
 

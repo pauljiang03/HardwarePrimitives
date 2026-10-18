@@ -2,8 +2,7 @@ import MatrixCore.Specification.Stages
 
 /-! # The implementation meets the independent specification
 
-For every model the specification transcribes (CDNA 1 and the SFMA with correct rounding,
-CDNA 3 with Algorithms 1 and 2), and for every input, the implementation returns the word `w`
+For every transcribed model (CDNA 1, SFMA, CDNA 3) and every input, the implementation returns `w`
 exactly when the specification's `Result` holds for `w`. -/
 
 namespace MatrixCore.Spec
@@ -36,7 +35,6 @@ theorem sum_val (ps : List Unpacked) : ((ps.map numOf).map Num.val).sum = sumQ (
   | cons p ps ih =>
     rw [List.map_cons, List.map_cons, List.sum_cons, val_numOf, ih]; rfl
 
-/-- The specification's accumulated value is the implementation's `S_acc`. -/
 theorem accumulated_eq {P : Model} {S : Params} (hS : Supported P S) (x : Prepared)
     (hc : x.c.t = 23) :
     accumulated S (x.a.map numOf) (x.b.map numOf) (numOf x.c) =
@@ -84,7 +82,6 @@ theorem triple_some {oa : Option α} {ob : Option β} {oc : Option γ} {a : α} 
       oa = some a ∧ ob = some b ∧ oc = some c := by
   cases oa <;> cases ob <;> cases oc <;> simp
 
-/-- Decoding the words through the specification gives the implementation's decoded inputs. -/
 theorem prepare_spec {P : Model} {S : Params} (hS : Supported P S) (x : BlockInput P) :
     (((x.a.map BitVec.toNat).mapM S.a.decode).bind fun as =>
       ((x.b.map BitVec.toNat).mapM S.b.decode).bind fun bs =>
@@ -112,7 +109,6 @@ theorem productOverflows_of {x : Prepared} (h : ∀ p ∈ x.p, absQ p.value < po
   have := h p hp
   simp; grind
 
-/-- The value accumulated by the implementation when no product overflows. -/
 theorem accumulate_supported {P : Model} {S : Params} (hS : Supported P S) (x : Prepared)
     (hov : P.productOverflow = false ∨ x.productOverflows = false) :
     accumulate P x = .ok (match P.accumulation with
@@ -124,8 +120,7 @@ theorem accumulate_supported {P : Model} {S : Params} (hS : Supported P S) (x : 
   rw [hno]
   rcases hS.kind with ⟨hP, _⟩ | ⟨hP, _⟩ | ⟨hP, _⟩ <;> simp [hP]
 
-/-- **Equivalence.** On every supported model and for every input, the implementation returns
-`w` exactly when `w` is the specification's result. -/
+/-- The implementation returns `w` exactly when `w` is the specification's result. -/
 theorem blockBits_eq_spec {P : Model} {S : Params} (hS : Supported P S) (x : BlockInput P)
     (w : F32) :
     blockBits x = .ok w ↔ Result S (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c w := by
@@ -218,7 +213,6 @@ theorem supported_cdna3FP8 (a b : Format) :
 theorem layoutOf_e4m3 : layoutOf e4m3fnuz = e4m3 := rfl
 theorem layoutOf_e5m2 : layoutOf e5m2fnuz = e5m2 := rfl
 
-/-- The paper's variants, each with the implementation model and its transcription. -/
 theorem supported_eq_spec_cdna3F16 (x : BlockInput MatrixCore.cdna3F16) (w : F32) :
     blockBits x = .ok w ↔ Result Spec.cdna3F16 (x.a.map BitVec.toNat) (x.b.map BitVec.toNat) x.c w :=
   blockBits_eq_spec supported_cdna3F16 x w

@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Targeted differential test of the CDNA 3 binary8 model against the MATLAB model.
-
-`matlab_diff.py` samples fp8 inputs as the paper's Section 5 does. This script draws them from the
-six regimes of `fp8_cases.py` instead, which aim at the odd/even grouping (odd slots large and even
-slots small, cancellation across the groups), at the binary8 cutoff of `c`, at sparse blocks and at
-the shifted-sum path, with `k = 16` and `k = 32` (two chained blocks). The MATLAB model
-(`Generic_BFMA_TC.m` with the parameters of `MI300AMC.m`, commit `79143bd`, fetched and run in GNU
-Octave as by `matlab_diff.py`) has no mixed fp8 formats, so only E4M3 × E4M3 and E5M2 × E5M2 are
-compared, in the variants `shipped` and `rdfix`. Results are compared as values.
+"""Targeted differential test of the CDNA 3 FP8 model against the MATLAB model.
 
 Usage: python3 scripts/matlab_fp8.py [--cases N] [--seed S]   (N cases per format)
 """

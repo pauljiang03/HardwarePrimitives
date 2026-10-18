@@ -2,13 +2,7 @@ import MatrixCore.MC.Block
 
 /-! # Facts about decoded blocks
 
-What `prepare` guarantees and how the exponent and grouping helpers behave, in one place for the
-theory files and for downstream proofs:
-
-* `e_max` bounds every nonzero product and is `none` only when all products are zero;
-* odd- and even-indexed positions partition the products;
-* every finite operand has a significand below 2, so every product has one below 4;
-* `prepare` keeps the operand counts, and `c` has 23 mantissa bits. -/
+Properties of `prepare`, `maxExp` and the odd/even split. -/
 
 namespace MatrixCore
 
@@ -32,7 +26,6 @@ theorem foldl_maxExp_none (ps : List Unpacked) : ∀ acc : Option ℤ,
     · simp only [maxExpStep, hq, ↓reduceIte] at h
       exact absurd (ih _ h).1 (by simp)
 
-/-- No exponent means every product is zero. -/
 theorem maxExp_none {ps : List Unpacked} (h : maxExp ps = none) : ∀ p ∈ ps, p.m = 0 :=
   (foldl_maxExp_none ps none h).2
 
@@ -62,7 +55,6 @@ theorem foldl_maxExpStep_le (ps : List Unpacked) (acc : Option ℤ) (r : ℤ)
         | some v => have := h1 (max v p.e) (by simp [hm]); omega
       · exact h2 p hp hm
 
-/-- `e_max` bounds the exponent of every nonzero product. -/
 theorem maxExp_le {ps : List Unpacked} {e : ℤ} (h : maxExp ps = some e) :
     ∀ p ∈ ps, p.m ≠ 0 → p.e ≤ e :=
   (foldl_maxExpStep_le ps none e h).2
@@ -85,7 +77,6 @@ theorem sum_of_zero {ps : List Unpacked} (h : ∀ p ∈ ps, p.m = 0) : sumQ (ps.
 
 /-! ## Odd and even positions -/
 
-/-- Odd- and even-indexed positions partition a list. -/
 theorem sumQ_odd_even (f : α → ℚ) : ∀ l : List α,
     sumQ ((oddIndexed l).map f) + sumQ ((evenIndexed l).map f) = sumQ (l.map f) ∧
       (oddIndexed l).length + (evenIndexed l).length = l.length
@@ -144,7 +135,6 @@ theorem decodeNat_bounded {f : Format} {n : ℕ} {u : Unpacked} (h : f.decodeNat
     · simp at h
     · simp only [Datum.finite.injEq] at h; subst h; exact unpackFields_bounded _ _ _ _ hM
 
-/-- Every finite operand has a significand below 2: `m < 2^(t + 1)`. -/
 theorem read_bounded {i : InputFormat} {w : i.Word} {u : Unpacked}
     (h : (i.read w).toFinite = some u) : u.m < 2 ^ (u.t + 1) := by
   cases i with
@@ -202,7 +192,6 @@ theorem prepare_bounded {P : Model} {x : BlockInput P} {px : Prepared} (h : prep
   · obtain ⟨w, _, hw⟩ := mapM_mem_option hB u hu
     exact read_bounded hw
 
-/-- Every product has a significand below 4. -/
 theorem products_bounded {px : Prepared} (ha : ∀ u ∈ px.a, u.m < 2 ^ (u.t + 1))
     (hb : ∀ u ∈ px.b, u.m < 2 ^ (u.t + 1)) : ∀ p ∈ px.p, p.m < 2 ^ (p.t + 2) := by
   intro p hp
@@ -213,7 +202,6 @@ theorem products_bounded {px : Prepared} (ha : ∀ u ∈ px.a, u.m < 2 ^ (u.t + 
   calc a.m * b.m < 2 ^ (a.t + 1) * 2 ^ (b.t + 1) := Nat.mul_lt_mul'' h1 h2
     _ = 2 ^ (a.t + b.t + 2) := by rw [← Nat.pow_add]; congr 1; omega
 
-/-- A significand below 2 bounds the value by the next power of two. -/
 theorem Unpacked.absQ_value_lt {u : Unpacked} (hm : u.m < 2 ^ (u.t + 1)) :
     absQ u.value < pow2 (u.e + 1) := by
   rw [Unpacked.absQ_value]
@@ -221,7 +209,6 @@ theorem Unpacked.absQ_value_lt {u : Unpacked} (hm : u.m < 2 ^ (u.t + 1)) :
   have := Rat.mul_lt_mul_of_pos_right hmq (pow2_pos (u.e - u.t))
   rwa [← pow2_add, show ((u.t + 1 : ℕ) : ℤ) + (u.e - u.t) = u.e + 1 by omega] at this
 
-/-- The decoded `c` of a prepared block is the decoding of its word. -/
 theorem prepare_c {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
     (fp32.decode x.c).toFinite = some px.c := by
   unfold prepare at h
@@ -236,7 +223,6 @@ theorem prepare_c_bounded {P : Model} {x : BlockInput P} {px : Prepared}
   obtain ⟨ht, hm⟩ := decodeNat_bounded (f := fp32) (n := x.c.toNat) (toFinite_some (prepare_c h))
   rw [ht]; exact hm
 
-/-- `|c| < 2^(e_c + 1)` for the exponent `e_c` the late addition uses. -/
 theorem prepare_cExp_bound {P : Model} {x : BlockInput P} {px : Prepared}
     (h : prepare x = some px) : ∀ eC, cExp P px.c = some eC → absQ px.c.value < pow2 (eC + 1) := by
   intro eC he

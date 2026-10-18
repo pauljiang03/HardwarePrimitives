@@ -1,17 +1,12 @@
 import MCFloat.Equivalence.Rounding
 
-/-! # Decoding: FloatLib's classification is Matrix-Core's `decode`
-
-For every word of every operand format (binary32, binary16, bfloat16, tf19, fp8 E4M3/E5M2
-FNUZ, and XF32), FloatLib classifies the word as Matrix-Core does: the same NaNs, the same signed
-infinities, and finite words with the same value, exponent, zero test, subnormal test and sign. -/
+/-! # Decoding: FloatLib's classification is `MatrixCore`'s `decode` -/
 
 set_option linter.unusedSimpArgs false
 
 namespace MCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-/-- A FloatLib term and a Matrix-Core unpacked value agree. -/
 structure TermAgree (t : MCFloat.Term) (u : MatrixCore.Unpacked) : Prop where
   value : t.value = u.value
   exponent : t.exponent = u.e
@@ -19,7 +14,6 @@ structure TermAgree (t : MCFloat.Term) (u : MatrixCore.Unpacked) : Prop where
   small : t.small = decide (u.m < 2 ^ u.t)
   negative : t.dyadic.negative = u.negative
 
-/-- A FloatLib classification and a Matrix-Core datum agree. -/
 def Agree : MCFloat.Value → MatrixCore.Datum → Prop
   | .finite t, .finite u => TermAgree t u
   | .inf s, .infinity s' => s = s'
@@ -216,8 +210,6 @@ theorem e5m2fnuz_agree (n : ℕ) (hn : n < 2 ^ 8) :
 
 /-! ## XF32 and operand formats -/
 
-/-- XF32 reads the tf19 word of a finite binary32 word's upper nineteen bits: Matrix-Core's
-truncation of the significand. -/
 theorem xf32_tf19 (n : ℕ) (u : MatrixCore.Unpacked)
     (h : MatrixCore.fp32.decodeNat n = .finite u) :
     MatrixCore.tf19.decodeNat (n / 2 ^ 13) = .finite (MatrixCore.InputFormat.truncateXF32 u) := by

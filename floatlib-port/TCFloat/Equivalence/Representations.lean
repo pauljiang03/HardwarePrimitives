@@ -43,7 +43,7 @@ def sourceInput (p : TCModel) (x : Interface.Input p) : TensorCore.BlockInput (m
       exact List.map_id ps
     · exact (wordEquiv 32).apply_symm_apply c
 
-/-- A genuine isomorphism of the complete bounded encoded input carriers. -/
+/-- An isomorphism of the bounded encoded inputs. -/
 def inputEquiv (p : TCModel) : TensorCore.BlockInput (model p) ≃ Interface.Input p where
   toFun := input p
   invFun := sourceInput p
@@ -145,7 +145,7 @@ theorem eft_checked_eq (p : TCModel) (hf : p.format.isIEEE=true)
     simp [Interface.eftChecked,TensorCore.tcEftEncoded,TensorCore.prepareEncodedEFT,
       input_length,model,hs',observe,error]
 
-/-- Paper-scope equivalence through a two-sided input isomorphism, preserving errors, EFT branches and all output bits. -/
+/-- Equivalence through the input isomorphism, preserving errors, EFT branches and output bits. -/
 theorem floatlib_eq_reference (p : TCModel) (hf : SupportedFormat p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tcChecked p (inputEquiv p x)=
@@ -154,7 +154,7 @@ theorem floatlib_eq_reference (p : TCModel) (hf : SupportedFormat p.format)
       observe encodedResult (TensorCore.tcEftEncoded x D) :=
   ⟨tc_checked_eq p hf.ieee x,eft_checked_eq p hf.ieee x D⟩
 
-/-- The same theorem quantified over every port input, by the inverse isomorphism. -/
+/-- The same equivalence, quantified over every port input. -/
 theorem floatlib_eq_reference_inverse (p : TCModel) (hf : SupportedFormat p.format)
     (x : Interface.Input p) (D : Fin (2^32)) :
     Interface.tcChecked p x=

@@ -9,7 +9,6 @@ def model (p : TCModel) : TensorCore.Model :=
 def block (b : Block) : TensorCore.PreparedBlock :=
   ⟨model b.model,b.products.map (fun (a,b) => (project a,project b)),project b.c⟩
 
-/-- The paper's models have a binary32 block output. -/
 @[simp] theorem block_outputMantissaBits (b : Block) : (block b).model.outputMantissaBits = 23 := rfl
 def denormalizedTerm (t : Term) : TensorCore.DenormalizedProduct :=
   ⟨t.dyadic.signedSignificand,t.exponent,t.mantissaBits⟩

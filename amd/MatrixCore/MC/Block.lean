@@ -2,12 +2,11 @@ import MatrixCore.MC.Models
 
 /-! # One block: inputs and products
 
-A block is one multi-term addition of the paper: `N_FMA` products `p_ℓ = a_ℓ b_ℓ` and the
-accumulator input `c`. -/
+A block is one multi-term addition of `N_FMA` products `p_ℓ = a_ℓ b_ℓ` and the input `c`. -/
 
 namespace MatrixCore
 
-/-- Encoded operands of one block: the vectors `a`, `b` and the binary32 scalar `c`. -/
+/-- Encoded operands of one block: the vectors `a`, `b` and the FP32 scalar `c`. -/
 structure BlockInput (P : Model) where
   a : List P.a.Word
   b : List P.b.Word
@@ -50,8 +49,7 @@ theorem Prepared.p_length (x : Prepared) : x.p.length = min x.a.length x.b.lengt
 def maxExpStep (acc : Option ℤ) (p : Unpacked) : Option ℤ :=
   if p.m = 0 then acc else some (match acc with | none => p.e | some v => max v p.e)
 
-/-- `e_max`: the largest exponent of the nonzero products; `none` when all are zero. Zero
-products do not take part in alignment. -/
+/-- `e_max`: the largest exponent of the nonzero products; `none` when all are zero. -/
 def maxExp (ps : List Unpacked) : Option ℤ := ps.foldl maxExpStep none
 
 /-- Larger of two optional exponents, with `none` as `−∞`. -/

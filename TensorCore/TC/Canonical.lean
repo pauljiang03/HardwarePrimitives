@@ -12,7 +12,7 @@ theorem fp16Fp32_invocation_compatible (K padding : ℕ) (eAlignMin : Option ℤ
       (evalBlock x).toOption.map (fun t => t.output.bits) :=
   legacy_invocation_bits x (23 + padding) (by change fp16.WellFormed; decide) rfl (Nat.le_refl 23)
 
-/-- One public contract for any FMA size and any number of padding bits. -/
+/-- Contract of the FP16 models for any FMA size and any number of padding bits. -/
 theorem fp16Fp32_contract (K padding carryBits : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K padding eAlignMin)) (t : BlockTrace)
     (h : evalBlock x = .ok t) (hc : K + 1 ≤ 2 ^ carryBits) :

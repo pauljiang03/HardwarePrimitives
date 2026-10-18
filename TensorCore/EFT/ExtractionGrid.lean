@@ -76,7 +76,6 @@ theorem overlap_eq_retained_sub_outputResidual (g : ExtractionGrid t) :
 def lowBitsAt (g : ExtractionGrid t) (ℓ : ℤ) : List ℤ :=
   g.lowParts.map fun e => (e / pow2 ℓ).floor
 
-/-- Original terms on a common grid yield exact residual coefficients on it. -/
 theorem lowParts_on_grid (g : ExtractionGrid t) (ℓ : ℤ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ) :
     g.lowParts = (g.lowBitsAt ℓ).map fun (z : ℤ) => (z : ℚ) * pow2 ℓ := by
@@ -96,7 +95,7 @@ theorem lowParts_on_grid (g : ExtractionGrid t) (ℓ : ℤ) (hℓ : ℓ ≤ g.ex
   dsimp only [Function.comp_def]
   rw [hr, Rat.mul_div_cancel (Rat.ne_of_gt (pow2_pos ℓ)), Rat.floor_intCast]
 
-/-- A common input grid bounds the residual coefficients, using the component count (including C) and the extraction exponent. -/
+/-- A common input grid bounds the residual coefficients by the term count and the grid gap. -/
 theorem inputGrid_coefficient_bound (g : ExtractionGrid t) (ℓ : ℤ) (P : ℕ) (hℓ : ℓ ≤ g.exponent)
     (hinput : ∀ x ∈ t.block.terms, ∃ z : ℤ, x.value = (z : ℚ) * pow2 ℓ)
     (hbound : t.block.terms.length * (2 ^ (g.exponent - ℓ).toNat - 1) < 2 ^ P) :

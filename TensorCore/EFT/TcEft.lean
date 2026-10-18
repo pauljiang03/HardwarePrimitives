@@ -5,7 +5,7 @@ import TensorCore.TC.ErrorBounds
 
 namespace TensorCore
 
-/-- Lemma IV.2: the overlap width `τ = ψ − η + p ≥ 0`, the number of positions in which the low components overlap the bits that the hardware accumulates, where `qE = 2^(ψ−23)` is the extraction grid and `qA = 2^(η − 23 − p)` the alignment grid. -/
+/-- Lemma IV.2: the overlap width `τ = ψ − η + p ≥ 0`. -/
 theorem overlap_width (t : BlockTrace) (η : ℤ) (p : ℕ) (hη : t.block.alignExp = some η)
     (hF : t.block.model.alignMantissaBits = 23 + p) :
     0 ≤ t.extractionExponent - t.block.alignGridExponent ∧
@@ -16,7 +16,7 @@ theorem overlap_width (t : BlockTrace) (η : ℤ) (p : ℕ) (hη : t.block.align
   simp only [Option.getD_some]
   omega
 
-/-- The exact reference branch of Algorithm 1: `RN(D − ε_o + Σ εᵢ)` formed from the extracted components in exact dyadic arithmetic. -/
+/-- The exact reference branch of Algorithm 1: `RN(D − ε_o + Σ εᵢ)` in exact dyadic arithmetic. -/
 def BlockTrace.exactConsolidation (t : BlockTrace) : Option F32 :=
   round32 .nearestEven (t.output.value - t.overlap + sumQ t.lowParts)
 
@@ -26,7 +26,7 @@ theorem exactConsolidation_eq_corrected (t : BlockTrace) :
   unfold BlockTrace.exactConsolidation
   rw [← overlap_recovery, corrected_eq_round_exactDot]
 
-/-- Outcome of Algorithm 1: the scalar branch, the exact reference branch, or an exact sum outside the FP32 range. -/
+/-- Outcome of Algorithm 1: the scalar branch, the exact reference branch, or out of FP32 range. -/
 inductive TcEftResult where
   | scalar (bits : F32)
   | exactReference (bits : F32)
@@ -38,7 +38,7 @@ def TcEftResult.bits : TcEftResult → Option F32
   | .exactReference b => some b
   | .outOfRange => none
 
-/-- Algorithm 1 on a trace: the scalar branch when the predicate holds, otherwise the exact reference branch. -/
+/-- Algorithm 1 on a trace: the scalar branch when its predicate holds, else the exact reference. -/
 def BlockTrace.tcEft (t : BlockTrace) : TcEftResult :=
   match t.scalarCorrected with
   | some b => .scalar b
@@ -125,7 +125,7 @@ theorem tcEft_bits_isSome_iff (t : BlockTrace) :
       rw [hr] at hb
       contradiction
 
-/-- TC-EFT Table V: the reference branch's per-cell operation ledger for `K` products (`n = K + 1` terms), as the TC-EFT paper counts it. -/
+/-- TC-EFT Table V: the reference branch's operation counts for `K` products (`K + 1` terms). -/
 structure ReferenceLedger where
   bitDecodes : ℕ
   scaleComparisons : ℕ
@@ -140,7 +140,6 @@ structure ReferenceLedger where
 
 def referenceLedger (K : ℕ) : ReferenceLedger :=
   ⟨2 * K + 2, K + 1, K, K + 1, K, 1, K, 2, 1⟩
-
 
 def scalarBranchOperations (K : ℕ) : ℕ := K + 3
 

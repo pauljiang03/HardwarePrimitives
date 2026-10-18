@@ -11,7 +11,6 @@ set_option maxRecDepth 4096
 set_option maxHeartbeats 1000000
 set_option exponentiation.threshold 1024
 
-/-- A finite decoded significand is below `2 ^ (mantissaBits + 1)`. -/
 theorem classifyNat_finite_bound (f : Format) (n : ℕ) (d : Decoded)
     (h : (classifyNat f n).finite = some d) :
     d.significand.natAbs < 2 ^ (d.mantissaBits.toNat + 1) := by
@@ -93,7 +92,6 @@ theorem fp32_exponent9_toNat (bits : F32) :
   rw [BitVec.toNat_setWidth_of_le (by decide), BitVec.toNat_setWidth,
     BitVec.toNat_ushiftRight, Nat.shiftRight_eq_div_pow]
 
-/-- Decoding c gives the model's c term. -/
 theorem decodeC_spec (bits : F32) :
     (decodeC bits).map Term.denormalized =
       (decode32 bits).map fun d => ⟨d.significand, d.exponent, d.mantissaBits⟩ := by

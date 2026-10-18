@@ -47,7 +47,7 @@ def main():
         baseline = report.read_text()
         require('TensorCore.auditBaseline' in baseline, 'Cold audit omitted the imported theorem')
 
-        # No proof shortcut is used: only rebuilding can catch this invalid proof while the compiled module still contains the valid baseline theorem.
+        # Only a rebuild catches this invalid proof: the cached module still holds the valid baseline.
         source.write_text(valid + 'theorem auditInvalid : False := by decide\nend TensorCore\n')
         stale = audit()
         require(stale.returncode != 0, 'Audit accepted broken source behind a valid build cache')

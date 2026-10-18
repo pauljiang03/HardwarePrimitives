@@ -6,8 +6,6 @@ import TensorCore.Numerics.Truncation
 
 namespace TensorCore
 
-/-- The output word is the binary32 truncation of the accumulator, truncated further to the
-model's block-output mantissa bits. -/
 theorem evalPrepared_output_mantissa {b : PreparedBlock} {t : BlockTrace}
     (h : evalPrepared b = .ok t) : ∃ bits, round32 .truncate b.accumulator = some bits ∧
       t.output.bits = truncateMantissa32 b.model.outputMantissaBits bits := by
@@ -26,14 +24,13 @@ theorem evalPrepared_output_mantissa {b : PreparedBlock} {t : BlockTrace}
       · cases Option.some.inj hd
         exact ⟨bits, rfl, rfl⟩
 
-/-- With a binary32 block output, the output word is the binary32 truncation of the accumulator. -/
 theorem evalPrepared_output {b : PreparedBlock} {t : BlockTrace}
     (h : evalPrepared b = .ok t) (hw : 23 ≤ b.model.outputMantissaBits) :
     round32 .truncate b.accumulator = some t.output.bits := by
   obtain ⟨bits, hr, ht⟩ := evalPrepared_output_mantissa h
   rw [hr, ht, truncateMantissa32_of_le hw]
 
-/-- With a binary32 block output, a block's output word is the binary32 truncation of its accumulator. -/
+/-- With an FP32 block output, a block's output word is the FP32 truncation of its accumulator. -/
 theorem evalBlock_output {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputMantissaBits) :
     round32 .truncate t.block.accumulator = some t.output.bits :=
@@ -93,8 +90,7 @@ theorem evalPrepared_error_bound {b : PreparedBlock} {t : BlockTrace}
   have hout := evalPrepared_output h hw
   exact block_error_bound b t.output (round32_range hout) hout
 
-/-- The model error is below (number of terms) · (alignment grid step) + (one output ulp), for a
-model with a binary32 block output. -/
+/-- Model error below (terms) · (alignment grid step) + (one output ulp), for an FP32 block output. -/
 theorem evalBlock_error_bound {p : Model} {x : BlockInput p} {t : BlockTrace}
     (h : evalBlock x = .ok t) (hw : 23 ≤ p.outputMantissaBits) :
     absQ (t.block.exactDot - t.output.value) <

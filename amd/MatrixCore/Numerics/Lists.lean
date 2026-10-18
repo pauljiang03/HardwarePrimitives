@@ -1,9 +1,6 @@
 import MatrixCore.Numerics.Exact
 
-/-! # List lemmas
-
-Generic facts about `mapM` in `Option`, `zipWith` and `sumQ`, shared by the model, the
-specification bridge and downstream proofs. -/
+/-! # List lemmas -/
 
 namespace MatrixCore
 

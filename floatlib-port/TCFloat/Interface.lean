@@ -1,6 +1,6 @@
 import TCFloat.Model
 
-/-! The two encoded interfaces: the TC model and the TC-EFT correction. -/
+/-! The two encoded interfaces: the Tensor Core model and the TC-EFT correction. -/
 namespace TCFloat.Interface
 
 def tc (p : TCModel) (pairs : List (Nat × Nat)) (c : Nat) : Option Nat :=
@@ -34,7 +34,7 @@ inductive Error where
   | nonfiniteOutput
   deriving Repr, DecidableEq
 
-/-- Typed validation outcomes preserve the reference interface's error distinctions. -/
+/-- Typed outcomes with the reference interface's error distinctions. -/
 def tcChecked (p : TCModel) (x : Input p) : Except Error Nat :=
   if x.products.length != p.nfma then .error .wrongProductCount
   else match prepare p x.pairs x.c.val with

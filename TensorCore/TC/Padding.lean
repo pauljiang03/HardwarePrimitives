@@ -6,7 +6,6 @@ import TensorCore.TC.AcceptedDomain
 
 namespace TensorCore
 
-/-- Uniform finite FP16-product/FP32-c metadata bounds. -/
 theorem prepare_fp16_term_metadata (K padding : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K padding eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
@@ -44,7 +43,6 @@ theorem prepare_fp16_term_metadata (K padding : ℕ) (eAlignMin : Option ℤ)
           pair.1.exponent + pair.2.exponent ≤ 127
         omega
 
-/-- FP16 products have much narrower scale/grid support than FP32 c. -/
 theorem prepare_fp16_products_metadata (K padding : ℕ) (eAlignMin : Option ℤ)
     (x : BlockInput (fp16Fp32Model K padding eAlignMin)) (b : PreparedBlock)
     (h : prepare x = some b) :
@@ -75,7 +73,7 @@ theorem prepare_fp16_products_metadata (K padding : ℕ) (eAlignMin : Option ℤ
         pair.1.exponent + pair.2.exponent ≤ 30
       omega
 
-/-- A sharper sufficient threshold for minimum alignment exponents of at most 30, which covers the models of all source variants. -/
+/-- At least 156 padding bits make alignment exact when the minimum alignment exponent is at most 30. -/
 theorem canonical_source_padding_exact (K padding : ℕ) (eAlignMin : Option ℤ)
     (hf : ∀ f ∈ eAlignMin, f ≤ 30) (hpadding : 156 ≤ padding)
     (x : BlockInput (fp16Fp32Model K padding eAlignMin)) (b : PreparedBlock)

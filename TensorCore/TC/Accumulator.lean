@@ -4,7 +4,7 @@ import TensorCore.TC.Block
 
 namespace TensorCore
 
-/-- Actual modular signed-word additions, starting from a supplied register. -/
+/-- Modular signed-word additions, starting from a supplied register. -/
 def machineAccumulate (w : ℕ) (acc : BitVec w) : List ℤ → BitVec w
   | [] => acc
   | z :: zs => machineAccumulate w (acc + BitVec.ofInt w z) zs
@@ -13,7 +13,7 @@ def machineAccumulate (w : ℕ) (acc : BitVec w) : List ℤ → BitVec w
 def PreparedBlock.machineAccumulator (b : PreparedBlock) (w : ℕ) : ℚ :=
   ((machineAccumulate w 0 b.alignedBits).toInt : ℚ) * pow2 b.alignGridExponent
 
-/-- Execute accumulation with w-bit additions, then the ordinary rounding to FP32 and the block output. -/
+/-- Accumulation with `w`-bit additions, then the usual rounding to FP32 and the block output. -/
 def evalPreparedMachine (w : ℕ) (b : PreparedBlock) : Except ModelError BlockTrace :=
   match round32 .truncate (b.machineAccumulator w) with
   | none => .error .accumulatorOutOfRange

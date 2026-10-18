@@ -3,8 +3,7 @@ import TensorCore.Numerics.Binary.RoundingContract
 
 open TensorCore
 
--- Every rational in the finite reference range has a correctly rounded result,
--- for every well-formed IEEE-style format and each of the four modes.
+-- Every rational in the finite range has a correctly rounded result, in every format and mode.
 example (f : Format) (hf : f.WellFormed) (mode : BinaryRoundingMode) (x : ℚ)
     (hr : absQ x ≤ f.maxFinite) :
     ∃ bits, roundBinary f mode x = some bits ∧ BinaryRoundSpec f mode x bits :=
@@ -18,8 +17,7 @@ example (f : Format) (hf : f.WellFormed) (v : SignedFiniteValue f) :
     (signedFiniteBinaryBijection f hf).decode ((signedFiniteBinaryBijection f hf).encode v) = v :=
   (signedFiniteBinaryBijection f hf).decode_encode v
 
--- The canonical representation uses a nonnegative significand with an explicit
--- sign; zero and subnormals use emin, and normal significands include the leading bit.
+-- The canonical representation: a nonnegative significand with an explicit sign.
 example (f : Format) (hf : f.WellFormed) (r : BinaryRep f) :
     decodeBinaryRep f hf (encodeBinaryRep f hf r) = r :=
   (finiteBinaryBijection f hf).decode_encode r

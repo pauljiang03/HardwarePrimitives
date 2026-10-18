@@ -5,16 +5,7 @@ import MatrixCore.MC.SpecialAgreement
 
 /-! # Chained blocks
 
-An inner product runs `⌈k / N_FMA⌉` blocks, each block's `d` being the next block's `c`.
-`runBlocks` keeps every block's trace, and `dotBits` is its last output
-(`dotBits_eq_runBlocks`). Results about one block carry over to a whole run:
-
-* every trace of a run is an accepted block (`runBlocks_mem`, `runBlocks_all`), so any
-  block-level theorem applies to each block;
-* consecutive blocks are linked through the binary32 word passed between them (`Chain`);
-* a per-block identity telescopes over the run (`fold_residual_ledger`); in particular the exact
-  products and the initial `c` equal the final output plus the sum of the blocks' residuals
-  (`runBlocks_residual_ledger`, `dotBits_residual_ledger`). -/
+An inner product runs `⌈k / N_FMA⌉` blocks, each block's `d` being the next block's `c`. -/
 
 namespace MatrixCore
 
@@ -37,8 +28,7 @@ def lastOutput : F32 → List (BlockTrace P) → F32
   | d, [] => d
   | _, t :: ts => lastOutput t.d ts
 
-/-- Consecutive blocks are linked: each block's `c` is the decoding of the word before it (the
-initial `c`, then the previous block's `d`). -/
+/-- Consecutive blocks are linked: each block's `c` decodes the word passed on before it. -/
 def Chain : F32 → List (BlockTrace P) → Prop
   | _, [] => True
   | c, t :: ts => (fp32.decode c).toFinite = some t.prepared.c ∧ Chain t.d ts
@@ -116,7 +106,7 @@ theorem runBlocks_mem {P : Model} {c : F32} {bs : List (List P.a.Word × List P.
     · exact ⟨_, he⟩
     · exact ih hr u hu
 
-/-- **Lifting.** Any property that every accepted block has holds for every block of a run. -/
+/-- Any property that every accepted block has holds for every block of a run. -/
 theorem runBlocks_all {P : Model} {Q : BlockInput P → BlockTrace P → Prop}
     (hQ : ∀ x t, evalBlock x = .ok t → Q x t) {c : F32}
     {bs : List (List P.a.Word × List P.b.Word)} {ts : List (BlockTrace P)}
@@ -129,7 +119,6 @@ theorem evalBlock_c {P : Model} {x : BlockInput P} {t : BlockTrace P} (h : evalB
     (fp32.decode x.c).toFinite = some t.prepared.c :=
   prepare_c (evalBlock_ok h).2.2.1
 
-/-- A run is linked through the words it passes on. -/
 theorem runBlocks_chain {P : Model} {c : F32} {bs : List (List P.a.Word × List P.b.Word)}
     {ts : List (BlockTrace P)} (h : runBlocks P c bs = .ok ts) : Chain c ts := by
   induction bs generalizing c ts with
@@ -143,7 +132,6 @@ theorem runBlocks_chain {P : Model} {c : F32} {bs : List (List P.a.Word × List 
 theorem decode_infinity32 (s : Bool) : fp32.decode (infinity32 s) = .infinity s := by
   cases s <;> decide
 
-/-- No block accepts an infinite `c`. -/
 theorem blockBits_infinity32 {P : Model} (a : List P.a.Word) (b : List P.b.Word) (s : Bool)
     (d : F32) : blockBits (P := P) ⟨a, b, infinity32 s⟩ ≠ .ok d := by
   intro h
@@ -208,7 +196,6 @@ theorem dotOutcome_finite (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c
 
 /-! ## Loss accounting over a run -/
 
-/-- Execute a fixed-input schedule. -/
 def foldState (step : σ → α → σ) : σ → List α → σ
   | s, [] => s
   | s, a :: as => foldState step (step s a) as
@@ -217,7 +204,6 @@ def foldLoss (step : σ → α → σ) (loss : σ → α → ℚ) : σ → List 
   | _, [] => 0
   | s, a :: as => loss s a + foldLoss step loss (step s a) as
 
-/-- Induction for arbitrary schedules, from a local law for one step. -/
 theorem fold_residual_ledger
     (value : σ → ℚ) (step : σ → α → σ) (loss : σ → α → ℚ)
     (contribution : α → ℚ)
@@ -243,8 +229,6 @@ theorem wordValue_of_decode {c : F32} {u : Unpacked} (h : (fp32.decode c).toFini
     wordValue c = u.value := by
   simp [wordValue, value32, h]
 
-/-- Over linked blocks, the initial `c` and every block's products equal the final output plus
-every block's residual. -/
 theorem chain_residual_ledger (c : F32) (ts : List (BlockTrace P)) (hc : Chain c ts) :
     wordValue c + sumQ (ts.map fun t => t.prepared.products) =
       wordValue (lastOutput c ts) + sumQ (ts.map BlockTrace.residual) := by
@@ -265,8 +249,7 @@ theorem runBlocks_residual_ledger {P : Model} {c : F32}
       wordValue (lastOutput c ts) + sumQ (ts.map BlockTrace.residual) :=
   chain_residual_ledger c ts (runBlocks_chain h)
 
-/-- **Inner products.** An accepted inner product decomposes into accepted, linked blocks whose
-products and initial `c` equal the output plus the blocks' residuals. -/
+/-- An accepted inner product's `c` and products equal its output plus the blocks' residuals. -/
 theorem dotBits_residual_ledger (P : Model) {a : List P.a.Word} {b : List P.b.Word} {c d : F32}
     (hlen : a.length = b.length) (h : dotBits P a b c = .ok d) :
     ∃ ts, runBlocks P c (blocks P a b) = .ok ts ∧ lastOutput c ts = d ∧ Chain c ts ∧

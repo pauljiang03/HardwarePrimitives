@@ -57,7 +57,7 @@ def main():
     config = (ROOT / 'lakefile.toml').read_text()
     targets = json.loads(re.search(r'^defaultTargets\s*=\s*(\[[^\]]*\])', config, re.M).group(1))
     assert {'TensorCore', 'TensorCoreTests'} <= set(targets)
-    # Work in progress lives in wip/ as standalone Lake projects; the root package never builds it.
+    # wip/ holds standalone Lake projects that the root package never builds.
     assert 'wip' not in config and not (ROOT / 'tensor-core').exists()
     print(json.dumps({'status': 'passed', 'library_modules': len(production), 'test_modules': len(tests),
                       'public_root_excludes_tests': True, 'reference_eft_excludes_kernels': True,

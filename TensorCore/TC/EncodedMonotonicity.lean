@@ -49,7 +49,6 @@ theorem monotoneInAccumulator_encoded {p : Model} {ps : List (p.Word × p.Word)}
           rw [← hd, ← hd']
           exact hm dc dc' t t' ht ht' (by rw [hv, hv']; exact hlt)
 
-/-- A non-monotone encoded witness refutes decoded monotonicity for its fixed products. -/
 theorem not_monotoneInAccumulator_of_encoded {p : Model} {ps : List (p.Word × p.Word)}
     {products : List (Decoded × Decoded)} (hp : prepareProducts p ps = some products)
     (h : ¬ MonotoneInEncodedAccumulator p ps) : ¬ MonotoneInAccumulator p products :=

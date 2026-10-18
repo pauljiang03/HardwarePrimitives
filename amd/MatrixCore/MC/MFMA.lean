@@ -2,11 +2,7 @@ import MatrixCore.MC.InnerProduct
 
 /-! # The MFMA operation `D = AB + C`
 
-`mfma P A B C` takes `A` by rows, `B` by columns and `C` by rows. Each entry `d_ij` is the
-observed inner product of row `i` of `A` and column `j` of `B` with `c_ij` (`mfma_entry`). A finite
-entry is the finite-domain inner product, so every theorem about inner products applies to it:
-its blocks satisfy the contracts of the model, and it is within the sum of their error bounds of the
-exact `c_ij + Σ_ℓ a_iℓ b_ℓj` (`mfma_finite`, `mfma_error`). -/
+`mfma P A B C` takes `A` and `C` by rows and `B` by columns. -/
 
 namespace MatrixCore
 
@@ -23,8 +19,7 @@ theorem mfma_row_length (P : Model) (A : List (List P.a.Word)) (B : List (List P
   | none => rw [hA] at h; simp at h
   | some aRow => rw [hA] at h; simp at h; rw [← h]; simp
 
-/-- Each entry of `D = AB + C` is the observed inner product of row `i` of `A` and column `j` of
-`B` with `c_ij`. -/
+/-- Entry `d_ij` is the observed inner product of row `i` of `A`, column `j` of `B` and `c_ij`. -/
 theorem mfma_entry (P : Model) {A : List (List P.a.Word)} {B : List (List P.b.Word)}
     {C : List (List F32)} {i j : ℕ} {row : List P.a.Word} {col : List P.b.Word}
     {cRow : List F32} {c : F32} (hA : A[i]? = some row) (hB : B[j]? = some col)
@@ -45,8 +40,7 @@ theorem mfma_finite (P : Model) {A : List (List P.a.Word)} {B : List (List P.b.W
   rw [mfma_entry P hA hB hC hc] at hd
   exact dotOutcome_finite P (Option.some.inj hd)
 
-/-- **Error of an MFMA entry.** If every accepted block's residual is bounded by `B`, a finite
-entry `d_ij` is within the sum of its blocks' bounds of the exact `c_ij + Σ_ℓ a_iℓ b_ℓj`. -/
+/-- A finite entry `d_ij` is within the sum of its blocks' bounds of `c_ij + Σ_ℓ a_iℓ b_ℓj`. -/
 theorem mfma_error (P : Model) (hn : 0 < P.nfma) {Bnd : BlockTrace P → ℚ}
     (hB : ∀ x t, evalBlock x = .ok t → absQ t.residual ≤ Bnd t)
     {A : List (List P.a.Word)} {B : List (List P.b.Word)}

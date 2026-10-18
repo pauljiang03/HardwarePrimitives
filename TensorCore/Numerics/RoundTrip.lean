@@ -1,12 +1,11 @@
 import TensorCore.Numerics.ScalarSum
 
-/-! Decoder/encoder round trip: converting the value of a nonzero finite FP32 encoding, in either rounding mode, returns exactly that encoding. -/
+/-! Decoder/encoder round trip for nonzero finite FP32 encodings. -/
 
 namespace TensorCore
 
 set_option maxRecDepth 4096
 
-/-- Field decomposition of a finite FP32 encoding. -/
 theorem decode32_fields (b : F32) (d : Decoded) (h : decode32 b = some d) :
     (b.toNat / 8388608 % 256 = 0 ∧ b.toNat % 8388608 = 0 ∧ d = ⟨0, 0, 0⟩) ∨
     (b.toNat / 8388608 % 256 = 0 ∧ b.toNat % 8388608 ≠ 0 ∧
@@ -73,7 +72,6 @@ theorem round32_canonical (mode : RoundingMode) (negative : Bool) (e k : ℤ)
     rw [h0] at hmag
     simp [absQ] at hmag
     grind
-  -- Exponent selection.
   have hexp : normExp ((k : ℚ) * pow2 (e - 23)) = e := by
     unfold normExp emin32
     by_cases hk : 2 ^ 23 ≤ k

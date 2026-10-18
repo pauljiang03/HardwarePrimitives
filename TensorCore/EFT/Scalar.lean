@@ -5,7 +5,7 @@ import TensorCore.Numerics.Binary.ScalarSum
 
 namespace TensorCore
 
-/-- The TC-EFT paper's component predicate with separate minimum-grid, coefficient, and absolute range bounds. -/
+/-- The component predicate in format `f`, with grid, coefficient and range bounds. -/
 def BlockTrace.scalarPredicateIn (t : BlockTrace) (f : Format) : Bool :=
   let ℓ := t.lowestLowBitExp
   let q := pow2 ℓ
@@ -18,7 +18,7 @@ def BlockTrace.scalarPredicateIn (t : BlockTrace) (f : Format) : Bool :=
   representableBinary f t.retainedSum &&
   decide (absQ (t.retainedSum + sumQ t.lowParts) ≤ maxFinite32)
 
-/-- Scalar residual additions and overlap subtraction in f, then direct nearest-even FP32 rounding of the exact final sum. -/
+/-- Residual sum and overlap subtraction in `f`, then nearest-even FP32 rounding of the final sum. -/
 def BlockTrace.scalarCorrectedInUnchecked (t : BlockTrace) (f : Format) : Option F32 :=
   (naiveSumBinary f t.lowParts).bind fun etot =>
     (binaryAdd f t.output.value (-t.overlap)).bind fun h =>
@@ -77,7 +77,7 @@ theorem scalarCorrectedIn_isSome_iff (t : BlockTrace) (f : Format) :
     obtain ⟨b, hb, _⟩ := scalarCorrectedIn_correct t f hp
     rw [hb]; rfl
 
-/-- A returned correction rounds the independent original-input ideal. -/
+/-- A returned correction is the correctly rounded exact dot product of the inputs. -/
 theorem evalBlock_scalarCorrectedIn_correct {p : Model} {x : BlockInput p} {t : BlockTrace}
     {z : ℚ} {b : F32} (f : Format) (h : evalBlock x = .ok t) (hz : exactDot x = some z)
     (hb : t.scalarCorrectedIn f = some b) : NearestEven32 z b := by
@@ -90,7 +90,6 @@ theorem evalBlock_scalarCorrectedIn_correct {p : Model} {x : BlockInput p} {t : 
   rw [← Option.some.inj hz]
   exact hn
 
-/-- Generic scalar correction specialized to FP32 equals the FP32 correction procedure. -/
 theorem scalarCorrectedInUnchecked_fp32 (t : BlockTrace) :
     t.scalarCorrectedInUnchecked fp32 = t.scalarCorrectedUnchecked := by
   simp only [BlockTrace.scalarCorrectedInUnchecked, BlockTrace.scalarCorrectedUnchecked,
@@ -100,7 +99,6 @@ set_option maxRecDepth 4096 in
 theorem representableBinary_fp32 (x : ℚ) : representableBinary fp32 x = representable32 x := rfl
 
 set_option maxRecDepth 4096 in
-/-- The FP32 scalar predicate implies the generic correction predicate specialized to FP32. -/
 theorem scalarPredicate_implies_in_fp32 (t : BlockTrace) (h : t.scalarPredicate = true) :
     t.scalarPredicateIn fp32 = true := by
   unfold BlockTrace.scalarPredicate at h

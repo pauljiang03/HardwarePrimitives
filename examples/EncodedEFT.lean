@@ -3,7 +3,7 @@ import TensorCore.TC.EncodedMonotonicity
 
 open TensorCore
 
--- D is a supplied FP32 result, not an internally rerun tensor-core invocation.
+-- `D` is a supplied FP32 result, not a rerun of the Tensor Core invocation.
 example : tcEftEncoded (⟨List.replicate 4 (0x3e00, 0x3d00), 0x3f7fffff⟩ :
     BlockInput v100F16F32) 0x4107ffff = .ok (.consolidated (.scalar 0x41080000)) := by
   decide +kernel

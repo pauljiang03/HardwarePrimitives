@@ -3,27 +3,8 @@ import MatrixCore.MC.InnerProduct
 
 /-! # Monotonicity in the products
 
-Raising a product `p_ℓ = a_ℓ b_ℓ` (with every other product and `c` unchanged) raises the exact
-`Σ p_ℓ + c`.
-
-* SFMA and CDNA 1 round the exact sum once, so their output depends only on it and is monotone in
-  every product and in `c` (`correctRounding_exact_monotone`, `correctRounding_product_monotone`).
-* CDNA 2 and CDNA 3 are **not** monotone in the products, on every input format of the paper
-  (`cdna2F16_nonmonotonic`, …, `cdna3E5M2_nonmonotonic`):
-  - CDNA 2 flushes subnormal *operands*: a product with a subnormal operand counts as zero, and a
-    slightly larger product with normal operands does not;
-  - CDNA 3 aligns to `e_max`, the largest *exponent sum* `e_a + e_b`. Products are denormalized, so a
-    product with a subnormal operand can have a tiny value and a large exponent: raising it by a
-    tiny amount can raise `e_max`, coarsen the alignment grid, and truncate the other products (or
-    RD `c`) by much more than it gains. Even with normal operands, equal products `1.5 · 1.5` and
-    `2.25 · 1` give different outputs (`cdna3F16_products_not_determined`).
-
-The mechanism is the one behind the TC-EFT paper's non-monotonicity on NVIDIA Tensor Cores
-(flowback): the terms are truncated on a grid set by the largest exponent, so perturbing the term
-that holds it, whichever term that is, changes how much of every other term survives. On NVIDIA
-any term can hold it, `c` included (the TC-EFT paper's construction perturbs `c`). On AMD CDNA 3
-only a product can, since `c` is aligned separately: the output is monotone in `c`
-(`evalBlock_c_monotone`) but not in the products. -/
+SFMA and CDNA 1 are monotone in the products; CDNA 2 and CDNA 3 are not, on every input format
+of the paper. -/
 
 namespace MatrixCore
 
@@ -91,8 +72,7 @@ def BlocksLE (P : Model) :
   | ab :: r, ab' :: r' => exactProducts P ab.1 ab.2 ≤ exactProducts P ab'.1 ab'.2 ∧ BlocksLE P r r'
   | _, _ => False
 
-/-- SFMA and CDNA 1 inner products of any length: blockwise larger products and a larger `c` give
-a larger output. -/
+/-- SFMA and CDNA 1 inner products are monotone in the blockwise exact products and in `c`. -/
 theorem runBlocks_correctRounding_monotone {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true) :
     ∀ (bs bs' : List (List P.a.Word × List P.b.Word)) (c c' : F32) (ts ts' : List (BlockTrace P)),
@@ -116,7 +96,7 @@ def ProductNonmonotone {P : Model} (x x' : BlockInput P) : Prop :=
   productsLE x x' = true ∧ x.c = x'.c ∧
     ∃ d d', blockBits x = .ok d ∧ blockBits x' = .ok d' ∧ wordValue d' < wordValue d
 
-/-- SFMA and CDNA 1 have no such pair. -/
+/-- SFMA and CDNA 1 have no non-monotone pair. -/
 theorem correctRounding_not_nonmonotone {P : Model} (hacc : P.accumulation = .correctRounding)
     (hov : P.productOverflow = false) (hs : P.subnormals = true) (x x' : BlockInput P) :
     ¬ ProductNonmonotone x x' := by
@@ -141,14 +121,13 @@ theorem cdna1F16_not_nonmonotone (x x' : BlockInput cdna1F16) : ¬ ProductNonmon
 theorem cdna1BF16_not_nonmonotone (x x' : BlockInput cdna1BF16) : ¬ ProductNonmonotone x x' :=
   correctRounding_not_nonmonotone rfl rfl rfl x x'
 
-/-- CDNA 2 fp16: `p₁` rises from `−2^-10` (`2^-15 · −2^5`, subnormal operand, flushed to zero) to
-`−2^-11` (`2^-14 · −2^3`, kept); the output falls from `0` to `−2^-11`. -/
+/-- CDNA 2 FP16: `p₁` rises from a product with a flushed subnormal operand to `−2^-11`. -/
 theorem cdna2F16_nonmonotonic :
     ProductNonmonotone (P := cdna2F16) ⟨[0x0200, 0, 0, 0], [0xD200, 0, 0, 0], 0⟩
       ⟨[0x0400, 0, 0, 0], [0xC800, 0, 0, 0], 0⟩ :=
   ⟨by decide +kernel, rfl, 0x00000000, 0xBA000000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 2 bf16: `−2^-27` (`2^-127 · −2^100`, flushed) rises to `−2^-28` (`2^-126 · −2^98`). -/
+/-- CDNA 2 BF16: `p₁` rises from `−2^-27` (subnormal operand, flushed) to `−2^-28`. -/
 theorem cdna2BF16_nonmonotonic :
     ProductNonmonotone (P := cdna2BF16) ⟨[0x0040, 0], [0xF180, 0], 0⟩ ⟨[0x0080, 0], [0xF080, 0], 0⟩ :=
   ⟨by decide +kernel, rfl, 0x00000000, 0xB1800000, by decide +kernel, by decide +kernel, by decide +kernel⟩
@@ -158,47 +137,42 @@ theorem cdna2BF16_1k_nonmonotonic :
       ⟨[0x0080, 0, 0, 0], [0xF080, 0, 0, 0], 0⟩ :=
   ⟨by decide +kernel, rfl, 0x00000000, 0xB1800000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 3 fp16: `p₁` rises from `2^-9 − 2^-29` (`1025/1024 · 2046/1024 · 2^-10`, `e_p = −10`) to
-`2^-9` (`2^-24 · 2^15`, `e_p = 1`). `e_max` rises from `−10` to `1`, the grid from `2^-34` to
-`2^-23`, and seven products `2^-24` are truncated away: the output falls by about `7 · 2^-24`. -/
+/-- CDNA 3 FP16: `p₁` rises from `2^-9 − 2^-29` to `2^-9`, and `e_max` from `−10` to `1`. -/
 theorem cdna3F16_nonmonotonic :
     ProductNonmonotone (P := cdna3F16)
       ⟨0x3C01 :: List.replicate 7 0x0C00, 0x17FE :: List.replicate 7 0x0C00, 0⟩
       ⟨0x0001 :: List.replicate 7 0x0C00, 0x7800 :: List.replicate 7 0x0C00, 0⟩ :=
   ⟨by decide +kernel, rfl, 0x3B0006F8, 0x3B000000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 3 bf16: `2^-6 − 2^-21` (`217/128 · 151/128 · 2^-7`) rises to `2^-6` (`2^-133 · 2^127`,
-`e_p = 1`); seven products just below `2^-23` are truncated away. -/
+/-- CDNA 3 BF16: `p₁` rises from `2^-6 − 2^-21` to `2^-6` with `e_p = 1`. -/
 theorem cdna3BF16_nonmonotonic :
     ProductNonmonotone (P := cdna3BF16)
       ⟨0x3FD9 :: List.replicate 7 0x3980, 0x3C17 :: List.replicate 7 0x39FE, 0⟩
       ⟨0x0001 :: List.replicate 7 0x3980, 0x7F00 :: List.replicate 7 0x39FE, 0⟩ :=
   ⟨by decide +kernel, rfl, 0x3C8000BC, 0x3C800000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 3 XF32: the fp16 construction in tf19 (`2^-136 · 2^127`, `e_p = 1`). -/
+/-- CDNA 3 XF32: the FP16 construction in `tf19`. -/
 theorem cdna3XF32_nonmonotonic :
     ProductNonmonotone (P := cdna3XF32)
       ⟨0x3F802000 :: List.replicate 3 0x39800000, 0x3AFFC000 :: List.replicate 3 0x39800000, 0⟩
       ⟨0x00002000 :: List.replicate 3 0x39800000, 0x7F000000 :: List.replicate 3 0x39800000, 0⟩ :=
   ⟨by decide +kernel, rfl, 0x3B0002F8, 0x3B000000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 3 fp8 E4M3: equal products `1.875·2^-3 · 1` (`e_p = −3`) and `2^-10 · 240` (`e_p = 0`);
-the larger `e_max` RDs `c = 2^-25` to zero. -/
+/-- CDNA 3 FP8 E4M3: equal products `1.875·2^-3 · 1` and `2^-10 · 240`; `c = 2^-25` is lost. -/
 theorem cdna3E4M3_nonmonotonic :
     ProductNonmonotone (P := cdna3FP8 e4m3fnuz e4m3fnuz)
       ⟨0x2F :: List.replicate 15 0, 0x40 :: List.replicate 15 0, 0x33000000⟩
       ⟨0x01 :: List.replicate 15 0, 0x7F :: List.replicate 15 0, 0x33000000⟩ :=
   ⟨by decide +kernel, rfl, 0x3E700002, 0x3E700000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 3 fp8 E5M2: equal products `1.75·2^-2 · 1` and `2^-17 · 57344`; `c = 2^-25` is lost. -/
+/-- CDNA 3 FP8 E5M2: equal products `1.75·2^-2 · 1` and `2^-17 · 57344`; `c = 2^-25` is lost. -/
 theorem cdna3E5M2_nonmonotonic :
     ProductNonmonotone (P := cdna3FP8 e5m2fnuz e5m2fnuz)
       ⟨0x3B :: List.replicate 15 0, 0x40 :: List.replicate 15 0, 0x33000000⟩
       ⟨0x01 :: List.replicate 15 0, 0x7F :: List.replicate 15 0, 0x33000000⟩ :=
   ⟨by decide +kernel, rfl, 0x3EE00001, 0x3EE00000, by decide +kernel, by decide +kernel, by decide +kernel⟩
 
-/-- CDNA 3 with normal operands only: the equal products `1.5 · 1.5` (`e_p = 0`) and `2.25 · 1`
-(`e_p = 1`) give different outputs, so the output is not a function of the products' values. -/
+/-- CDNA 3 FP16, normal operands: equal products `1.5 · 1.5` and `2.25 · 1` give different outputs. -/
 theorem cdna3F16_products_not_determined :
     productValues cdna3F16 (0x3E00 :: List.replicate 7 0x0C00) (0x3E00 :: List.replicate 7 0x0C00) =
       productValues cdna3F16 (0x4080 :: List.replicate 7 0x0C00) (0x3C00 :: List.replicate 7 0x0C00) ∧

@@ -2,16 +2,13 @@ import MatrixCore.MC.Stages
 
 /-! # Evaluating one block
 
-`evalBlock` computes `d = fl{S_acc}` for finite inputs. Inputs or results outside the finite
-domain are reported as errors here; `MatrixCore.MC.Special` gives the infinities and NaNs that
-the hardware returns for them. -/
+`evalBlock` computes `d = fl{S_acc}` for finite inputs and reports anything else as an error. -/
 
 namespace MatrixCore
 
 inductive ModelError where
   /-- `a` or `b` does not have `N_FMA` entries. -/
   | wrongLength
-  /-- An operand is an infinity or NaN. -/
   | nonfiniteInput
   /-- A product reached `2^128` on a model that detects product overflow (CDNA 3). -/
   | productOverflow
@@ -21,11 +18,10 @@ inductive ModelError where
   | outputOverflow
   deriving Repr, DecidableEq
 
-/-- Some product has `|p_ℓ| ≥ 2^128`. -/
 def Prepared.productOverflows (x : Prepared) : Bool :=
   x.p.any fun p => decide (pow2 128 ≤ absQ p.value)
 
-/-- `S_acc`, the value converted to binary32 by the final `fl{·}`. -/
+/-- `S_acc`, the value rounded to FP32 by the final `fl{·}`. -/
 def accumulate (P : Model) (x : Prepared) : Except ModelError ℚ :=
   if P.productOverflow && x.productOverflows then .error .productOverflow
   else

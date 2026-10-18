@@ -11,7 +11,7 @@ def SupportedFormat (f : FloatFormat) : Prop := f=.binary16 ∨ f=.bfloat16 ∨ 
 theorem SupportedFormat.ieee {f : FloatFormat} (h : SupportedFormat f) : f.isIEEE=true := by
   rcases h with rfl|rfl|rfl <;> decide +kernel
 
-/-- The universal equivalence, restricted to the supported FP16, BF16 and TF32 input formats with FP32 output. -/
+/-- The universal equivalence for the FP16, BF16 and TF32 input formats with FP32 output. -/
 theorem supportedFormat_equivalence (p : TCModel) (hf : SupportedFormat p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tc p (inputPairs x) x.c.toNat =
@@ -47,7 +47,7 @@ theorem trace_evaluated {s : TensorCore.BlockTrace} {t : Trace} (h : TraceRel s 
   have hw : s.block.model.outputMantissaBits = 23 := by rw [h.block_eq]; rfl
   simp only [TensorCore.evalPrepared,hbits,hw,TensorCore.truncateMantissa32_23,hd]
 
-/-- Two-part error bound: the model's error is below (number of terms)·(alignment quantum) plus the output quantum (TC-EFT paper, Theorem III.1). -/
+/-- Error below terms × alignment quantum plus the output quantum (TC-EFT paper, Theorem III.1). -/
 theorem floatlib_error_bound (t : Trace) (hb : ValidBlock t.block) (hw : t.bits<2^32)
     (hv : TCFloat.value32 t.bits=some t.output) (ht : t.block.evaluate=some t.bits) :
     |t.block.ideal-t.output| < (t.block.terms.length:Rat)*TCFloat.pow2 t.block.q +
@@ -59,20 +59,20 @@ theorem floatlib_error_bound (t : Trace) (hb : ValidBlock t.block) (hw : t.bits<
     q_eq,pow2_eq,TensorCore.outputUlpExponent,hs.bits_eq] at h
   exact h
 
-/-- Every extracted low part is strictly smaller in magnitude than the extraction quantum (TC-EFT paper, Lemma IV.1). -/
+/-- Every low part is below the extraction quantum in magnitude (TC-EFT paper, Lemma IV.1). -/
 theorem floatlib_lowPart_bound (t : Trace) (e : Rat) (he : e ∈ t.lowParts) :
     |e| < TCFloat.pow2 t.extractionExponent := by
   obtain ⟨x,_,rfl⟩ := List.mem_map.mp he
   exact truncGrid_error x.value t.extractionExponent
 
-/-- The extraction grid is never finer than the alignment grid, and the gap is `max 0 (output quantum − alignment quantum)` (TC-EFT paper, Lemma IV.2). -/
+/-- The extraction grid is never finer than the alignment grid (TC-EFT paper, Lemma IV.2). -/
 theorem floatlib_overlap_width (t : Trace) :
     0 ≤ t.extractionExponent-t.block.q ∧
       t.extractionExponent-t.block.q = max 0 (outputUlpExponent t.bits-t.block.q) := by
   unfold Trace.extractionExponent
   omega
 
-/-- The aligned accumulator equals the retained coarse sum plus the alignment-grid truncations of the low parts: an exact nested-grid decomposition (TC-EFT paper, Lemma IV.3). -/
+/-- The accumulator is the retained sum plus the aligned low parts (TC-EFT paper, Lemma IV.3). -/
 theorem floatlib_accumulator_eq_retained (t : Trace) :
     t.block.accumulator = t.retained + t.retainedLowParts.sum := by
   let τ := (t.extractionExponent-t.block.q).toNat
@@ -93,7 +93,7 @@ theorem floatlib_accumulator_eq_retained (t : Trace) :
     exact hsplit x.value
   rw [hm,List.sum_map_add]
 
-/-- The overlap `D − H` equals the retained low parts minus the output normalization and rounding residual (TC-EFT paper, Lemma IV.4). -/
+/-- `D − H` is the aligned low parts minus the output residual (TC-EFT paper, Lemma IV.4). -/
 theorem floatlib_overlap_eq_retained_sub_outputResidual (t : Trace) :
     t.overlap = t.retainedLowParts.sum-t.outputResidual := by
   have h := floatlib_accumulator_eq_retained t
@@ -128,14 +128,14 @@ theorem rtz_range (x : Rat) (b : Nat) (h : TCFloat.round32 .towardZero x=some b)
   obtain ⟨b,hb,_⟩ := Option.map_eq_some_iff.mp h
   exact TensorCore.round32_range hb
 
-/-- Actual FloatLib RTZ outputs are monotone in the exact value being converted. -/
+/-- FloatLib RTZ outputs are monotone in the exact value. -/
 theorem rtz_output_monotone (x y : Rat) (bx by' : Nat) (dx dy : Rat)
     (hx : TCFloat.round32 .towardZero x=some bx) (hy : TCFloat.round32 .towardZero y=some by')
     (hdx : TCFloat.value32 bx=some dx) (hdy : TCFloat.value32 by'=some dy) (hxy : x≤y) : dx≤dy := by
   rw [rtz_value_spec x bx dx hx hdx,rtz_value_spec y by' dy hy hdy]
   exact TensorCore.signedRounded_trunc_monotone x y hxy (rtz_range x bx hx) (rtz_range y by' hy)
 
-/-- Under a perturbation of C, the output increases exactly when the round-truncation of the shifted accumulator increases (TC-EFT paper, Eq. 6). -/
+/-- After changing C, the output rises iff its truncated accumulator does (TC-EFT paper, Eq. 6). -/
 theorem floatlib_output_increase_iff (p : TCModel) (ps : List (Term×Term)) (c c' : Term)
     (bits bits' : Nat) (d d' : Rat)
     (h : (Block.mk p c ps).evaluate=some bits) (h' : (Block.mk p c' ps).evaluate=some bits')
@@ -174,7 +174,7 @@ def belowTerm (j : Nat) : Term :=
 theorem belowTerm_project (j : Nat) : project (belowTerm j)=TensorCore.belowDecoded j :=
   project_term (TensorCore.belowDecoded j)
 
-/-- Non-monotonicity over the family `C = 1 − j·2^-24`: exact output increase, threshold on j, and maximal output, for arbitrary p and K (TC-EFT paper, Theorem III.5). -/
+/-- Non-monotonicity over `C = 1 − j·2^-24`, for any p and K (TC-EFT paper, Theorem III.5). -/
 theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
     (hp : M.padding=p) (ha : ValidTerm a) (hb : ValidTerm b)
     (hf : ∀ f ∈ M.eAlignMin, f≤ -1)
@@ -215,7 +215,7 @@ theorem floatlib_nonmonotone_range (M : TCModel) (p K j : Nat) (a b : Term)
   · simpa only [pow2_eq] using hy
   · simpa only [pow2_eq] using hu
 
-/-- Every representable value in the source's finite FP32 set passes the port's test, and every value passing that test belongs to exactly that set. -/
+/-- The source's finite FP32 values are exactly those passing the port's `representable` test. -/
 theorem finiteValue32_iff_representable (x : Rat) :
     TensorCore.FiniteValue32 x ↔ TCFloat.representable x=true := by
   rw [representable_eq]
@@ -231,7 +231,7 @@ private theorem sum_map_difference (xs : List Rat) (f g : Rat → Rat) :
   | nil => simp
   | cons x xs ih => simp only [List.map_cons,List.sum_cons,ih]; ring
 
-/-- Flowback must exceed the accumulator shift for the output to increase (general form of TC-EFT paper, Definition III.3). -/
+/-- The output rises only if flowback exceeds the shift (general form of Definition III.3). -/
 theorem general_flowback_necessary (primary primary' : Rat) (others : List Rat) (q q' : Int)
     (bits bits' : Nat) (d d' : Rat)
     (h : TCFloat.round32 .towardZero

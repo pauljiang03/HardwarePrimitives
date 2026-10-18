@@ -4,31 +4,25 @@ import TensorCore.Numerics.Encoding
 
 namespace TensorCore
 
-
 /-- Numerical features of one Tensor Core block FMA. -/
 structure Model where
   /-- Input format of `a` and `b` (FP16, BF16, packed TF32, E5M2, or widened E4M3). -/
   input : Format
-  /-- K, the FMA size N_FMA: the number of products added in a single multi-term addition. -/
+  /-- The FMA size N_FMA (K): the number of products added in one multi-term addition. -/
   nfma : ℕ
-  /-- F = 23 + p: the mantissa bits each term keeps after alignment, the 23-bit mantissa plus p
-  padding bits (`n_eab` in *Accurate Models*); 13 on the FP8 block FMAs of Ada and Hopper, ten bits
-  fewer than FP32. -/
+  /-- F = 23 + p: mantissa bits each term keeps after alignment, with p padding bits (`n_eab` in
+  *Accurate Models*); 13 on the FP8 block FMAs of Ada and Hopper. -/
   alignMantissaBits : ℤ
   /-- The minimum alignment exponent e_align^min, if the architecture has one. -/
   eAlignMin : Option ℤ
-  /-- The mantissa bits of the block output. 23, a full binary32 output, on every variant except the
-  FP8 block FMAs of Ada and Hopper, which keep a 13-bit mantissa after alignment (*Accurate Models*,
-  Table 3) and truncate the block output to a 13-bit mantissa, as the Accurate Models toolbox's
-  `GEMM.m` does. Fewer than 23 bits truncate the binary32 output further. -/
+  /-- Block-output mantissa bits: 23 (FP32), or 13 on the FP8 block FMAs of Ada and Hopper. -/
   outputMantissaBits : ℕ := 23
   deriving Repr, DecidableEq
 
-/-- V100 FP16 -> FP32: `K = 4`, `(2, 23, 0)` alignment, and no relevant minimum alignment exponent. -/
+/-- V100 FP16 -> FP32 block FMA. -/
 def v100F16F32 : Model := ⟨fp16, 4, 23, none, 23⟩
 
-/-- The binary32 word with only its leading `m` mantissa bits kept, the others cleared: truncation
-toward zero to `m` mantissa bits, for normal and subnormal words alike. Unchanged when `23 ≤ m`. -/
+/-- Truncation of an FP32 word toward zero to `m` mantissa bits; the identity when `23 ≤ m`. -/
 def truncateMantissa32 (m : ℕ) (w : F32) : F32 :=
   BitVec.ofNat 32 (w.toNat / 2 ^ (23 - m) * 2 ^ (23 - m))
 
@@ -47,7 +41,6 @@ theorem truncateMantissa32_toNat (m : ℕ) (w : F32) :
   simp only [truncateMantissa32, BitVec.toNat_ofNat]
   exact Nat.mod_eq_of_lt (by omega)
 
-/-- Truncating the mantissa keeps the sign and exponent fields. -/
 theorem truncateMantissa32_div (m : ℕ) (w : F32) :
     (truncateMantissa32 m w).toNat / 2 ^ 23 = w.toNat / 2 ^ 23 := by
   rw [truncateMantissa32_toNat]
@@ -56,7 +49,6 @@ theorem truncateMantissa32_div (m : ℕ) (w : F32) :
   have hpos : 0 < 2 ^ (23 - m) := Nat.two_pow_pos _
   rw [hp, ← Nat.div_div_eq_div_mul, ← Nat.div_div_eq_div_mul, Nat.mul_div_cancel _ hpos]
 
-/-- A finite binary32 word stays finite when its mantissa is truncated. -/
 theorem decode32_truncateMantissa32 {m : ℕ} {w : F32} (h : (decode32 w).isSome) :
     (decode32 (truncateMantissa32 m w)).isSome := by
   have hd := truncateMantissa32_div m w

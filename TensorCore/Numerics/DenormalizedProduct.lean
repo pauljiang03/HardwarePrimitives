@@ -2,14 +2,12 @@ import TensorCore.Numerics.FormatProperties
 
 /-! Exact products kept in denormalized form.
 
-Here *denormalized* means *not normalized*, as in Khattak and Mikaitis's *Accurate Models*
-papers ("the products remain denormalised"): a product keeps the full product of the two
-significands, which may be 2 or more, and the sum of the two input exponents. It does not mean
-*subnormal*. -/
+*Denormalized* means not normalized, as in Khattak and Mikaitis's *Accurate Models*: the
+significand product may be 2 or more. It does not mean subnormal. -/
 
 namespace TensorCore
 
-/-- An exact product kept in denormalized form: `value = significand · 2^(exponent − mantissaBits)`. -/
+/-- An exact product: `value = significand · 2^(exponent − mantissaBits)`. -/
 structure DenormalizedProduct where
   /-- Product of the two integer significands (may be ≥ 2 after the binary point is placed). -/
   significand : ℤ

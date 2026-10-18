@@ -1,7 +1,7 @@
 import Lean
 import TCFloat
 
-/-! Axiom audit generated from the environment: every theorem in the `TCFloat` namespace, including generated regression theorems, is listed with the axioms its proof depends on. -/
+/-! Axiom audit of every `TCFloat` theorem, and dependency checks on the executable. -/
 
 open Lean Elab Command
 

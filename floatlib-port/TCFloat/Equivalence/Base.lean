@@ -25,7 +25,7 @@ open FloatLib.Floats.Formats.BinaryInterchange
   | nil => rfl
   | cons x xs ih => simp [TensorCore.sumZ, ih]
 
-/-- The parent's final truncation is FloatLib's IEEE round-toward-zero mode on the finite domain. -/
+/-- The `TensorCore` rounding modes as FloatLib's IEEE modes. -/
 def mode : TensorCore.RoundingMode → Mode
   | .truncate => .towardZero
   | .nearestEven => .nearestEven
@@ -51,7 +51,7 @@ def project (t : Term) : TensorCore.Decoded :=
 /-- Canonical FloatLib terms: consistent scale metadata, with the source's single zero sign. -/
 def CanonicalTerm := {t : Term // term (project t) = t}
 
-/-- A genuine two-sided representation equivalence, for arbitrary integer terms. -/
+/-- A two-sided representation equivalence, for arbitrary integer terms. -/
 def termEquiv : TensorCore.Decoded ≃ CanonicalTerm where
   toFun d := ⟨term d, by simp⟩
   invFun t := project t.val

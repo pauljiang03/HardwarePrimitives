@@ -58,7 +58,6 @@ theorem floor_le_ceil (t : ℚ) : t.floor ≤ t.ceil := by
   have h2 := Rat.le_ceil (x := t)
   exact Rat.intCast_le_intCast.mp (Rat.le_trans h1 h2)
 
-/-- Every mode selects a coefficient between the floor and the ceiling of the scaled magnitude, hence within `[0, N]` for a magnitude below `N`. -/
 theorem binaryCoefficient_bounds (mode : BinaryRoundingMode) (negative : Bool) (t : ℚ)
     (N : ℕ) (ht : 0 ≤ t) (htop : t < (N : ℚ)) :
     0 ≤ binaryCoefficient mode negative t ∧ binaryCoefficient mode negative t ≤ N ∧
@@ -124,7 +123,6 @@ theorem binaryCoefficient_le_integer (mode : BinaryRoundingMode) (negative : Boo
   | towardNegative => simp only [binaryCoefficient]; split <;> omega
   | towardPositive => simp only [binaryCoefficient]; split <;> omega
 
-/-- The selected coefficient of a positive in-range magnitude. -/
 theorem binaryRoundedCoeff_bounds (f : Format) (hf : f.WellFormed) (mode : BinaryRoundingMode)
     (negative : Bool) (m : ℚ) (hm : 0 < m) (hr : m ≤ f.maxFinite) :
     let e := binaryNormExp f m
@@ -172,7 +170,6 @@ theorem binaryRoundedCoeff_bounds (f : Format) (hf : f.WellFormed) (mode : Binar
       grind
     exact hscale
 
-/-- Carry preserves the value and produces a coefficient that fits the encoding. -/
 theorem binaryCarry_spec (f : Format) (hf : f.WellFormed) (e k : ℤ) (he1 : f.emin ≤ e)
     (he2 : e ≤ f.emax) (hk0 : 0 ≤ k) (hk1 : k ≤ ((2 ^ (f.mantissaBits + 1) : ℕ) : ℤ))
     (hsub : ((2 ^ f.mantissaBits : ℕ) : ℤ) ≤ k ∨ e = f.emin)

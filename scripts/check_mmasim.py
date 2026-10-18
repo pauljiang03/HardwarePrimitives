@@ -1,30 +1,9 @@
 #!/usr/bin/env python3
 """Cross-check the NVIDIA Tensor Core models against Microsoft's MMA-Sim.
 
-MMA-Sim (https://github.com/microsoft/MMA-Sim, MIT licence, Copyright (c) Microsoft Corporation)
-is a bit-accurate simulator of GPU matrix multiply-accumulate units, built and checked by its
-authors against GPUs on random inputs. This script runs a local checkout of the commit pinned in
-vendor/mmasim/SOURCES.json, unmodified except that its FP64 FMA module (a C++ kernel compiled with
--fopenmp, which Apple clang rejects) is replaced by a stub that fails if called: no FP64
-instruction is checked. It needs a Python with torch for MMA-Sim; the rest runs in plain Python.
-
-Part 1: 31 instructions of V100, A100, Ada, H100 (mma.sync, wgmma), B200 (mma.sync, tcgen05.mma)
-and the RTX PRO 6000 with fp16, bf16, tf32, e4m3 and e5m2 inputs and binary32 c and output, on
-random bit patterns, wide and moderate values, sparse inputs, c above or below the largest product,
-near-cancellation, tiny and subnormal operands, signed zeros and inputs near overflow, with c
-accumulated inside the instruction; K is one, two or more instructions chained through c. The
-Lean side is tc_features `model-dot` with each model's parameters.
-Part 2: the FP8 mma.sync model of H100, H200 and B200 (tc_features `mma-sync`) against the same
-path composed from MMA-Sim's FP16 mma.sync (scripts/mmasim/mmasync.py).
-
-Outcomes per case: same (bit-identical words), special (an Inf or NaN operand: the Lean models
-reject such inputs), overflow (finite operands, accumulator beyond binary32's range: the Lean models
-reject it, MMA-Sim returns an infinity), zero-sign (both zero, different signs), mismatch.
-This is an independent simulator, not a hardware measurement.
-
 Usage: python3 scripts/check_mmasim.py --mmasim <MMA-Sim checkout> --python <python with torch>
        [--cases N] [--seed S]     (also from MMASIM_DIR and MMASIM_PYTHON)
-Writes data/regressions/mmasim-report.json."""
+"""
 if not __debug__:
     raise SystemExit('Run without python -O or PYTHONOPTIMIZE: these checks rely on assert.')
 import argparse
@@ -42,8 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FEATURES = ROOT / '.lake/build/bin/tc_features'
 TMP = ROOT / 'tmp/mmasim'
 
-# Lean model parameters: (fmt, nfma, F, eAlignMin, outBits) as in TensorCore/TC/{Defs,
-# CanonicalDefs, CanonicalFormatDefs, GPUs}.lean
+# Lean model parameters: (fmt, nfma, F, eAlignMin, outBits)
 LEAN = {
     'v100-f16': ('fp16', 4, 23, 'none', 23),
     'a100-f16': ('fp16', 8, 24, '-132', 23), 'a100-bf16': ('bf16', 8, 24, '-132', 23),
@@ -55,7 +33,7 @@ LEAN = {
     'blackwell-e4m3': ('e4m3', 32, 25, 'none', 23), 'blackwell-e5m2': ('e5m2', 32, 25, 'none', 23),
 }
 
-# (variant, our model (GPU-level name in the snapshot), MMA-Sim class, arch, shape, kinst)
+# (variant, Lean model, MMA-Sim class, arch, shape, kinst)
 VARIANTS = [
     ('V100 fp16 mma.m8n8k4', 'v100-f16', 'MMA', 'Volta', 'm8n8k4.f32.f16.f16.f32', 4),
     ('A100 fp16 mma.m16n8k16', 'a100-f16', 'MMA', 'Ampere', 'm16n8k16.f32.f16.f16.f32', 16),
@@ -92,14 +70,13 @@ VARIANTS = [
 ]
 
 WIDTH = {'fp16': 16, 'bf16': 16, 'tf32': 32, 'e4m3': 8, 'e5m2': 8}
-# (mantissa bits, exponent bits, bias) of the operand words as stored (tf32 as a 32-bit word)
+# (mantissa bits, exponent bits, bias) of the stored operand words (TF32 as a 32-bit word)
 LAY = {'fp16': (10, 5, 15), 'bf16': (7, 8, 127), 'tf32': (23, 8, 127), 'e4m3': (3, 4, 7),
        'e5m2': (2, 5, 15)}
 
 
 def dec(fmt, w):
-    """(signed significand, exponent, mantissa bits) of an operand word, (0, 0, 0) for zero, None
-    for Inf/NaN; E4M3 has no infinities and its only NaNs are S.1111.111."""
+    """(significand, exponent, mantissa bits) of a word; (0, 0, 0) for zero, None for Inf/NaN."""
     t, eb, bias = LAY[fmt]
     if fmt == 'tf32':
         w, t = w >> 13, 10
@@ -182,8 +159,7 @@ def gen(fmt, K, rng, family, F):
         c = f32_word(rng.getrandbits(1), rng.randint(-149, 127), rng.getrandbits(23))
         return a, b, c
     if family == 'zeros':
-        # exact cancellation and signed zeros: pairs x*y and (-x)*y, zero factors of either
-        # sign, c in {+0, -0} or tiny
+        # exact cancellation and signed zeros: pairs x*y and (-x)*y, c in {+0, -0} or tiny
         a, b = [], []
         while len(a) < K:
             x = finite_word(fmt, rng, bias - 3, bias + 3, sub=0.1, zero=0.3)
@@ -202,7 +178,7 @@ def gen(fmt, K, rng, family, F):
         c = (1 << 31) if r < 0.4 else 0 if r < 0.8 else f32_word(rng.getrandbits(1), -140, rng.getrandbits(23))
         return a, b, c
     if family == 'ovf':
-        # c near the top of binary32 and large products of the same sign
+        # c near the top of FP32 and large products of the same sign
         t_, eb_, bias_ = LAY[fmt]
         a = [finite_word(fmt, rng, (1 << eb_) - 4, (1 << eb_) - 2, sub=0, zero=0.2) for _ in range(K)]
         b = [finite_word(fmt, rng, (1 << eb_) - 4, (1 << eb_) - 2, sub=0, zero=0.2) for _ in range(K)]
@@ -243,7 +219,7 @@ def gen(fmt, K, rng, family, F):
         if acc == 0:
             c = f32_word(s, e, m)
         else:
-            # -acc rounded to binary32, then moved by a few units in the last place
+            # -acc rounded to FP32, then moved by a few units in the last place
             mag = abs(acc)
             ex = max(floor_log2(mag), -126)
             k = round(mag / Q(2) ** (ex - 23)) + rng.randint(-3, 3)
@@ -266,7 +242,7 @@ def floor_log2(x):
 
 
 def word32(v):
-    """The binary32 word of a value that is a binary32 value or rounds to one (nearest even)."""
+    """The FP32 word of v, rounded to nearest even."""
     if v == 0:
         return 0
     neg, a = v < 0, abs(v)
@@ -368,7 +344,7 @@ def main():
         totals['same_with_nonzero_c'] += with_c
         totals['cases'] += len(meta)
         print(f'{vname:44s} {len(meta):6d}  {dict(counts)}', flush=True)
-    # Part 2: FP8 mma.sync against the composite of MMA-Sim's FP16 mma.sync.
+    # FP8 mma.sync against its composite from MMA-Sim's FP16 mma.sync.
     composite = {}
     for arch in ['Hopper', 'Blackwell']:
         for fmt in ['e4m3', 'e5m2']:

@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Run the FloatLib implementation and Matrix-Core's model on the same random inner products.
-
-Both executables read `<model> <a> <b> <c>` lines (hexadecimal words) and print the observed
-result: `F <word>`, `I+`, `I-` or `N`. Outputs are compared exactly, words bit for bit.
-
-Inputs for every model:
-  bits     independent uniform words (infinities and NaN included);
-  normal   finite words with exponents drawn over the whole normal range;
-  narrow   finite words with exponents within a few binades of each other, so that alignment,
-           cancellation and carries happen;
-  tiny     subnormal and smallest-normal words, with a subnormal or zero c;
-  special  finite words with an infinity, NaN or extreme value placed at random.
+"""Compare `mc_floatlib` with `mc_eval` bit for bit on random inner products.
 
 Usage: python3 scripts/compare.py [--cases N] [--seed S]
 """

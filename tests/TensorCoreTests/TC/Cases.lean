@@ -12,7 +12,7 @@ def r2 : V100Input := ⟨[(0x3e00, 0x3e00), (0x3c01, 0x3001),
   (0x3c01, 0x3001), (0x3c00, 0x3000)], 0x3e000000⟩
 def r3 : V100Input := ⟨List.replicate 4 (0x3e00, 0x3d00), 0x3f7fffff⟩
 
-/-- Proof-free projection: traces come exclusively from the evaluator. c is term zero. -/
+/-- A projection of the evaluator's trace; `c` is term zero. -/
 structure Snapshot where
   bits : ℕ
   alignExp : Option ℤ
@@ -120,7 +120,7 @@ theorem out_of_range_rejected :
 theorem wrong_shape_rejected :
     outputBits (⟨[], 0⟩ : V100Input) = .error .wrongProductCount := by decide +kernel
 
-/-- Revised TC-EFT III.4, one concrete V100 witness, not a universal threshold. -/
+/-- TC-EFT III.4: one concrete V100 witness. -/
 theorem v100_nonmonotonicity_witness :
     outputBits (⟨List.replicate 4 (0x0c00, 0x0c00), 0x3f800000⟩ : V100Input) = .ok 0x3f800000 ∧
     outputBits (⟨List.replicate 4 (0x0c00, 0x0c00), 0x3f7fffff⟩ : V100Input) = .ok 0x3f800001 := by

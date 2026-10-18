@@ -1,22 +1,10 @@
 #!/usr/bin/env python3
-"""Differential test of the Lean CDNA 3 binary8 model against MMA-Sim's CDNA 3 FP8 arithmetic.
-
-MMA-Sim (Microsoft, https://github.com/microsoft/MMA-Sim, MIT licence) models the MMA units of
-NVIDIA and AMD GPUs. For CDNA 3 `float8_e4m3fnuz` and `float8_e5m2fnuz` inputs it selects
-`MMA_GTR_FDPA(F=24, F2=31, rho="RNE-FP32", L_max=16)` (`src/mmasim/mmasim/amd/sim.py`), whose
-`gtr_fdpa` (`src/mmasim/mmasim/arithmetic/fdpa.py`) this script transcribes, at commit `aab7f2a`,
-with exact rational arithmetic in place of MMA-Sim's float64 tensors. MMA-Sim's code is not run
-or vendored; `gtr_fdpa` below follows it step by step. Each 16-product block's output is the next
-block's `c`, as in MMA-Sim's `dpa`.
-
-The cases come from `fp8_cases.py` (six regimes, `k = 16` and `32`, the profiles `cdna3E4M3`,
-`cdna3E5M2` and `cdna3E4M3E5M2`); `mc_eval` evaluates the Lean model. Outputs are compared as
-binary32 words; the exact transcription has no signed zero, so a zero is compared by value and
-counted separately.
+"""Differential test of the Lean CDNA 3 FP8 model against MMA-Sim's CDNA 3 FP8 arithmetic.
 
 Usage: python3 scripts/mmasim_fp8.py [--cases N] [--seed S]   (N cases per profile)
 
-The transcribed function is covered by MMA-Sim's licence:
+`gtr_fdpa` transcribes MMA-Sim's `gtr_fdpa` (https://github.com/microsoft/MMA-Sim, commit
+`aab7f2a`) in exact rational arithmetic and is covered by MMA-Sim's licence:
 
     Copyright (c) Microsoft Corporation.
 
@@ -64,7 +52,6 @@ def p2(e):
     return Q(2) ** e
 
 
-# ---------------------------------------------------------------- binary32
 def f32_value(w):
     E, M = (w >> 23) & 0xff, w & 0x7fffff
     if E == 255:
@@ -74,8 +61,7 @@ def f32_value(w):
 
 
 def rne32(x):
-    """Round to nearest even binary32 word (MMA-Sim's RNE-FP32 conversion); 'I+' or 'I-' past the
-    largest finite value."""
+    """Round to the nearest even FP32 word (MMA-Sim's RNE-FP32); 'I+' or 'I-' past the largest."""
     if x == 0:
         return 0
     a = abs(x)

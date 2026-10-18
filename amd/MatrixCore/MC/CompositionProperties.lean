@@ -3,9 +3,8 @@ import MatrixCore.MC.CorrectRounding
 
 /-! # Inner products of several blocks
 
-An inner product of length `N_FMA` is one block, and binary32 inputs form an SFMA: each product
-is added to the running result by one correctly rounded fused step,
-`d = fl{(…fl{fl{c + p₁} + p₂}…) + p_k}`. -/
+An inner product of length `N_FMA` is one block, and the SFMA adds each product by one correctly
+rounded fused step. -/
 
 namespace MatrixCore
 
@@ -58,7 +57,7 @@ theorem blocks_sfma (a : List sfmaF32.a.Word) (b : List sfmaF32.b.Word) :
   dsimp only
   rw [show sfmaF32.nfma = 1 from rfl, chunks_one a _ (Nat.le_refl _), chunks_one b _ (Nat.le_refl _)]
 
-/-- binary32 inputs: one correctly rounded fused step per product, `c` first. -/
+/-- SFMA: one correctly rounded fused step per product, `c` first. -/
 theorem dotBits_sfma_cons (a : sfmaF32.a.Word) (as : List sfmaF32.a.Word) (b : sfmaF32.b.Word)
     (bs : List sfmaF32.b.Word) (c : F32) (h : as.length = bs.length) :
     dotBits sfmaF32 (a :: as) (b :: bs) c =
@@ -76,7 +75,7 @@ theorem dotBits_sfma_cons (a : sfmaF32.a.Word) (as : List sfmaF32.a.Word) (b : s
   simp only [List.map_cons, List.zip_cons_cons, List.foldlM_cons]
   rfl
 
-/-- Each SFMA step is the binary32 value nearest to `c + a · b`, ties to even. -/
+/-- Each SFMA step is the FP32 value nearest to `c + a · b`, ties to even. -/
 theorem sfma_step_nearestEven {a b c d : F32} {t : BlockTrace sfmaF32}
     (h : evalBlock (P := sfmaF32) ⟨[a], [b], c⟩ = .ok t) (hd : t.d = d) :
     NearestEven32 t.prepared.exact d := by

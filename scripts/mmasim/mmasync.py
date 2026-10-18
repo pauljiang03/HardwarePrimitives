@@ -1,16 +1,7 @@
-"""The FP8 mma.sync path of H100, H200 and B200 composed from MMA-Sim's own pieces (MIT licence,
-Copyright (c) Microsoft Corporation; the pinned commit, unmodified): torch's FP8 -> FP16
-conversion, MMA-Sim's FP16 mma.sync m16n8k16 of the given architecture for each interleaved group
-(positions k mod 4 in {0,1}, then {2,3}; the second chained on the first, the first from C = 0),
-then c added in binary32 by torch (round to nearest even). Called by scripts/check_mmasim.py.
-
-MMA-Sim does not list FP8 mma.sync for Hopper or Blackwell; this composite checks the arithmetic
-of the Lean model given its structure. The structure is tested against recorded outputs by
-scripts/check_device_replay.py.
+"""Evaluate the FP8 mma.sync path of H100, H200 and B200 composed from MMA-Sim's FP16 mma.sync.
 
 Usage: mmasync.py <MMA-Sim src dir> <in.jsonl> <out.txt>
-Input lines: {"arch": "Hopper"|"Blackwell", "fmt": "e4m3"|"e5m2", "kinst": 32|16,
-              "a": [bytes], "b": [bytes], "c": word}"""
+"""
 import json
 import sys
 import types
@@ -59,7 +50,7 @@ def main():
             zero = torch.zeros_like(d)
             d1 = op.dpa(sa[:, ga], sb[:, ga], zero)
             d2 = op.dpa(sa[:, gb], sb[:, gb], d1)
-            d = d2 + d          # binary32 addition, round to nearest even
+            d = d2 + d          # FP32 addition, round to nearest even
         raw = d.view(torch.int32).tolist()
         for i, w in zip(idx, raw):
             out[i] = w & 0xffffffff

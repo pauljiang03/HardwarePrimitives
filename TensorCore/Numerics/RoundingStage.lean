@@ -87,7 +87,7 @@ theorem roundingStage_range {s : RoundingStage} {x : ℚ} {d : FiniteBinary s.fo
     (h : s.roundValue x = some d) : s.format.WellFormed ∧ absQ x ≤ s.format.maxFinite :=
   roundBinary_range (roundingStage_output h)
 
-/-- Executed sequences telescope across actual encodings, with every loss retained. -/
+/-- The input is the final value plus the sum of the stage losses. -/
 theorem runRoundings_recovery (ss : List RoundingStage) (x : ℚ) (r : RoundingRun)
     (h : runRoundings ss x = some r) : x = r.value + r.loss := by
   induction ss generalizing x r with
@@ -109,7 +109,7 @@ theorem runRoundings_recovery (ss : List RoundingStage) (x : ℚ) (r : RoundingR
         simp only [RoundingRun.loss, List.map_cons, sumQ, RoundingEvent.loss] at *
         grind
 
-/-- Every event is a successful conversion; the trace does not invent rounded boundaries. -/
+/-- The events follow the stages, and each one is a successful conversion. -/
 theorem runRoundings_events (ss : List RoundingStage) (x : ℚ) (r : RoundingRun)
     (h : runRoundings ss x = some r) :
     r.events.map RoundingEvent.stage = ss ∧

@@ -31,7 +31,7 @@ theorem trunc_signed_residual (x : ℚ) :
   · have hn' : 0 ≤ x := by grind
     simpa [hn, absQ_of_nonneg hn'] using h
 
-/-- FP32 truncation's strict output loss bound, with its finite-range hypothesis. -/
+/-- Truncation to FP32 loses less than one ulp of the output. -/
 theorem output_residual_bound (x : ℚ) (b : F32) (d : ℚ)
     (hr : absQ x ≤ maxFinite32) (hb : round32 .truncate x = some b)
     (hd : value32 b = some d) :

@@ -3,14 +3,9 @@ import MatrixCore.MC.Prepared
 
 /-! # Fixed-width and exact accumulation give the same output
 
-Every decoded operand has a significand below 2, so every product is below 4: a product aligned
-to `e_max` with `23 + padding` mantissa bits fits in `23 + padding + 2` bits. With
-`N_FMA ≤ 2^carryBits` products and a sign bit, a register of `23 + padding + 2 + carryBits + 1`
-bits never wraps, on any prefix of the sum and in either grouping. -/
+With `N_FMA ≤ 2^carryBits`, a register of `23 + padding + 2 + carryBits + 1` bits never wraps. -/
 
 namespace MatrixCore
-
-/-! ## Significand bounds -/
 
 /-! ## Aligned products as integers -/
 
@@ -24,7 +19,6 @@ theorem truncBits_zero (g : ℤ) : truncBits 0 g = 0 := by
     · exact absurd h hp
   exact_mod_cast this
 
-/-- An aligned product fits in `23 + padding + 2` bits. -/
 theorem alignedBits_bound {padding : ℕ} {ps : List Unpacked} {e : ℤ} (he : maxExp ps = some e)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) :
     ∀ z ∈ alignedBits padding e ps, z.natAbs < 2 ^ (23 + padding + 2) := by
@@ -62,7 +56,6 @@ theorem alignedBits_magnitude {padding : ℕ} {ps : List Unpacked} {e : ℤ} (he
     (fun z hz => by have := alignedBits_bound he hb z hz; omega)
   simpa [alignedBits] using this
 
-/-- `ps.length` terms of at most `2^B − 1` fit below `2^(B + c)` when `ps.length ≤ 2^c`. -/
 theorem count_mul_lt (n B c : ℕ) (h : n ≤ 2 ^ c) : n * (2 ^ B - 1) < 2 ^ (B + c) := by
   have hB := Nat.two_pow_pos B
   have hc := Nat.two_pow_pos c
@@ -73,8 +66,6 @@ theorem count_mul_lt (n B c : ℕ) (h : n ≤ 2 ^ c) : n * (2 ^ B - 1) < 2 ^ (B 
 
 /-! ## One group in a register -/
 
-/-- A group register holds the group's aligned sum exactly, and its magnitude is bounded by the
-group size. -/
 theorem machineAlignedSum_spec (w padding : ℕ) (ps : List Unpacked) (hw : 0 < w)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2))
     (hcap : ps.length * (2 ^ (23 + padding + 2) - 1) < 2 ^ (w - 1)) :
@@ -93,8 +84,7 @@ theorem machineAlignedSum_spec (w padding : ℕ) (ps : List Unpacked) (hw : 0 < 
     rw [hx, sumQ_truncMantissa_eq]
     exact ⟨rfl, by have := sumZ_natAbs_le (alignedBits padding e ps); omega⟩
 
-/-- Moving a register to a coarser exponent by an arithmetic right shift is the RD of the
-model. -/
+/-- An arithmetic right shift of a register to a coarser exponent is the model's RD. -/
 theorem shiftRegister_spec {w : ℕ} (F : ℕ) (e : ℤ) (s : Option ℤ × BitVec w)
     (hle : ∀ v, s.1 = some v → v ≤ e) (hz : s.1 = none → s.2.toInt = 0) :
     rdMantissa ((s.2.toInt : ℚ) * pow2 (s.1.getD 0 - F)) e F =
@@ -119,8 +109,6 @@ theorem shiftRegister_spec {w : ℕ} (F : ℕ) (e : ℤ) (s : Option ℤ × BitV
 
 /-! ## The configuration -/
 
-/-- With `|ps| ≤ 2^carryBits` products of significand below 4, `w`-bit registers give the model's
-`(e_max, S_{p_i,sum})` in both groupings. -/
 theorem machineProductSum_eq (w carryBits : ℕ) (P : Model) (ps : List Unpacked)
     (hb : ∀ p ∈ ps, p.m < 2 ^ (p.t + 2)) (hcount : ps.length ≤ 2 ^ carryBits)
     (hw : P.alignMantissaBits + 2 + carryBits + 1 ≤ w) :
@@ -170,9 +158,7 @@ theorem accumulateMachine_eq (w : ℕ) (P : Model) (x : Prepared)
   · rfl
   · cases P.accumulation <;> rfl
 
-/-- **Fixed-width refinement.** For every model and every input, accumulating the products in
-`w`-bit registers gives the model's result, whenever `N_FMA ≤ 2^carryBits` and
-`23 + padding + 2 + carryBits + 1 ≤ w`. -/
+/-- Accumulating the products in `w`-bit registers gives the model's output. -/
 theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)
     (hcount : P.nfma ≤ 2 ^ carryBits) (hw : P.alignMantissaBits + 2 + carryBits + 1 ≤ w) :
     evalBlockMachine w x = evalBlock x := by
@@ -210,19 +196,15 @@ theorem machinePrefix_exact (w carryBits padding : ℕ) {ps : List Unpacked} {e 
 
 /-! ## CDNA 3 register widths -/
 
-/-- CDNA 3 fp16: 26 bits per aligned product, 3 carry bits for 8 products, and a sign bit. -/
 theorem cdna3F16_machine_eq (x : BlockInput cdna3F16) : evalBlockMachine 30 x = evalBlock x :=
   evalBlockMachine_eq x 30 3 (by decide) (by decide)
 
 theorem cdna3BF16_machine_eq (x : BlockInput cdna3BF16) : evalBlockMachine 30 x = evalBlock x :=
   evalBlockMachine_eq x 30 3 (by decide) (by decide)
 
-/-- CDNA 3 XF32: 4 products, so 2 carry bits. -/
 theorem cdna3XF32_machine_eq (x : BlockInput cdna3XF32) : evalBlockMachine 29 x = evalBlock x :=
   evalBlockMachine_eq x 29 2 (by decide) (by decide)
 
-/-- CDNA 3 binary8: 16 products in two groups of eight; one more carry bit holds the combined
-odd and even sums. -/
 theorem cdna3FP8_machine_eq (fa fb : Format) (x : BlockInput (cdna3FP8 fa fb)) :
     evalBlockMachine 31 x = evalBlock x :=
   evalBlockMachine_eq x 31 4 (by simp [cdna3FP8]) (by simp [cdna3FP8, Model.alignMantissaBits])

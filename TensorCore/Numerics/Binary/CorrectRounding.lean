@@ -1,7 +1,7 @@
 import TensorCore.Numerics.Binary.RoundingBounds
 import TensorCore.Numerics.CorrectRounding
 
-/-! Correctness of `roundBinary` for every well-formed IEEE-style `Format` (TC-EFT Definition II.2 for FP16, BF16, tf19, FP32, and FP64). -/
+/-! Correctness of `roundBinary` for every well-formed `Format` (TC-EFT Definition II.2). -/
 
 namespace TensorCore
 
@@ -14,7 +14,7 @@ def binarySignedRounded (f : Format) (mode : BinaryRoundingMode) (x : ℚ) : ℚ
   if x < 0 then -binaryMagnitudeRounded f mode true (absQ x)
   else binaryMagnitudeRounded f mode false (absQ x)
 
-/-! Grid geometry parametric in the mantissa width. -/
+/-! ## Grid geometry -/
 
 theorem rne_grid_nearest_q (m q : ℚ) (hq : 0 < q) (j : ℤ) :
     absQ (m - (rneInt (m / q) : ℚ) * q) ≤ absQ (m - (j : ℚ) * q) := by
@@ -63,7 +63,6 @@ theorem Format.finite_below_binade (f : Format) (k e2 e : ℤ)
   rw [← step2]
   exact step1
 
-/-- The nearest-even coefficient ignores the sign flag. -/
 theorem binaryCoefficient_nearestEven (negative : Bool) (t : ℚ) :
     binaryCoefficient .nearestEven negative t = rneInt t := rfl
 
@@ -98,7 +97,6 @@ theorem binaryMagnitudeRounded_lower (f : Format) (hf : f.WellFormed) (mode : Bi
   rw [f.binade_grid (binaryNormExp f m), ← Rat.intCast_natCast]
   exact Rat.mul_le_mul_of_nonneg_right (Rat.intCast_le_intCast.mpr hk) (Rat.le_of_lt hq)
 
-/-- A finer grid below the input's binade cannot supply an equally near competitor. -/
 theorem binary_rne_lower_binade_strict (f : Format) (hf : f.WellFormed) (negative : Bool) (m : ℚ)
     (hm : 0 < m) (hr : m ≤ f.maxFinite) (j fe : ℤ) (hfe : f.emin ≤ fe)
     (hj : j.natAbs < 2 ^ (f.mantissaBits + 1)) (he : fe < binaryNormExp f m) :
@@ -205,7 +203,6 @@ theorem binarySignedRounded_tie_even (f : Format) (hf : f.WellFormed) (x y : ℚ
     apply binary_rne_magnitude_tie_even f hf false x y (by simpa [absQ_of_nonneg hn] using hm)
       (by simpa [absQ_of_nonneg hn] using hr) hy hne ht
 
-/-- The converter returns the signed selected grid value, with the coefficient's parity in the low bit. -/
 theorem roundBinary_nonzero_spec (f : Format) (hf : f.WellFormed) (mode : BinaryRoundingMode)
     (x : ℚ) (hx : x ≠ 0) (hr : absQ x ≤ f.maxFinite) :
     ∃ bits : BitVec f.width, roundBinary f mode x = some bits ∧
@@ -287,7 +284,7 @@ theorem roundBinary_nearestEven_correct (f : Format) (hf : f.WellFormed) (x : �
     · intro y hy hne ht
       exact hp (binarySignedRounded_tie_even f hf x y hx hr hy hne ht)
 
-/-! Truncation. -/
+/-! ## Truncation -/
 
 /-- `y` lies between zero and `x`, inclusive. -/
 def Between0 (x y : ℚ) : Prop := (0 ≤ x ∧ 0 ≤ y ∧ y ≤ x) ∨ (x ≤ 0 ∧ x ≤ y ∧ y ≤ 0)
@@ -333,7 +330,7 @@ theorem binary_trunc_magnitude_spec (f : Format) (hf : f.WellFormed) (negative :
       have := pow2_pos (binaryNormExp f m - f.mantissaBits - 1)
       grind
 
-/-- Truncated result: between zero and the input, of largest magnitude among the format's finite values there. -/
+/-- Truncated result: between zero and `x`, of largest magnitude among the finite values there. -/
 def Truncated (f : Format) (x : ℚ) (bits : BitVec f.width) : Prop :=
   ∃ d : ℚ, binaryValue f bits = some d ∧ Between0 x d ∧
     ∀ y : ℚ, f.FiniteValue y → Between0 x y → absQ y ≤ absQ d

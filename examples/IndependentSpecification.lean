@@ -15,7 +15,7 @@ example (x : BlockInput a100BF16F32)
       IndependentSpec.bits (IndependentSpec.parametersOf a100BF16F32) (IndependentSpec.inputOf x) = some t.output.bits :=
   IndependentSpec.valid_success x h (by decide)
 
-/-- Every intermediate encoding in an explicitly ordered schedule, for a binary32 block output. -/
+/-- Every intermediate encoding of an explicitly ordered schedule, for an FP32 block output. -/
 example (p : Model) (c : F32) (blocks : List (List (p.Word × p.Word))) (hw : 23 ≤ p.outputMantissaBits) :
     (runBlocks p c blocks).toOption.map (fun ts => ts.map fun t => t.output.bits) =
       IndependentSpec.runChain (IndependentSpec.parametersOf p) c blocks :=

@@ -3,16 +3,8 @@ import Init.GrindInstances.Ring.Rat
 
 /-! # Independent specification
 
-A second transcription of the paper's matrix-core blocks, written in its fixed-point language
-and sharing only standard-library arithmetic with the implementation:
-
-* Table 1 layouts and IEEE/FNUZ field decoding;
-* products `s_p = s_a s_b`, `e_p = e_a + e_b`;
-* Algorithm 1 and Algorithm 2 on integer significands: alignment to `e_max` with truncation to
-  `24` mantissa bits, a right shift with RD to `k` mantissa bits, and a subnormal-aware
-  normalization with RD to `31` mantissa bits;
-* the exact sum of CDNA 1;
-* binary32 RNE stated as a property of the result word over all finite binary32 words. -/
+A second transcription of the paper's matrix-core blocks in its fixed-point language, sharing only
+standard-library arithmetic with the implementation. -/
 
 namespace MatrixCore.Spec
 
@@ -43,8 +35,7 @@ def Num.val (x : Num) : ℚ := (if x.neg then -1 else 1) * (x.M : ℚ) * (2 : �
 /-- The signed integer `±M`. -/
 def Num.int (x : Num) : ℤ := if x.neg then -(x.M : ℤ) else x.M
 
-/-- Decode a word: `none` for an infinity or NaN; subnormals and zero carry the minimum normal
-exponent `1 − bias`. -/
+/-- `none` for an infinity or NaN; subnormals and zero get the exponent `1 − bias`. -/
 def decode (L : Layout) (w : ℕ) : Option Num :=
   let F := w % 2 ^ L.mantissa
   let E := w / 2 ^ L.mantissa % 2 ^ L.exponent
@@ -56,7 +47,7 @@ def decode (L : Layout) (w : ℕ) : Option Num :=
 /-- How an operand word is read. -/
 inductive Operand where
   | layout (L : Layout)
-  /-- XF32: a binary32 word with its mantissa cut to ten bits. -/
+  /-- XF32: an FP32 word with its mantissa truncated to 10 bits. -/
   | xf32
   deriving Repr, DecidableEq
 
@@ -72,8 +63,7 @@ def mul (a b : Num) : Num := ⟨a.neg != b.neg, a.M * b.M, a.f + b.f, a.e + b.e�
 /-- `⌊M · 2^s⌋` for a natural `M`. -/
 def shiftNat (M : ℕ) (s : ℤ) : ℕ := if 0 ≤ s then M * 2 ^ s.toNat else M / 2 ^ (-s).toNat
 
-/-- Align `x` to exponent `e` and truncate to `k` mantissa bits: the integer `A` such that
-`A · 2^(e − k)` is `x` with its magnitude truncated. -/
+/-- `x` aligned to exponent `e` and truncated to `k` mantissa bits, in steps of `2^(e − k)`. -/
 def alignTrunc (x : Num) (e : ℤ) (k : ℕ) : ℤ :=
   let A := shiftNat x.M (x.e - x.f - (e - k))
   if x.neg then -(A : ℤ) else A
@@ -89,7 +79,7 @@ def emax (ps : List Num) : Option ℤ := ((ps.filter fun p => p.M ≠ 0).map Num
 
 /-- Parameters of the late addition of `c`. -/
 structure Late where
-  /-- The padding bits (`n_eab` in the paper): products keep `23 + padding` mantissa bits. -/
+  /-- Padding bits (`n_eab` in the paper): products keep `23 + padding` mantissa bits. -/
   padding : ℕ
   /-- `s'_c` is RD to this many mantissa bits. -/
   cMantissa : ℕ
@@ -97,7 +87,7 @@ structure Late where
   sumMantissa : ℕ
   /-- The normalized `S_acc` is RD to this many mantissa bits. -/
   accMantissa : ℕ
-  /-- binary8: `s'_c = 0` once `e_max − e_c` exceeds this. -/
+  /-- FP8: `s'_c = 0` once `e_max − e_c` exceeds this. -/
   cCutoff : Option ℕ
   /-- `e_{c=0}`; `none` discards a zero `c`. -/
   cZero : Option ℤ
@@ -106,9 +96,7 @@ structure Late where
 /-- `e_c`, with `e_{c=0}` for a zero `c`. -/
 def cExp (L : Late) (c : Num) : Option ℤ := if c.M = 0 then L.cZero else some c.e
 
-/-- Lines 8–11 of Algorithm 1: `S'_{p_i,sum}` is `S` (on the grid `2^g`) shifted to `e_c` and RD
-to `sumMantissa` mantissa bits; `S_acc = S'_{p_i,sum} + s_c`; `S_acc` is normalized, without going
-below exponent `−126`, and RD to `accMantissa` mantissa bits. -/
+/-- Lines 8–11 of Algorithm 1: `S_acc = S'_{p_i,sum} + s_c`, normalized (not below `−126`), RD. -/
 def shiftedBranch (L : Late) (S : ℤ) (g : ℤ) (c : Num) (ec : ℤ) : ℚ :=
   let G := ec - L.sumMantissa
   let A := shiftRD S g G + shiftRD c.int (c.e - c.f) G
@@ -146,15 +134,13 @@ def odds (ps : List Num) : List Num := ((ps.zipIdx).filter fun q => q.2 % 2 = 0)
 /-- Elements at odd 0-based positions: `p₂, p₄, …`. -/
 def evens (ps : List Num) : List Num := ((ps.zipIdx).filter fun q => q.2 % 2 = 1).map (·.1)
 
-/-- One group of Algorithm 2: aligned to its own maximum exponent and truncated to `F`
-mantissa bits, then shifted to `e_max` and RD to `F` mantissa bits. -/
+/-- One group of Algorithm 2: aligned and truncated to its own maximum, then RD to `e_max`. -/
 def groupPart (F : ℕ) (qs : List Num) (e : ℤ) : ℤ :=
   match emax qs with
   | none => 0
   | some eq => shiftRD ((qs.map fun p => alignTrunc p eq F).sum) (eq - F) (e - F)
 
-/-- Algorithm 2: odd and even products aligned to their own maxima and truncated, the two sums
-shifted to the common `e_max` and RD to `23 + padding` mantissa bits, then late `c`. -/
+/-- Algorithm 2: odd and even products aligned separately, RD to the shared `e_max`, late `c`. -/
 def algorithm2 (L : Late) (ps : List Num) (c : Num) : ℚ :=
   match emax ps with
   | none => lateC L none 0 c
@@ -189,11 +175,10 @@ def accumulated (P : Params) (as bs : List Num) (c : Num) : ℚ :=
   | .algorithm1 L => algorithm1 L ps c
   | .algorithm2 L => algorithm2 L ps c
 
-/-- Value of a finite binary32 word. -/
+/-- Value of a finite FP32 word. -/
 def value32 (w : BitVec 32) : Option ℚ := (decode fp32 w.toNat).map Num.val
 
-/-- Binary32 RNE of `x` to the word `w`: the sign of `x`, a value nearest to `x` among all finite
-binary32 words, and an even last bit when another finite word is equally near. -/
+/-- FP32 RNE of `x` to `w`: the sign of `x`, a nearest finite value, an even last bit on ties. -/
 def RoundsNearestEven (x : ℚ) (w : BitVec 32) : Prop :=
   (w.toNat / 2147483648 % 2 = 1 ↔ x < 0) ∧
   ∃ d, value32 w = some d ∧
@@ -201,7 +186,7 @@ def RoundsNearestEven (x : ℚ) (w : BitVec 32) : Prop :=
     (∀ v y, value32 v = some y → y ≠ d → magnitude (x - y) = magnitude (x - d) →
       w.toNat % 2 = 0)
 
-/-- RNE into binary32 overflows at `2^128 − 2^103`. -/
+/-- RNE into FP32 overflows at `2^128 − 2^103`. -/
 def overflows (x : ℚ) : Prop := (2 : ℚ) ^ (128 : ℤ) - (2 : ℚ) ^ (103 : ℤ) ≤ magnitude x
 
 /-- `w` is the output of the block for words `a`, `b`, `c`. -/
@@ -213,9 +198,9 @@ def Result (P : Params) (a b : List ℕ) (c : BitVec 32) (w : BitVec 32) : Prop 
         ∀ p ∈ List.zipWith mul as bs, magnitude p.val < (2 : ℚ) ^ (128 : ℤ)) ∧
       ¬ overflows (accumulated P as bs cn) ∧ RoundsNearestEven (accumulated P as bs cn) w
 
-/-! ## CDNA 2: pairwise sums of binary32 values (Fig. 2) -/
+/-! ## CDNA 2: pairwise sums of FP32 values (Fig. 2) -/
 
-/-- A CDNA 2 block: operand formats and group size (`2`, or `4` for fp16 and bf16 `_1k`). -/
+/-- A CDNA 2 block: operand formats and group size (2, or 4 for FP16 and BF16 `_1k`). -/
 structure PairwiseParams where
   a : Operand
   b : Operand
@@ -225,26 +210,21 @@ structure PairwiseParams where
 /-- No subnormal inputs: a significand below one becomes zero. -/
 def flushNum (x : Num) : Num := if x.M < 2 ^ x.f then { x with M := 0 } else x
 
-/-- Smallest normal binary32 magnitude. -/
+/-- Smallest normal FP32 magnitude. -/
 def minNormal : ℚ := (2 : ℚ) ^ (-126 : ℤ)
 
-/-- `fl{x} = y` on CDNA 2: binary32 RNE of `x` without overflow, a subnormal result replaced by
-zero. -/
+/-- `fl{x} = y` on CDNA 2: FP32 RNE without overflow, a subnormal result replaced by zero. -/
 def Fl (x y : ℚ) : Prop :=
   ¬ overflows x ∧ ∃ w d, RoundsNearestEven x w ∧ value32 w = some d ∧
     y = (if d ≠ 0 ∧ magnitude d < minNormal then 0 else d)
 
-/-- The output word of `fl{x}` on CDNA 2: a subnormal result is replaced by the zero of its
-sign. -/
+/-- The output word of `fl{x}` on CDNA 2: a subnormal result becomes the zero of its sign. -/
 def FlWord (x : ℚ) (w : BitVec 32) : Prop :=
   ¬ overflows x ∧ ∃ w₀ d, RoundsNearestEven x w₀ ∧ value32 w₀ = some d ∧
     w = (if d ≠ 0 ∧ magnitude d < minNormal then
       BitVec.ofNat 32 (w₀.toNat / 2147483648 % 2 * 2147483648) else w₀)
 
-/-- Fig. 2 for the products `p_ℓ` and the flushed `c`: groups of two
-`d = fl{c + fl{fl{p₁} + fl{p₂}}}` and groups of four
-`d = fl{c + fl{fl{fl{p₁} + fl{p₂}} + fl{fl{p₃} + fl{p₄}}}}`, where `fl{p_ℓ}` converts each product
-to binary32. -/
+/-- Fig. 2: `d = fl{c + fl{fl{p₁} + fl{p₂}}}` for groups of two, the analogous tree for four. -/
 def pairwiseOutput (ps : List ℚ) (c : ℚ) (w : BitVec 32) : Prop :=
   match ps with
   | [x₁, x₂] => ∃ q₁ q₂ t, Fl x₁ q₁ ∧ Fl x₂ q₂ ∧ Fl (q₁ + q₂) t ∧ FlWord (c + t) w
@@ -253,8 +233,7 @@ def pairwiseOutput (ps : List ℚ) (c : ℚ) (w : BitVec 32) : Prop :=
       Fl (q₁ + q₂) u ∧ Fl (q₃ + q₄) v ∧ Fl (u + v) t ∧ FlWord (c + t) w
   | _ => False
 
-/-- `w` is the output of a CDNA 2 block for the words `a`, `b`, `c`: the inputs are decoded and
-flushed, multiplied exactly, and summed as in Fig. 2. -/
+/-- `w` is the output of a CDNA 2 block: flushed inputs, exact products, sums as in Fig. 2. -/
 def PairwiseResult (P : PairwiseParams) (a b : List ℕ) (c : BitVec 32) (w : BitVec 32) : Prop :=
   a.length = P.group ∧ b.length = P.group ∧
     ∃ as bs cn, a.mapM P.a.decode = some as ∧ b.mapM P.b.decode = some bs ∧
@@ -271,7 +250,7 @@ def cdna2BF16_1k : PairwiseParams := ⟨.layout bf16, .layout bf16, 4⟩
 /-- `align(c, S_{p_i,sum}) = (24, 32, RD)`, one padding bit, `e_{c=0} = −126`. -/
 def cdna3Late : Late := ⟨1, 24, 32, 31, none, some (-126)⟩
 
-/-- binary8: as `cdna3Late`, with `s'_c = 0` beyond a shift of `25`. -/
+/-- FP8: as `cdna3Late`, with `s'_c = 0` beyond a shift of 25. -/
 def cdna3Late8 : Late := ⟨1, 24, 32, 31, some 25, some (-126)⟩
 
 def sfma : Params := ⟨.layout fp32, .layout fp32, 1, .exact, false⟩

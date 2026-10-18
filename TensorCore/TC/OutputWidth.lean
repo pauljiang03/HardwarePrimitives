@@ -4,25 +4,12 @@ import TensorCore.Numerics.RoundTrip
 
 /-! # Block outputs with fewer than 23 mantissa bits
 
-The FP8 block FMAs of Ada and Hopper truncate the block output to a 13-bit mantissa
-(`outputMantissaBits = 13`). This file proves the error bound for every block-output width.
-
-A finite binary32 word `w` has the value `±coeff32 r · 2^-149`, where `r` is the word without its
-sign bit and `coeff32` is strictly increasing in `r` (`coeff32_lt_of_lt`). Clearing the low
-`23 − m` mantissa bits of a word (`truncateMantissa32 m`) is therefore truncation toward zero to an
-`m`-bit mantissa within binary32's exponent range: it keeps the sign and the exponent field, never
-increases the magnitude, loses at most `2^(23 − m) − 1` units in the last place, and returns the
-largest magnitude among the words with `m` mantissa bits that do not exceed the original
-(`truncateMantissa32_values`, `_between`, `_sub_le`, `_max`).
-
-`evalBlock_error_bound_any`: the model error is below (number of terms) · (alignment grid step)
-plus `2^(23 − m)` units in the last place of the binary32 output word, that is, one unit in the
-last place of the `(m + 1)`-bit output significand. For `m ≥ 23` this is `evalBlock_error_bound`;
-`fp8_error_bound` is the case `m = 13`. -/
+The error bound for every block-output width, including the 13-bit output of the FP8 block FMAs of
+Ada and Hopper. -/
 
 namespace TensorCore
 
-/-- The magnitude of a binary32 word without its sign bit, in units of `2^-149`. -/
+/-- The magnitude of an FP32 word without its sign bit, in units of `2^-149`. -/
 def coeff32 (r : ℕ) : ℕ :=
   if r / 2 ^ 23 = 0 then r % 2 ^ 23 else (2 ^ 23 + r % 2 ^ 23) * 2 ^ (r / 2 ^ 23 - 1)
 
@@ -48,7 +35,6 @@ theorem coeff32_ge_binade (r : ℕ) (h : r / 2 ^ 23 ≠ 0) :
   rw [if_neg h]
   exact Nat.mul_le_mul_right _ (by omega)
 
-/-- `coeff32` is strictly increasing. -/
 theorem coeff32_lt_of_lt {r r' : ℕ} (h : r < r') : coeff32 r < coeff32 r' := by
   have hE : r / 2 ^ 23 ≤ r' / 2 ^ 23 := Nat.div_le_div_right (Nat.le_of_lt h)
   rcases Nat.lt_or_eq_of_le hE with hlt | heq
@@ -79,10 +65,10 @@ theorem le_of_coeff32_le {r r' : ℕ} (h : coeff32 r ≤ coeff32 r') : r ≤ r' 
   have := coeff32_lt_of_lt hlt
   omega
 
-/-- The sign of a binary32 word: `1` or `−1`. -/
+/-- The sign of an FP32 word: `1` or `−1`. -/
 def signQ32 (n : ℕ) : ℚ := if n / 2 ^ 31 = 0 then 1 else -1
 
-/-- The value of a finite binary32 word is `±coeff32 r · 2^-149`. -/
+/-- The value of a finite FP32 word is `±coeff32 r · 2^-149`. -/
 theorem decode32_value_coeff {w : F32} {d : Decoded} (h : decode32 w = some d) :
     d.value = signQ32 w.toNat * (coeff32 (w.toNat % 2 ^ 31) : ℚ) * pow2 (-149) := by
   have hlt := w.isLt
@@ -129,7 +115,6 @@ theorem decode32_value_coeff {w : F32} {d : Decoded} (h : decode32 w = some d) :
         Rat.one_mul]
       simp only [Rat.mul_assoc]
 
-/-- `2^ulp` of a word, in units of `2^-149`. -/
 theorem pow2_outputUlpExponent (w : F32) :
     pow2 (outputUlpExponent w) =
       (((if (w.toNat % 2 ^ 31) / 2 ^ 23 = 0 then 1 else 2 ^ ((w.toNat % 2 ^ 31) / 2 ^ 23 - 1)) : ℕ) : ℚ) *
@@ -159,7 +144,6 @@ theorem truncateMantissa32_parts (m : ℕ) (w : F32) :
   have hlt := w.isLt
   change w.toNat < 2 ^ 32 at hlt
   generalize w.toNat = n at hlt ⊢
-  -- n = 2^31 q + r, and 2^k divides 2^31
   have hd : 2 ^ 31 = 2 ^ k * 2 ^ (31 - k) := by rw [← Nat.pow_add]; congr 1; omega
   have hpos : 0 < 2 ^ k := Nat.two_pow_pos k
   obtain ⟨q, r, hr, rfl⟩ : ∃ q r, r < 2 ^ 31 ∧ n = 2 ^ 31 * q + r :=
@@ -180,7 +164,6 @@ theorem truncateMantissa32_parts (m : ℕ) (w : F32) :
   simp only [Nat.reducePow] at hr hr' ⊢
   omega
 
-/-- The exponent field of a magnitude word survives clearing its low `k ≤ 23` bits. -/
 theorem div_binade_of_clear (r k : ℕ) (hk : k ≤ 23) :
     (r / 2 ^ k * 2 ^ k) / 2 ^ 23 = r / 2 ^ 23 := by
   have hd : 2 ^ 23 = 2 ^ k * 2 ^ (23 - k) := by rw [← Nat.pow_add]; congr 1; omega
@@ -189,7 +172,6 @@ theorem div_binade_of_clear (r k : ℕ) (hk : k ≤ 23) :
 theorem coeff32_clear_le (r k : ℕ) : coeff32 (r / 2 ^ k * 2 ^ k) ≤ coeff32 r :=
   coeff32_le_of_le (Nat.div_mul_le_self r _)
 
-/-- Clearing the low `k` bits loses at most `2^k − 1` units of the binade's last place. -/
 theorem coeff32_clear_sub (r k : ℕ) (hk : k ≤ 23) :
     coeff32 r - coeff32 (r / 2 ^ k * 2 ^ k) + (if r / 2 ^ 23 = 0 then 1 else 2 ^ (r / 2 ^ 23 - 1)) ≤
       2 ^ k * (if r / 2 ^ 23 = 0 then 1 else 2 ^ (r / 2 ^ 23 - 1)) := by
@@ -229,8 +211,6 @@ theorem coeff32_clear_sub (r k : ℕ) (hk : k ≤ 23) :
     rw [Nat.add_mul, Nat.one_mul] at this
     exact this
 
-/-- A word with its low `k` bits clear stays below another word's clearing once its coefficient
-is at most the other's. -/
 theorem coeff32_le_clear {ry r k : ℕ} (hy : ry % 2 ^ k = 0) (h : coeff32 ry ≤ coeff32 r) :
     coeff32 ry ≤ coeff32 (r / 2 ^ k * 2 ^ k) := by
   apply coeff32_le_of_le
@@ -242,7 +222,6 @@ theorem coeff32_le_clear {ry r k : ℕ} (hy : ry % 2 ^ k = 0) (h : coeff32 ry �
   rw [hy']
   exact Nat.mul_le_mul_right _ (Nat.div_le_div_right hle)
 
-/-- A finite word of value zero is `+0` or `−0`. -/
 theorem zeroBits_of_value (b : F32) (h : value32 b = some 0) :
     b.toNat = 0 ∨ b.toNat = 2147483648 := by
   cases hd : decode32 b with
@@ -270,7 +249,6 @@ theorem sign32_abs (n : ℕ) (c : ℕ) (u : ℚ) (hu : 0 < u) :
   · rw [Rat.one_mul]; exact absQ_of_nonneg hc
   · rw [Rat.neg_mul, Rat.one_mul, Rat.neg_mul, absQ_neg]; exact absQ_of_nonneg hc
 
-/-- The values of a finite word and of the word with its low `23 − m` mantissa bits cleared. -/
 theorem truncateMantissa32_values {m : ℕ} {w : F32} {v : ℚ} (h : value32 w = some v) :
     ∃ v', value32 (truncateMantissa32 m w) = some v' ∧
       v = signQ32 w.toNat * (coeff32 (w.toNat % 2 ^ 31) : ℚ) * pow2 (-149) ∧
@@ -360,8 +338,7 @@ theorem truncateMantissa32_sub_le {m : ℕ} {w : F32} {v v' : ℚ} (h : value32 
   have := Rat.mul_le_mul_of_nonneg_right hq (Rat.le_of_lt hu)
   grind
 
-/-- Maximality: a word with its low `23 − m` bits clear whose magnitude is at most `|v|` has
-magnitude at most `|v'|`. -/
+/-- Maximality: a word with low `23 − m` bits clear and magnitude at most `|v|` is at most `|v'|`. -/
 theorem truncateMantissa32_max {m : ℕ} {w y : F32} {v v' vy : ℚ} (h : value32 w = some v)
     (h' : value32 (truncateMantissa32 m w) = some v') (hy : value32 y = some vy)
     (hlow : y.toNat % 2 ^ (23 - m) = 0) (hle : absQ vy ≤ absQ v) : absQ vy ≤ absQ v' := by
@@ -387,7 +364,6 @@ theorem truncateMantissa32_max {m : ℕ} {w y : F32} {v v' vy : ℚ} (h : value3
     have := coeff32_le_clear hy0 hc
     exact Rat.mul_le_mul_of_nonneg_right (Rat.natCast_le_natCast.mpr this) (Rat.le_of_lt hu)
 
-/-- Clearing low bits keeps the exponent field, so the unit in the last place is unchanged. -/
 theorem outputUlpExponent_truncateMantissa32 (m : ℕ) (w : F32) :
     outputUlpExponent (truncateMantissa32 m w) = outputUlpExponent w := by
   unfold outputUlpExponent
@@ -395,10 +371,7 @@ theorem outputUlpExponent_truncateMantissa32 (m : ℕ) (w : F32) :
 
 /-! ## The error bound for any block-output width -/
 
-/-- The model error is below (number of terms) · (alignment grid step) plus `2^(23 − m)` units in
-the last place of the binary32 output word, where `m` is the model's number of output mantissa
-bits. With `m = 13` (Ada and Hopper FP8) the output term is one unit in the last place of the
-14-bit output significand; with `m ≥ 23` it is the bound of `evalBlock_error_bound`. -/
+/-- Model error below (terms) · (grid step) + `2^(23 − m)` FP32 ulps, for `m` output mantissa bits. -/
 theorem evalPrepared_error_bound_any {b : PreparedBlock} {t : BlockTrace}
     (h : evalPrepared b = .ok t) :
     absQ (t.block.exactDot - t.output.value) <
@@ -437,8 +410,7 @@ theorem evalBlock_error_bound_any {p : Model} {x : BlockInput p} {t : BlockTrace
   have := evalPrepared_error_bound_any (evalBlock_evalPrepared h)
   rwa [evalBlock_model h] at this
 
-/-- The Ada and Hopper FP8 instances: (number of terms) · (grid step) + `2^10` binary32 units in
-the last place of the output word, that is, one unit in the last place of its 14-bit significand. -/
+/-- Ada and Hopper FP8: (terms) · (grid step) + `2^10` FP32 ulps, one ulp of the 14-bit significand. -/
 theorem fp8_error_bound {p : Model} (hp : p.outputMantissaBits = 13) {x : BlockInput p}
     {t : BlockTrace} (h : evalBlock x = .ok t) :
     absQ (t.block.exactDot - t.output.value) <

@@ -18,7 +18,7 @@ theorem tie_even : add32WithLean 0x3f800000 0x33800000 = some 0x3f800000 := by d
 
 theorem tie_odd : add32WithLean 0x3f800001 0x33800000 = some 0x3f800002 := by decide +kernel
 
-/-- Each addition rounds, so two separately lost half-ULPs do not accumulate. -/
+/-- Each addition rounds separately. -/
 theorem every_step_rounds :
     naiveSum32WithLeanFrom 0 [0x3f800000, 0x33800000, 0x33800000] = some 0x3f800000 := by
   decide +kernel
@@ -34,7 +34,7 @@ theorem exact_residual_sum :
     naiveSum32WithLeanFrom 0 [0x3f800000, 0xbf000000, 0x3e800000] = some 0x3f400000 := by
   decide +kernel
 
-/-- The finite EFT contract rejects even an exact sum just above maxFinite that ordinary IEEE nearest-even arithmetic could round back to maxFinite. -/
+/-- An exact sum just above the largest finite value is rejected. -/
 theorem exact_range_rejection : add32WithLean 0x7f7fffff 0x3f800000 = none := by decide +kernel
 
 theorem intermediate_range_rejection :
