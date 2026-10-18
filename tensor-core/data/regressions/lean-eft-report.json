@@ -44,7 +44,7 @@
     "TensorCore/Scalar/Specification.lean": "cfe3c08af2caf4b68e10a98b0ac7e6c672b9a0c741a9fc8e5cfbb173c9cec3c2",
     "TensorCore/Kernels/EFT/BitScan.lean": "f13cc7da3684d09f539a7e6e39b15cc56de98af14545183f4c432a0f9a704445",
     "TensorCore/Kernels/EFT/BitScanDefs.lean": "39eada4ec892f7eafa90b8549406f743499b15df957e4c0ca2b26eaac9806df7",
-    "TensorCore/Kernels/EFT/Correctness.lean": "780156c7e7a66cbe24f448a60e01f5fac8336f0c9a5564882def8a04a1b9b87d",
+    "TensorCore/Kernels/EFT/Correctness.lean": "4c19d9f4af4c73d0c3041b0ae2a6f199568a06ff0cf5897f86fd62929407ea20",
     "TensorCore/Kernels/EFT/Cost.lean": "2ae34f4f904964968efbb43454ac4216634a4f2decf133802c58ed54677c3c89",
     "TensorCore/Kernels/EFT/Decode.lean": "b3143e680e047a23aa5918afb0cde5d10bd1611e7ab0c4721ff8c22bf284aff7",
     "TensorCore/Kernels/EFT/DecodeDefs.lean": "b0e1ac468ac10de92989f1a043e847d6e397c640dd8398f952af285e782028b5",

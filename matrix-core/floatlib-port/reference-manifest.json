@@ -49,7 +49,7 @@
  "MatrixCore/Numerics/Format.lean": "6bf72099cd0255d556b1d4251071fd7c29d5100ff0900b4ae3e2e6f6a1f8aa81",
  "MatrixCore/Numerics/Grid.lean": "65425514d18450b961c244b216d64a56cb2a26a90074fc6165c68de796da1705",
  "MatrixCore/Numerics/Lists.lean": "76ee922291963aaddc46b8cd41c2399b39225e1c782253917f4dbacba4150129",
- "MatrixCore/Numerics/Notation.lean": "a936ce84544004c3bcacbd5ba735fe018ab27978799535cc3a7baf968e812c0a",
+ "MatrixCore/Numerics/Notation.lean": "68ff36a4648292c5ae6792c63745b1fbb1fb91cd4ee5faaf6ac6383121fe6b06",
  "MatrixCore/Numerics/Round32.lean": "274fe340c0003eebc8dd21d67c6bc2c5297486052d46e3c40e900397ce9f3462",
  "MatrixCore/Numerics/RoundingContract.lean": "2d85f2a99b86443cac17d954629ef4e644caf3ecb609733dee536ae8602d1e4d",
  "MatrixCore/Numerics/RoundingError.lean": "1f7870e6575bae97bea288cb56323437a8d8957029d1be00fcb2a593eb4184d6",

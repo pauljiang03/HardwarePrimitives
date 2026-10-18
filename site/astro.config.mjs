@@ -106,6 +106,7 @@ export default defineConfig({
           items: [
             { label: 'What is proven', slug: 'proofs/theorems' },
             { label: 'What is tested', slug: 'proofs/tested' },
+            { label: 'Tensor Cores and Matrix Cores compared', slug: 'proofs/cross-vendor' },
             { label: 'FloatLib cross-check', slug: 'proofs/floatlib' },
           ],
         },

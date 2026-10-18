@@ -14,8 +14,9 @@ The library, `MatrixCore`, follows Khattak, Mikaitis and Graziani,
 (arXiv 2609.14845), and uses that paper's notation throughout. It lives in the
 [`matrix-core/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/matrix-core)
 folder as a standalone Lake project, with its own numerical foundation: it
-does not depend on the Tensor Core library, and the two cannot be imported
-into the same file.
+does not depend on the Tensor Core library. The two can be imported into the
+same file, and [Tensor Cores and Matrix Cores compared](/HardwarePrimitives/proofs/cross-vendor/)
+proves each comparison below as one theorem.
 
 ## The hardware behavior being modeled
 
@@ -63,8 +64,11 @@ The Lean model implements these steps directly.
 | Alignment | every term, `C` included, to the largest exponent | CDNA 3: the products to their largest exponent; `c` added late |
 | Monotone in `C` / `c` | no: a smaller `C` can move the grid and raise the output | yes, on every configuration |
 | Monotone in the products | no | SFMA and CDNA 1 yes; CDNA 2 and CDNA 3 no |
-| Product order | — | CDNA 1 and CDNA 3 Algorithm 1 depend only on the multiset; CDNA 2 and CDNA 3 FP8 depend on positions |
+| Product order | only the multiset matters | CDNA 1 and CDNA 3 Algorithm 1 depend only on the multiset; CDNA 2 and CDNA 3 FP8 depend on positions |
 | EFT correction | TC-EFT: cut-off at the alignment grid or the last bit of `D` | MC-EFT: the same algorithm; the cut-off of each generation |
+
+For blocks with the same exact sum, TC-EFT and MC-EFT return the same word
+([the comparison](/HardwarePrimitives/proofs/cross-vendor/#the-correction-does-not-depend-on-the-vendor)).
 
 Each generation's properties page ([CDNA 1](/HardwarePrimitives/matrix-core/properties/cdna1/),
 [CDNA 2](/HardwarePrimitives/matrix-core/properties/cdna2/),

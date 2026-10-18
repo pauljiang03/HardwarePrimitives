@@ -28,8 +28,7 @@ TC results, EFT results, error kinds, and branch tags. The correspondence is
 stated through explicit `Equiv`s.
 
 The FloatLib project compares against a generated copy of the main
-library's sources. Apart from a scoped-notation file, that copy is
-byte-identical to the current sources.
+library's sources. That copy is byte-identical to the current sources.
 
 ```sh
 cd tensor-core/floatlib-port

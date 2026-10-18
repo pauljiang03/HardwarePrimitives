@@ -591,6 +591,42 @@ range the correctly rounded word with the sign of `x` is unique.
 - **Classification:** Core theorems.
 - **Lean:** [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/RoundingContract.lean#L312), [`MatrixCore.rne32_isSome_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/RoundingContract.lean#L389), [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Uniqueness.lean#L356)
 
+## Tensor Cores and Matrix Cores compared
+
+### Do the two libraries read and round words the same way?
+
+**Yes.** Every FP32, FP16 and BF16 word has the same value in both libraries,
+or neither gives one, and both round every rational to the same FP32 word up to
+the largest finite magnitude. Above it, the Tensor Core library returns no word
+and the Matrix Core library rounds values below `2^128 − 2^103` to the largest
+finite word.
+
+- **Classification:** Core theorems.
+- **Lean:** [`CrossVendor.decode_value`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Formats.lean#L43), [`CrossVendor.value32_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Formats.lean#L68), [`CrossVendor.round32_eq_rne32`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Rounding.lean#L33)
+
+### Do TC-EFT and MC-EFT agree?
+
+**Yes, for blocks with the same exact sum in the FP32 range.** Both return a
+word, the same one: the sum rounded to nearest even, from any finite `D` on
+either side. For the same FP16 or BF16 operand words on A100 and CDNA 3, or
+FP16 words on V100 and CDNA 1, this needs only finite inputs.
+
+- **Assumes:** the same exact sum, in the FP32 range; finite `D` on both sides.
+- **Classification:** Core theorems.
+- **Lean:** [`CrossVendor.corrections_agree`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Correction.lean#L93), [`CrossVendor.fp16_ampere_cdna3`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Correction.lean#L136), [`CrossVendor.fp16_volta_cdna1`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Correction.lean#L148), [`CrossVendor.bf16_ampere_cdna3`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Correction.lean#L160)
+
+### How do the two vendors' block FMAs differ?
+
+**One theorem per row of the comparison.** On the same FP16 words, A100
+truncates and CDNA 3 rounds to nearest. Lowering `C` can raise an H100 output,
+while every Matrix Core configuration is monotone in `c`. Raising a product can
+lower the output on V100, CDNA 2 and CDNA 3, never on CDNA 1 or the SFMA. A
+Tensor Core block depends on its products only as a multiset, as CDNA 1 and
+CDNA 3 Algorithm 1 do; CDNA 2 and CDNA 3 FP8 depend on positions.
+
+- **Classification:** Core theorems, with kernel-checked witnesses.
+- **Lean:** [`CrossVendor.final_rounding`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Comparison.lean#L23), [`CrossVendor.accumulator_monotonicity`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Comparison.lean#L44), [`CrossVendor.product_monotonicity`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Comparison.lean#L86), [`CrossVendor.product_order`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/cross-vendor/CrossVendor/Comparison.lean#L112), [`TensorCore.evalBlock_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/ProductOrder.lean#L60)
+
 ## What is not proven
 
 - **That real GPUs behave like the models.** For the Tensor Cores that rests on

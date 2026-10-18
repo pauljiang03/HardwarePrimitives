@@ -19,6 +19,8 @@ tests, examples, validation scripts and a second implementation on FloatLib.
 | [`matrix-core/`](matrix-core/README.md) | `MatrixCore` | AMD CDNA 1 (MI100), CDNA 2 (MI210, MI250), CDNA 3 (MI300A, MI300X) | FP32, FP16, BF16, XF32, FP8 E4M3/E5M2 FNUZ |
 
 The two libraries are independent: `MatrixCore` does not import `TensorCore`.
+Both can be imported into one file, and [`cross-vendor/`](cross-vendor/README.md)
+states each comparison between them as a single theorem.
 The models follow Khattak and Mikaitis, *Accurate Models of NVIDIA Tensor
 Cores* ([arXiv:2512.07004](https://arxiv.org/abs/2512.07004)), and Khattak,
 Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
@@ -39,6 +41,10 @@ Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
   alignment loses nothing, and fixed-width accumulation. Every generation is
   monotone in `c`, and MC-EFT, the Matrix Core counterpart of TC-EFT, recovers
   the correctly rounded sum of a block from its output.
+- **Across vendors:** the two libraries decode and round words identically;
+  for blocks with the same exact sum, TC-EFT and MC-EFT return the same word;
+  and each row of the comparison (final rounding, monotonicity in `C` and in
+  the products, product order) is one theorem.
 
 Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
@@ -57,6 +63,9 @@ python3 scripts/check_clean_build.py   # fresh build, axiom audit, examples, ora
 cd ../matrix-core
 lake build                             # MatrixCore, the paper's test vectors, the axiom audit
 python3 scripts/check.py               # clean build, examples, documentation blocks
+
+cd ../cross-vendor
+python3 scripts/check.py               # the comparisons, the axiom audit
 ```
 
 Usage examples are in each folder's README. The Tensor Core models reproduce
@@ -72,6 +81,7 @@ tested](https://pauljiang03.github.io/HardwarePrimitives/proofs/tested/).
 | --- | --- |
 | [`tensor-core/`](tensor-core/README.md) | NVIDIA Tensor Cores: models, properties, TC-EFT, bitvector kernels, tests, examples, FloatLib implementation, GPU recordings |
 | [`matrix-core/`](matrix-core/README.md) | AMD Matrix Cores: models, properties, MC-EFT, tests, examples, FloatLib implementation |
+| [`cross-vendor/`](cross-vendor/README.md) | Theorems that compare the two libraries |
 | `site/` | Website sources |
 | [`wip/`](wip/README.md) | Work in progress, not part of the libraries |
 

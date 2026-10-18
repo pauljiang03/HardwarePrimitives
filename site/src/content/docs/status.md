@@ -49,6 +49,11 @@ exact non-monotonicity threshold of each; and for FP8 `mma.sync`, an error bound
 by TC-EFT, an independent specification and a bitvector datapath. The FloatLib implementation covers
 all six FP8 block FMAs.
 
+**Across vendors.** The two libraries can be imported together. They decode and round words
+identically, TC-EFT and MC-EFT return the same word for blocks with the same exact sum, and each
+row of the comparison is one theorem
+([Tensor Cores and Matrix Cores compared](/HardwarePrimitives/proofs/cross-vendor/)).
+
 **Cross-checks proven in Lean.** Each model equals an independent specification. The Tensor Core
 model also equals a bitvector datapath, and a second implementation on FloatLib.
 
@@ -56,7 +61,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 | Check | Status |
 | --- | --- |
-| `lake build` (255 targets) | passes, no Lean warnings |
+| `lake build` (256 targets) | passes, no Lean warnings |
 | Axiom audit | only `propext`, `Classical.choice`, `Quot.sound`; no `sorry` |
 | Model = independent specification | proven for all inputs on every model, for every block-output width (FP8 included) |
 | Model = bitvector datapath | proven for all inputs on the 8 FP16/BF16/TF32 variants, the 6 FP8 block FMAs and FP8 `mma.sync` |
@@ -80,8 +85,6 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 - **The FP8 `mma.sync` path** of Hopper and B200 follows the structure that *Accurate Models*
   describes. The recorded rows do not separate it from a single block followed by `c`; the
   paper's interleaving experiment does, and that is a kernel-checked theorem.
-- **Cross-vendor statements.** `TensorCore` and `MatrixCore` cannot be imported together, so
-  every statement that compares the two vendors is two theorems.
 
 **Hardware coverage.**
 
@@ -106,8 +109,6 @@ products it takes a given error bound.
 
 **Without hardware:**
 
-- **Single cross-vendor theorems.** Make `TensorCore` and `MatrixCore` importable together, so
-  that each comparison between NVIDIA and AMD is one statement.
 - **Special values and FP16 outputs.** Infinities and NaNs inside block FMAs, and the FP16-output
   modes.
 

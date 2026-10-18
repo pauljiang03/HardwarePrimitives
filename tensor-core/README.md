@@ -55,6 +55,9 @@ Four FP16 products `1 × 1` on the V100 model give the FP32 word of `4.0`; the
 - FP8 `mma.sync`: an error bound, its correction by TC-EFT, an independent
   specification, and a bitvector datapath, each proven.
 - A bitvector datapath proven equal to the model.
+- The output of a block FMA depends on its products only as a multiset.
+- Importable together with `MatrixCore`; the comparisons are in
+  [`cross-vendor/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/cross-vendor).
 
 Details: [error bounds](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/properties/error-bounds/),
 [non-monotonicity](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/properties/non-monotonicity/),

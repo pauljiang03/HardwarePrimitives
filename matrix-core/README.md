@@ -7,7 +7,8 @@ Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
 notation.
 
 A standalone Lake project with its own numerics; it does not depend on
-`TensorCore`. Documentation: [the AMD model at a
+`TensorCore`, and the two can be imported into one file
+([`cross-vendor/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/cross-vendor)). Documentation: [the AMD model at a
 glance](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/).
 
 ## Coverage

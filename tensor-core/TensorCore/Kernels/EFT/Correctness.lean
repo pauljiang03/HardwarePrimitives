@@ -74,7 +74,7 @@ theorem tcEft_prepared {variant : Variant} {x : BlockInput variant.model} {D : F
       | none => exact ⟨.outOfRange, by rw [if_neg hz, hc]; dsimp +instances only; rw [hb, hf]; rfl, hf.symm.trans hr⟩
       | some b => exact ⟨.boundedExact b, by rw [if_neg hz, hc]; dsimp +instances only; rw [hb, hf]; rfl, hf.symm.trans hr⟩
 
-/-- Correct rounding for all eight variants, every finite block and every finite `D`. -/
+/-- Correct rounding for all fourteen variants, every finite block and every finite `D`. -/
 theorem tcEft_correct {variant : Variant} {x : BlockInput variant.model} {D : F32} {s d : ℚ}
     (hlen : x.products.length = variant.model.nfma)
     (hx : TensorCore.exactDot x = some s) (hD : TensorCore.value32 D = some d) :

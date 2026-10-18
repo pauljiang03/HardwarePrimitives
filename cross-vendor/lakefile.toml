@@ -1,0 +1,23 @@
+name = "crossVendor"
+version = "0.1.0"
+defaultTargets = ["CrossVendor", "CrossVendorTests"]
+
+[leanOptions]
+pp.unicode.fun = true
+
+[[require]]
+name = "tensorCore"
+path = "../tensor-core"
+
+[[require]]
+name = "matrixCore"
+path = "../matrix-core"
+
+[[lean_lib]]
+name = "CrossVendor"
+globs = ["CrossVendor", "CrossVendor.*"]
+
+[[lean_lib]]
+name = "CrossVendorTests"
+srcDir = "tests"
+globs = ["CrossVendorTests", "CrossVendorTests.*"]

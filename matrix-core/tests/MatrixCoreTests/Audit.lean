@@ -68,7 +68,7 @@ elab "axiom_audit" : command => do
   logInfo m!"axiom_audit: {roots.size} theorems, standard axioms only"
 
 /-- Negative control: a declaration that uses the implementation must be reported. -/
-def badSpec : ℚ := MatrixCore.pow2 3
+def badSpec : Rat := MatrixCore.pow2 3
 
 elab "negative_control" : command => do
   let bad := forbidden (← getEnv) ``badSpec

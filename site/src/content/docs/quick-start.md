@@ -109,3 +109,19 @@ example : blockBits x = .ok 0x3F800000 := by decide +kernel
 | `MatrixCore.MC` | Models, block evaluation, special values, chaining, error bounds, monotonicity |
 | `MatrixCore.Specification` | The independent transcription of the paper and the equality proofs |
 | `MatrixCore` | All of the above |
+
+## Comparing the two
+
+The `cross-vendor/` project imports both libraries and proves the comparisons
+between them, one theorem each
+([Tensor Cores and Matrix Cores compared](/HardwarePrimitives/proofs/cross-vendor/)):
+
+```sh
+cd cross-vendor
+lake build                  # CrossVendor and the axiom audit
+python3 scripts/check.py    # build, audit, documentation blocks
+```
+
+`TensorCore` and `MatrixCore` scope their `ℕ`, `ℤ` and `ℚ` notation to their
+own namespaces, so `open TensorCore` or `open MatrixCore` brings it into scope,
+and one file can import both.

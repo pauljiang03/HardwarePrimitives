@@ -93,6 +93,15 @@ def legacy_import(line):
     return ('import ' + ' '.join(legacy_module(word) for word in words[1:]) + '\n').encode()
 
 
+def legacy_source(name, data):
+    """The parent scopes its notation to `TensorCore` after the pinned revision; compare it unscoped."""
+    if name != 'TensorCore/Numerics/Notation.lean':
+        return data
+    text = data.decode().replace('scoped notation "', 'notation "')
+    text = re.sub(r'^(namespace|end) TensorCore\n', '', text, flags=re.M)
+    return text.encode()
+
+
 def body_hash(lines, name=''):
     body = b''.join(line for line in lines if not line.startswith(b'import ')).decode()
     tokens = json.dumps(pinned_spelling(lean_tokens(body), name), ensure_ascii=False, separators=(',', ':')).encode()
@@ -125,7 +134,7 @@ def main():
         data = (REPO / name).read_bytes()
         digest = hashlib.sha256(data).hexdigest()
         if digest != pinned['source_sha256']:
-            current_lines = [legacy_import(line) for line in data.splitlines(keepends=True)]
+            current_lines = [legacy_import(line) for line in legacy_source(name, data).splitlines(keepends=True)]
             if body_hash(current_lines, name) != pinned['body_tokens_sha256']:
                 raise RuntimeError(f"Original arithmetic/proof source differs from pinned revision: {name}")
             old = pinned['imports']
@@ -139,11 +148,6 @@ def main():
         pending.extend(imports(data.decode()))
 
     for name, data in sources.items():
-        if name == "TensorCore/Numerics/Notation.lean":
-            data = data.replace(b'notation "', b'namespace TensorCore\nnotation "', 1) + b"\nend TensorCore\n"
-            for symbol, suffix in [("ℕ", "Nat"), ("ℤ", "Int"), ("ℚ", "Rat")]:
-                data = data.replace(f'notation "{symbol}"'.encode(),
-                    f'scoped notation (name := compat{suffix}) "{symbol}"'.encode())
         target = OUT / name
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists() or target.read_bytes() != data:
@@ -154,11 +158,11 @@ def main():
     (OUT/'manifest.json').write_text(json.dumps({'revision':PIN,
         'reference_manifest_sha256':REFERENCE_SHA256,
         'comparison':'exact non-import code tokens and string literals; comments and whitespace ignored',
-        'notation_shim':'three declarations renamed and scoped; same expansions',
+        'notation':'the parent scopes its notation to TensorCore; compared unscoped, copied unchanged',
         'removed_unused_imports':dict(sorted(pruned_imports.items())),
         'source_origin':dict(sorted(origins.items())),
         'source_sha256':dict(sorted(verified.items()))},indent=2)+'\n')
-    print(f"Verified {len(verified)} parent dependencies against the reference manifest; compatibility sources prepared with scoped Nat/Int/Rat notation")
+    print(f"Verified {len(verified)} parent dependencies against the reference manifest; compatibility sources copied unchanged")
 
 if __name__ == "__main__":
     main()

@@ -10,6 +10,7 @@ examples, scripts and FloatLib implementation.
 | --- | --- |
 | [`tensor-core/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/tensor-core) | NVIDIA Tensor Cores: the `TensorCore` library |
 | [`matrix-core/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/matrix-core) | AMD Matrix Cores: the `MatrixCore` library (CDNA 1, 2 and 3) |
+| [`cross-vendor/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/cross-vendor) | The `CrossVendor` library: theorems that compare the two |
 | [`site/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/site) | This website (Astro Starlight) |
 | [`wip/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/wip) | Work in progress that builds on the models, not covered by this website |
 

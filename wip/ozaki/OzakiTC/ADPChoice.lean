@@ -39,6 +39,8 @@ encoding needs INT8 instructions that take unsigned operands.
 
 namespace Ozaki.TC
 
+open scoped TensorCore
+
 /-- The fixed-point width for `t` bits and exponent span `e`. -/
 def adpW (t e : ℕ) : ℕ := t + e + 1
 

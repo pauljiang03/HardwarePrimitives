@@ -65,23 +65,6 @@ def token_hash(text):
     return hashlib.sha256(json.dumps(lean_tokens(text), ensure_ascii=False).encode()).hexdigest()
 
 
-def scoped_notation(text):
-    lines = []
-    for line in text.splitlines():
-        for symbol, name in (("ℕ", "Nat"), ("ℤ", "Int"), ("ℚ", "Rat")):
-            if line.startswith(f'notation "{symbol}"'):
-                line = f'scoped notation (name := compat{name}) "{symbol}" => {name}'
-        lines.append(line)
-    out, inserted = [], False
-    for line in lines:
-        if line.startswith("scoped notation") and not inserted:
-            out.append("namespace MatrixCore")
-            inserted = True
-        out.append(line)
-    out.append("end MatrixCore")
-    return "\n".join(out) + "\n"
-
-
 def main():
     src = sources()
     hashes = {name: token_hash(text) for name, text in src.items()}
@@ -96,12 +79,10 @@ def main():
     for name, text in src.items():
         target = OUT / name
         target.parent.mkdir(parents=True, exist_ok=True)
-        if name == "MatrixCore/Numerics/Notation.lean":
-            text = scoped_notation(text)
         if not target.exists() or target.read_text() != text:
             target.write_text(text)
     print(f"Verified {len(src)} MatrixCore sources against the manifest; "
-          "compatibility copy prepared with scoped ℕ/ℤ/ℚ notation")
+          "compatibility copy written")
 
 
 if __name__ == "__main__":

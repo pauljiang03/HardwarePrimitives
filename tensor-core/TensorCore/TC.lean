@@ -26,6 +26,7 @@ import TensorCore.TC.MachineRefinement
 import TensorCore.TC.Monotonicity
 import TensorCore.TC.MonotonicityRange
 import TensorCore.TC.MonotonicityFP8
+import TensorCore.TC.ProductOrder
 import TensorCore.TC.Padding
 import TensorCore.TC.Models
 import TensorCore.TC.MmaSyncFP8
