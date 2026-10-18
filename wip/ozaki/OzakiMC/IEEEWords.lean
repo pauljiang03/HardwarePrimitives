@@ -18,7 +18,7 @@ namespace Ozaki.MC
 /-- The `WordFormat` of a MatrixCore format. -/
 def wordFormatOf (f : Format) : WordFormat := ⟨f.mantissaBits, f.exponentBits, f.bias⟩
 
-theorem wordFormatOf_binary32 : wordFormatOf binary32 = WordFormat.binary32 := rfl
+theorem wordFormatOf_binary32 : wordFormatOf fp32 = WordFormat.binary32 := rfl
 
 /-- The IEEE datum MatrixCore's decoding gives a word. -/
 def datumFVal : Datum → FVal
@@ -55,15 +55,15 @@ theorem decodeWord_decodeNat (f : Format) (hf : f.specials = .ieee) (n : ℕ) :
 
 /-- On binary32 words the integer decoder is MatrixCore's binary32 decoding. -/
 theorem decodeWord_binary32 (w : F32) :
-    (decodeWord .binary32 w.toNat).toFVal = datumFVal (binary32.decode w) :=
-  decodeWord_decodeNat binary32 rfl w.toNat
+    (decodeWord .binary32 w.toNat).toFVal = datumFVal (fp32.decode w) :=
+  decodeWord_decodeNat fp32 rfl w.toNat
 
 /-- A word MatrixCore decodes to a finite value decodes to that value. -/
 theorem decodeWord_value32 {w : F32} {v : ℚ} (h : value32 w = some v) :
     ∃ n, (decodeWord .binary32 w.toNat).toFVal = .fin ⟨v, n⟩ := by
   rw [decodeWord_binary32]
   unfold value32 at h
-  cases hd : binary32.decode w with
+  cases hd : fp32.decode w with
   | finite x =>
     rw [hd] at h
     simp only [Datum.toFinite, Option.map_some, Option.some.injEq] at h
@@ -84,8 +84,8 @@ theorem mcOzaki1CRILW_eq {P : Model} {b : ℕ} (hP : ExactMultiplier P b) (hb : 
     crIEEEWord .binary32 (mcOzaki1CRIL P b W ss smax)
         (fun x y => (exactSignI (mcSplitK P b) b smax x y).getD 0)
         (ws.map BitVec.toNat) (vs.map BitVec.toNat) =
-      dotIEEE 24 (-126) 127 (ws.map fun w => datumFVal (binary32.decode w))
-        (vs.map fun w => datumFVal (binary32.decode w)) := by
+      dotIEEE 24 (-126) 127 (ws.map fun w => datumFVal (fp32.decode w))
+        (vs.map fun w => datumFVal (fp32.decode w)) := by
   unfold crIEEEWord
   rw [crIEEEIW_eq]
   have h := mcOzaki1CRILI_eq hP hb W ss hsmax

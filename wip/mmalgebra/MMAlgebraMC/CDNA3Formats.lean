@@ -25,9 +25,9 @@ namespace MMAlgebra.MC.CDNA3
 theorem cdna3BF16_pass (d : F32) (hd : GoodW d) :
     (mcMachine cdna3BF16).block d (List.replicate 8 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := cdna3BF16) ⟨(slotPairs cdna3BF16 (List.replicate 8 none)).map Prod.fst,
@@ -105,9 +105,9 @@ theorem cdna3BF16_pass (d : F32) (hd : GoodW d) :
 theorem cdna3XF32_pass (d : F32) (hd : GoodW d) :
     (mcMachine cdna3XF32).block d (List.replicate 4 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := cdna3XF32) ⟨(slotPairs cdna3XF32 (List.replicate 4 none)).map Prod.fst,

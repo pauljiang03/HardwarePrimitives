@@ -86,7 +86,7 @@ theorem directed_unusual_format (x : ℚ) (hr : absQ x ≤ (Format.mk 1 2 (-7)).
     roundBinary_towardPositive_correct _ (by decide) x hr⟩
 
 def fma64Bits (mode : BinaryRoundingMode) (a b c : BitVec 64) : Option ℕ :=
-  (evalInvocation (p := binary64Fma mode) ⟨[(a, b)], c⟩).toOption.map fun t => t.output.bits.toNat
+  (evalInvocation (p := fp64Fma mode) ⟨[(a, b)], c⟩).toOption.map fun t => t.output.bits.toNat
 
 theorem fma64_directed_half_ulp :
     fma64Bits .towardNegative 0x3ff0000000000000 0x3ff0000000000000 0x3ca0000000000000 = some 0x3ff0000000000000 ∧
@@ -96,7 +96,7 @@ theorem fma64_directed_half_ulp :
   decide +kernel
 
 def fma64Signed (mode : BinaryRoundingMode) (a b c : BitVec 64) : Option ℕ :=
-  (binary64FmaBits (mode := mode) ⟨[(a, b)], c⟩).map BitVec.toNat
+  (fp64FmaBits (mode := mode) ⟨[(a, b)], c⟩).map BitVec.toNat
 
 /-- IEEE 754 signed zero for exact zeros; a nonzero result rounded to zero keeps its sign. -/
 theorem fma64_signed_zero :

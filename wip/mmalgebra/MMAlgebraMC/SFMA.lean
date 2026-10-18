@@ -28,7 +28,7 @@ instance (q : sfmaF32.a.Word × sfmaF32.b.Word) : Decidable (SfmaOK q) := by
 /-- The admissible SFMA operand pairs. -/
 abbrev SfmaIn : Type := {q : sfmaF32.a.Word × sfmaF32.b.Word // SfmaOK q}
 
-theorem read32_onGrid (w : F32) {u : Unpacked} (h : (binary32.decode w).toFinite = some u) :
+theorem read32_onGrid (w : F32) {u : Unpacked} (h : (fp32.decode w).toFinite = some u) :
     OnGrid u.value ((ex32 w : ℤ) - 150) := by
   have hu := decode32_val w h
   unfold ex32
@@ -126,9 +126,9 @@ theorem sfma_block_good (d : F32) (ps : List (Option SfmaIn)) (o : F32)
 theorem sfma_pass (d : F32) (hd : GoodW d) :
     (mcMachine sfmaF32).block d [none] = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := sfmaF32) ⟨(slotPairs sfmaF32 [none]).map Prod.fst,

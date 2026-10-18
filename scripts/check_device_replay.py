@@ -231,11 +231,11 @@ def main():
                        subnormal=sum(c & 0x7fffffff != 0 and (c >> 23) & 0xff == 0 for c in c_words)))
             if fp8 and arch != 'blackwell':
                 # Negative control: the same model with a binary32 block output.
-                control = run([line.replace(f' {model} ', f' {model}-binary32-output ', 1)
+                control = run([line.replace(f' {model} ', f' {model}-fp32-output ', 1)
                                for line in model_lines], f'replay-{key}-control.txt')
-                report[key]['binary32_output_control_mismatches'] = sum(
+                report[key]['fp32_output_control_mismatches'] = sum(
                     r.get('bits') != d for r, d in zip(control, d_words))
-                assert report[key]['binary32_output_control_mismatches'] > 0, key
+                assert report[key]['fp32_output_control_mismatches'] > 0, key
             if fp8 and arch == 'blackwell':
                 # The FP8 mma.sync model of the recording harness, and a control: the B200 block
                 # FMA holding c (the tcgen05.mma model) disagrees with the recorded rows.

@@ -38,15 +38,15 @@ example (mode : BinaryRoundingMode) :
   exact roundBinary_zero fp16 (by decide) mode
 
 -- FP64 DMMA: the four-direction contract is about the exact decoded product plus c.
-example {mode : BinaryRoundingMode} {x : InvocationInput (binary64Fma mode)}
-    {t : InvocationTrace (binary64Fma mode)} (h : evalInvocation x = .ok t) :
+example {mode : BinaryRoundingMode} {x : InvocationInput (fp64Fma mode)}
+    {t : InvocationTrace (fp64Fma mode)} (h : evalInvocation x = .ok t) :
     invocationIdeal x = some t.intermediate.value ∧
     BinaryRoundSpec fp64 mode t.intermediate.value t.output.bits ∧
     binarySign fp64 t.output.bits = decide (t.intermediate.value < 0) :=
-  binary64Fma_correct h
+  fp64Fma_correct h
 
-example (mode : BinaryRoundingMode) (x : InvocationInput (binary64Fma mode))
-    (b : PreparedInvocation (binary64Fma mode)) (hp : prepareInvocation x = some b)
+example (mode : BinaryRoundingMode) (x : InvocationInput (fp64Fma mode))
+    (b : PreparedInvocation (fp64Fma mode)) (hp : prepareInvocation x = some b)
     (hn : x.products.length = 1) (hr : absQ b.exactDot ≤ fp64.maxFinite) :
     ∃ t, evalInvocation x = .ok t :=
-  binary64Fma_success mode x b hp hn hr
+  fp64Fma_success mode x b hp hn hr

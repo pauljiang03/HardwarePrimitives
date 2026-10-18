@@ -15,7 +15,7 @@ structure Layout where
 
 @[implicit_reducible] def Layout.width (f : Layout) : ℕ := 1 + f.exponent + f.mantissaBits
 
-def binary32 : Layout := ⟨23, 8, 127⟩
+def fp32 : Layout := ⟨23, 8, 127⟩
 
 structure Parameters where
   input : Layout
@@ -50,7 +50,7 @@ def decode (f : Layout) (word : ℕ) : Option Term :=
 def product (a b : Term) : Term := ⟨a.value * b.value, a.exponent + b.exponent⟩
 
 def terms (p : Parameters) (x : Input p) : Option (List Term) := do
-  let c ← decode binary32 x.c.toNat
+  let c ← decode fp32 x.c.toNat
   let ps ← x.products.mapM fun (a, b) => do
     return product (← decode p.input a.toNat) (← decode p.input b.toNat)
   return c :: ps
@@ -87,7 +87,7 @@ def Valid (p : Parameters) (x : Input p) : Prop :=
   x.products.length = p.nfma ∧
     ∃ ts, terms p x = some ts ∧ magnitude (accumulated p ts) ≤ maxFinite
 
-def value32 (bits : BitVec 32) : Option ℚ := (decode binary32 bits.toNat).map Term.value
+def value32 (bits : BitVec 32) : Option ℚ := (decode fp32 bits.toNat).map Term.value
 
 /-- A finite value lies between zero and the pre-conversion accumulated value. -/
 def Between (x y : ℚ) : Prop :=

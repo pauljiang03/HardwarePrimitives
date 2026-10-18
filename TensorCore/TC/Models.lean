@@ -17,7 +17,7 @@ def hopperTF32MmaInvocation : InvocationSpec := alignedInvocation tf32Register 8
 def hopperTF32WmmaInvocation : InvocationSpec := alignedInvocation tf32Register 4 25 (some (-133))
 
 /-- Finite-domain binary64 fused arithmetic, with an explicit rounding direction. -/
-def binary64Fma (mode : BinaryRoundingMode) : InvocationSpec :=
+def fp64Fma (mode : BinaryRoundingMode) : InvocationSpec :=
   ⟨packedIEEE fp64, fp64, 1, .fused, [], ⟨fp64, mode⟩⟩
 
 end TensorCore

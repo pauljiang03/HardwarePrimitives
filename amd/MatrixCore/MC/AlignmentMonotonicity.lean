@@ -174,7 +174,7 @@ theorem evalBlock_productValues {P : Model} {x : BlockInput P} {t : BlockTrace P
   unfold prepare at hp
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at hp <;> simp at hp
   cases hB : x.b.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at hp <;> simp at hp
-  cases hC : (binary32.decode x.c).toFinite <;> rw [hC] at hp <;> simp at hp
+  cases hC : (fp32.decode x.c).toFinite <;> rw [hC] at hp <;> simp at hp
   rename_i A B _
   rw [← hp]
   exact mapM_productValues x.a x.b A B hA hB

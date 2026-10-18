@@ -159,19 +159,19 @@ structure PinnedProducts (α : ℤ) (x : Prepared) : Prop where
   pin : ∃ p ∈ x.p, p.m ≠ 0 ∧ p.e = α
 
 /-- A nonzero binary32 value below `2^α` (`α ≥ −126`) has exponent at most `α`. -/
-theorem decode32_exp_le {w : F32} {u : Unpacked} (h : (binary32.decode w).toFinite = some u)
+theorem decode32_exp_le {w : F32} {u : Unpacked} (h : (fp32.decode w).toFinite = some u)
     {α : ℤ} (hα : -126 ≤ α) (hv : absQ u.value < pow2 α) : u.m ≠ 0 → u.e ≤ α := by
   intro _
-  have hd' : binary32.decodeNat w.toNat = .finite u := by
-    cases hd : binary32.decodeNat w.toNat with
+  have hd' : fp32.decodeNat w.toNat = .finite u := by
+    cases hd : fp32.decodeNat w.toNat with
     | finite v =>
-      have hdec : binary32.decode w = .finite v := hd
+      have hdec : fp32.decode w = .finite v := hd
       rw [hdec] at h; simp only [Datum.toFinite, Option.some.injEq] at h; rw [h]
     | infinity _ =>
-      have hdec : binary32.decode w = .infinity _ := hd
+      have hdec : fp32.decode w = .infinity _ := hd
       rw [hdec] at h; simp [Datum.toFinite] at h
     | nan =>
-      have hdec : binary32.decode w = .nan := hd
+      have hdec : fp32.decode w = .nan := hd
       rw [hdec] at h; simp [Datum.toFinite] at h
   by_cases hn : 2 ^ u.t ≤ u.m
   · have h1 := pow2_le_absQ hn

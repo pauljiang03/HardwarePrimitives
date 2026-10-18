@@ -132,7 +132,7 @@ theorem unpack32_nonzero (a : F32) (h : NonzeroFinite32 a) :
     rfl
 
 theorem decode32_nonzero (a : F32) (h : NonzeroFinite32 a) :
-    decode .binary32 a = .finite (sign32 a)
+    decode .fp32 a = .finite (sign32 a)
       ((nativeSign (sign32 a) |>.apply (mantissa32 a) : ℤ) * pow2 (exponent32 a)) := by
   have heMax : a.toNat / 8388608 % 256 ≠ 255 := by have := h.1; omega
   by_cases he : a.toNat / 8388608 % 256 = 0
@@ -163,12 +163,12 @@ theorem packComponents32_eq (negative : Bool) (e : BitVec 8) (m : BitVec 23) :
   all_goals omega
 
 theorem packZero32_eq (negative : Bool) :
-    pack Float.Model.Format.binary32 (.zero (nativeSign negative)) = zero .binary32 negative := by
+    pack Float.Model.Format.binary32 (.zero (nativeSign negative)) = zero .fp32 negative := by
   rw [pack, packedZero, packComponents32_eq]
   cases negative <;> rfl
 
 theorem encodeZero32_eq (negative : Bool) (e : ℤ) :
-    encodeBinary fp32 negative e 0 = zero .binary32 negative := by
+    encodeBinary fp32 negative e 0 = zero .fp32 negative := by
   change BitVec.ofNat 32 ((if negative then 2147483648 else 0) + 0) = _
   cases negative <;> rfl
 
@@ -269,11 +269,11 @@ theorem packRound32_eq (negative : Bool) (m : ℕ) (e : ℤ) (hm : 0 < m)
       rw [packFinite32_eq negative E k (by omega) (by omega) hEl hEu, hk]
 
 theorem finiteBits32_encode (x : ℚ) (hx : x ≠ 0) (hr : absQ x ≤ fp32.maxFinite) :
-    finiteBits .binary32 .nearestEven x hr =
+    finiteBits .fp32 .nearestEven x hr =
       let E := binaryNormExp fp32 (absQ x)
       let K := rneInt (absQ x / pow2 (E - 23))
       encodeBinary fp32 (decide (x < 0)) (binaryCarry fp32 E K).1 (binaryCarry fp32 E K).2 := by
-  have h := finiteBits_eq .binary32 .nearestEven x hr
+  have h := finiteBits_eq .fp32 .nearestEven x hr
   change roundBinary fp32 .nearestEven x = some _ at h
   unfold roundBinary at h
   rw [if_neg (by decide : ¬ ¬ fp32.WellFormed), if_neg (Rat.not_lt.mpr hr), if_neg hx] at h
@@ -291,7 +291,7 @@ theorem packRound32_reference (negative : Bool) (m : ℕ) (e : ℤ) (hm : 0 < m)
     (tinyMode : Tininess) (hr : (m : ℚ) * pow2 e ≤ fp32.maxFinite) :
     pack Float.Model.Format.binary32
       (Float.Model.UnpackedFloat.round Float.Model.Format.binary32 (nativeSign negative) m e) =
-      (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩ negative
+      (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩ negative
         (if negative then -((m : ℚ) * pow2 e) else (m : ℚ) * pow2 e)).bits := by
   have hx : 0 < (m : ℚ) * pow2 e := Rat.mul_pos (Rat.natCast_pos.mpr hm) (pow2_pos e)
   have habs : absQ ((m : ℚ) * pow2 e) = (m : ℚ) * pow2 e := absQ_of_nonneg (Rat.le_of_lt hx)
@@ -311,7 +311,7 @@ theorem packNormalize32_reference (m : ℤ) (e : ℤ) (tinyMode : Tininess)
     (hr : absQ ((m : ℚ) * pow2 e) ≤ fp32.maxFinite) :
     pack Float.Model.Format.binary32
       (normalize Float.Model.Format.binary32 m e .positive) =
-      (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩ false
+      (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩ false
         ((m : ℚ) * pow2 e)).bits := by
   by_cases hz : m = 0
   · subst m
@@ -378,7 +378,7 @@ def nativeAdd32 (a b : F32) (ha : Native32Valid a) (hb : Native32Valid b) : F32 
 theorem nativeAdd32_reference (a b : F32) (ha : NonzeroFinite32 a) (hb : NonzeroFinite32 b)
     (tinyMode : Tininess) (hr : absQ (finiteValue32 a + finiteValue32 b) ≤ fp32.maxFinite) :
     nativeAdd32 a b (native32Valid_finite a ha.1) (native32Valid_finite b hb.1) =
-      (TensorCore.IEEE.add .binary32 ⟨.nearestEven, tinyMode⟩ a b).bits := by
+      (TensorCore.IEEE.add .fp32 ⟨.nearestEven, tinyMode⟩ a b).bits := by
   change pack Float.Model.Format.binary32
     (Float.Model.UnpackedFloat.add Float.Model.Format.binary32
       (unpack Float.Model.Format.binary32 a) (unpack Float.Model.Format.binary32 b)) = _
@@ -393,13 +393,13 @@ theorem nativeAdd32_reference (a b : F32) (ha : NonzeroFinite32 a) (hb : Nonzero
       (decreaseExponent (mantissa32 b) (exponent32 b) (min (exponent32 a) (exponent32 b))).1)
     (min (exponent32 a) (exponent32 b)) tinyMode (by simpa only [hv, finiteValue32] using hr)
   rw [hround, hv]
-  change (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩ false
+  change (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩ false
       (finiteValue32 a + finiteValue32 b)).bits =
-    (addDatum .binary32 ⟨.nearestEven, tinyMode⟩ (decode .binary32 a) (decode .binary32 b)).bits
+    (addDatum .fp32 ⟨.nearestEven, tinyMode⟩ (decode .fp32 a) (decode .fp32 b)).bits
   rw [decode32_nonzero a ha, decode32_nonzero b hb]
-  change (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩ false
+  change (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩ false
     (finiteValue32 a + finiteValue32 b)).bits =
-      (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩
+      (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩
         (sumZeroSign .nearestEven (sign32 a) (sign32 b))
         (finiteValue32 a + finiteValue32 b)).bits
   cases sa : sign32 a <;> cases sb : sign32 b
@@ -440,7 +440,7 @@ def nativeSub32 (a b : F32) (ha : Native32Valid a) (hb : Native32Valid b) : F32 
 theorem nativeSub32_reference (a b : F32) (ha : NonzeroFinite32 a) (hb : NonzeroFinite32 b)
     (tinyMode : Tininess) (hr : absQ (finiteValue32 a - finiteValue32 b) ≤ fp32.maxFinite) :
     nativeSub32 a b (native32Valid_finite a ha.1) (native32Valid_finite b hb.1) =
-      (TensorCore.IEEE.sub .binary32 ⟨.nearestEven, tinyMode⟩ a b).bits := by
+      (TensorCore.IEEE.sub .fp32 ⟨.nearestEven, tinyMode⟩ a b).bits := by
   change pack Float.Model.Format.binary32
     (Float.Model.UnpackedFloat.sub Float.Model.Format.binary32
       (unpack Float.Model.Format.binary32 a) (unpack Float.Model.Format.binary32 b)) = _
@@ -455,15 +455,15 @@ theorem nativeSub32_reference (a b : F32) (ha : NonzeroFinite32 a) (hb : Nonzero
       (decreaseExponent (mantissa32 b) (exponent32 b) (min (exponent32 a) (exponent32 b))).1)
     (min (exponent32 a) (exponent32 b)) tinyMode (by simpa only [hv, finiteValue32] using hr)
   rw [hround, hv]
-  change (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩ false
+  change (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩ false
       (finiteValue32 a - finiteValue32 b)).bits =
-    (addDatum .binary32 ⟨.nearestEven, tinyMode⟩ (decode .binary32 a) (decode .binary32 b).negate).bits
+    (addDatum .fp32 ⟨.nearestEven, tinyMode⟩ (decode .fp32 a) (decode .fp32 b).negate).bits
   rw [decode32_nonzero a ha, decode32_nonzero b hb]
   simp only [Datum.negate, addDatum, Datum.isNaN, Bool.false_or, Bool.false_eq_true, ↓reduceIte]
   rw [← Rat.sub_eq_add_neg]
-  change (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩ false
+  change (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩ false
     (finiteValue32 a - finiteValue32 b)).bits =
-      (TensorCore.IEEE.round .binary32 ⟨.nearestEven, tinyMode⟩
+      (TensorCore.IEEE.round .fp32 ⟨.nearestEven, tinyMode⟩
         (sumZeroSign .nearestEven (sign32 a) (!(sign32 b)))
         (finiteValue32 a - finiteValue32 b)).bits
   cases sa : sign32 a <;> cases sb : sign32 b
@@ -532,7 +532,7 @@ def nativeMul32 (a b : F32) (ha : Native32Valid a) (hb : Native32Valid b) : F32 
 theorem nativeMul32_reference (a b : F32) (ha : NonzeroFinite32 a) (hb : NonzeroFinite32 b)
     (tinyMode : Tininess) (hr : absQ (finiteValue32 a * finiteValue32 b) ≤ fp32.maxFinite) :
     nativeMul32 a b (native32Valid_finite a ha.1) (native32Valid_finite b hb.1) =
-      (TensorCore.IEEE.mul .binary32 ⟨.nearestEven, tinyMode⟩ a b).bits := by
+      (TensorCore.IEEE.mul .fp32 ⟨.nearestEven, tinyMode⟩ a b).bits := by
   have hm := Nat.mul_pos ha.2 hb.2
   have hp : 0 < ((mantissa32 a * mantissa32 b : ℕ) : ℚ) * pow2 (exponent32 a + exponent32 b) :=
     Rat.mul_pos (Rat.natCast_pos.mpr hm) (pow2_pos _)
@@ -547,9 +547,9 @@ theorem nativeMul32_reference (a b : F32) (ha : NonzeroFinite32 a) (hb : Nonzero
   simp only [Float.Model.UnpackedFloat.mul]
   rw [nativeSign_mul, roundWithAccuracy_eq_round32 _ _ _ (product32_no_leftshift a b ha hb),
     packRound32_reference _ _ _ hm tinyMode hrange, ← finiteValue32_mul]
-  change (round .binary32 ⟨.nearestEven, tinyMode⟩ (xor (sign32 a) (sign32 b))
+  change (round .fp32 ⟨.nearestEven, tinyMode⟩ (xor (sign32 a) (sign32 b))
     (finiteValue32 a * finiteValue32 b)).bits =
-      (mulDatum .binary32 ⟨.nearestEven, tinyMode⟩ (decode .binary32 a) (decode .binary32 b)).bits
+      (mulDatum .fp32 ⟨.nearestEven, tinyMode⟩ (decode .fp32 a) (decode .fp32 b)).bits
   rw [decode32_nonzero a ha, decode32_nonzero b hb]
   rfl
 

@@ -255,12 +255,12 @@ theorem block_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Correspond
       MatrixCore.blockOutcome x := by
   have hA := read_agree h.a x.a
   have hB := read_agree h.b x.b
-  have hC : Agree (MCFloat.classify .binary32 x.c.toNat) (MatrixCore.binary32.decode x.c) :=
-    binary32_agree x.c.toNat x.c.isLt
+  have hC : Agree (MCFloat.classify .binary32 x.c.toNat) (MatrixCore.fp32.decode x.c) :=
+    fp32_agree x.c.toNat x.c.isLt
   have hspecial : observe (MCFloat.special ((MCFloat.classify .binary32 x.c.toNat).ext ::
       List.zipWith (MCFloat.product P) ((x.a.map BitVec.toNat).map P.a.read)
         ((x.b.map BitVec.toNat).map P.b.read))) =
-      (MatrixCore.combineSpecial (MatrixCore.XVal.ofDatum (MatrixCore.binary32.decode x.c) ::
+      (MatrixCore.combineSpecial (MatrixCore.XVal.ofDatum (MatrixCore.fp32.decode x.c) ::
         MatrixCore.blockProducts x)).getD .nan := by
     rw [observe_special, List.map_cons, ext_agree hC, products_agree h.rules hA hB]
     unfold MatrixCore.blockProducts

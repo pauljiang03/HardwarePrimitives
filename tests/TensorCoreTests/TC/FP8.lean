@@ -81,9 +81,9 @@ example : (evalBlock (⟨narrowCase, 0⟩ : BlockInput adaE4M3F32)).toOption.map
   decide +kernel
 
 /-- Ada E4M3 with a binary32 block output instead. -/
-@[implicit_reducible] def adaE4M3Binary32 : Model := ⟨e4m3x, 16, 13, none, 23⟩
+@[implicit_reducible] def adaE4M3Fp32Output : Model := ⟨e4m3x, 16, 13, none, 23⟩
 
-example : (evalBlock (⟨narrowCase, 0⟩ : BlockInput adaE4M3Binary32)).toOption.map (·.output.bits) =
+example : (evalBlock (⟨narrowCase, 0⟩ : BlockInput adaE4M3Fp32Output)).toOption.map (·.output.bits) =
     some 0x40000200 := by
   decide +kernel
 

@@ -143,7 +143,7 @@ structure C32 (v : ℚ) (eC : ℤ) : Prop where
   grid : OnGrid v (eC - 23)
 
 theorem c32_of_decode {P : Model} (hcz : P.cZeroExp = some (-126)) {w : F32} {c : Unpacked}
-    (h : (binary32.decode w).toFinite = some c) : ∃ eC, cExp P c = some eC ∧ C32 c.value eC := by
+    (h : (fp32.decode w).toFinite = some c) : ∃ eC, cExp P c = some eC ∧ C32 c.value eC := by
   obtain ⟨ht, hm, he1, _, hn⟩ := decode32_finite_fields (toFinite_some h)
   unfold cExp
   by_cases h0 : c.m = 0
@@ -510,12 +510,12 @@ theorem prepare_same {P : Model} {a : List P.a.Word} {b : List P.b.Word} {c c' :
   unfold prepare at h h'
   cases hA : a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h h' <;> simp at h h'
   cases hB : b.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at h h' <;> simp at h h'
-  cases hC : (binary32.decode c).toFinite <;> rw [hC] at h <;> simp at h
-  cases hC' : (binary32.decode c').toFinite <;> rw [hC'] at h' <;> simp at h'
+  cases hC : (fp32.decode c).toFinite <;> rw [hC] at h <;> simp at h
+  cases hC' : (fp32.decode c').toFinite <;> rw [hC'] at h' <;> simp at h'
   rw [← h, ← h']; exact ⟨rfl, rfl⟩
 
 /-- Flushing a decoded binary32 value is `flushValue` of its value. -/
-theorem flush_value32 {w : F32} {c : Unpacked} (h : (binary32.decode w).toFinite = some c) :
+theorem flush_value32 {w : F32} {c : Unpacked} (h : (fp32.decode w).toFinite = some c) :
     c.flush.value = flushValue c.value := by
   obtain ⟨ht, hm, he1, _, hn⟩ := decode32_finite_fields (toFinite_some h)
   unfold Unpacked.flush flushValue

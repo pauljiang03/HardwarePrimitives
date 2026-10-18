@@ -127,7 +127,7 @@ theorem cdna3_pval_zero : (mcMachine cdna3F16).pval (0, 0) = 0 := by decide +ker
 /-- The decoded operands of an evaluated block, from its slot pairs. -/
 theorem evalBlock_pairs {P : Model} {qs : List (P.a.Word × P.b.Word)} {d : F32} {t : BlockTrace P}
     (h : evalBlock (P := P) ⟨qs.map Prod.fst, qs.map Prod.snd, d⟩ = .ok t) :
-    ∃ L C, qs.mapM (decPair P) = some L ∧ (binary32.decode d).toFinite = some C ∧
+    ∃ L C, qs.mapM (decPair P) = some L ∧ (fp32.decode d).toFinite = some C ∧
       t.prepared = ⟨L.map Prod.fst, L.map Prod.snd, C⟩ := by
   obtain ⟨_, _, hp, _, _⟩ := evalBlock_ok h
   rw [prepare_pairs] at hp
@@ -135,7 +135,7 @@ theorem evalBlock_pairs {P : Model} {qs : List (P.a.Word × P.b.Word)} {d : F32}
   | none => rw [hL] at hp; cases hp
   | some L =>
     rw [hL] at hp
-    cases hC : (binary32.decode d).toFinite with
+    cases hC : (fp32.decode d).toFinite with
     | none => rw [hC] at hp; cases hp
     | some C =>
       rw [hC] at hp

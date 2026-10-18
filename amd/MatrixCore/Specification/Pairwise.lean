@@ -167,13 +167,13 @@ theorem pairwise_eq_spec {P : Model} {S : PairwiseParams} (hS : SupportedPairwis
   simp only [List.length_map, hS.group]
   have hdec : (((x.a.map BitVec.toNat).mapM S.a.decode).bind fun as =>
       ((x.b.map BitVec.toNat).mapM S.b.decode).bind fun bs =>
-        (decode binary32 x.c.toNat).bind fun cn => some (as, bs, cn)) =
+        (decode fp32 x.c.toNat).bind fun cn => some (as, bs, cn)) =
       (prepare x).map fun px => (px.a.map numOf, px.b.map numOf, numOf px.c) := by
     rw [hS.a, hS.b, mapM_decode_eq, mapM_decode_eq, decode_c_eq]
     unfold prepare
     cases x.a.mapM fun w => (P.a.read w).toFinite <;> simp
     cases x.b.mapM fun w => (P.b.read w).toFinite <;> simp
-    cases (MatrixCore.binary32.decode x.c).toFinite <;> simp
+    cases (MatrixCore.fp32.decode x.c).toFinite <;> simp
   -- the model's side, for decoded inputs
   have hacc : ∀ (px : Prepared) (s : ℚ), accumulate P px = .ok s ↔ pairwiseSum P px = some s := by
     intro px s

@@ -31,26 +31,26 @@ theorem ofNat_bits_self (w : MCFloat.F32) : MCFloat.ofNat .binary32 (MCFloat.bit
   rfl
 
 theorem classify_word (w : MCFloat.F32) :
-    Agree (MCFloat.classifyModel w) (MatrixCore.binary32.decodeNat (MCFloat.bits w)) := by
-  have h := binary32_agree (MCFloat.bits w) (bits_lt w)
+    Agree (MCFloat.classifyModel w) (MatrixCore.fp32.decodeNat (MCFloat.bits w)) := by
+  have h := fp32_agree (MCFloat.bits w) (bits_lt w)
   rwa [MCFloat.classify, ofNat_bits_self] at h
 
 theorem decode_signedZero (w : MatrixCore.F32) :
-    ∃ u, MatrixCore.binary32.decode (MatrixCore.signedZero32 w) = .finite u := by
+    ∃ u, MatrixCore.fp32.decode (MatrixCore.signedZero32 w) = .finite u := by
   have h : w.toNat / 2147483648 % 2 = 0 ∨ w.toNat / 2147483648 % 2 = 1 := by omega
   unfold MatrixCore.signedZero32
   rcases h with h | h <;> rw [h] <;> exact ⟨_, rfl⟩
 
 theorem decode_rne32 {x : ℚ} {w : MatrixCore.F32} (h : MatrixCore.rne32 x = some w) :
-    ∃ u, MatrixCore.binary32.decode w = .finite u := by
+    ∃ u, MatrixCore.fp32.decode w = .finite u := by
   have hv := MatrixCore.rne32_value h
   unfold MatrixCore.value32 at hv
-  cases hd : MatrixCore.binary32.decode w <;> simp [hd, MatrixCore.Datum.toFinite] at hv
+  cases hd : MatrixCore.fp32.decode w <;> simp [hd, MatrixCore.Datum.toFinite] at hv
   exact ⟨_, rfl⟩
 
 /-- `fl{·}` words are finite: a binary32 encoding with a value. -/
 theorem decode_fl32 {ftz : Bool} {x : ℚ} {d : MatrixCore.F32} (h : MatrixCore.fl32 ftz x = some d) :
-    ∃ u, MatrixCore.binary32.decode d = .finite u := by
+    ∃ u, MatrixCore.fp32.decode d = .finite u := by
   unfold MatrixCore.fl32 at h
   cases hr : MatrixCore.rne32 x with
   | none => simp [hr] at h
@@ -62,7 +62,7 @@ theorem decode_fl32 {ftz : Bool} {x : ℚ} {d : MatrixCore.F32} (h : MatrixCore.
     · exact decode_rne32 hr
 
 theorem decode_infinity (s : Bool) :
-    MatrixCore.binary32.decodeNat (MatrixCore.infinity32 s).toNat = .infinity s := by
+    MatrixCore.fp32.decodeNat (MatrixCore.infinity32 s).toNat = .infinity s := by
   cases s <;> decide
 
 theorem observe_fl (ftz : Bool) (x : ℚ) :
@@ -76,7 +76,7 @@ theorem observe_fl (ftz : Bool) (x : ℚ) :
   | some d =>
     obtain ⟨u, hu⟩ := decode_fl32 h
     rw [h] at hc
-    change Agree _ (MatrixCore.binary32.decode d) at hc
+    change Agree _ (MatrixCore.fp32.decode d) at hc
     rw [hu] at hc
     simp only
     cases hm : MCFloat.classifyModel (MCFloat.fl ftz x) <;> rw [hm] at hc <;> simp [Agree] at hc
@@ -97,7 +97,7 @@ theorem wordX_fl (ftz : Bool) (x : ℚ) :
   | some d =>
     obtain ⟨u, hu⟩ := decode_fl32 h
     rw [h] at hc
-    change Agree _ (MatrixCore.binary32.decode d) at hc
+    change Agree _ (MatrixCore.fp32.decode d) at hc
     rw [hu] at hc
     have hv : MatrixCore.value32 d = some u.value := by
       simp [MatrixCore.value32, hu, MatrixCore.Datum.toFinite]

@@ -87,7 +87,7 @@ theorem evalBlock_products {P : Model} {xa : List P.a.Word} {xb : List P.b.Word}
   unfold prepare at hp
   cases hA : xa.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at hp <;> simp at hp
   cases hB : xb.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at hp <;> simp at hp
-  cases hC : (binary32.decode c).toFinite <;> rw [hC] at hp <;> simp at hp
+  cases hC : (fp32.decode c).toFinite <;> rw [hC] at hp <;> simp at hp
   rename_i A B _
   rw [← hp]
   unfold Prepared.products Prepared.p

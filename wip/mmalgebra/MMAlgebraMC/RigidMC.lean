@@ -74,7 +74,7 @@ theorem alignedAccumulation_onGrid {P : Model} (hP : P.accumulation = .globalAli
 
 /-- Prepared operands of a block on fp16 words: the products are multiples of `2^-48` and `c` a
 binary32 value. -/
-theorem fp16_prepared {P : Model} (ha : P.a = .packed binary16) (hb : P.b = .packed binary16)
+theorem fp16_prepared {P : Model} (ha : P.a = .packed fp16) (hb : P.b = .packed fp16)
     {qs : List (P.a.Word × P.b.Word)} {d : F32} {px : Prepared}
     (h : prepare (P := P) ⟨qs.map Prod.fst, qs.map Prod.snd, d⟩ = some px) :
     (∀ p ∈ px.p, OnGrid p.value (-149)) ∧ OnGrid px.c.value (-149) := by
@@ -83,7 +83,7 @@ theorem fp16_prepared {P : Model} (ha : P.a = .packed binary16) (hb : P.b = .pac
   | none => rw [hL] at h; cases h
   | some L =>
     rw [hL] at h
-    cases hC : (binary32.decode d).toFinite with
+    cases hC : (fp32.decode d).toFinite with
     | none => rw [hC] at h; cases h
     | some C =>
       rw [hC] at h
@@ -143,9 +143,9 @@ theorem cdna3_block_good (d : F32) (ps : List (Option (cdna3F16.a.Word × cdna3F
 theorem cdna3_pass (d : F32) (hd : GoodW d) :
     (mcMachine cdna3F16).block d (List.replicate 8 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := cdna3F16) ⟨(slotPairs cdna3F16 (List.replicate 8 none)).map Prod.fst,

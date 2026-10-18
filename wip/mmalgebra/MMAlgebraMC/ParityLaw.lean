@@ -158,7 +158,7 @@ theorem blockBits_parityEquiv {P : Model} (hP : P.accumulation = .oddEvenGroupin
   rcases mapM_parityEquiv (decPair P) h with ⟨h1, h2⟩ | ⟨L, M, h1, h2, hLM⟩
   · left; simp [h1, h2]
   · rw [h1, h2]
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => left; simp
     | some C =>
       right

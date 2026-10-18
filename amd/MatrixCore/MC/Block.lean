@@ -25,7 +25,7 @@ structure Prepared where
 def prepare {P : Model} (x : BlockInput P) : Option Prepared := do
   let a ← x.a.mapM fun w => (P.a.read w).toFinite
   let b ← x.b.mapM fun w => (P.b.read w).toFinite
-  let c ← (binary32.decode x.c).toFinite
+  let c ← (fp32.decode x.c).toFinite
   return ⟨a, b, c⟩
 
 namespace Prepared

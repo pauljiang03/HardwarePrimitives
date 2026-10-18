@@ -28,10 +28,10 @@ private def getModel : String → Option InvocationSpec
   | "hopper-bf16" => some hopperBF16Invocation
   | "hopper-tf32-mma" => some hopperTF32MmaInvocation
   | "hopper-tf32-wmma" => some hopperTF32WmmaInvocation
-  | "f64-rne" => some (binary64Fma .nearestEven)
-  | "f64-rz" => some (binary64Fma .truncate)
-  | "f64-rd" => some (binary64Fma .towardNegative)
-  | "f64-ru" => some (binary64Fma .towardPositive)
+  | "f64-rne" => some (fp64Fma .nearestEven)
+  | "f64-rz" => some (fp64Fma .truncate)
+  | "f64-rd" => some (fp64Fma .towardNegative)
+  | "f64-ru" => some (fp64Fma .towardPositive)
   | "ada-e4m3" => some adaE4M3Invocation
   | "ada-e5m2" => some adaE5M2Invocation
   | "hopper-e4m3" => some hopperE4M3Invocation
@@ -151,10 +151,10 @@ private def replayModel : String → Option ReplayModel
   | "blackwell-e4m3" => some ⟨blackwellE4M3F32, e4m3Word⟩
   | "blackwell-e5m2" => some ⟨blackwellE5M2F32, plainWord _⟩
   -- Negative controls: Ada and Hopper FP8 with a binary32 block output.
-  | "ada-e4m3-binary32-output" => some ⟨{adaE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
-  | "ada-e5m2-binary32-output" => some ⟨{adaE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
-  | "hopper-e4m3-binary32-output" => some ⟨{hopperE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
-  | "hopper-e5m2-binary32-output" => some ⟨{hopperE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
+  | "ada-e4m3-fp32-output" => some ⟨{adaE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
+  | "ada-e5m2-fp32-output" => some ⟨{adaE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
+  | "hopper-e4m3-fp32-output" => some ⟨{hopperE4M3F32 with outputMantissaBits := 23}, e4m3Word⟩
+  | "hopper-e5m2-fp32-output" => some ⟨{hopperE5M2F32 with outputMantissaBits := 23}, plainWord _⟩
   | _ => none
 
 private def pairs {α : Type} : List α → Option (List (α × α))

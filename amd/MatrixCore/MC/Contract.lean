@@ -35,7 +35,7 @@ structure BlockContract {P : Model} (x : BlockInput P) (t : BlockTrace P) : Prop
   lengths : x.a.length = P.nfma ∧ x.b.length = P.nfma
   prepared : prepare x = some t.prepared
   /-- `c` is the decoding of the input word. -/
-  c : (binary32.decode x.c).toFinite = some t.prepared.c
+  c : (fp32.decode x.c).toFinite = some t.prepared.c
   /-- Every operand has a significand below 2, so every product has one below 4. -/
   operands : (∀ u ∈ t.prepared.a, u.m < 2 ^ (u.t + 1)) ∧ (∀ u ∈ t.prepared.b, u.m < 2 ^ (u.t + 1))
   products : ∀ p ∈ t.prepared.p, p.m < 2 ^ (p.t + 2)

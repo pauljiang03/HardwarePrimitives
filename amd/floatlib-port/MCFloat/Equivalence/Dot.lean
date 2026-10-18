@@ -24,11 +24,11 @@ theorem chunks_map (f : α → β) (n : ℕ) :
     rw [← List.map_cons, ← List.map_take, ← List.map_drop, chunks_map f n k]
 
 theorem decode_infinity_inv (n : ℕ) (hn : n < 2 ^ 32) (s : Bool)
-    (h : MatrixCore.binary32.decodeNat n = .infinity s) : n = (MatrixCore.infinity32 s).toNat := by
+    (h : MatrixCore.fp32.decodeNat n = .infinity s) : n = (MatrixCore.infinity32 s).toNat := by
   unfold MatrixCore.Format.decodeNat at h
-  simp (config := { decide := true }) only [show MatrixCore.binary32.mantissaBits = 23 from rfl,
-    show MatrixCore.binary32.exponentBits = 8 from rfl,
-    show MatrixCore.binary32.specials = .ieee from rfl, Nat.reducePow, Nat.reduceAdd,
+  simp (config := { decide := true }) only [show MatrixCore.fp32.mantissaBits = 23 from rfl,
+    show MatrixCore.fp32.exponentBits = 8 from rfl,
+    show MatrixCore.fp32.specials = .ieee from rfl, Nat.reducePow, Nat.reduceAdd,
     Nat.reduceSub] at h
   split at h
   · split at h
@@ -43,21 +43,21 @@ theorem inf_bits {w : MCFloat.F32} {s : Bool} (h : MCFloat.classifyModel w = .in
     MCFloat.bits w = (MatrixCore.infinity32 s).toNat := by
   have hc := classify_word w
   rw [h] at hc
-  cases hd : MatrixCore.binary32.decodeNat (MCFloat.bits w) <;> rw [hd] at hc <;>
+  cases hd : MatrixCore.fp32.decodeNat (MCFloat.bits w) <;> rw [hd] at hc <;>
     simp only [Agree] at hc
   subst hc
   exact decode_infinity_inv _ (bits_lt w) _ hd
 
 theorem observe_word (w : MatrixCore.F32) :
     observe (MCFloat.ofNat .binary32 w.toNat) = MatrixCore.observe32 w := by
-  have hc := binary32_agree w.toNat w.isLt
+  have hc := fp32_agree w.toNat w.isLt
   have hb : MCFloat.bits (MCFloat.ofNat .binary32 w.toNat) = w.toNat := ofNat_bits _ _ w.isLt
   unfold observe MatrixCore.observe32
   rw [hb]
   change Agree (MCFloat.classifyModel (MCFloat.ofNat .binary32 w.toNat))
-    (MatrixCore.binary32.decode w) at hc
+    (MatrixCore.fp32.decode w) at hc
   cases hm : MCFloat.classifyModel (MCFloat.ofNat .binary32 w.toNat) <;>
-    cases hd : MatrixCore.binary32.decode w <;> rw [hm, hd] at hc <;> simp only [Agree] at hc <;>
+    cases hd : MatrixCore.fp32.decode w <;> rw [hm, hd] at hc <;> simp only [Agree] at hc <;>
     simp [hc]
 
 theorem fold_agree {P : MCFloat.MCModel} {Q : MatrixCore.Model} (h : Corresponds P Q)

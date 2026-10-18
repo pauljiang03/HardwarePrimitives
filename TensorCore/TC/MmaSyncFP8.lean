@@ -57,7 +57,7 @@ def mmaSyncFP8 (conv : BitVec 8 → F16) (c : F32) (ps : List (BitVec 8 × BitVe
   let ps16 := ps.map fun (a, b) => (conv a, conv b)
   let d1 ← hmma 0 (groupA ps16)
   let d2 ← hmma d1 (groupB ps16)
-  addBinary32 d2 c
+  addFp32 d2 c
 
 /-- A long inner product through consecutive FP8 `mma.sync` instructions of `k` products each
 (the last padded with zero pairs), each output the next instruction's `c`. -/
@@ -98,7 +98,7 @@ def mmaSyncFP8BA (conv : BitVec 8 → F16) (c : F32) (ps : List (BitVec 8 × Bit
   let ps16 := ps.map fun (a, b) => (conv a, conv b)
   let d1 ← hmma 0 (groupB ps16)
   let d2 ← hmma d1 (groupA ps16)
-  addBinary32 d2 c
+  addFp32 d2 c
 
 theorem interleave_test_reversed :
     ∀ k, k < 32 → 2 ≤ k → mmaSyncFP8BA e5m2ToF16 0 (interleaveInput k) = some 0x3f800001 := by
@@ -128,8 +128,8 @@ def mmaSyncFP8Separate (conv : BitVec 8 → F16) (c : F32) (ps : List (BitVec 8 
   let ps16 := ps.map fun (a, b) => (conv a, conv b)
   let d1 ← hmma 0 (groupA ps16)
   let d2 ← hmma 0 (groupB ps16)
-  let s ← addBinary32 d1 d2
-  addBinary32 s c
+  let s ← addFp32 d1 d2
+  addFp32 s c
 
 /-- The operands of row 3936 (line number) of the recorded B200 E5M2 vectors of the Accurate Models
 toolbox, commit 79143bd (`vendor/matlab-tensor-core-79143bd/model_validation/B200/E5M2/`): `c` is

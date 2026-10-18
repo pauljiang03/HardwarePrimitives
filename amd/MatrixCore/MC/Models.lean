@@ -12,33 +12,33 @@ namespace MatrixCore
 `(…((c + p₁) + p₂) + …)`, keeping each product exact and rounding each step with RNE: blocks of
 one product with correct rounding. Subnormals are supported in input and output. -/
 def sfmaF32 : Model :=
-  { a := .packed binary32, b := .packed binary32, nfma := 1, accumulation := .correctRounding }
+  { a := .packed fp32, b := .packed fp32, nfma := 1, accumulation := .correctRounding }
 
 /-! ## CDNA 1 (MI100): full-precision products, exact accumulation, final RNE -/
 
 /-- CDNA 1 fp16: `N_FMA = 4`, `c` accumulated with the products, exact sum, RNE (Fig. 1a). -/
 def cdna1F16 : Model :=
-  { a := .packed binary16, b := .packed binary16, nfma := 4, accumulation := .correctRounding }
+  { a := .packed fp16, b := .packed fp16, nfma := 4, accumulation := .correctRounding }
 
 /-- CDNA 1 bf16: `N_FMA = 2`; products may exceed `2^128` inside a block (Fig. 1b). -/
 def cdna1BF16 : Model :=
-  { a := .packed bfloat16, b := .packed bfloat16, nfma := 2, accumulation := .correctRounding }
+  { a := .packed bf16, b := .packed bf16, nfma := 2, accumulation := .correctRounding }
 
 /-! ## CDNA 2 (MI210, MI250): pairwise sums of binary32 values, subnormals flushed -/
 
 /-- CDNA 2 fp16: `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}`, no subnormals (Fig. 2a). -/
 def cdna2F16 : Model :=
-  { a := .packed binary16, b := .packed binary16, nfma := 4, accumulation := .pairWiseSum,
+  { a := .packed fp16, b := .packed fp16, nfma := 4, accumulation := .pairWiseSum,
     subnormals := false }
 
 /-- CDNA 2 bf16 without the `_1k` suffix: group size `2`, `fl{c + fl{p₁ + p₂}}` (Fig. 2b). -/
 def cdna2BF16 : Model :=
-  { a := .packed bfloat16, b := .packed bfloat16, nfma := 2, accumulation := .pairWiseSum,
+  { a := .packed bf16, b := .packed bf16, nfma := 2, accumulation := .pairWiseSum,
     subnormals := false }
 
 /-- CDNA 2 bf16 `_1k` instructions: group size `4`, as fp16 (Fig. 2a). -/
 def cdna2BF16_1k : Model :=
-  { a := .packed bfloat16, b := .packed bfloat16, nfma := 4, accumulation := .pairWiseSum,
+  { a := .packed bf16, b := .packed bf16, nfma := 4, accumulation := .pairWiseSum,
     subnormals := false }
 
 /-! ## CDNA 3 (MI300A, MI300X): global alignment with late `c` -/
@@ -46,12 +46,12 @@ def cdna2BF16_1k : Model :=
 /-- CDNA 3 fp16 (Algorithm 1): `N_FMA = 8`, products denormalized and aligned with `(2, 24)`,
 `c` added late with `(24, 32, RD)` alignment, `e_{c=0} = −126`, `|p_ℓ| ≥ 2^128` overflows. -/
 def cdna3F16 : Model :=
-  { a := .packed binary16, b := .packed binary16, nfma := 8, accumulation := .globalAlignment,
+  { a := .packed fp16, b := .packed fp16, nfma := 8, accumulation := .globalAlignment,
     productOverflow := true }
 
 /-- CDNA 3 bf16: every feature as fp16. -/
 def cdna3BF16 : Model :=
-  { a := .packed bfloat16, b := .packed bfloat16, nfma := 8, accumulation := .globalAlignment,
+  { a := .packed bf16, b := .packed bf16, nfma := 8, accumulation := .globalAlignment,
     productOverflow := true }
 
 /-- CDNA 3 XF32: binary32 words truncated to tf19, `N_FMA = 4`, otherwise as fp16. -/

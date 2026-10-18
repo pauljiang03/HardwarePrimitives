@@ -136,7 +136,7 @@ def blockOutcome {P : Model} (x : BlockInput P) : Option Outcome :=
   else
     match prepare x with
     | some px => some (finiteOutcome P px)
-    | none => some ((combineSpecial (.ofDatum (binary32.decode x.c) :: blockProducts x)).getD .nan)
+    | none => some ((combineSpecial (.ofDatum (fp32.decode x.c) :: blockProducts x)).getD .nan)
 
 /-- binary32 encodings of the infinities. -/
 def infinity32 (negative : Bool) : F32 := if negative then 0xFF800000 else 0x7F800000

@@ -46,11 +46,11 @@ def emax (f : Format) : ℤ :=
 end Format
 
 /-- binary32 (fp32): the format of `c` and `d` on every variant. -/
-@[implicit_reducible] def binary32 : Format := ⟨8, 23, 127, .ieee⟩
+@[implicit_reducible] def fp32 : Format := ⟨8, 23, 127, .ieee⟩
 /-- binary16 (fp16). -/
-@[implicit_reducible] def binary16 : Format := ⟨5, 10, 15, .ieee⟩
+@[implicit_reducible] def fp16 : Format := ⟨5, 10, 15, .ieee⟩
 /-- bfloat16 (bf16). -/
-@[implicit_reducible] def bfloat16 : Format := ⟨8, 7, 127, .ieee⟩
+@[implicit_reducible] def bf16 : Format := ⟨8, 7, 127, .ieee⟩
 /-- tf19 (TensorFloat-32 values; AMD XF32): binary32's exponent with 10 mantissa bits. -/
 @[implicit_reducible] def tf19 : Format := ⟨8, 10, 127, .ieee⟩
 /-- fp8-E4M3 FNUZ: precision 4, minimum normal `2^-7`, maximum `240`. -/
@@ -178,7 +178,7 @@ def decode (f : Format) (w : BitVec f.width) : Datum := f.decodeNat w.toNat
 end Format
 
 /-- Finite value of a binary32 word, if any. -/
-def value32 (w : F32) : Option ℚ := (binary32.decode w).toFinite.map Unpacked.value
+def value32 (w : F32) : Option ℚ := (fp32.decode w).toFinite.map Unpacked.value
 
 /-! ## Matrix-core operand formats -/
 
@@ -210,7 +210,7 @@ def truncateXF32 (x : Unpacked) : Unpacked := ⟨x.negative, x.m / 2 ^ 13, x.e, 
 def read : (i : InputFormat) → i.Word → Datum
   | .packed f, w => f.decode w
   | .xf32, w =>
-    match binary32.decode w with
+    match fp32.decode w with
     | .finite x => .finite (truncateXF32 x)
     | d => d
 

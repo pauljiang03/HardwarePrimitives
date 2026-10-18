@@ -226,10 +226,10 @@ theorem packed_encodesInts (f : Format) (hmin : f.emin ≤ 0)
 at least thirteen zero bits, which the truncation to ten mantissa bits drops. -/
 theorem xf32_encodesInts : EncodesInts .xf32 11 := by
   intro z hz
-  obtain ⟨w, hw, u, hu, hv, hn⟩ := encodeExact_int binary32 (by decide) (by decide) (by decide)
+  obtain ⟨w, hw, u, hu, hv, hn⟩ := encodeExact_int fp32 (by decide) (by decide) (by decide)
     (Nat.le_trans hz (by decide))
   have hr : (InputFormat.read .xf32 w).toFinite = some (InputFormat.truncateXF32 u) := by
-    show (match binary32.decode w with
+    show (match fp32.decode w with
       | .finite x => Datum.finite (InputFormat.truncateXF32 x) | d => d).toFinite = _
     rw [hu]; rfl
   -- the significand is a multiple of `2^13`

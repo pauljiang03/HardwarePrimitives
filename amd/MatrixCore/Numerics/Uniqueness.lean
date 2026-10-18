@@ -32,7 +32,7 @@ theorem rne32_rounds {x : ℚ} {w : F32} (h : rne32 x = some w) : RoundsNearestE
 
 /-- Fields of a binary32 word. -/
 theorem decode32_eq (w : F32) :
-    binary32.decode w =
+    fp32.decode w =
       let M := w.toNat % 8388608
       let E := w.toNat / 8388608 % 256
       let neg := w.toNat / 2147483648 % 2 == 1

@@ -50,15 +50,15 @@ theorem operand_decode_eq (i : InputFormat) (w : i.Word) :
   cases i with
   | packed f => exact decode_eq f w.toNat
   | xf32 =>
-    show (decode binary32 w.toNat).map _ = (match MatrixCore.binary32.decode w with
+    show (decode fp32 w.toNat).map _ = (match MatrixCore.fp32.decode w with
       | Datum.finite x => Datum.finite (InputFormat.truncateXF32 x) | d => d).toFinite.map numOf
-    have h := decode_eq MatrixCore.binary32 w.toNat
-    have hl : layoutOf MatrixCore.binary32 = binary32 := rfl
+    have h := decode_eq MatrixCore.fp32 w.toNat
+    have hl : layoutOf MatrixCore.fp32 = fp32 := rfl
     rw [hl] at h
     rw [h]
-    show _ = (match MatrixCore.Format.decodeNat MatrixCore.binary32 w.toNat with
+    show _ = (match MatrixCore.Format.decodeNat MatrixCore.fp32 w.toNat with
       | Datum.finite x => Datum.finite (InputFormat.truncateXF32 x) | d => d).toFinite.map numOf
-    cases MatrixCore.Format.decodeNat MatrixCore.binary32 w.toNat <;> rfl
+    cases MatrixCore.Format.decodeNat MatrixCore.fp32 w.toNat <;> rfl
 
 theorem mapM_decode_eq (i : InputFormat) (ws : List i.Word) :
     (ws.map BitVec.toNat).mapM (operandOf i).decode =
@@ -72,12 +72,12 @@ theorem mapM_decode_eq (i : InputFormat) (ws : List i.Word) :
 
 theorem value32_eq (w : F32) : value32 w = MatrixCore.value32 w := by
   unfold value32 MatrixCore.value32
-  have h := decode_eq MatrixCore.binary32 w.toNat
-  have hl : layoutOf MatrixCore.binary32 = binary32 := rfl
+  have h := decode_eq MatrixCore.fp32 w.toNat
+  have hl : layoutOf MatrixCore.fp32 = fp32 := rfl
   rw [hl] at h
   rw [h]
-  show _ = (MatrixCore.Format.decodeNat MatrixCore.binary32 w.toNat).toFinite.map Unpacked.value
-  cases (MatrixCore.Format.decodeNat MatrixCore.binary32 w.toNat).toFinite <;> simp [val_numOf]
+  show _ = (MatrixCore.Format.decodeNat MatrixCore.fp32 w.toNat).toFinite.map Unpacked.value
+  cases (MatrixCore.Format.decodeNat MatrixCore.fp32 w.toNat).toFinite <;> simp [val_numOf]
 
 /-! ## Fixed-point alignment -/
 

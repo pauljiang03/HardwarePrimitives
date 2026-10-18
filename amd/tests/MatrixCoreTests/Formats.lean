@@ -12,13 +12,13 @@ open MatrixCore
 def val (f : Format) (n : ℕ) : Option ℚ := (f.decodeNat n).toFinite.map Unpacked.value
 
 /-- binary16: maximum `65504`, minimum normal `2^-14`, minimum subnormal `2^-24`. -/
-example : val binary16 0x7BFF = some 65504 ∧ val binary16 0x0400 = some (p2 (-14)) ∧
-    val binary16 0x0001 = some (p2 (-24)) ∧ binary16.decodeNat 0x7C00 = .infinity false := by
+example : val fp16 0x7BFF = some 65504 ∧ val fp16 0x0400 = some (p2 (-14)) ∧
+    val fp16 0x0001 = some (p2 (-24)) ∧ fp16.decodeNat 0x7C00 = .infinity false := by
   decide +kernel
 
 /-- bfloat16: maximum `(2 − 2^-7)·2^127`, minimum normal `2^-126`. -/
-example : val bfloat16 0x7F7F = some ((2 - p2 (-7)) * p2 127) ∧
-    val bfloat16 0x0080 = some (p2 (-126)) := by decide +kernel
+example : val bf16 0x7F7F = some ((2 - p2 (-7)) * p2 127) ∧
+    val bf16 0x0080 = some (p2 (-126)) := by decide +kernel
 
 /-- tf19: maximum `(2 − 2^-10)·2^127`. -/
 example : val tf19 0x3FBFF = some ((2 - p2 (-10)) * p2 127) := by decide +kernel
@@ -34,8 +34,8 @@ example : val e5m2fnuz 0x7F = some 57344 ∧ val e5m2fnuz 0x04 = some (p2 (-15))
     val e5m2fnuz 0x01 = some (p2 (-17)) ∧ e5m2fnuz.decodeNat 0x80 = .nan := by decide +kernel
 
 /-- binary32: maximum `(2 − 2^-23)·2^127`, the infinities and a NaN. -/
-example : val binary32 0x7F7FFFFF = some ((2 - p2 (-23)) * p2 127) ∧
-    binary32.decodeNat 0xFF800000 = .infinity true ∧ binary32.decodeNat 0x7FC00000 = .nan := by
+example : val fp32 0x7F7FFFFF = some ((2 - p2 (-23)) * p2 127) ∧
+    fp32.decodeNat 0xFF800000 = .infinity true ∧ fp32.decodeNat 0x7FC00000 = .nan := by
   decide +kernel
 
 /-- XF32 reads `1 + 2^-10 + 2^-11` (`0x3F803000`) as `1 + 2^-10`. -/

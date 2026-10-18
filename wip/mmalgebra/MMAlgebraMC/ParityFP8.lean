@@ -69,9 +69,9 @@ theorem cdna3FP8_slotZero (fa fb : Format) :
 theorem e44_pass (d : F32) (hd : GoodW d) :
     (mcMachine E44).block d (List.replicate 16 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := E44) ⟨(slotPairs E44 (List.replicate 16 none)).map Prod.fst,
@@ -149,9 +149,9 @@ theorem e44_pass (d : F32) (hd : GoodW d) :
 theorem e55_pass (d : F32) (hd : GoodW d) :
     (mcMachine E55).block d (List.replicate 16 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := E55) ⟨(slotPairs E55 (List.replicate 16 none)).map Prod.fst,
@@ -229,9 +229,9 @@ theorem e55_pass (d : F32) (hd : GoodW d) :
 theorem e45_pass (d : F32) (hd : GoodW d) :
     (mcMachine E45).block d (List.replicate 16 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := E45) ⟨(slotPairs E45 (List.replicate 16 none)).map Prod.fst,
@@ -309,9 +309,9 @@ theorem e45_pass (d : F32) (hd : GoodW d) :
 theorem e54_pass (d : F32) (hd : GoodW d) :
     (mcMachine E54).block d (List.replicate 16 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := E54) ⟨(slotPairs E54 (List.replicate 16 none)).map Prod.fst,

@@ -88,7 +88,7 @@ theorem block_le_cr {P : Model} {b : ℕ} (hE : ExactMultiplier P b)
       cases hb : x.b.mapM (fun w => (P.b.read w).toFinite) with
       | none => simp [ha, hb] at hp
       | some B' =>
-        cases hc : (binary32.decode x.c).toFinite with
+        cases hc : (fp32.decode x.c).toFinite with
         | none => simp [ha, hb, hc] at hp
         | some C =>
           have hp' : t.prepared = ⟨A', B', C⟩ := by

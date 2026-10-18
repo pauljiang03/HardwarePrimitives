@@ -63,28 +63,28 @@ theorem mapM_lead {f : α → Option β} {w a z : α} {u b c : β} (hw : f w = s
   simp [hw]
 
 /-- The operand vector decodes to the lead and `leadTail n`. -/
-theorem leadOperands_mapM {w : BitVec 16} {u : Unpacked} (hw : binary16.decode w = .finite u)
+theorem leadOperands_mapM {w : BitVec 16} {u : Unpacked} (hw : fp16.decode w = .finite u)
     (n : ℕ) :
-    (leadOperands w n).mapM (fun w => (binary16.decode w).toFinite) = some (u :: leadTail n) :=
-  mapM_lead (f := fun w : BitVec 16 => (binary16.decode w).toFinite) (by simp only [hw]; rfl)
+    (leadOperands w n).mapM (fun w => (fp16.decode w).toFinite) = some (u :: leadTail n) :=
+  mapM_lead (f := fun w : BitVec 16 => (fp16.decode w).toFinite) (by simp only [hw]; rfl)
     (by decide) (by decide) n (7 - n)
 
 /-- A block whose operand vectors and `c` decode is prepared to these decoded values. -/
 theorem prepare_of_mapM {P : Model} {x : BlockInput P} {A B : List Unpacked} {c : Unpacked}
     (ha : x.a.mapM (fun w => (P.a.read w).toFinite) = some A)
     (hb : x.b.mapM (fun w => (P.b.read w).toFinite) = some B)
-    (hc : (binary32.decode x.c).toFinite = some c) : prepare x = some ⟨A, B, c⟩ := by
+    (hc : (fp32.decode x.c).toFinite = some c) : prepare x = some ⟨A, B, c⟩ := by
   unfold prepare
   rw [ha, hb, hc]
   rfl
 
 /-- A block of the family decodes to the two leads, `leadTail n`, and `c = 0`. -/
 theorem prepare_cdna3F16LeadBlock {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub) (n : ℕ) :
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub) (n : ℕ) :
     prepare (cdna3F16LeadBlock wa wb n) =
       some ⟨ua :: leadTail n, ub :: leadTail n, ⟨false, 0, -126, 23⟩⟩ :=
   prepare_of_mapM (leadOperands_mapM ha n) (leadOperands_mapM hb n)
-    (show (binary32.decode (0 : F32)).toFinite = some ⟨false, 0, -126, 23⟩ by decide)
+    (show (fp32.decode (0 : F32)).toFinite = some ⟨false, 0, -126, 23⟩ by decide)
 
 /-- The products of a block of the family: the lead product and `leadTailProducts n`. -/
 theorem cdna3F16LeadBlock_products (ua ub c : Unpacked) (n : ℕ) :
@@ -173,7 +173,7 @@ theorem evalBlock_of_stages {P : Model} {x : BlockInput P} {px : Prepared} {s : 
 
 /-- An accepted block of the family returns its `S_acc` when this is a binary32 value. -/
 theorem cdna3F16LeadBlock_eval {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub)
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub)
     (hL : (ua.mul ub).m ≠ 0) (he : -24 ≤ (ua.mul ub).e)
     (hov : absQ (ua.mul ub).value < pow2 128) {n : ℕ} (hn : n ≤ 7) {S : ℚ}
     (hS : truncGrid (ua.mul ub).value ((ua.mul ub).e - 24) +
@@ -241,14 +241,14 @@ sign, a nonzero product and `e_a + e_b = −10`, and every `n ≤ 7`, the block 
 returns `d = (m_a m_b + 64 n)·2^-30` and the block with lead `0x0001 · 0x7800 = 2^-9` returns
 `d' = 2^-9`. -/
 theorem cdna3F16LeadBlock_outputs {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub)
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub)
     (hs : ua.negative = ub.negative) (hm : 0 < ua.m * ub.m) (he : ua.e + ub.e = -10)
     {n : ℕ} (hn : n ≤ 7) :
     ∃ d d', blockBits (cdna3F16LeadBlock wa wb n) = .ok d ∧
       blockBits (cdna3F16LeadBlock 0x0001 0x7800 n) = .ok d' ∧
       wordValue d = ((ua.m * ub.m + 64 * n : ℕ) : ℚ) * pow2 (-30) ∧ wordValue d' = pow2 (-9) := by
-  obtain ⟨hta, hma⟩ := decodeNat_bounded (f := binary16) ha
-  obtain ⟨htb, hmb⟩ := decodeNat_bounded (f := binary16) hb
+  obtain ⟨hta, hma⟩ := decodeNat_bounded (f := fp16) ha
+  obtain ⟨htb, hmb⟩ := decodeNat_bounded (f := fp16) hb
   have ht : ua.t = 10 := hta
   have ht' : ub.t = 10 := htb
   have hma' : ua.m < 2048 := hma
@@ -285,8 +285,8 @@ theorem cdna3F16LeadBlock_outputs {wa wb : BitVec 16} {ua ub : Unpacked}
   obtain ⟨hfin, hlt⟩ := finiteValue32_mul_pow2_neg30 (N := ua.m * ub.m + 64 * n) (by omega)
   obtain ⟨d, hd, hdv⟩ := cdna3F16LeadBlock_eval ha hb hLm (by omega) hov hn hS hfin hlt
   -- the lead `0x0001 · 0x7800 = 2^-9`: `e_max = 1`, the products `2^-24` are truncated away
-  have ha' : binary16.decode 0x0001 = .finite ⟨false, 1, -14, 10⟩ := by decide
-  have hb' : binary16.decode 0x7800 = .finite ⟨false, 1024, 15, 10⟩ := by decide
+  have ha' : fp16.decode 0x0001 = .finite ⟨false, 1, -14, 10⟩ := by decide
+  have hb' : fp16.decode 0x7800 = .finite ⟨false, 1024, 15, 10⟩ := by decide
   have hS' : truncGrid (Unpacked.mul ⟨false, 1, -14, 10⟩ ⟨false, 1024, 15, 10⟩).value
       ((Unpacked.mul ⟨false, 1, -14, 10⟩ ⟨false, 1024, 15, 10⟩).e - 24) +
       n * truncGrid (pow2 (-24))
@@ -309,7 +309,7 @@ theorem cdna3F16LeadBlock_outputs {wa wb : BitVec 16} {ua ub : Unpacked}
 and every `n ≤ 7`, the output with lead `2^-9 = 0x0001 · 0x7800` is smaller than the output with
 lead `a₁ b₁` exactly when `2^21 − m_a m_b < 64 n`. -/
 theorem cdna3F16LeadBlock_decrease_iff {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub)
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub)
     (hs : ua.negative = ub.negative) (hm : 0 < ua.m * ub.m) (he : ua.e + ub.e = -10)
     {n : ℕ} (hn : n ≤ 7) :
     ∃ d d', blockBits (cdna3F16LeadBlock wa wb n) = .ok d ∧
@@ -338,21 +338,21 @@ theorem zip_self_all_le : ∀ l : List ℚ, (l.zip l).all (fun q => decide (q.1 
     exact ⟨Rat.le_refl, zip_self_all_le l⟩
 
 /-- The value of a CDNA 3 fp16 operand word is the value of its decoding. -/
-theorem wordValue_of_decode16 {w : BitVec 16} {u : Unpacked} (h : binary16.decode w = .finite u) :
+theorem wordValue_of_decode16 {w : BitVec 16} {u : Unpacked} (h : fp16.decode w = .finite u) :
     cdna3F16.a.wordValue w = u.value := by
   unfold InputFormat.wordValue
-  show ((binary16.decode w).toFinite.map Unpacked.value).getD 0 = u.value
+  show ((fp16.decode w).toFinite.map Unpacked.value).getD 0 = u.value
   rw [h]; rfl
 
 /-- In the family, every product of the block with lead `0x0001 · 0x7800` is at least the
 corresponding product of the block with lead `a₁ b₁` exactly when `m_a m_b ≤ 2^21`. -/
 theorem cdna3F16LeadBlock_productsLE_iff {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub)
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub)
     (hs : ua.negative = ub.negative) (he : ua.e + ub.e = -10) (n : ℕ) :
     productsLE (cdna3F16LeadBlock wa wb n) (cdna3F16LeadBlock 0x0001 0x7800 n) = true ↔
       ua.m * ub.m ≤ 2 ^ 21 := by
-  obtain ⟨hta, _⟩ := decodeNat_bounded (f := binary16) ha
-  obtain ⟨htb, _⟩ := decodeNat_bounded (f := binary16) hb
+  obtain ⟨hta, _⟩ := decodeNat_bounded (f := fp16) ha
+  obtain ⟨htb, _⟩ := decodeNat_bounded (f := fp16) hb
   have hval := lead_value hs hta htb he
   have hwa := wordValue_of_decode16 ha
   have hwb : cdna3F16.b.wordValue wb = ub.value := wordValue_of_decode16 hb
@@ -379,7 +379,7 @@ the lead to `2^-9 = 0x0001 · 0x7800` (the other products and `c = 0` unchanged)
 products at least as large and a smaller output exactly when `m_a m_b ≤ 2^21` and
 `2^21 − m_a m_b < 64 n`. -/
 theorem cdna3F16LeadBlock_nonmonotone_iff {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub)
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub)
     (hs : ua.negative = ub.negative) (hm : 0 < ua.m * ub.m) (he : ua.e + ub.e = -10)
     {n : ℕ} (hn : n ≤ 7) :
     ProductNonmonotone (cdna3F16LeadBlock wa wb n) (cdna3F16LeadBlock 0x0001 0x7800 n) ↔

@@ -178,7 +178,7 @@ theorem blockOutcome_finite_iff {P : Model} (x : BlockInput P) (d : F32) :
       | none =>
         rw [hpx] at h
         simp only [Option.some.injEq] at h
-        cases hc : combineSpecial (.ofDatum (binary32.decode x.c) :: blockProducts x) with
+        cases hc : combineSpecial (.ofDatum (fp32.decode x.c) :: blockProducts x) with
         | none => rw [hc] at h; simp at h
         | some o =>
           rw [hc] at h; simp only [Option.getD_some] at h

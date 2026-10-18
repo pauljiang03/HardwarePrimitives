@@ -273,9 +273,9 @@ theorem evalBlock_cancel {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals
     obtain ⟨u, hu, _⟩ := ha w hw; exact ⟨u, hu⟩
   obtain ⟨B, hB⟩ := mapM_exists x.b fun w hw => by
     obtain ⟨u, hu, _⟩ := hb w hw; exact ⟨u, hu⟩
-  obtain ⟨uc, hC, hcv⟩ : ∃ uc, (binary32.decode x.c).toFinite = some uc ∧ uc.value = zc := by
+  obtain ⟨uc, hC, hcv⟩ : ∃ uc, (fp32.decode x.c).toFinite = some uc ∧ uc.value = zc := by
     unfold value32 at hc
-    cases hd : (binary32.decode x.c).toFinite with
+    cases hd : (fp32.decode x.c).toFinite with
     | none => rw [hd] at hc; simp at hc
     | some uc => rw [hd] at hc; simp at hc; exact ⟨uc, rfl, hc⟩
   have hprep : prepare x = some ⟨A, B, uc⟩ := by

@@ -41,7 +41,7 @@ def lastOutput : F32 → List (BlockTrace P) → F32
 initial `c`, then the previous block's `d`). -/
 def Chain : F32 → List (BlockTrace P) → Prop
   | _, [] => True
-  | c, t :: ts => (binary32.decode c).toFinite = some t.prepared.c ∧ Chain t.d ts
+  | c, t :: ts => (fp32.decode c).toFinite = some t.prepared.c ∧ Chain t.d ts
 
 theorem foldlM_blockBits (P : Model) (bs : List (List P.a.Word × List P.b.Word)) (c : F32) :
     bs.foldlM (fun c ab => blockBits (P := P) ⟨ab.1, ab.2, c⟩) c =
@@ -126,7 +126,7 @@ theorem runBlocks_all {P : Model} {Q : BlockInput P → BlockTrace P → Prop}
   exact ⟨x, hQ x t hx⟩
 
 theorem evalBlock_c {P : Model} {x : BlockInput P} {t : BlockTrace P} (h : evalBlock x = .ok t) :
-    (binary32.decode x.c).toFinite = some t.prepared.c :=
+    (fp32.decode x.c).toFinite = some t.prepared.c :=
   prepare_c (evalBlock_ok h).2.2.1
 
 /-- A run is linked through the words it passes on. -/
@@ -140,7 +140,7 @@ theorem runBlocks_chain {P : Model} {c : F32} {bs : List (List P.a.Word × List 
 
 /-! ## Finite observations -/
 
-theorem decode_infinity32 (s : Bool) : binary32.decode (infinity32 s) = .infinity s := by
+theorem decode_infinity32 (s : Bool) : fp32.decode (infinity32 s) = .infinity s := by
   cases s <;> decide
 
 /-- No block accepts an infinite `c`. -/
@@ -239,7 +239,7 @@ def Prepared.products (x : Prepared) : ℚ := sumQ (x.p.map Unpacked.value)
 /-- What a block loses: its exact `Σ p_ℓ + c` minus the value of its output. -/
 def BlockTrace.residual (t : BlockTrace P) : ℚ := t.prepared.exact - wordValue t.d
 
-theorem wordValue_of_decode {c : F32} {u : Unpacked} (h : (binary32.decode c).toFinite = some u) :
+theorem wordValue_of_decode {c : F32} {u : Unpacked} (h : (fp32.decode c).toFinite = some u) :
     wordValue c = u.value := by
   simp [wordValue, value32, h]
 

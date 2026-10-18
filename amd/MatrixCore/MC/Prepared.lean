@@ -156,9 +156,9 @@ theorem read_bounded {i : InputFormat} {w : i.Word} {u : Unpacked}
     rw [ht]; exact hm
   | xf32 =>
     simp only [InputFormat.read] at h
-    cases hd : binary32.decode w <;> rw [hd] at h <;> simp [Datum.toFinite] at h
+    cases hd : fp32.decode w <;> rw [hd] at h <;> simp [Datum.toFinite] at h
     subst h
-    obtain ⟨_, hm⟩ := decodeNat_bounded (f := binary32) (n := BitVec.toNat w) hd
+    obtain ⟨_, hm⟩ := decodeNat_bounded (f := fp32) (n := BitVec.toNat w) hd
     simp only [InputFormat.truncateXF32]
     have hm' : _ < 16777216 := hm
     apply (Nat.div_lt_iff_lt_mul (Nat.two_pow_pos 13)).mpr
@@ -172,7 +172,7 @@ theorem prepare_lengths {P : Model} {x : BlockInput P} {px : Prepared} (h : prep
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
   cases hB : x.b.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at h <;> simp at h
-  cases hC : (MatrixCore.binary32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
+  cases hC : (MatrixCore.fp32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
   subst h
   exact ⟨mapM_length_option hA, mapM_length_option hB⟩
 
@@ -181,11 +181,11 @@ theorem prepare_c_t {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare 
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
   cases hB : x.b.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at h <;> simp at h
-  cases hC : (MatrixCore.binary32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
+  cases hC : (MatrixCore.fp32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
   rename_i c
   subst h
-  have hd : MatrixCore.binary32.decode x.c = .finite c := by
-    cases hd : MatrixCore.binary32.decode x.c <;> rw [hd] at hC <;> simp [Datum.toFinite] at hC; rw [hC]
+  have hd : MatrixCore.fp32.decode x.c = .finite c := by
+    cases hd : MatrixCore.fp32.decode x.c <;> rw [hd] at hC <;> simp [Datum.toFinite] at hC; rw [hC]
   exact (decode32_finite_fields hd).1
 
 theorem prepare_bounded {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
@@ -194,7 +194,7 @@ theorem prepare_bounded {P : Model} {x : BlockInput P} {px : Prepared} (h : prep
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
   cases hB : x.b.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at h <;> simp at h
-  cases hC : (binary32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
+  cases hC : (fp32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
   subst h
   refine ⟨mapM_length_option hA, fun u hu => ?_, fun u hu => ?_⟩
   · obtain ⟨w, _, hw⟩ := mapM_mem_option hA u hu
@@ -223,17 +223,17 @@ theorem Unpacked.absQ_value_lt {u : Unpacked} (hm : u.m < 2 ^ (u.t + 1)) :
 
 /-- The decoded `c` of a prepared block is the decoding of its word. -/
 theorem prepare_c {P : Model} {x : BlockInput P} {px : Prepared} (h : prepare x = some px) :
-    (binary32.decode x.c).toFinite = some px.c := by
+    (fp32.decode x.c).toFinite = some px.c := by
   unfold prepare at h
   cases hA : x.a.mapM fun w => (P.a.read w).toFinite <;> rw [hA] at h <;> simp at h
   cases hB : x.b.mapM fun w => (P.b.read w).toFinite <;> rw [hB] at h <;> simp at h
-  cases hC : (binary32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
+  cases hC : (fp32.decode x.c).toFinite <;> rw [hC] at h <;> simp at h
   subst h
   rfl
 
 theorem prepare_c_bounded {P : Model} {x : BlockInput P} {px : Prepared}
     (h : prepare x = some px) : px.c.m < 2 ^ (px.c.t + 1) := by
-  obtain ⟨ht, hm⟩ := decodeNat_bounded (f := binary32) (n := x.c.toNat) (toFinite_some (prepare_c h))
+  obtain ⟨ht, hm⟩ := decodeNat_bounded (f := fp32) (n := x.c.toNat) (toFinite_some (prepare_c h))
   rw [ht]; exact hm
 
 /-- `|c| < 2^(e_c + 1)` for the exponent `e_c` the late addition uses. -/

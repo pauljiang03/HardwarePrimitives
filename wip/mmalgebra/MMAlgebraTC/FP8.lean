@@ -288,16 +288,16 @@ block FMA after it returns `1` on Hopper and Ada and `1 + 2^-18` on Blackwell. -
 theorem fp8_trunc_after_add :
     ((padBlock hopperE4M3F32 0 (widenE4M3Pairs [(0x38, 0x38)])).bind fun a =>
       (padBlock hopperE4M3F32 0 (widenE4M3Pairs [(0x01, 0x01)])).bind fun b =>
-        addBinary32 a b) = some 0x3F800020 ∧
+        addFp32 a b) = some 0x3F800020 ∧
     ((padBlock hopperE4M3F32 0 (widenE4M3Pairs [(0x38, 0x38)])).bind fun a =>
       (padBlock hopperE4M3F32 0 (widenE4M3Pairs [(0x01, 0x01)])).bind fun b =>
-        (addBinary32 a b).bind fun s => padBlock hopperE4M3F32 s []) = some 0x3F800000 ∧
+        (addFp32 a b).bind fun s => padBlock hopperE4M3F32 s []) = some 0x3F800000 ∧
     ((padBlock adaE4M3F32 0 (widenE4M3Pairs [(0x38, 0x38)])).bind fun a =>
       (padBlock adaE4M3F32 0 (widenE4M3Pairs [(0x01, 0x01)])).bind fun b =>
-        (addBinary32 a b).bind fun s => padBlock adaE4M3F32 s []) = some 0x3F800000 ∧
+        (addFp32 a b).bind fun s => padBlock adaE4M3F32 s []) = some 0x3F800000 ∧
     ((padBlock blackwellE4M3F32 0 (widenE4M3Pairs [(0x38, 0x38)])).bind fun a =>
       (padBlock blackwellE4M3F32 0 (widenE4M3Pairs [(0x01, 0x01)])).bind fun b =>
-        (addBinary32 a b).bind fun s => padBlock blackwellE4M3F32 s []) = some 0x3F800020 := by
+        (addFp32 a b).bind fun s => padBlock blackwellE4M3F32 s []) = some 0x3F800020 := by
   decide +kernel
 
 /-- **`C` in the accumulator or in the epilogue.** With `A·B = 0` (`k = 32` zero products) and

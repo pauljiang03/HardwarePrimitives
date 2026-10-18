@@ -280,13 +280,13 @@ theorem Model.dot_one_block (p : Model) (hK : 0 < p.nfma) (c : F32)
   cases evalBlock (⟨ps, c⟩ : BlockInput p) <;> rfl
 
 /-- `d + c` in binary32, rounded to nearest even. -/
-def addBinary32 (d c : F32) : Option F32 := do
+def addFp32 (d c : F32) : Option F32 := do
   round32 .nearestEven ((← value32 d) + (← value32 c))
 
 /-- `addBinary32` returns the binary32 value nearest the exact sum, ties to even. -/
-theorem addBinary32_nearestEven {d c o : F32} {u v : ℚ} (hd : value32 d = some u)
-    (hc : value32 c = some v) (h : addBinary32 d c = some o) : NearestEven32 (u + v) o := by
-  simp only [addBinary32, hd, hc, Option.bind_eq_bind, Option.bind_some] at h
+theorem addFp32_nearestEven {d c o : F32} {u v : ℚ} (hd : value32 d = some u)
+    (hc : value32 c = some v) (h : addFp32 d c = some o) : NearestEven32 (u + v) o := by
+  simp only [addFp32, hd, hc, Option.bind_eq_bind, Option.bind_some] at h
   obtain ⟨b, hb, hn⟩ := round32_nearestEven_correct (u + v) (round32_range h)
   rw [h] at hb
   cases Option.some.inj hb
@@ -296,7 +296,7 @@ theorem addBinary32_nearestEven {d c o : F32} {u v : ℚ} (hd : value32 d = some
 recorded B200 FP8 outputs (recorded through `mma.sync`, which adds `c` after the products) agree
 with it on the B200 block FMA. -/
 def Model.dotThenAdd (p : Model) (c : F32) (ps : List (p.Word × p.Word)) : Option F32 := do
-  addBinary32 (← p.dot 0 ps) c
+  addFp32 (← p.dot 0 ps) c
 
 /-! ## Invocation descriptors
 
@@ -306,11 +306,11 @@ accumulation of `c` that the recorded B200 outputs show as an accumulator input 
 block (`CPlacement.late`) with a round-to-nearest-even output stage. The replay checks the descriptors against the models. -/
 
 /-- Binary32's exponent range with 13 mantissa bits: the block output of Ada and Hopper FP8. -/
-@[implicit_reducible] def binary32Mantissa13 : Format := ⟨13, 8, 127⟩
+@[implicit_reducible] def fp32Mantissa13 : Format := ⟨13, 8, 127⟩
 
 /-- An FP8 descriptor with a 13-bit block output. -/
 @[implicit_reducible] def narrowInvocation (input : OperandEncoding) (K : ℕ) : InvocationSpec :=
-  ⟨input, fp32, K, .aligned 13 none .early, [⟨binary32Mantissa13, .truncate⟩], ⟨fp32, .truncate⟩⟩
+  ⟨input, fp32, K, .aligned 13 none .early, [⟨fp32Mantissa13, .truncate⟩], ⟨fp32, .truncate⟩⟩
 
 def adaE4M3Invocation : InvocationSpec := narrowInvocation e4m3Encoding 16
 def adaE5M2Invocation : InvocationSpec := narrowInvocation e5m2Encoding 16

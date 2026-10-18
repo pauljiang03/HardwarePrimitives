@@ -22,12 +22,12 @@ open MatrixCore
 namespace Ozaki.MC
 
 /-- fp16 holds `2047` and `2048`. -/
-theorem binary16_holds_2047 : binary16.encodeExact 2047 = some 0x67FF ∧
-    binary16.encodeExact 2048 = some 0x6800 := by decide +kernel
+theorem binary16_holds_2047 : fp16.encodeExact 2047 = some 0x67FF ∧
+    fp16.encodeExact 2048 = some 0x6800 := by decide +kernel
 
 /-- bf16 holds `256` but not `2047`. -/
-theorem bfloat16_holds_256 : bfloat16.encodeExact 256 = some 0x4380 ∧
-    bfloat16.encodeExact 2047 = none := by decide +kernel
+theorem bfloat16_holds_256 : bf16.encodeExact 256 = some 0x4380 ∧
+    bf16.encodeExact 2047 = none := by decide +kernel
 
 /-- A CDNA 3 block FMA of `11`-bit products exceeds the exactness bound: `7 × 2047² = 29331463` is
 returned as `29331464`. -/

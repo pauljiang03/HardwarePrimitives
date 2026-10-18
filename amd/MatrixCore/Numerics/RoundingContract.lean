@@ -13,11 +13,11 @@ namespace MatrixCore
 /-- Decoding a constructed word returns its sign, significand, and exponent. -/
 theorem decode_encode32 (negative : Bool) (e : ℤ) (m : ℕ) (he1 : -126 ≤ e) (he2 : e ≤ 127)
     (hm : m < 16777216) (hn : 8388608 ≤ m ∨ e = -126) :
-    binary32.decode (encode32 negative e m) = .finite ⟨negative, m, e, 23⟩ := by
-  show binary32.decodeNat (BitVec.ofNat 32 _).toNat = _
+    fp32.decode (encode32 negative e m) = .finite ⟨negative, m, e, 23⟩ := by
+  show fp32.decodeNat (BitVec.ofNat 32 _).toNat = _
   rw [BitVec.toNat_ofNat]
   unfold Format.decodeNat
-  simp only [binary32, Format.unpackFields, Format.emin, show (2 : ℕ) ^ 23 = 8388608 from rfl,
+  simp only [fp32, Format.unpackFields, Format.emin, show (2 : ℕ) ^ 23 = 8388608 from rfl,
     show (2 : ℕ) ^ 8 = 256 from rfl, show (2 : ℕ) ^ (23 + 8) = 2147483648 from rfl,
     show (2 : ℕ) ^ 32 = 4294967296 from rfl]
   generalize hN : ((if negative then 2147483648 else 0) +
@@ -48,10 +48,10 @@ theorem decode_encode32 (negative : Bool) (e : ℤ) (m : ℕ) (he1 : -126 ≤ e)
     exact ⟨by omega, by omega, trivial⟩
 
 /-- Every finite binary32 word decodes to `±m · 2^(e−23)` with `m < 2^24` and `−126 ≤ e ≤ 127`. -/
-theorem decode32_finite_fields {w : F32} {x : Unpacked} (h : binary32.decode w = .finite x) :
+theorem decode32_finite_fields {w : F32} {x : Unpacked} (h : fp32.decode w = .finite x) :
     x.t = 23 ∧ x.m < 16777216 ∧ -126 ≤ x.e ∧ x.e ≤ 127 ∧ (8388608 ≤ x.m ∨ x.e = -126) := by
   unfold Format.decode Format.decodeNat at h
-  simp only [binary32, Format.unpackFields, Format.emin] at h
+  simp only [fp32, Format.unpackFields, Format.emin] at h
   have hw := w.isLt
   generalize w.toNat = n at h hw
   simp only [show (2 : ℕ) ^ 23 = 8388608 from rfl, show (2 : ℕ) ^ 8 = 256 from rfl,
@@ -76,7 +76,7 @@ def FiniteValue32 (y : ℚ) : Prop :=
 
 theorem value32_finiteValue {w : F32} {y : ℚ} (h : value32 w = some y) : FiniteValue32 y := by
   unfold value32 at h
-  cases hd : binary32.decode w with
+  cases hd : fp32.decode w with
   | finite x =>
     rw [hd] at h
     simp only [Datum.toFinite, Option.map_some, Option.some.injEq] at h

@@ -28,11 +28,11 @@ def Format.encodeExact (f : Format) (v : ℚ) : Option (BitVec f.width) :=
       if (f.decode w).toFinite.map Unpacked.value = some v then some w else none
 
 /-- binary32 word of an exactly representable value. -/
-def fp32Exact (v : ℚ) : Option F32 := binary32.encodeExact v
+def fp32Exact (v : ℚ) : Option F32 := fp32.encodeExact v
 
 /-- Input word of an exactly representable value. -/
 def InputFormat.encodeExact : (i : InputFormat) → ℚ → Option i.Word
   | .packed f, v => f.encodeExact v
-  | .xf32, v => binary32.encodeExact v
+  | .xf32, v => fp32.encodeExact v
 
 end MatrixCore

@@ -10,7 +10,7 @@ set_option maxRecDepth 4096
 
 theorem value32_eq (b : BitVec 32) : value32 b = TensorCore.value32 b := by
   unfold value32
-  change (decode (layoutOf fp32) b.toNat).map Term.value = _
+  change (decode (layoutOf TensorCore.fp32) b.toNat).map Term.value = _
   rw [decode_eq]
   simp only [Option.map_map]
   rfl
@@ -51,7 +51,7 @@ theorem round32_sign (x : ℚ) (b : F32) (h : round32 .truncate x = some b) :
 theorem round32_rounds (x : ℚ) (b : F32) (h : round32 .truncate x = some b) :
     Rounds x b := by
   have hr := round32_range h
-  obtain ⟨bits, hb, hc⟩ := roundBinary_truncate_correct fp32 (by decide) x hr
+  obtain ⟨bits, hb, hc⟩ := roundBinary_truncate_correct TensorCore.fp32 (by decide) x hr
   change round32 .truncate x = some bits at hb
   rw [h] at hb
   cases Option.some.inj hb

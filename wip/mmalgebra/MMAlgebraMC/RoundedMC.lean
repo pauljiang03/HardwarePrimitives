@@ -80,9 +80,9 @@ theorem cdna1_block (p : ℕ → cdna1F16.a.Word × cdna1F16.b.Word) (hp : Finit
     (mcMachine cdna1F16).block d (I.map (Option.map p)) =
       fl32 false ((mcMachine cdna1F16).val d + (mcMachine cdna1F16).slotVal (I.map (Option.map p))) := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, hCv⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, hCv⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   have hfin : ∀ q ∈ slotPairs cdna1F16 (I.map (Option.map p)), (decPair cdna1F16 q).isSome := by
@@ -124,9 +124,9 @@ theorem cdna1_block (p : ℕ → cdna1F16.a.Word × cdna1F16.b.Word) (hp : Finit
 
 /-! ## fp16 products are binary32 values -/
 
-theorem decode16_e_le {n : ℕ} {u : Unpacked} (h : binary16.decodeNat n = .finite u) : u.e ≤ 15 := by
+theorem decode16_e_le {n : ℕ} {u : Unpacked} (h : fp16.decodeNat n = .finite u) : u.e ≤ 15 := by
   unfold Format.decodeNat at h
-  simp only [binary16] at h
+  simp only [fp16] at h
   have hE : n / 2 ^ 10 % 2 ^ 5 < 32 := Nat.mod_lt _ (by decide)
   split at h
   · split at h <;> simp at h
@@ -139,7 +139,7 @@ theorem decode16_e_le {n : ℕ} {u : Unpacked} (h : binary16.decodeNat n = .fini
     · simp only; omega
 
 /-- **An fp16 product is a binary32 value.** -/
-theorem fp16_prod_exact {P : Model} (ha : P.a = .packed binary16) (hb : P.b = .packed binary16)
+theorem fp16_prod_exact {P : Model} (ha : P.a = .packed fp16) (hb : P.b = .packed fp16)
     (q : P.a.Word × P.b.Word) (hq : ((P.a.read q.1).toFinite).isSome ∧ ((P.b.read q.2).toFinite).isSome) :
     FiniteValue32 ((mcMachine P).pval q) := by
   obtain ⟨u, hu⟩ := Option.isSome_iff_exists.mp hq.1
@@ -147,17 +147,17 @@ theorem fp16_prod_exact {P : Model} (ha : P.a = .packed binary16) (hb : P.b = .p
   have hval : (mcMachine P).pval q = u.value * v.value := by
     show P.a.wordValue q.1 * P.b.wordValue q.2 = _
     simp [InputFormat.wordValue, hu, hv]
-  have bnd : ∀ {i : InputFormat} (hi : i = .packed binary16) {w : i.Word} {x : Unpacked},
+  have bnd : ∀ {i : InputFormat} (hi : i = .packed fp16) {w : i.Word} {x : Unpacked},
       (i.read w).toFinite = some x → -14 ≤ x.e ∧ x.e ≤ 15 ∧ x.t = 10 ∧ x.m < 2048 := by
     intro i hi w x hx
     subst hi
     simp only [InputFormat.read, Format.decode] at hx
-    cases hd : binary16.decodeNat w.toNat <;> rw [hd] at hx <;> simp [Datum.toFinite] at hx
+    cases hd : fp16.decodeNat w.toNat <;> rw [hd] at hx <;> simp [Datum.toFinite] at hx
     subst hx
     obtain ⟨he, ht⟩ := decodeNat_e hd
     have hle := decode16_e_le hd
     obtain ⟨_, hm⟩ := decodeNat_bounded hd
-    simp [binary16, Format.emin] at he hle ht hm
+    simp [fp16, Format.emin] at he hle ht hm
     exact ⟨by omega, by omega, ht, by omega⟩
   obtain ⟨hu1, hu2, hut, hum⟩ := bnd ha hu
   obtain ⟨hv1, hv2, hvt, hvm⟩ := bnd hb hv

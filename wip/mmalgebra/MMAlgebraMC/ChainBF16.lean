@@ -17,9 +17,9 @@ namespace MMAlgebra.MC
 theorem cdna1BF16_pass (d : F32) (hd : GoodW d) :
     (mcMachine cdna1BF16).block d (List.replicate 2 none) = some d := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1
-  obtain ⟨C, hC, rfl⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, rfl⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   show (blockBits (P := cdna1BF16) ⟨(slotPairs cdna1BF16 (List.replicate 2 none)).map Prod.fst,

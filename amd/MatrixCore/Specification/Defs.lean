@@ -24,9 +24,9 @@ structure Layout where
   fnuz : Bool
   deriving Repr, DecidableEq
 
-def binary32 : Layout := ⟨8, 23, 127, false⟩
-def binary16 : Layout := ⟨5, 10, 15, false⟩
-def bfloat16 : Layout := ⟨8, 7, 127, false⟩
+def fp32 : Layout := ⟨8, 23, 127, false⟩
+def fp16 : Layout := ⟨5, 10, 15, false⟩
+def bf16 : Layout := ⟨8, 7, 127, false⟩
 def e4m3 : Layout := ⟨4, 3, 8, true⟩
 def e5m2 : Layout := ⟨5, 2, 16, true⟩
 
@@ -62,7 +62,7 @@ inductive Operand where
 
 def Operand.decode : Operand → ℕ → Option Num
   | .layout L, w => Spec.decode L w
-  | .xf32, w => (Spec.decode binary32 w).map fun x => ⟨x.neg, x.M / 2 ^ 13, 10, x.e⟩
+  | .xf32, w => (Spec.decode fp32 w).map fun x => ⟨x.neg, x.M / 2 ^ 13, 10, x.e⟩
 
 /-- `p = a · b`: significands multiplied, exponents added. -/
 def mul (a b : Num) : Num := ⟨a.neg != b.neg, a.M * b.M, a.f + b.f, a.e + b.e⟩
@@ -190,7 +190,7 @@ def accumulated (P : Params) (as bs : List Num) (c : Num) : ℚ :=
   | .algorithm2 L => algorithm2 L ps c
 
 /-- Value of a finite binary32 word. -/
-def value32 (w : BitVec 32) : Option ℚ := (decode binary32 w.toNat).map Num.val
+def value32 (w : BitVec 32) : Option ℚ := (decode fp32 w.toNat).map Num.val
 
 /-- Binary32 RNE of `x` to the word `w`: the sign of `x`, a value nearest to `x` among all finite
 binary32 words, and an even last bit when another finite word is equally near. -/
@@ -208,7 +208,7 @@ def overflows (x : ℚ) : Prop := (2 : ℚ) ^ (128 : ℤ) - (2 : ℚ) ^ (103 : �
 def Result (P : Params) (a b : List ℕ) (c : BitVec 32) (w : BitVec 32) : Prop :=
   a.length = P.nfma ∧ b.length = P.nfma ∧
     ∃ as bs cn, a.mapM P.a.decode = some as ∧ b.mapM P.b.decode = some bs ∧
-      decode binary32 c.toNat = some cn ∧
+      decode fp32 c.toNat = some cn ∧
       (P.productLimit = true →
         ∀ p ∈ List.zipWith mul as bs, magnitude p.val < (2 : ℚ) ^ (128 : ℤ)) ∧
       ¬ overflows (accumulated P as bs cn) ∧ RoundsNearestEven (accumulated P as bs cn) w
@@ -258,13 +258,13 @@ flushed, multiplied exactly, and summed as in Fig. 2. -/
 def PairwiseResult (P : PairwiseParams) (a b : List ℕ) (c : BitVec 32) (w : BitVec 32) : Prop :=
   a.length = P.group ∧ b.length = P.group ∧
     ∃ as bs cn, a.mapM P.a.decode = some as ∧ b.mapM P.b.decode = some bs ∧
-      decode binary32 c.toNat = some cn ∧
+      decode fp32 c.toNat = some cn ∧
       pairwiseOutput ((List.zipWith mul (as.map flushNum) (bs.map flushNum)).map Num.val)
         (flushNum cn).val w
 
-def cdna2F16 : PairwiseParams := ⟨.layout binary16, .layout binary16, 4⟩
-def cdna2BF16 : PairwiseParams := ⟨.layout bfloat16, .layout bfloat16, 2⟩
-def cdna2BF16_1k : PairwiseParams := ⟨.layout bfloat16, .layout bfloat16, 4⟩
+def cdna2F16 : PairwiseParams := ⟨.layout fp16, .layout fp16, 4⟩
+def cdna2BF16 : PairwiseParams := ⟨.layout bf16, .layout bf16, 2⟩
+def cdna2BF16_1k : PairwiseParams := ⟨.layout bf16, .layout bf16, 4⟩
 
 /-! ## The paper's parameters -/
 
@@ -274,11 +274,11 @@ def cdna3Late : Late := ⟨1, 24, 32, 31, none, some (-126)⟩
 /-- binary8: as `cdna3Late`, with `s'_c = 0` beyond a shift of `25`. -/
 def cdna3Late8 : Late := ⟨1, 24, 32, 31, some 25, some (-126)⟩
 
-def sfma : Params := ⟨.layout binary32, .layout binary32, 1, .exact, false⟩
-def cdna1F16 : Params := ⟨.layout binary16, .layout binary16, 4, .exact, false⟩
-def cdna1BF16 : Params := ⟨.layout bfloat16, .layout bfloat16, 2, .exact, false⟩
-def cdna3F16 : Params := ⟨.layout binary16, .layout binary16, 8, .algorithm1 cdna3Late, true⟩
-def cdna3BF16 : Params := ⟨.layout bfloat16, .layout bfloat16, 8, .algorithm1 cdna3Late, true⟩
+def sfma : Params := ⟨.layout fp32, .layout fp32, 1, .exact, false⟩
+def cdna1F16 : Params := ⟨.layout fp16, .layout fp16, 4, .exact, false⟩
+def cdna1BF16 : Params := ⟨.layout bf16, .layout bf16, 2, .exact, false⟩
+def cdna3F16 : Params := ⟨.layout fp16, .layout fp16, 8, .algorithm1 cdna3Late, true⟩
+def cdna3BF16 : Params := ⟨.layout bf16, .layout bf16, 8, .algorithm1 cdna3Late, true⟩
 def cdna3XF32 : Params := ⟨.xf32, .xf32, 4, .algorithm1 cdna3Late, true⟩
 def cdna3FP8 (a b : Layout) : Params := ⟨.layout a, .layout b, 16, .algorithm2 cdna3Late8, true⟩
 

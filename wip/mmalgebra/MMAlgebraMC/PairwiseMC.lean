@@ -101,16 +101,16 @@ theorem flush_bounds {u : Unpacked} (h : -14 ≤ u.e ∧ u.e ≤ 15 ∧ u.t = 10
   · exact ⟨h.1, h.2.1, h.2.2.1, show 0 < 2048 by decide⟩
   · exact h
 
-theorem binary16_bounds {i : InputFormat} (hi : i = .packed binary16) {w : i.Word} {x : Unpacked}
+theorem binary16_bounds {i : InputFormat} (hi : i = .packed fp16) {w : i.Word} {x : Unpacked}
     (hx : (i.read w).toFinite = some x) : -14 ≤ x.e ∧ x.e ≤ 15 ∧ x.t = 10 ∧ x.m < 2048 := by
   subst hi
   simp only [InputFormat.read, Format.decode] at hx
-  cases hd : binary16.decodeNat w.toNat <;> rw [hd] at hx <;> simp [Datum.toFinite] at hx
+  cases hd : fp16.decodeNat w.toNat <;> rw [hd] at hx <;> simp [Datum.toFinite] at hx
   subst hx
   obtain ⟨he, ht⟩ := decodeNat_e hd
   have hle := decode16_e_le hd
   obtain ⟨_, hm⟩ := decodeNat_bounded hd
-  simp [binary16, Format.emin] at he ht hm
+  simp [fp16, Format.emin] at he ht hm
   exact ⟨by omega, by omega, ht, by omega⟩
 
 theorem fpval_eq {q : cdna2F16.a.Word × cdna2F16.b.Word} {u v : Unpacked}
@@ -347,7 +347,7 @@ theorem flValue_products (p : ℕ → cdna2F16.a.Word × cdna2F16.b.Word) (hp : 
     simp [this]
 
 theorem flush_value_good {d : F32} (hd : Good2 d) {C : Unpacked}
-    (hC : (binary32.decode d).toFinite = some C) : C.flush.value = C.value := by
+    (hC : (fp32.decode d).toFinite = some C) : C.flush.value = C.value := by
   unfold Unpacked.flush
   split
   · rename_i hm
@@ -389,9 +389,9 @@ theorem cdna2_block (p : ℕ → cdna2F16.a.Word × cdna2F16.b.Word) (hp : Finit
       (MMAlgebra.evCRO cdna2M (fl32 false) p 0 (MMAlgebra.pairTree I.length I)).bind
         fun w => fl32 false ((value32 d).getD 0 + (value32 w).getD 0) := by
   obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hd.1.1
-  obtain ⟨C, hC, hCv⟩ : ∃ C, (binary32.decode d).toFinite = some C ∧ C.value = v := by
+  obtain ⟨C, hC, hCv⟩ : ∃ C, (fp32.decode d).toFinite = some C ∧ C.value = v := by
     unfold value32 at hv
-    cases hc : (binary32.decode d).toFinite with
+    cases hc : (fp32.decode d).toFinite with
     | none => rw [hc] at hv; cases hv
     | some C => rw [hc] at hv; exact ⟨C, rfl, Option.some.inj hv⟩
   have hfin : ∀ q ∈ slotPairs cdna2F16 (I.map (Option.map p)), (decPair cdna2F16 q).isSome := by

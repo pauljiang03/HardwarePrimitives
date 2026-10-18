@@ -42,24 +42,24 @@ theorem ExactMultiplier.exactOn {P : Model} {b : ℕ} (h : ExactMultiplier P b) 
 theorem EncodesInts.mono {i : InputFormat} {b b' : ℕ} (h : EncodesInts i b) (hb : b' ≤ b) :
     EncodesInts i b' := fun z hz => h z (Nat.le_trans hz (Nat.pow_le_pow_right (by decide) hb))
 
-theorem binary16_encodesInts {b : ℕ} (hb : b ≤ 11) : EncodesInts (.packed binary16) b :=
-  packed_encodesInts binary16 (by decide) (by decide) (by decide) hb
+theorem binary16_encodesInts {b : ℕ} (hb : b ≤ 11) : EncodesInts (.packed fp16) b :=
+  packed_encodesInts fp16 (by decide) (by decide) (by decide) hb
 
-theorem bfloat16_encodesInts {b : ℕ} (hb : b ≤ 8) : EncodesInts (.packed bfloat16) b :=
-  packed_encodesInts bfloat16 (by decide) (by decide) (by decide) hb
+theorem bfloat16_encodesInts {b : ℕ} (hb : b ≤ 8) : EncodesInts (.packed bf16) b :=
+  packed_encodesInts bf16 (by decide) (by decide) (by decide) hb
 
-theorem binary32_encodesInts {b : ℕ} (hb : b ≤ 24) : EncodesInts (.packed binary32) b :=
-  packed_encodesInts binary32 (by decide) (by decide) (by decide) hb
+theorem binary32_encodesInts {b : ℕ} (hb : b ≤ 24) : EncodesInts (.packed fp32) b :=
+  packed_encodesInts fp32 (by decide) (by decide) (by decide) hb
 
 theorem xf32_encodesInts_le {b : ℕ} (hb : b ≤ 11) : EncodesInts .xf32 b :=
   xf32_encodesInts.mono hb
 
-theorem binary16_small : smallSubnormals (.packed binary16) := by
-  show binary16.emin ≤ 0; decide
-theorem bfloat16_small : smallSubnormals (.packed bfloat16) := by
-  show bfloat16.emin ≤ 0; decide
-theorem binary32_small : smallSubnormals (.packed binary32) := by
-  show binary32.emin ≤ 0; decide
+theorem binary16_small : smallSubnormals (.packed fp16) := by
+  show fp16.emin ≤ 0; decide
+theorem bfloat16_small : smallSubnormals (.packed bf16) := by
+  show bf16.emin ≤ 0; decide
+theorem binary32_small : smallSubnormals (.packed fp32) := by
+  show fp32.emin ≤ 0; decide
 
 theorem cdna3_config (P : Model) (hacc : P.accumulation = .globalAlignment) (hn : P.padding = 1)
     (hl : P.late = {}) (hc : P.cZeroExp = some (-126)) : ExactConfig P :=

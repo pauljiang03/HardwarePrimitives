@@ -40,14 +40,14 @@ theorem mapM_pairs {γ : Type} (P : Model) (k : List Unpacked → List Unpacked 
 theorem prepare_pairs (P : Model) (qs : List (P.a.Word × P.b.Word)) (d : F32) :
     prepare (P := P) ⟨qs.map Prod.fst, qs.map Prod.snd, d⟩ =
       (qs.mapM (decPair P)).bind fun L =>
-        ((binary32.decode d).toFinite).map fun C => ⟨L.map Prod.fst, L.map Prod.snd, C⟩ := by
+        ((fp32.decode d).toFinite).map fun C => ⟨L.map Prod.fst, L.map Prod.snd, C⟩ := by
   unfold prepare
   simp only [Option.bind_eq_bind, Option.pure_def]
-  refine (mapM_pairs P (fun a b => ((binary32.decode d).toFinite).bind fun c =>
+  refine (mapM_pairs P (fun a b => ((fp32.decode d).toFinite).bind fun c =>
     some (Prepared.mk a b c)) qs).trans ?_
   cases qs.mapM (decPair P) with
   | none => rfl
-  | some L => cases (binary32.decode d).toFinite <;> rfl
+  | some L => cases (fp32.decode d).toFinite <;> rfl
 
 theorem products_pairs (L : List (Unpacked × Unpacked)) (C : Unpacked) :
     (Prepared.mk (L.map Prod.fst) (L.map Prod.snd) C).p = L.map fun q => q.1.mul q.2 := by
@@ -126,7 +126,7 @@ theorem mc_perm {P : Model}
     | none => rw [hx, hy] at hm; exact hm.elim
     | some L₂ =>
       rw [hx, hy] at hm
-      cases hc : (binary32.decode d).toFinite with
+      cases hc : (fp32.decode d).toFinite with
       | none => left; simp
       | some C =>
         right

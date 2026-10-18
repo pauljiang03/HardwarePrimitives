@@ -76,8 +76,8 @@ theorem overflows_iff (x : ℚ) : overflows x ↔ ¬ absQ x < overflowThreshold3
 /-! ## Blocks -/
 
 theorem decode_c_eq (c : F32) :
-    decode binary32 c.toNat = (MatrixCore.binary32.decode c).toFinite.map numOf :=
-  decode_eq MatrixCore.binary32 c.toNat
+    decode fp32 c.toNat = (MatrixCore.fp32.decode c).toFinite.map numOf :=
+  decode_eq MatrixCore.fp32 c.toNat
 
 theorem triple_some {oa : Option α} {ob : Option β} {oc : Option γ} {a : α} {b : β} {c : γ} :
     (oa.bind fun x => ob.bind fun y => oc.bind fun z => some (x, y, z)) = some (a, b, c) ↔
@@ -88,13 +88,13 @@ theorem triple_some {oa : Option α} {ob : Option β} {oc : Option γ} {a : α} 
 theorem prepare_spec {P : Model} {S : Params} (hS : Supported P S) (x : BlockInput P) :
     (((x.a.map BitVec.toNat).mapM S.a.decode).bind fun as =>
       ((x.b.map BitVec.toNat).mapM S.b.decode).bind fun bs =>
-        (decode binary32 x.c.toNat).bind fun cn => some (as, bs, cn)) =
+        (decode fp32 x.c.toNat).bind fun cn => some (as, bs, cn)) =
       (prepare x).map fun px => (px.a.map numOf, px.b.map numOf, numOf px.c) := by
   rw [hS.a, hS.b, mapM_decode_eq, mapM_decode_eq, decode_c_eq]
   unfold prepare
   cases x.a.mapM fun w => (P.a.read w).toFinite <;> simp
   cases x.b.mapM fun w => (P.b.read w).toFinite <;> simp
-  cases (MatrixCore.binary32.decode x.c).toFinite <;> simp
+  cases (MatrixCore.fp32.decode x.c).toFinite <;> simp
 
 theorem productOverflows_false {x : Prepared} (h : x.productOverflows = false) :
     ∀ p ∈ x.p, absQ p.value < pow2 128 := by

@@ -19,7 +19,7 @@ def GoodW (w : F32) : Prop := (value32 w).isSome = true ∧ w ≠ 0x80000000
 
 instance (w : F32) : Decidable (GoodW w) := by unfold GoodW; infer_instance
 
-theorem decode32_val (w : F32) {u : Unpacked} (h : (binary32.decode w).toFinite = some u) :
+theorem decode32_val (w : F32) {u : Unpacked} (h : (fp32.decode w).toFinite = some u) :
     u = (if w.toNat / 8388608 % 256 = 0 then
       ⟨w.toNat / 2147483648 % 2 == 1, w.toNat % 8388608, -126, 23⟩ else
       ⟨w.toNat / 2147483648 % 2 == 1, 8388608 + w.toNat % 8388608,
@@ -35,7 +35,7 @@ theorem decode32_val (w : F32) {u : Unpacked} (h : (binary32.decode w).toFinite 
 theorem value32_sign {w : F32} {v : ℚ} (h : value32 w = some v) (hv : v ≠ 0) :
     sign32 w = decide (v < 0) := by
   unfold value32 at h
-  cases hd : (binary32.decode w).toFinite with
+  cases hd : (fp32.decode w).toFinite with
   | none => rw [hd] at h; cases h
   | some u =>
     rw [hd] at h
@@ -63,7 +63,7 @@ theorem value32_sign {w : F32} {v : ℚ} (h : value32 w = some v) (hv : v ≠ 0)
 /-- A finite word of value zero is `+0` or `−0`. -/
 theorem value32_zero_word {w : F32} (h : value32 w = some 0) : w = 0 ∨ w = 0x80000000 := by
   unfold value32 at h
-  cases hd : (binary32.decode w).toFinite with
+  cases hd : (fp32.decode w).toFinite with
   | none => rw [hd] at h; cases h
   | some u =>
     rw [hd] at h

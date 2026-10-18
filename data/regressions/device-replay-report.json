@@ -382,7 +382,7 @@
       "zero": 0,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 1055
+    "fp32_output_control_mismatches": 1055
   },
   "L40S-E4M3": {
     "model": "dot ada-e4m3",
@@ -407,7 +407,7 @@
       "zero": 0,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 1055
+    "fp32_output_control_mismatches": 1055
   },
   "H100-E4M3": {
     "model": "dot hopper-e4m3",
@@ -432,7 +432,7 @@
       "zero": 5000,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 1415
+    "fp32_output_control_mismatches": 1415
   },
   "H200-E4M3": {
     "model": "dot hopper-e4m3",
@@ -457,7 +457,7 @@
       "zero": 5000,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 1415
+    "fp32_output_control_mismatches": 1415
   },
   "B200-E4M3": {
     "model": "dot-then-add blackwell-e4m3",
@@ -509,7 +509,7 @@
       "zero": 0,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 962
+    "fp32_output_control_mismatches": 962
   },
   "L40S-E5M2": {
     "model": "dot ada-e5m2",
@@ -534,7 +534,7 @@
       "zero": 0,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 962
+    "fp32_output_control_mismatches": 962
   },
   "H100-E5M2": {
     "model": "dot hopper-e5m2",
@@ -559,7 +559,7 @@
       "zero": 5000,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 841
+    "fp32_output_control_mismatches": 841
   },
   "H200-E5M2": {
     "model": "dot hopper-e5m2",
@@ -584,7 +584,7 @@
       "zero": 5000,
       "subnormal": 0
     },
-    "binary32_output_control_mismatches": 841
+    "fp32_output_control_mismatches": 841
   },
   "B200-E5M2": {
     "model": "dot-then-add blackwell-e5m2",

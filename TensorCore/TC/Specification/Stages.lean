@@ -61,7 +61,7 @@ theorem terms_eq {p : Model} (x : BlockInput p) :
       (prepare x).map (fun b => b.terms.map denormalizedTermOf) := by
   unfold terms inputOf parametersOf
   change (do
-    let c ← decode (layoutOf fp32) x.c.toNat
+    let c ← decode (layoutOf TensorCore.fp32) x.c.toNat
     let ps ← x.products.mapM fun (pair : p.Word × p.Word) => do
       return product (← decode (layoutOf p.input) pair.1.toNat)
         (← decode (layoutOf p.input) pair.2.toNat)

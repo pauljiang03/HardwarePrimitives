@@ -40,8 +40,8 @@ theorem unpacked_value (s : Bool) (m : ℕ) (e : ℤ) (t : ℕ) :
     (⟨s, m, e, t⟩ : MatrixCore.Unpacked).value = (if s then -(m : ℚ) else m) * MCFloat.pow2 (e - t) :=
   rfl
 
-theorem binary32_agree (n : ℕ) (hn : n < 2 ^ 32) :
-    Agree (MCFloat.classify .binary32 n) (MatrixCore.binary32.decodeNat n) := by
+theorem fp32_agree (n : ℕ) (hn : n < 2 ^ 32) :
+    Agree (MCFloat.classify .binary32 n) (MatrixCore.fp32.decodeNat n) := by
   have hb : (MCFloat.ofNat .binary32 n).bits.toNat = n := ofNat_bits _ n hn
   unfold MCFloat.classify MCFloat.classifyModel MatrixCore.Format.decodeNat
   simp only [Model.isNaN, Model.isInf, Model.toDyadic?, Model.ieeeToDyadic?,
@@ -52,9 +52,9 @@ theorem binary32_agree (n : ℕ) (hn : n < 2 ^ 32) :
     show FloatFormat.binary32.exponentBias = 127 from rfl,
     show FloatFormat.ieeeMinSubnormalExponent .binary32 = -149 from rfl,
     show FloatFormat.ieeeNormalMantissaExpOffset .binary32 = 150 from rfl,
-    show MatrixCore.binary32.mantissaBits = 23 from rfl, show MatrixCore.binary32.exponentBits = 8 from rfl,
-    show MatrixCore.binary32.specials = .ieee from rfl, show MatrixCore.binary32.bias = 127 from rfl,
-    show MatrixCore.binary32.emin = -126 from rfl, MatrixCore.Format.unpackFields, Model.pow2_eq_two_pow]
+    show MatrixCore.fp32.mantissaBits = 23 from rfl, show MatrixCore.fp32.exponentBits = 8 from rfl,
+    show MatrixCore.fp32.specials = .ieee from rfl, show MatrixCore.fp32.bias = 127 from rfl,
+    show MatrixCore.fp32.emin = -126 from rfl, MatrixCore.Format.unpackFields, Model.pow2_eq_two_pow]
   simp only [ite_true, Nat.reducePow, Nat.reduceAdd, Nat.reduceSub]
   have hS : n / 2147483648 < 2 := by omega
   have hE : n / 8388608 % 256 < 256 := Nat.mod_lt _ (by norm_num)
@@ -69,8 +69,8 @@ theorem binary32_agree (n : ℕ) (hn : n < 2 ^ 32) :
       (try (constructor <;> simp [MCFloat.Term.value, MCFloat.Term.isZero, dyadic_toRat,
         unpacked_value, h2, h3, hM, sub_sub] <;> (try omega)))
 
-theorem binary16_agree (n : ℕ) (hn : n < 2 ^ 16) :
-    Agree (MCFloat.classify .binary16 n) (MatrixCore.binary16.decodeNat n) := by
+theorem fp16_agree (n : ℕ) (hn : n < 2 ^ 16) :
+    Agree (MCFloat.classify .binary16 n) (MatrixCore.fp16.decodeNat n) := by
   have hb : (MCFloat.ofNat .binary16 n).bits.toNat = n := ofNat_bits _ n hn
   unfold MCFloat.classify MCFloat.classifyModel MatrixCore.Format.decodeNat
   simp only [Model.isNaN, Model.isInf, Model.toDyadic?, Model.ieeeToDyadic?,
@@ -81,9 +81,9 @@ theorem binary16_agree (n : ℕ) (hn : n < 2 ^ 16) :
     show FloatFormat.binary16.exponentBias = 15 from rfl,
     show FloatFormat.ieeeMinSubnormalExponent .binary16 = -24 from rfl,
     show FloatFormat.ieeeNormalMantissaExpOffset .binary16 = 25 from rfl,
-    show MatrixCore.binary16.mantissaBits = 10 from rfl, show MatrixCore.binary16.exponentBits = 5 from rfl,
-    show MatrixCore.binary16.specials = .ieee from rfl, show MatrixCore.binary16.bias = 15 from rfl,
-    show MatrixCore.binary16.emin = -14 from rfl, MatrixCore.Format.unpackFields, Model.pow2_eq_two_pow]
+    show MatrixCore.fp16.mantissaBits = 10 from rfl, show MatrixCore.fp16.exponentBits = 5 from rfl,
+    show MatrixCore.fp16.specials = .ieee from rfl, show MatrixCore.fp16.bias = 15 from rfl,
+    show MatrixCore.fp16.emin = -14 from rfl, MatrixCore.Format.unpackFields, Model.pow2_eq_two_pow]
   simp only [ite_true, Nat.reducePow, Nat.reduceAdd, Nat.reduceSub]
   have hS : n / 32768 < 2 := by omega
   have hE : n / 1024 % 32 < 32 := Nat.mod_lt _ (by norm_num)
@@ -98,8 +98,8 @@ theorem binary16_agree (n : ℕ) (hn : n < 2 ^ 16) :
       (try (constructor <;> simp [MCFloat.Term.value, MCFloat.Term.isZero, dyadic_toRat,
         unpacked_value, h2, h3, hM, sub_sub] <;> (try omega)))
 
-theorem bfloat16_agree (n : ℕ) (hn : n < 2 ^ 16) :
-    Agree (MCFloat.classify .bfloat16 n) (MatrixCore.bfloat16.decodeNat n) := by
+theorem bf16_agree (n : ℕ) (hn : n < 2 ^ 16) :
+    Agree (MCFloat.classify .bfloat16 n) (MatrixCore.bf16.decodeNat n) := by
   have hb : (MCFloat.ofNat .bfloat16 n).bits.toNat = n := ofNat_bits _ n hn
   unfold MCFloat.classify MCFloat.classifyModel MatrixCore.Format.decodeNat
   simp only [Model.isNaN, Model.isInf, Model.toDyadic?, Model.ieeeToDyadic?,
@@ -110,9 +110,9 @@ theorem bfloat16_agree (n : ℕ) (hn : n < 2 ^ 16) :
     show FloatFormat.bfloat16.exponentBias = 127 from rfl,
     show FloatFormat.ieeeMinSubnormalExponent .bfloat16 = -133 from rfl,
     show FloatFormat.ieeeNormalMantissaExpOffset .bfloat16 = 134 from rfl,
-    show MatrixCore.bfloat16.mantissaBits = 7 from rfl, show MatrixCore.bfloat16.exponentBits = 8 from rfl,
-    show MatrixCore.bfloat16.specials = .ieee from rfl, show MatrixCore.bfloat16.bias = 127 from rfl,
-    show MatrixCore.bfloat16.emin = -126 from rfl, MatrixCore.Format.unpackFields, Model.pow2_eq_two_pow]
+    show MatrixCore.bf16.mantissaBits = 7 from rfl, show MatrixCore.bf16.exponentBits = 8 from rfl,
+    show MatrixCore.bf16.specials = .ieee from rfl, show MatrixCore.bf16.bias = 127 from rfl,
+    show MatrixCore.bf16.emin = -126 from rfl, MatrixCore.Format.unpackFields, Model.pow2_eq_two_pow]
   simp only [ite_true, Nat.reducePow, Nat.reduceAdd, Nat.reduceSub]
   have hS : n / 32768 < 2 := by omega
   have hE : n / 128 % 256 < 256 := Nat.mod_lt _ (by norm_num)
@@ -219,15 +219,15 @@ theorem e5m2fnuz_agree (n : ℕ) (hn : n < 2 ^ 8) :
 /-- XF32 reads the tf19 word of a finite binary32 word's upper nineteen bits: Matrix-Core's
 truncation of the significand. -/
 theorem xf32_tf19 (n : ℕ) (u : MatrixCore.Unpacked)
-    (h : MatrixCore.binary32.decodeNat n = .finite u) :
+    (h : MatrixCore.fp32.decodeNat n = .finite u) :
     MatrixCore.tf19.decodeNat (n / 2 ^ 13) = .finite (MatrixCore.InputFormat.truncateXF32 u) := by
   unfold MatrixCore.Format.decodeNat at h ⊢
-  simp (config := { decide := true }) only [show MatrixCore.binary32.mantissaBits = 23 from rfl,
-    show MatrixCore.binary32.exponentBits = 8 from rfl, show MatrixCore.binary32.specials = .ieee from rfl,
+  simp (config := { decide := true }) only [show MatrixCore.fp32.mantissaBits = 23 from rfl,
+    show MatrixCore.fp32.exponentBits = 8 from rfl, show MatrixCore.fp32.specials = .ieee from rfl,
     show MatrixCore.tf19.mantissaBits = 10 from rfl, show MatrixCore.tf19.exponentBits = 8 from rfl,
     show MatrixCore.tf19.specials = .ieee from rfl, MatrixCore.Format.unpackFields,
-    show MatrixCore.binary32.emin = -126 from rfl, show MatrixCore.tf19.emin = -126 from rfl,
-    show MatrixCore.binary32.bias = 127 from rfl, show MatrixCore.tf19.bias = 127 from rfl,
+    show MatrixCore.fp32.emin = -126 from rfl, show MatrixCore.tf19.emin = -126 from rfl,
+    show MatrixCore.fp32.bias = 127 from rfl, show MatrixCore.tf19.bias = 127 from rfl,
     Nat.reducePow, Nat.reduceAdd, Nat.reduceSub] at h ⊢
   have e1 : n / 8192 / 1024 % 256 = n / 8388608 % 256 := by omega
   have e2 : n / 8192 % 1024 = n % 8388608 / 8192 := by omega
@@ -247,12 +247,12 @@ theorem xf32_tf19 (n : ℕ) (u : MatrixCore.Unpacked)
 def OperandAgree (o : MCFloat.Operand) (i : MatrixCore.InputFormat) : Prop :=
   ∀ w : i.Word, Agree (o.read w.toNat) (i.read w)
 
-theorem operand_binary32 : OperandAgree (.fmt .binary32) (.packed MatrixCore.binary32) :=
-  fun w => binary32_agree w.toNat w.isLt
-theorem operand_binary16 : OperandAgree (.fmt .binary16) (.packed MatrixCore.binary16) :=
-  fun w => binary16_agree w.toNat w.isLt
-theorem operand_bfloat16 : OperandAgree (.fmt .bfloat16) (.packed MatrixCore.bfloat16) :=
-  fun w => bfloat16_agree w.toNat w.isLt
+theorem operand_fp32 : OperandAgree (.fmt .binary32) (.packed MatrixCore.fp32) :=
+  fun w => fp32_agree w.toNat w.isLt
+theorem operand_fp16 : OperandAgree (.fmt .binary16) (.packed MatrixCore.fp16) :=
+  fun w => fp16_agree w.toNat w.isLt
+theorem operand_bf16 : OperandAgree (.fmt .bfloat16) (.packed MatrixCore.bf16) :=
+  fun w => bf16_agree w.toNat w.isLt
 theorem operand_e4m3fnuz : OperandAgree (.fmt .e4m3fnuz) (.packed MatrixCore.e4m3fnuz) :=
   fun w => e4m3fnuz_agree w.toNat w.isLt
 theorem operand_e5m2fnuz : OperandAgree (.fmt .e5m2fnuz) (.packed MatrixCore.e5m2fnuz) :=
@@ -261,14 +261,14 @@ theorem operand_e5m2fnuz : OperandAgree (.fmt .e5m2fnuz) (.packed MatrixCore.e5m
 theorem operand_xf32 : OperandAgree .xf32 .xf32 := by
   intro w
   have hw : w.toNat < 2 ^ 32 := w.isLt
-  have h := binary32_agree w.toNat hw
+  have h := fp32_agree w.toNat hw
   change Agree (match MCFloat.classify .binary32 w.toNat with
     | .finite _ => MCFloat.classify .tf32 (w.toNat / 2 ^ 13) | v => v)
-    (match MatrixCore.binary32.decodeNat w.toNat with
+    (match MatrixCore.fp32.decodeNat w.toNat with
     | .finite x => .finite (MatrixCore.InputFormat.truncateXF32 x) | d => d)
   revert h
   cases hc : MCFloat.classify .binary32 w.toNat <;>
-    cases hd : MatrixCore.binary32.decodeNat w.toNat <;> simp [Agree]
+    cases hd : MatrixCore.fp32.decodeNat w.toNat <;> simp [Agree]
   rename_i t u
   intro _
   rw [← xf32_tf19 w.toNat u hd]

@@ -11,18 +11,18 @@ open Float.Model.UnpackedFloat
 
 theorem value32_nonzero (a : F32) (ha : NonzeroFinite32 a) :
     TensorCore.value32 a = some (finiteValue32 a) := by
-  have h := (decode_finite_iff .binary32 a (sign32 a) (finiteValue32 a)).mp
+  have h := (decode_finite_iff .fp32 a (sign32 a) (finiteValue32 a)).mp
     (decode32_nonzero a ha)
   exact h.1
 
 theorem round32_ieee_positive_zero (x : ℚ) (hr : absQ x ≤ fp32.maxFinite) :
-    TensorCore.round32 .nearestEven x = some (round .binary32 {} false x).bits := by
+    TensorCore.round32 .nearestEven x = some (round .fp32 {} false x).bits := by
   by_cases hz : x = 0
   · subst x
     rw [round_zero]
     change TensorCore.round32 .nearestEven 0 = some (0 : F32)
     decide +kernel
-  · exact round_agrees_finite .binary32 {} false x hz hr
+  · exact round_agrees_finite .fp32 {} false x hz hr
 
 theorem nativeAdd32_round (a b : F32) (ha : NonzeroFinite32 a) (hb : NonzeroFinite32 b)
     (hr : absQ (finiteValue32 a + finiteValue32 b) ≤ fp32.maxFinite) :

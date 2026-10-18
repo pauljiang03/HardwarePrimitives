@@ -21,42 +21,42 @@ theorem rules_of {P : MCFloat.MCModel} {Q : MatrixCore.Model}
   ⟨hl, hp, hs⟩
 
 theorem sfma : Corresponds MCFloat.sfma MatrixCore.sfmaF32 :=
-  ⟨operand_binary32, operand_binary32, rfl,
+  ⟨operand_fp32, operand_fp32, rfl,
     rules_of rfl (by simp [MCFloat.sfma, MatrixCore.sfmaF32]) (by simp [MatrixCore.sfmaF32]),
     rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem cdna1F16 : Corresponds MCFloat.cdna1F16 MatrixCore.cdna1F16 :=
-  ⟨operand_binary16, operand_binary16, rfl,
+  ⟨operand_fp16, operand_fp16, rfl,
     rules_of rfl (by simp [MCFloat.cdna1F16, MatrixCore.cdna1F16]) (by simp [MatrixCore.cdna1F16]),
     rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem cdna1BF16 : Corresponds MCFloat.cdna1BF16 MatrixCore.cdna1BF16 :=
-  ⟨operand_bfloat16, operand_bfloat16, rfl,
+  ⟨operand_bf16, operand_bf16, rfl,
     rules_of rfl (by simp [MCFloat.cdna1BF16, MatrixCore.cdna1BF16]) (by simp [MatrixCore.cdna1BF16]),
     rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem cdna2F16 : Corresponds MCFloat.cdna2F16 MatrixCore.cdna2F16 :=
-  ⟨operand_binary16, operand_binary16, rfl,
+  ⟨operand_fp16, operand_fp16, rfl,
     rules_of rfl (by simp [MCFloat.cdna2F16, MatrixCore.cdna2F16]) (fun _ => rfl),
     rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem cdna2BF16 : Corresponds MCFloat.cdna2BF16 MatrixCore.cdna2BF16 :=
-  ⟨operand_bfloat16, operand_bfloat16, rfl,
+  ⟨operand_bf16, operand_bf16, rfl,
     rules_of rfl (by simp [MCFloat.cdna2BF16, MatrixCore.cdna2BF16]) (fun _ => rfl),
     rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem cdna2BF16_1k : Corresponds MCFloat.cdna2BF16_1k MatrixCore.cdna2BF16_1k :=
-  ⟨operand_bfloat16, operand_bfloat16, rfl,
+  ⟨operand_bf16, operand_bf16, rfl,
     rules_of rfl (by simp [MCFloat.cdna2BF16_1k, MatrixCore.cdna2BF16_1k]) (fun _ => rfl),
     rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem cdna3F16 : Corresponds MCFloat.cdna3F16 MatrixCore.cdna3F16 :=
-  ⟨operand_binary16, operand_binary16, rfl,
+  ⟨operand_fp16, operand_fp16, rfl,
     rules_of rfl (by simp [MCFloat.cdna3F16, MatrixCore.cdna3F16]) (by simp [MatrixCore.cdna3F16]),
     rfl, rfl, ⟨rfl, rfl, rfl⟩⟩
 
 theorem cdna3BF16 : Corresponds MCFloat.cdna3BF16 MatrixCore.cdna3BF16 :=
-  ⟨operand_bfloat16, operand_bfloat16, rfl,
+  ⟨operand_bf16, operand_bf16, rfl,
     rules_of rfl (by simp [MCFloat.cdna3BF16, MatrixCore.cdna3BF16]) (by simp [MatrixCore.cdna3BF16]),
     rfl, rfl, ⟨rfl, rfl, rfl⟩⟩
 

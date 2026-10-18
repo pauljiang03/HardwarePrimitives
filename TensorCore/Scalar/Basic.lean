@@ -5,13 +5,13 @@ import TensorCore.Numerics.Binary.RoundingContract
 namespace TensorCore.IEEE
 
 inductive BinaryFormat where
-  | binary16 | binary32 | binary64
+  | fp16 | fp32 | fp64
   deriving Repr, DecidableEq
 
 def BinaryFormat.layout : BinaryFormat → Format
-  | .binary16 => fp16
-  | .binary32 => fp32
-  | .binary64 => fp64
+  | .fp16 => TensorCore.fp16
+  | .fp32 => TensorCore.fp32
+  | .fp64 => TensorCore.fp64
 
 theorem BinaryFormat.valid (f : BinaryFormat) : f.layout.WellFormed := by
   cases f <;> decide +kernel

@@ -33,7 +33,7 @@ def dotBits (P : Model) (a : List P.a.Word) (b : List P.b.Word) (c : F32) :
 
 /-- A binary32 word as an observation. -/
 def observe32 (w : F32) : Outcome :=
-  match binary32.decode w with
+  match fp32.decode w with
   | .finite _ => .finite w
   | .infinity s => .infinity s
   | .nan => .nan

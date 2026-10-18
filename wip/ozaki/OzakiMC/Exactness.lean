@@ -143,7 +143,7 @@ theorem read_sub {i : InputFormat} (hi : smallSubnormals i) {w : i.Word} {u : Un
     | nan => rw [hd] at h; simp [Datum.toFinite] at h
   | xf32 =>
     simp only [InputFormat.read] at h
-    cases hd : binary32.decode w with
+    cases hd : fp32.decode w with
     | finite v =>
       rw [hd] at h; simp only [Datum.toFinite, Option.some.injEq] at h; subst h
       obtain ⟨_, _, _, _, hn⟩ := decode32_finite_fields hd
@@ -591,10 +591,10 @@ theorem wordDotAbs_nonneg (P : Model) :
     have := absQ_nonneg (P.a.wordValue x * P.b.wordValue y)
     grind
 
-theorem binary32_sub {w : F32} {u : Unpacked} (h : (binary32.decode w).toFinite = some u) :
+theorem binary32_sub {w : F32} {u : Unpacked} (h : (fp32.decode w).toFinite = some u) :
     u.m < 2 ^ u.t → u.e ≤ 0 := by
   intro hm
-  cases hd : binary32.decode w with
+  cases hd : fp32.decode w with
   | finite v =>
     rw [hd] at h; simp only [Datum.toFinite, Option.some.injEq] at h; subst h
     obtain ⟨ht, _, _, _, hn⟩ := decode32_finite_fields hd
@@ -616,9 +616,9 @@ theorem evalBlock_int {P : Model} (hP : ExactConfig P) (hfa : smallSubnormals P.
     obtain ⟨u, hu, _⟩ := ha w hw; exact ⟨u, hu⟩
   obtain ⟨B, hB⟩ := mapM_exists x.b fun w hw => by
     obtain ⟨u, hu, _⟩ := hb w hw; exact ⟨u, hu⟩
-  obtain ⟨uc, hC, hcv⟩ : ∃ uc, (binary32.decode x.c).toFinite = some uc ∧ uc.value = zc := by
+  obtain ⟨uc, hC, hcv⟩ : ∃ uc, (fp32.decode x.c).toFinite = some uc ∧ uc.value = zc := by
     unfold value32 at hc
-    cases hd : (binary32.decode x.c).toFinite with
+    cases hd : (fp32.decode x.c).toFinite with
     | none => rw [hd] at hc; simp at hc
     | some uc => rw [hd] at hc; simp at hc; exact ⟨uc, rfl, hc⟩
   have hprep : prepare x = some ⟨A, B, uc⟩ := by
