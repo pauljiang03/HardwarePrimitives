@@ -10,7 +10,7 @@ grid. Anything below the grid is discarded.
 ## Step 1: the alignment exponent η
 
 ```lean
-/-- A nonempty maximum ignores zero terms; none explicitly represents an all-zero block. -/
+/-- Largest exponent of a nonzero term; `none` for an all-zero block. -/
 def maxTermExp (ts : List DenormalizedProduct) : Option ℤ :=
   (ts.filterMap fun t => if t.significand = 0 then none else some t.exponent).foldl
     (fun acc e => some (match acc with | none => e | some v => max v e)) none

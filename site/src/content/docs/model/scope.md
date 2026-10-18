@@ -13,7 +13,7 @@ description: What the Lean Tensor Core model covers and what it deliberately lea
   through `wgmma`, and of B200 through `tcgen05.mma`, including the 13-bit
   block output of Ada and Hopper FP8; the FP8 `mma.sync` path of H100, H200
   and B200 (FP8 converted to FP16, two interleaved FP16 block FMAs, `C` added
-  afterwards in binary32), and the RTX PRO 6000's FP8 `mma.sync` (B200's FP8
+  afterwards in FP32), and the RTX PRO 6000's FP8 `mma.sync` (B200's FP8
   block FMA).
 - Every finite input encoding, including subnormals and signed zeros.
 - Exact products in denormalized form, alignment to the maximum exponent
@@ -34,7 +34,7 @@ description: What the Lean Tensor Core model covers and what it deliberately lea
   used by EFT: IEEE RNE would still round values slightly above
   `maxFinite32` down to it.
 - **FP16 or BF16 output.** The validated variants all produce FP32. The
-  13-bit block output of Ada and Hopper FP8 is a binary32 word with its ten
+  13-bit block output of Ada and Hopper FP8 is an FP32 word with its ten
   low mantissa bits zero.
 - **FP4 and FP6** and the Blackwell instructions *Accurate Models* does not
   characterize are not modeled. GPUs after Blackwell B200 are not covered.

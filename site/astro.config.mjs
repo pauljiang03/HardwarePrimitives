@@ -85,6 +85,7 @@ export default defineConfig({
             { label: 'CDNA 1', slug: 'amd/properties/cdna1' },
             { label: 'CDNA 2', slug: 'amd/properties/cdna2' },
             { label: 'CDNA 3', slug: 'amd/properties/cdna3' },
+            { label: 'TC-EFT correction', slug: 'amd/properties/eft' },
           ],
         },
         {

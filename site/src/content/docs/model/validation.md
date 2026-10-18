@@ -59,10 +59,10 @@ descriptor:
 
 The FP16, BF16 and TF32 rows use the models of A100 (Ada, L40S) and H100
 (H100, H200, B200). Each FP8 row holds 32 products. The toolbox's CUDA harness
-for the FP8 rows with binary32 output
+for the FP8 rows with FP32 output
 ([`mma_fp8_output_fp32.cu`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/matlab-tensor-core-79143bd/model_validation/CUDA/mma_fp8_output_fp32.cu),
 vendored with a pinned hash; the same file is in release v0.1) issues
-`mma.sync.aligned.m16n8k32` with FP8 operands and binary32 `C` and `D`. The model each FP8 row is replayed through
+`mma.sync.aligned.m16n8k32` with FP8 operands and FP32 `C` and `D`. The model each FP8 row is replayed through
 follows what its outputs agree with:
 
 - **Ada and L40S FP8**, and every FP16, BF16 and TF32 row: `C` is accumulated
@@ -71,7 +71,7 @@ follows what its outputs agree with:
 - **B200 FP8**, recorded with the toolbox's `mma.sync` harness: the outputs
   agree with the [FP8 `mma.sync` model](/HardwarePrimitives/model/variants/#fp8-through-mmasync)
   (`mmaSyncFP8Dot`: FP8 converted to FP16, two interleaved Hopper FP16 block
-  FMAs, then `C` added in binary32 with round-to-nearest-even), and equally with
+  FMAs, then `C` added in FP32 with round-to-nearest-even), and equally with
   B200's FP8 block FMA run from `C = 0` followed by the same addition of `C`
   (`Model.dotThenAdd`, and the descriptor `blackwellE4M3ThenAddInvocation`).
   Both replays have 0 mismatches. As a control, B200's FP8 block FMA with `C`
@@ -81,7 +81,7 @@ follows what its outputs agree with:
   block FMA from a zero accumulator, the reading of the toolbox's validation
   script (at this commit,
   [`Validate_TC_models.m`](https://github.com/north-numerical-computing/MATLAB-tensor-core/blob/79143bd29a4a71dc7c2ed47741b63572498b17f6/model_validation/Validate_TC_models.m)
-  sets `C` to zero for Hopper FP8: "`D = AB + D` where `D` is zero for fp8
+  sets `C` to zero for Hopper FP8: "`D = AB + D` where `D` is zero for FP8
   with WGMMA"). The replay uses `C = 0` and ignores
   the `c` file.
 
@@ -92,7 +92,7 @@ their FP8 rows. Counting each recorded output once, the two sources hold
 
 Before the replay, an independent Python decoder of E4M3 and E5M2 is compared
 with the Lean decoders on all 512 words. As a negative control, Ada and Hopper
-FP8 with a full binary32 block output disagree with 841 to 1,415 recorded rows
+FP8 with a full FP32 block output disagree with 841 to 1,415 recorded rows
 per GPU and format, so the replay distinguishes the 13-bit output.
 
 ### H100 and H200 FP8 with `C`: release v0.1
@@ -117,7 +117,7 @@ random rows do not separate this model from one 32-product block with 25
 mantissa bits after alignment, run from `C = 0` and followed by the addition
 of `C`; the interleaving experiment of *Accurate Models* does
 (`interleave_test_single_block`). One recorded B200 row excludes two
-independent FP16 blocks added in binary32 (`separate_groups_excluded`,
+independent FP16 blocks added in FP32 (`separate_groups_excluded`,
 kernel-checked).
 
 In all, the replay covers 145,000 rows (125,000 of commit 79143bd and 20,000
@@ -147,33 +147,33 @@ Cases are random bit patterns, wide and moderate values, sparse inputs, `C`
 above or below the largest product, near-cancellation, tiny and subnormal
 operands, signed zeros and inputs near overflow, over one, two or more
 instructions chained through `C`. Outcomes: identical words; an Inf or NaN
-operand, or a sum beyond binary32's range (the Lean models reject both);
+operand, or a sum beyond FP32's range (the Lean models reject both);
 mismatches.
 
 | Instruction | Cases | Identical | Inf/NaN operand | Overflow | Mismatches |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| V100 fp16 mma.m8n8k4 | 30,000 | 28,362 | 1,638 | 0 | 0 |
-| A100 fp16 mma.m16n8k16 | 30,000 | 27,524 | 2,476 | 0 | 0 |
-| A100 fp16 mma.m16n8k8 | 30,000 | 27,966 | 2,034 | 0 | 0 |
-| A100 bf16 mma.m16n8k16 | 30,000 | 21,349 | 738 | 7,913 | 0 |
-| A100 tf32 mma.m16n8k8 | 30,000 | 21,997 | 573 | 7,430 | 0 |
-| Ada fp16 mma.m16n8k16 | 30,000 | 27,483 | 2,517 | 0 | 0 |
-| Ada bf16 mma.m16n8k16 | 30,000 | 21,311 | 706 | 7,983 | 0 |
-| Ada tf32 mma.m16n8k8 | 30,000 | 22,023 | 531 | 7,446 | 0 |
-| H100 fp16 mma.m16n8k16 | 30,000 | 27,513 | 2,487 | 0 | 0 |
-| H100 bf16 mma.m16n8k16 | 30,000 | 21,327 | 727 | 7,946 | 0 |
-| H100 tf32 mma.m16n8k8 | 30,000 | 21,978 | 584 | 7,438 | 0 |
-| H100 tf32 mma.m16n8k4 (as WMMA HMMA.1684) | 30,000 | 23,007 | 484 | 6,509 | 0 |
-| H100 fp16 wgmma.m64n8k16 | 30,000 | 27,526 | 2,474 | 0 | 0 |
-| H100 bf16 wgmma.m64n8k16 | 30,000 | 21,302 | 786 | 7,912 | 0 |
-| H100 tf32 wgmma.m64n8k8 | 30,000 | 21,971 | 547 | 7,482 | 0 |
-| B200 fp16 mma.m16n8k16 | 30,000 | 27,491 | 2,509 | 0 | 0 |
-| B200 bf16 mma.m16n8k16 | 30,000 | 21,317 | 746 | 7,937 | 0 |
-| B200 tf32 mma.m16n8k8 | 30,000 | 21,927 | 592 | 7,481 | 0 |
-| B200 fp16 tcgen05.kind::f16 | 30,000 | 27,492 | 2,508 | 0 | 0 |
-| B200 bf16 tcgen05.kind::f16 | 30,000 | 21,342 | 745 | 7,913 | 0 |
-| B200 tf32 tcgen05.kind::tf32 | 30,000 | 21,970 | 588 | 7,442 | 0 |
-| RTX PRO 6000 fp16 mma.m16n8k16 | 30,000 | 27,526 | 2,474 | 0 | 0 |
+| V100 FP16 mma.m8n8k4 | 30,000 | 28,362 | 1,638 | 0 | 0 |
+| A100 FP16 mma.m16n8k16 | 30,000 | 27,524 | 2,476 | 0 | 0 |
+| A100 FP16 mma.m16n8k8 | 30,000 | 27,966 | 2,034 | 0 | 0 |
+| A100 BF16 mma.m16n8k16 | 30,000 | 21,349 | 738 | 7,913 | 0 |
+| A100 TF32 mma.m16n8k8 | 30,000 | 21,997 | 573 | 7,430 | 0 |
+| Ada FP16 mma.m16n8k16 | 30,000 | 27,483 | 2,517 | 0 | 0 |
+| Ada BF16 mma.m16n8k16 | 30,000 | 21,311 | 706 | 7,983 | 0 |
+| Ada TF32 mma.m16n8k8 | 30,000 | 22,023 | 531 | 7,446 | 0 |
+| H100 FP16 mma.m16n8k16 | 30,000 | 27,513 | 2,487 | 0 | 0 |
+| H100 BF16 mma.m16n8k16 | 30,000 | 21,327 | 727 | 7,946 | 0 |
+| H100 TF32 mma.m16n8k8 | 30,000 | 21,978 | 584 | 7,438 | 0 |
+| H100 TF32 mma.m16n8k4 (as WMMA HMMA.1684) | 30,000 | 23,007 | 484 | 6,509 | 0 |
+| H100 FP16 wgmma.m64n8k16 | 30,000 | 27,526 | 2,474 | 0 | 0 |
+| H100 BF16 wgmma.m64n8k16 | 30,000 | 21,302 | 786 | 7,912 | 0 |
+| H100 TF32 wgmma.m64n8k8 | 30,000 | 21,971 | 547 | 7,482 | 0 |
+| B200 FP16 mma.m16n8k16 | 30,000 | 27,491 | 2,509 | 0 | 0 |
+| B200 BF16 mma.m16n8k16 | 30,000 | 21,317 | 746 | 7,937 | 0 |
+| B200 TF32 mma.m16n8k8 | 30,000 | 21,927 | 592 | 7,481 | 0 |
+| B200 FP16 tcgen05.kind::f16 | 30,000 | 27,492 | 2,508 | 0 | 0 |
+| B200 BF16 tcgen05.kind::f16 | 30,000 | 21,342 | 745 | 7,913 | 0 |
+| B200 TF32 tcgen05.kind::TF32 | 30,000 | 21,970 | 588 | 7,442 | 0 |
+| RTX PRO 6000 FP16 mma.m16n8k16 | 30,000 | 27,526 | 2,474 | 0 | 0 |
 | Ada e4m3 mma.m16n8k32 | 20,000 | 18,921 | 1,079 | 0 | 0 |
 | Ada e5m2 mma.m16n8k32 | 20,000 | 18,163 | 1,837 | 0 | 0 |
 | Ada e4m3 mma.m16n8k16 | 30,000 | 28,797 | 1,203 | 0 | 0 |
@@ -192,7 +192,7 @@ Of the identical cases, 581,052 have a nonzero `C`, so
 MMA-Sim does not list FP8 `mma.sync` for Hopper or Blackwell. The second part
 composes that path from MMA-Sim's own pieces (torch's FP8 to FP16
 conversion, MMA-Sim's FP16 `mma.sync` for each interleaved group, `C` added in
-binary32) and compares it with `tc_features mma-sync`. This checks the
+FP32) and compares it with `tc_features mma-sync`. This checks the
 arithmetic of the `mma.sync` model given its structure; the structure itself
 is tested by the recorded rows above.
 

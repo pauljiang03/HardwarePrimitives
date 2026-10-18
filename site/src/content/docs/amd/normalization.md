@@ -1,16 +1,16 @@
 ---
 title: 6. Normalization and final rounding
-description: S_acc is normalized and rounded to nearest even in binary32, with explicit range, flushing, signed-zero and special-value behavior.
+description: S_acc is normalized and rounded to nearest even in FP32, with explicit range, flushing, signed-zero and special-value behavior.
 ---
 
 Every configuration ends the same way: `d = fl{S_acc}`. The accumulated value
 is **normalized** (its leading 1 becomes the top bit of a 24-bit significand,
-but never below binary32's minimum normal exponent) and **rounded to nearest
+but never below FP32's minimum normal exponent) and **rounded to nearest
 even**. This is the main difference from the Tensor Cores, whose final step is
 a truncation. Because `S_acc` is an exact rational, one function does both:
 
 ```lean
-/-- `⌊log₂ a⌋`, but not below binary32's minimum normal exponent `−126`. -/
+/-- Binade exponent of a nonzero magnitude, not below `−126` (subnormal-aware normalization). -/
 def normExp (a : ℚ) : ℤ := max (log2Floor a) (-126)
 
 def rneFields (a : ℚ) : ℤ × ℕ :=
@@ -18,7 +18,7 @@ def rneFields (a : ℚ) : ℤ × ℕ :=
   let k := rneInt (a / pow2 (e - 23))
   if k = 16777216 then (e + 1, 8388608) else (e, k.toNat)
 
-/-- `fl{x}`: binary32 RNE. `none` exactly when the rounded magnitude exceeds the finite range. -/
+/-- `fl{x}`: FP32 RNE; `none` exactly when the rounded magnitude exceeds the finite range. -/
 def rne32 (x : ℚ) : Option F32 :=
   if x = 0 then some 0
   else
@@ -114,16 +114,16 @@ record the choice.
 that does not mention it:
 
 - **Nearest even:** `NearestEven32 x w` says that `w` decodes to a finite value
-  at least as close to `x` as any finite binary32 value, with an even last bit
+  at least as close to `x` as any finite FP32 value, with an even last bit
   when two are equally close.
-  [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/RoundingContract.lean#L322)
+  [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/RoundingContract.lean#L312)
   proves that every result of `rne32` meets it.
 - **Uniqueness:** within the finite range, the correctly rounded word with the
   sign of the input is unique
-  ([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L370)).
+  ([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L356)).
 - **The block output:** on every model with subnormals, `d` is the nearest
-  binary32 value to `S_acc`, ties to even
-  ([`MatrixCore.evalBlock_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L60)).
+  FP32 value to `S_acc`, ties to even
+  ([`MatrixCore.evalBlock_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L54)).
 
 ## Special values
 

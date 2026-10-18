@@ -42,7 +42,7 @@ to 14 once, so the FP8 output is still a single truncation of the exact sum.
 
 ## `round32`: normalize and round an exact rational to FP32
 
-[`round32`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/RoundOp.lean#L53)
+[`round32`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/RoundOp.lean#L52)
 supports two modes, `truncate` and `nearestEven`. EFT uses the second. The
 algorithm is:
 
@@ -120,7 +120,7 @@ specifications that do not mention it:
 - **Nearest even:** `NearestEven32 x b` says that `b` decodes to a finite
   value at least as close to `x` as any finite FP32 value, and that `b` has
   an even final bit whenever a different value is equally close.
-  [`round32_nearestEven_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/CorrectRounding.lean#L155)
+  [`round32_nearestEven_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/CorrectRounding.lean#L153)
   proves `round32 .nearestEven` meets it on the whole finite range.
 - **Any binary format:**
   [`roundBinary_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Binary/RoundingContract.lean#L17)

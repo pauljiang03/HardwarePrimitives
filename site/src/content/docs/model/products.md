@@ -24,7 +24,7 @@ def denormalizedMul (a b : Decoded) : DenormalizedProduct :=
     a.mantissaBits + b.mantissaBits⟩
 ```
 
-[`denormalizedMul`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/DenormalizedProduct.lean#L25)
+[`denormalizedMul`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/DenormalizedProduct.lean#L23)
 multiplies the significands exactly (no bits dropped), adds exponents, and adds mantissa widths
 (an FP16 × FP16 product has 20 mantissa bits). Nothing is rounded. The value is exact:
 

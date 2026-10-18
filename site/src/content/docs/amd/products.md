@@ -18,9 +18,9 @@ def Unpacked.mul (a b : Unpacked) : Unpacked :=
 def Prepared.p (x : Prepared) : List Unpacked := List.zipWith Unpacked.mul x.a x.b
 ```
 
-[`Unpacked.mul`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L88)
+[`Unpacked.mul`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L79)
 multiplies the integer significands exactly, adds the exponents and adds the
-mantissa widths (an fp16 × fp16 product has 20 mantissa bits). Nothing is
+mantissa widths (an FP16 × FP16 product has 20 mantissa bits). Nothing is
 rounded, and the value is exact:
 
 ```lean
@@ -37,7 +37,7 @@ competes with them for the alignment exponent. On the AMD matrix cores it
 does not:
 
 - **CDNA 1** adds `c` to the products exactly, in the same sum.
-- **CDNA 2** adds `c` last, in the final binary32 addition of the pairwise sum.
+- **CDNA 2** adds `c` last, in the final FP32 addition of the pairwise sum.
 - **CDNA 3** aligns the products among themselves and adds `c` **late**, in a
   separate two-operand alignment ([CDNA 3](/HardwarePrimitives/amd/cdna3/#late-accumulation-of-c)).
 
@@ -47,7 +47,7 @@ the Tensor Core output is not
 
 ## Why the denormalized form matters
 
-Two products with the same value can have different exponents. Take fp16
+Two products with the same value can have different exponents. Take FP16
 `1.5 × 1.5 = 2.25` and `2.25 × 1 = 2.25`:
 
 | Product | Significand `s_p` | Exponent `e_p` | Value |
@@ -58,12 +58,12 @@ Two products with the same value can have different exponents. Take fp16
 On CDNA 3 the first puts the alignment grid one bit **finer** than the second,
 so the other products keep a bit more, and the two blocks of
 [the worked trace](/HardwarePrimitives/amd/#a-worked-trace) give different outputs
-([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L202)).
+([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L176)).
 The output of CDNA 3 is therefore not a function of the products' values.
 
 A **subnormal operand** makes the difference extreme. Its significand is below
 one but its exponent is the minimum normal exponent, so a product with a
-subnormal operand can have a tiny value and a large exponent sum. fp16
+subnormal operand can have a tiny value and a large exponent sum. FP16
 `2^-24 × 2^15` has the value `2^-9` but the exponent `−14 + 15 = 1`. Raising a
 product to such a representation can coarsen the grid for every other product
 of the block, which is the mechanism of CDNA 3's non-monotonicity in the
@@ -79,7 +79,7 @@ themselves. The architectures differ in what they do with a large product:
   `productOverflow`, and `blockOutcome` the infinity.
 - **CDNA 1** keeps products above `2^128` exact inside the block; only the final
   conversion can overflow.
-- **CDNA 2** converts each product to binary32, and that conversion can
+- **CDNA 2** converts each product to FP32, and that conversion can
   overflow (`intermediateOverflow`).
 
 ## A bound used later

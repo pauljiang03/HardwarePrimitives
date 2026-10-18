@@ -6,9 +6,9 @@ description: What the Lean model of AMD matrix cores covers, the modeling choice
 ## Covered
 
 - One MFMA block, and inner products and `D = AB + C` built from chained
-  blocks, on every variant of *Accurate Models of AMD Matrix Cores*: the fp32
-  SFMA on CDNA 1, 2 and 3; CDNA 1 fp16 and bf16; CDNA 2 fp16, bf16 and bf16
-  `_1k`; CDNA 3 fp16, bf16, XF32 and fp8 E4M3/E5M2 FNUZ in any mix.
+  blocks, on every variant of *Accurate Models of AMD Matrix Cores*: the FP32
+  SFMA on CDNA 1, 2 and 3; CDNA 1 FP16 and BF16; CDNA 2 FP16, BF16 and BF16
+  `_1k`; CDNA 3 FP16, BF16, XF32 and FP8 E4M3/E5M2 FNUZ in any mix.
 - Every input word, including subnormals, infinities and NaN, through the
   observation `blockOutcome`.
 - Fixed-width accumulation on CDNA 3, proved to give the model's output at
@@ -27,13 +27,13 @@ record why:
 - **`∞ · 0`.** NaN, as in IEEE 754; the paper does not test it.
 - **Inner dimension `k = 0`.** Not an instruction; `dotBits` returns `c`
   unchanged.
-- **CDNA 2 special values.** Products are converted to binary32 and summed
-  with binary32 additions, so an intermediate overflow is an infinity that
+- **CDNA 2 special values.** Products are converted to FP32 and summed
+  with FP32 additions, so an intermediate overflow is an infinity that
   propagates by IEEE 754 rules (`+∞ + −∞` is NaN). This reproduces the paper's
   `p₁ = 2^128, p₂ = −p₁` vector.
 - **XF32 NaN words** are classified before the significand is truncated.
 - **Zero products** take no part in `e_max`, and a group of odd or even
-  binary8 products that is entirely zero has no exponent; a group whose
+  FP8 products that is entirely zero has no exponent; a group whose
   nonzero products cancel keeps its exponent, as one of the paper's vectors
   requires.
 

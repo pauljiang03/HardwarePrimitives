@@ -29,8 +29,8 @@ in hexadecimal) and prints `F <word>`, `I+`, `I-` or `N`; the example prints
 | --- | --- |
 | One block gives the same observation (finite word, `±∞`, NaN) as `blockOutcome` | `block_agree` |
 | An inner product of any length gives the same observation as `dotOutcome` | `dot_agree` |
-| FloatLib's binary32 rounding agrees with `rne32` and `fl32` on every rational | `round32_bits`, `fl_bits` |
-| FloatLib's classification agrees with `MatrixCore`'s decoder on every word of every format | `binary32_agree`, …, `operand_xf32` |
+| FloatLib's FP32 rounding agrees with `rne32` and `fl32` on every rational | `round32_bits`, `fl_bits` |
+| FloatLib's classification agrees with `MatrixCore`'s decoder on every word of every format | `fp32_agree`, …, `operand_xf32` |
 | The per-model contracts, error bounds and monotonicity results hold for the FloatLib implementation | `floatlib_contract`, `floatlib_c_monotone`, `floatlib_nonmonotone`, … |
 
 The audit ([`tests/Audit.lean`](tests/Audit.lean)) checks that every theorem

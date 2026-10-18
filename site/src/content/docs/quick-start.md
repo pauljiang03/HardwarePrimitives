@@ -79,7 +79,7 @@ python3 scripts/check.py                    # clean build, examples, documentati
 evaluation during the build, and an audit checks the axioms.
 
 A block has the vectors `a`, `b` (`N_FMA` words each, in the model's input
-formats) and the binary32 word `c`. `blockBits` returns the binary32 word `d`
+formats) and the FP32 word `c`. `blockBits` returns the FP32 word `d`
 or a `ModelError`, and `evalBlock` a trace with the decoded inputs, `S_acc`
 and `d`:
 
@@ -88,7 +88,7 @@ import MatrixCore
 
 open MatrixCore
 
--- CDNA 3 fp16: c = 1 (0x3F800000), p₁ = 2^-12 · 2^-12 = 2^-24 (0x0C00), other products zero.
+-- CDNA 3 FP16: c = 1 (0x3F800000), p₁ = 2^-12 · 2^-12 = 2^-24 (0x0C00), other products zero.
 def x : BlockInput cdna3F16 :=
   ⟨0x0C00 :: List.replicate 7 0, 0x0C00 :: List.replicate 7 0, 0x3F800000⟩
 
@@ -101,7 +101,7 @@ example : blockBits x = .ok 0x3F800000 := by decide +kernel
 
 | Import | Contents |
 | --- | --- |
-| `MatrixCore.Numerics` | Formats, decoding, grids, binary32 rounding and its correctness |
+| `MatrixCore.Numerics` | Formats, decoding, grids, FP32 rounding and its correctness |
 | `MatrixCore.MC` | Models, block evaluation, special values, chaining, error bounds, monotonicity |
 | `MatrixCore.Specification` | The independent transcription of the paper and the equality proofs |
 | `MatrixCore` | All of the above |

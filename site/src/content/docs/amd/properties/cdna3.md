@@ -6,7 +6,7 @@ description: Properties of the CDNA 3 model - error bounds, monotonicity in c, a
 CDNA 3 aligns its products to their largest exponent, truncates them, and adds
 `c` late with rounding down ([semantics](/HardwarePrimitives/amd/cdna3/)).
 Unless stated otherwise, the theorems hold for every model with
-`globalAlignment` (fp16, bf16, XF32) or `oddEvenGrouping` (binary8), and are
+`globalAlignment` (FP16, BF16, XF32) or `oddEvenGrouping` (FP8), and are
 instantiated for `cdna3F16`, `cdna3BF16`, `cdna3XF32` and `cdna3FP8 fa fb`.
 
 ## Error bounds
@@ -24,7 +24,7 @@ the late alignment of `c`, and the final rounding. With `n` products and
 and when `e_c > e_max`, `S_acc` is below the exact sum, up to the product
 error, by less than `(n + 2)·2^(e_max − F) + 2^(e_c − 32) + 2^(e′ − 31)`, where
 `e′` is the normalized exponent of `S′_{p_i,sum} + s_c`
-([`MatrixCore.alignedAccumulation_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LateAccumulation.lean#L228)).
+([`MatrixCore.alignedAccumulation_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LateAccumulation.lean#L211)).
 `alignedBound P x` collects the branches, and with the final rounding:
 
 ```lean
@@ -38,7 +38,7 @@ theorem aligned_error {P : Model}
 
 From the inputs alone, with `A = Σ|p_ℓ| + |c|`, the error is at most
 `2^-23 · A + (n + 4) · 2^(e_max − 24) + 2^-149`
-([`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L238)).
+([`MatrixCore.aligned_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L227)).
 The alignment term depends on `e_max`, the largest **exponent** of the
 products, not on the size of the result. Products are in denormalized form,
 so `2^(e_max)` can exceed every `|p_ℓ|`, and when large products cancel the
@@ -50,14 +50,14 @@ relative error is large.
 
 For the same `a` and `b`, a larger `c` never gives a smaller output, on every
 configuration, and the same holds for inner products
-([`MatrixCore.evalBlock_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L633),
-[`MatrixCore.dotBits_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L657)).
+([`MatrixCore.evalBlock_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L605),
+[`MatrixCore.dotBits_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L629)).
 On a Tensor Core `C` takes part in the alignment, and lowering it can raise
 the output; on CDNA 3 `c` never sets the products' alignment.
 
 ### In the products: the mechanism, concretely
 
-On CDNA 3 fp16, take seven products `2^-12 × 2^-12 = 2^-24` and raise a lead
+On CDNA 3 FP16, take seven products `2^-12 × 2^-12 = 2^-24` and raise a lead
 product from `2^-9 − 2^-29` (`1025/1024 · 2046/1024 · 2^-10`, `e_p = −10`) to
 `2^-9` (`2^-24 · 2^15`, a subnormal operand, `e_p = 1`):
 
@@ -67,12 +67,12 @@ product from `2^-9 − 2^-29` (`1025/1024 · 2046/1024 · 2^-10`, `e_p = −10`)
 | `2^-9` | 1 | `2^-23` | truncated away | `2^-9` (`0x3B000000`) |
 
 The lead rises by `2^-29`, and the output falls by `223·2^-29`
-([`MatrixCore.cdna3F16_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L164)).
-Every input format has such a pair: bf16, XF32, E4M3 and E5M2
-([`MatrixCore.cdna3E4M3_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L187)
+([`MatrixCore.cdna3F16_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L141)).
+Every input format has such a pair: BF16, XF32, E4M3 and E5M2
+([`MatrixCore.cdna3E4M3_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L162)
 and its neighbours). Even with normal operands, equal products `1.5 · 1.5` and
 `2.25 · 1` give different outputs
-([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L202)).
+([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L176)).
 
 ### Monotone while the alignment exponents stay the same
 
@@ -95,7 +95,7 @@ theorem aligned_product_monotone {P : Model}
 
 So every pair of inputs where larger products give a smaller output changes an
 alignment exponent
-([`MatrixCore.aligned_nonmonotone_alignment_changes`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AlignmentMonotonicity.lean#L340)).
+([`MatrixCore.aligned_nonmonotone_alignment_changes`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AlignmentMonotonicity.lean#L291)).
 The per-model forms are `cdna3F16_product_monotone`, `cdna3BF16_product_monotone`,
 `cdna3XF32_product_monotone` and `cdna3FP8_product_monotone`.
 
@@ -110,7 +110,7 @@ significands `m_a`, `m_b`, so `L = m_a m_b · 2^-30`, with the lead
 
 ```lean
 theorem cdna3F16LeadBlock_nonmonotone_iff {wa wb : BitVec 16} {ua ub : Unpacked}
-    (ha : binary16.decode wa = .finite ua) (hb : binary16.decode wb = .finite ub)
+    (ha : fp16.decode wa = .finite ua) (hb : fp16.decode wb = .finite ub)
     (hs : ua.negative = ub.negative) (hm : 0 < ua.m * ub.m) (he : ua.e + ub.e = -10)
     {n : ℕ} (hn : n ≤ 7) :
     ProductNonmonotone (cdna3F16LeadBlock wa wb n) (cdna3F16LeadBlock 0x0001 0x7800 n) ↔
@@ -119,7 +119,7 @@ theorem cdna3F16LeadBlock_nonmonotone_iff {wa wb : BitVec 16} {ua ub : Unpacked}
 
 With `L`, `e_max = −10`, every product is kept and `d = (m_a m_b + 64n)·2^-30`;
 with `L′`, `e_max = 1` and `d′ = 2^-9`
-([`MatrixCore.cdna3F16LeadBlock_outputs`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/NonmonotoneFamily.lean#L243)).
+([`MatrixCore.cdna3F16LeadBlock_outputs`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/NonmonotoneFamily.lean#L201)).
 So the output falls exactly when **the lead's deficit `2^21 − m_a m_b` is less
 than `64n`**, the weight of the small products in units of `2^-30`, and the
 pair is non-monotone when, in addition, `L ≤ L′`. The theorem holds for every
@@ -139,7 +139,7 @@ Each row is also checked by kernel evaluation on both sides of its threshold
 For arbitrary inputs, let the gain `Δ = exact′ − exact` be how much the exact
 sum rises, and `R = exact − S_acc` the accumulation loss of each block. An
 output decrease **requires** that the loss grows by more than the gain,
-`R′ − R > Δ`; the condition is **sufficient** when both `S_acc` are binary32
+`R′ − R > Δ`; the condition is **sufficient** when both `S_acc` are FP32
 values, so that the final rounding returns them:
 
 ```lean
@@ -156,7 +156,7 @@ theorem output_decrease_of_loss {P : Model} (hs : P.subnormals = true) {x x' : B
 
 On CDNA 3, `R′ − R > Δ` with larger products and the same `c` needs a change
 of alignment exponent
-([`MatrixCore.aligned_loss_exceeds_gain_changes_alignment`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L136)).
+([`MatrixCore.aligned_loss_exceeds_gain_changes_alignment`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L101)).
 In the pair above, `Δ = 2^-29`, `R = 0` and `R′ = 7·2^-24`.
 
 ### How large the drop can be
@@ -176,7 +176,7 @@ theorem aligned_output_drop_le {P : Model}
 
 From the inputs alone, it is at most `2^-23 (A + A′) + (n + 4)·2^(e_max − 24) +
 (n′ + 4)·2^(e′_max − 24) + 2^-148 − Δ`
-([`MatrixCore.aligned_output_drop_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L172)).
+([`MatrixCore.aligned_output_drop_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L131)).
 For the pair above the drop is `223·2^-29` and the first bound `22511·2^-34`.
 
 ## Correct rounding
@@ -202,8 +202,8 @@ theorem aligned_nearestEven_of_lossless {P : Model}
 ```
 
 A product lies on the grid when its own last bit is at or above it
-([`MatrixCore.Unpacked.onGrid_of_le`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LosslessAlignment.lean#L42)):
-for example, eight fp16 products whose exponents are within 4 of `e_max` lose
+([`MatrixCore.Unpacked.onGrid_of_le`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LosslessAlignment.lean#L22)):
+for example, eight FP16 products whose exponents are within 4 of `e_max` lose
 nothing, since each has 20 mantissa bits and the grid keeps 24. The output is
 then the correctly rounded sum, as on CDNA 1.
 
@@ -211,11 +211,11 @@ then the correctly rounded sum, as on CDNA 1.
 
 - **Algorithm 1** depends on the products only as a multiset: every product is
   aligned to the same `e_max`
-  ([`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L37)).
+  ([`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L29)).
 - **Algorithm 2** depends on positions: moving a product between the odd and
   the even group can change `d`
-  ([`MatrixCore.oddEvenGrouping_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L61)).
-  The parity law says exactly how much: a binary8 block depends on its 16
+  ([`MatrixCore.oddEvenGrouping_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L48)).
+  The parity law says exactly how much: an FP8 block depends on its 16
   operand pairs only through the unordered pair {multiset of the odd slots,
   multiset of the even slots}, for every `c` and every mix of E4M3 and E5M2
   FNUZ. A permutation of the slots preserves the output on every input exactly
@@ -230,13 +230,25 @@ then the correctly rounded sum, as on CDNA 1.
 - **Sign.** The round-down steps make CDNA 3 asymmetric under negation:
   `c = 1, p₁ = 2^-24 + 2^-32` gives `1`, while the negated input gives
   `−(1 + 2^-23)`
-  ([`MatrixCore.globalAlignment_sign_asymmetric`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L71)).
+  ([`MatrixCore.globalAlignment_sign_asymmetric`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L57)).
 
 ## Fixed-width accumulation
 
-A two's-complement register of 30 bits (fp16, bf16), 29 (XF32) or 31
-(binary8), wrapping on overflow, gives the model's output for every input, and
+A two's-complement register of 30 bits (FP16, BF16), 29 (XF32) or 31
+(FP8), wrapping on overflow, gives the model's output for every input, and
 every prefix of the accumulation is exact at that width
-([`MatrixCore.evalBlockMachine_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L176),
-[`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L199);
+([`MatrixCore.evalBlockMachine_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L162),
+[`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L185);
 see [the register model](/HardwarePrimitives/amd/cdna3/#a-fixed-width-register-model)).
+
+## TC-EFT correction
+
+The [TC-EFT correction](/HardwarePrimitives/amd/properties/eft/) returns the
+correctly rounded sum for any finite `D`, with the cut-off at the higher of the
+last bit of `D` and the alignment grid. With `D` the block's output, `S_acc` is
+the high sum plus the part of the low parts that alignment kept, and the overlap
+is that kept part plus the final rounding error, less than `(N_FMA + 6)` units of
+the cut-off
+([`MatrixCore.aligned_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA3.lean#L632)).
+On the block whose seven products `2^-24` are truncated away, the hardware
+returns `0x40100000` and the correction `0x40100002`, on the fast path.

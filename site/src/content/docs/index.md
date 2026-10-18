@@ -23,7 +23,8 @@ and a set of proved properties:
    [CDNA 2](/HardwarePrimitives/amd/properties/cdna2/),
    [CDNA 3](/HardwarePrimitives/amd/properties/cdna3/)), are error bounds,
    monotonicity, correct rounding and the dependence on the order of the
-   products.
+   products, and [TC-EFT](/HardwarePrimitives/amd/properties/eft/) carries
+   over to every generation.
 
 ## The Tensor Core model
 

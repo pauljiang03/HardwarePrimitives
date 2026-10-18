@@ -25,7 +25,7 @@ two's-complement additions that wrap on overflow, applied one aligned term at
 a time.
 
 ```lean
-/-- Actual modular signed-word additions, starting from a supplied register. -/
+/-- Modular signed-word additions, starting from a supplied register. -/
 def machineAccumulate (w : ℕ) (acc : BitVec w) : List ℤ → BitVec w
   | [] => acc
   | z :: zs => machineAccumulate w (acc + BitVec.ofInt w z) zs
@@ -61,7 +61,7 @@ These widths count the two's complement sign bit. Without it they are 28, 30
 and 32 bits; the A100 and H100 values are the adder widths *Accurate Models*
 reports (§4.1.2 and §4.1.6).
 
-[`evalBlock_machinePrefix`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AlignmentExponent.lean#L186)
+[`evalBlock_machinePrefix`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AlignmentExponent.lean#L184)
 goes further. Every **prefix** of the accumulation is exact at that width,
 so the result does not depend on the order of additions, even with
 cancellation.

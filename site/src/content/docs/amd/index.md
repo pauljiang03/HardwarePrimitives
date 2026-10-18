@@ -1,6 +1,6 @@
 ---
 title: The model at a glance
-description: How the AMD matrix-core model turns encoded MFMA inputs into a binary32 output word in Lean, end to end.
+description: How the AMD matrix-core model turns encoded MFMA inputs into an FP32 output word in Lean, end to end.
 ---
 
 This section explains how the arithmetic of AMD matrix cores, the MFMA
@@ -25,8 +25,8 @@ One MFMA *block FMA* computes
 d = a₁·b₁ + a₂·b₂ + … + a_N·b_N + c
 ```
 
-where `aℓ, bℓ` are fp32, fp16, bf16, XF32 or fp8 words, `c` and `d` are
-binary32 words, and the FMA size `N = N_FMA` (1, 2, 4, 8 or 16) depends on
+where `aℓ, bℓ` are FP32, FP16, BF16, XF32 or FP8 words, `c` and `d` are
+FP32 words, and the FMA size `N = N_FMA` (1, 2, 4, 8 or 16) depends on
 the architecture and the input format. Longer inner products chain blocks,
 each block's `d` becoming the next block's `c`. Khattak, Mikaitis and Graziani
 found that the three architectures form the sum in different ways, but every
@@ -35,23 +35,23 @@ block does the following:
 1. Forms each product **exactly**, without normalizing the significand.
 2. Accumulates the products and `c` in one of four **configurations**:
    - **CDNA 1** (`correct_rounding`) adds them exactly;
-   - **CDNA 2** (`pair_wise_sum`) converts each product to binary32 and adds
-     them in a balanced tree of binary32 additions, with subnormals flushed;
+   - **CDNA 2** (`pair_wise_sum`) converts each product to FP32 and adds
+     them in a balanced tree of FP32 additions, with subnormals flushed;
    - **CDNA 3** (`global_alignment`) **aligns** the products to their
      largest exponent, **truncates** the bits below a fixed-point grid, adds
      them exactly, and adds `c` **late**, after the products;
-   - **CDNA 3 binary8** (`odd_even_grouping`) does the same for the odd- and
+   - **CDNA 3 FP8** (`odd_even_grouping`) does the same for the odd- and
      the even-indexed products separately before combining them.
 3. **Normalizes** the accumulated value `S_acc` and **rounds it to nearest
-   even** in binary32: `d = fl{S_acc}`.
+   even** in FP32: `d = fl{S_acc}`.
 
 | Architecture | Inputs | Configuration | `N_FMA` |
 | --- | --- | --- | --- |
-| CDNA 1, 2, 3 | fp32 | SFMA: `correct_rounding`, one product per step | 1 |
-| CDNA 1 (MI100) | fp16 / bf16 | `correct_rounding`: exact sum, one round to nearest even | 4 / 2 |
-| CDNA 2 (MI210, MI250) | fp16 / bf16 / bf16 `_1k` | `pair_wise_sum`, subnormals flushed | 4 / 2 / 4 |
-| CDNA 3 (MI300A, MI300X) | fp16 / bf16 / XF32 | `global_alignment` with late `c` (Algorithm 1) | 8 / 8 / 4 |
-| CDNA 3 | fp8 E4M3 / E5M2 FNUZ, any mix | `odd_even_grouping` (Algorithm 2) | 16 |
+| CDNA 1, 2, 3 | FP32 | SFMA: `correct_rounding`, one product per step | 1 |
+| CDNA 1 (MI100) | FP16 / BF16 | `correct_rounding`: exact sum, one round to nearest even | 4 / 2 |
+| CDNA 2 (MI210, MI250) | FP16 / BF16 / BF16 `_1k` | `pair_wise_sum`, subnormals flushed | 4 / 2 / 4 |
+| CDNA 3 (MI300A, MI300X) | FP16 / BF16 / XF32 | `global_alignment` with late `c` (Algorithm 1) | 8 / 8 / 4 |
+| CDNA 3 | FP8 E4M3 / E5M2 FNUZ, any mix | `odd_even_grouping` (Algorithm 2) | 16 |
 
 The Lean model implements these steps directly.
 
@@ -63,12 +63,14 @@ The Lean model implements these steps directly.
 | Alignment | every term, `C` included, to the largest exponent | CDNA 3: the products to their largest exponent; `c` added late |
 | Monotone in `C` / `c` | no: a smaller `C` can move the grid and raise the output | yes, on every configuration |
 | Monotone in the products | no | SFMA and CDNA 1 yes; CDNA 2 and CDNA 3 no |
-| Product order | — | CDNA 1 and CDNA 3 Algorithm 1 depend only on the multiset; CDNA 2 and CDNA 3 binary8 depend on positions |
+| Product order | — | CDNA 1 and CDNA 3 Algorithm 1 depend only on the multiset; CDNA 2 and CDNA 3 FP8 depend on positions |
+| TC-EFT correction | cut-off at the alignment grid or the last bit of `D` | the same algorithm; the cut-off of each generation |
 
 Each generation's properties page ([CDNA 1](/HardwarePrimitives/amd/properties/cdna1/),
 [CDNA 2](/HardwarePrimitives/amd/properties/cdna2/),
 [CDNA 3](/HardwarePrimitives/amd/properties/cdna3/)) states and proves its
-entries.
+entries. [TC-EFT](/HardwarePrimitives/amd/properties/eft/) returns the
+correctly rounded sum of a block of any generation from its output.
 
 ## The pipeline in Lean
 
@@ -76,7 +78,7 @@ entries.
   <a href="/HardwarePrimitives/amd/formats/"><span class="n">01 · prepare</span><span class="t">Decode</span><span class="d"><code>BlockInput P</code> → <code>Prepared</code></span></a>
   <a href="/HardwarePrimitives/amd/products/"><span class="n">02 · Unpacked.mul</span><span class="t">Multiply</span><span class="d">exact, denormalized</span></a>
   <a href="/HardwarePrimitives/amd/cdna1/"><span class="n">03 · CDNA 1</span><span class="t">Exact sum</span><span class="d"><code>S_acc = Σ p + c</code></span></a>
-  <a href="/HardwarePrimitives/amd/cdna2/"><span class="n">03 · CDNA 2</span><span class="t">Pairwise sums</span><span class="d">binary32 tree, <code>c</code> last</span></a>
+  <a href="/HardwarePrimitives/amd/cdna2/"><span class="n">03 · CDNA 2</span><span class="t">Pairwise sums</span><span class="d">FP32 tree, <code>c</code> last</span></a>
   <a href="/HardwarePrimitives/amd/cdna3/"><span class="n">03 · CDNA 3</span><span class="t">Align, late <code>c</code></span><span class="d">grid <code>2^(e_max − 24)</code></span></a>
   <a href="/HardwarePrimitives/amd/normalization/"><span class="n">04 · fl32</span><span class="t">Normalize &amp; round</span><span class="d">nearest even → <code>F32</code></span></a>
 </div>
@@ -90,7 +92,7 @@ These are its definitions, unchanged apart from omitted comments:
 ```lean
 structure Model where
   a : InputFormat                 -- input format of a
-  b : InputFormat                 -- input format of b (c and d are binary32)
+  b : InputFormat                 -- input format of b (c and d are FP32)
   nfma : ℕ                        -- N_FMA, the FMA size
   accumulation : Accumulation     -- correctRounding, pairWiseSum, globalAlignment, oddEvenGrouping
   padding : ℕ := 1                -- products keep 23 + padding mantissa bits after alignment
@@ -147,7 +149,7 @@ def evalBlock {P : Model} (x : BlockInput P) : Except ModelError (BlockTrace P) 
 | `s′_c` | `s_c` shifted right by `e_max − e_c`, rounded down to 24 mantissa bits | `shiftedC` |
 | `S′_{p_i,sum}` | `S_{p_i,sum}` shifted right by `e_c − e_max`, rounded down to 32 mantissa bits | `shiftedSum` |
 | `S_acc` | the accumulated value presented to the final rounding | `BlockTrace.sAcc`, `alignedAccumulation` |
-| `fl{·}` | normalize and round to binary32 with round to nearest even | `rne32`, `fl32` (with flush to zero), `flValue` |
+| `fl{·}` | normalize and round to FP32 with round to nearest even | `rne32`, `fl32` (with flush to zero), `flValue` |
 | RD | round toward `−∞` on a fixed-point grid | `rdGrid`, `rdMantissa` |
 | truncation | magnitude truncation on a fixed-point grid | `truncGrid`, `truncMantissa` |
 | SFMA | `(…((c + p₁) + p₂) + …)` | `sfmaF32` with `dotBits` |
@@ -159,7 +161,7 @@ Three design choices run through the model, as on the Tensor Core side:
 - **Bits in, bits out.** Inputs are `BitVec` words of the input formats and the
   output is an `F32 = BitVec 32`.
 - **Failure is explicit.** `evalBlock` returns `Except ModelError (BlockTrace P)`,
-  and [`MatrixCore.evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L41)
+  and [`MatrixCore.evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L36)
   gives the exact accepted domain. `blockOutcome` gives the infinity or NaN
   the hardware returns where the finite model rejects an input
   ([normalization and final rounding](/HardwarePrimitives/amd/normalization/#special-values)).
@@ -171,9 +173,9 @@ row is a field or a derived property of `Model`:
 
 | Row | Lean | CDNA 3 value |
 | --- | --- | --- |
-| Input formats | `Model.a`, `Model.b` | fp16, bf16, XF32, fp8 |
+| Input formats | `Model.a`, `Model.b` | FP16, BF16, XF32, FP8 |
 | Product alignment `(2, 24)` | `Model.productAlignment` | `(2, 24)` |
-| `N_FMA` | `Model.nfma` | 8 (16 for binary8, 4 for XF32) |
+| `N_FMA` | `Model.nfma` | 8 (16 for FP8, 4 for XF32) |
 | `e_{c=0}` | `Model.cZeroExp` | `−126` |
 | `c` late or early | `Model.lateC` | late |
 | `align(c, S_{p_i-sum})` `(24, 32, RD)` | `LateAlignment.cMantissaBits`, `.sumMantissaBits` | 24, 32 |
@@ -186,15 +188,15 @@ The four configurations are the constructors of `Accumulation`:
 | --- | --- | --- |
 | `correct_rounding` | `.correctRounding` | [CDNA 1](/HardwarePrimitives/amd/cdna1/), the SFMA |
 | `pair_wise_sum` | `.pairWiseSum` | [CDNA 2](/HardwarePrimitives/amd/cdna2/) |
-| `global_alignment` with `late_partial_sum` | `.globalAlignment` | [CDNA 3](/HardwarePrimitives/amd/cdna3/) fp16, bf16, XF32 |
-| `odd_even_grouping` | `.oddEvenGrouping` | [CDNA 3](/HardwarePrimitives/amd/cdna3/#odd-and-even-groups-binary8-algorithm-2) binary8 |
+| `global_alignment` with `late_partial_sum` | `.globalAlignment` | [CDNA 3](/HardwarePrimitives/amd/cdna3/) FP16, BF16, XF32 |
+| `odd_even_grouping` | `.oddEvenGrouping` | [CDNA 3](/HardwarePrimitives/amd/cdna3/#odd-and-even-groups-fp8-algorithm-2) FP8 |
 
 `Architecture.model` maps an architecture (from a device name such as
 `MI300X`) and an input kind to its model, where the architecture supports it.
 
 ## A worked trace
 
-Here is CDNA 3 fp16 (`N_FMA = 8`, `padding = 1`) with `c = 0`, seven products
+Here is CDNA 3 FP16 (`N_FMA = 8`, `padding = 1`) with `c = 0`, seven products
 `2^-12 × 2^-12 = 2^-24`, and one product of value `2.25`, written two ways:
 as `1.5 × 1.5` and as `2.25 × 1`.
 
@@ -211,7 +213,7 @@ as `1.5 × 1.5` and as `2.25 × 1`.
 The products have the same values, but the exponent the alignment sees is the
 sum of the input exponents, so the second block aligns on a coarser grid. Both
 rows are checked in Lean
-([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L202)):
+([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L176)):
 
 ```lean
 import MatrixCore
@@ -232,9 +234,9 @@ The shared stages and each generation have their own page:
 
 1. [Formats and decoding](/HardwarePrimitives/amd/formats/): IEEE and FNUZ classification, exponents, subnormals, XF32.
 2. [Exact products in denormalized form](/HardwarePrimitives/amd/products/): why the exponent of a product is the sum of the input exponents.
-3. [CDNA 1: correct rounding](/HardwarePrimitives/amd/cdna1/): the exact sum, and the SFMA of the fp32 instructions.
-4. [CDNA 2: pairwise sums](/HardwarePrimitives/amd/cdna2/): flushing, product conversion and the binary32 tree.
-5. [CDNA 3: global alignment](/HardwarePrimitives/amd/cdna3/): `e_max`, truncation, the binary8 groups, the late addition of `c`, fixed-width registers.
+3. [CDNA 1: correct rounding](/HardwarePrimitives/amd/cdna1/): the exact sum, and the SFMA of the FP32 instructions.
+4. [CDNA 2: pairwise sums](/HardwarePrimitives/amd/cdna2/): flushing, product conversion and the FP32 tree.
+5. [CDNA 3: global alignment](/HardwarePrimitives/amd/cdna3/): `e_max`, truncation, the FP8 groups, the late addition of `c`, fixed-width registers.
 6. [Normalization and final rounding](/HardwarePrimitives/amd/normalization/): `fl{·}`, range, flushing, signed zero and special values.
 7. [Instructions and chaining](/HardwarePrimitives/amd/instructions/): inner products of any length and `D = AB + C`.
 8. [Independent specification](/HardwarePrimitives/amd/specification/): a second transcription of the paper, proved equal to the model.

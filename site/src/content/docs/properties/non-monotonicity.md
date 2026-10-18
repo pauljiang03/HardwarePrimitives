@@ -55,7 +55,7 @@ Each row has a kernel-checked concrete witness in
 
 ## Larger perturbations
 
-[`nonmonotone_range_encoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MonotonicityRange.lean#L266)
+[`nonmonotone_range_encoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MonotonicityRange.lean#L262)
 generalizes the result to `C = 1 − j·2^-24` for `1 ≤ j ≤ 2^23`. It gives the
 exact set of `j` for which the output exceeds 1, namely
 `j ≤ min(2^23, K/2^p − 2)`, a closed form for the output, and the largest

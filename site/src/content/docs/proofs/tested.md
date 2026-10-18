@@ -51,8 +51,8 @@ have not been re-checked. Lean does not record `example`s as declarations, so th
 - **Agreement of the AMD model with the hardware**: through the paper's test
   vectors, each a kernel-checked regression reproducing the output the paper
   reports for the hardware; differential testing against the authors' MATLAB
-  models (600,000 random inner products, and 20,000 targeted binary8 ones);
-  and 90,000 binary8 inner products against MMA-Sim's CDNA 3 semantics. No
+  models (600,000 random inner products, and 20,000 targeted FP8 ones);
+  and 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics. No
   recorded AMD hardware outputs are published
   ([details](/HardwarePrimitives/amd/validation/)).
 - **Native Float32**: `tcEftWithLean_eq` is proved against Lean's float

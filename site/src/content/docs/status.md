@@ -32,7 +32,8 @@ The models are described on [the model at a glance](/HardwarePrimitives/model/) 
 
 **Proved properties of the matrix core models**, per generation:
 
-- **All:** per-block error bounds, also from the inputs alone, and monotonicity in `c`.
+- **All:** per-block error bounds, also from the inputs alone, monotonicity in `c`, and the
+  [TC-EFT correction](/HardwarePrimitives/amd/properties/eft/) of a block from its output.
 - **CDNA 1 and the SFMA:** correct rounding, monotonicity in every product, and independence of
   the order of the products.
 - **CDNA 2:** non-monotonicity in the products only through flushing; correct rounding when every
@@ -65,7 +66,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 **Model gaps.**
 
 - **Special values inside a block FMA.** The models reject infinities and NaNs in a block and a
-  binary32 overflow, where MMA-Sim returns `±∞`.
+  FP32 overflow, where MMA-Sim returns `±∞`.
 - **FP16-output modes** of the Tensor Cores are not modeled.
 - **Formats and architectures without a published characterization:** FP4, FP6, the Blackwell
   instructions that *Accurate Models* does not characterize, and AMD CDNA 4. INT8 is out of
@@ -91,7 +92,8 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 **TC-EFT.** The paper's input-based precondition (17) derives five of the nine conditions of
 the fast-path check for FP32; the other four depend on the particular sum and remain
-assumptions.
+assumptions. On the matrix cores no input-based condition is proved, the fallback uses exact
+rationals rather than a fixed-width word, and chained blocks are not covered.
 
 ## What could come next
 

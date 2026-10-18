@@ -1,6 +1,6 @@
 ---
 title: 1. Formats and decoding
-description: How encoded fp32, fp16, bf16, XF32 and fp8 FNUZ words become exact values with exponent metadata on the AMD model.
+description: How encoded FP32, FP16, BF16, XF32 and FP8 FNUZ words become exact values with exponent metadata on the AMD model.
 ---
 
 The model starts from bit patterns, not real numbers. Decoding has two jobs:
@@ -10,7 +10,7 @@ the minimum normal exponent).
 
 ## Formats
 
-A [`Format`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Defs.lean#L7)
+A [`MatrixCore.Format`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L18)
 is a layout of exponent bits, stored mantissa bits and bias, with its rule for
 special values:
 
@@ -21,12 +21,12 @@ structure Format where
   bias : ℤ
   specials : Specials := .ieee     -- .ieee, or .fnuz: no infinities and no negative zero
 
-def binary32 : Format := ⟨8, 23, 127, .ieee⟩   -- c and d on every variant
-def binary16 : Format := ⟨5, 10, 15, .ieee⟩    -- fp16
-def bfloat16 : Format := ⟨8, 7, 127, .ieee⟩    -- bf16
+def fp32 : Format := ⟨8, 23, 127, .ieee⟩       -- c and d on every variant
+def fp16 : Format := ⟨5, 10, 15, .ieee⟩
+def bf16 : Format := ⟨8, 7, 127, .ieee⟩
 def tf19 : Format := ⟨8, 10, 127, .ieee⟩       -- the values of XF32
-def e4m3fnuz : Format := ⟨4, 3, 8, .fnuz⟩      -- fp8-E4M3 FNUZ
-def e5m2fnuz : Format := ⟨5, 2, 16, .fnuz⟩     -- fp8-E5M2 FNUZ
+def e4m3fnuz : Format := ⟨4, 3, 8, .fnuz⟩
+def e5m2fnuz : Format := ⟨5, 2, 16, .fnuz⟩
 ```
 
 The width is `1 + exponentBits + mantissaBits`, so a word of format `f` has
@@ -34,12 +34,12 @@ type `BitVec f.width`.
 
 | Paper | Lean | Precision | Minimum normal | Maximum |
 | --- | --- | --- | --- | --- |
-| binary32 (fp32) | `binary32` | 24 | `2^-126` | `(2 − 2^-23)·2^127` |
+| FP32 | `fp32` | 24 | `2^-126` | `(2 − 2^-23)·2^127` |
 | tf19 (XF32) | `tf19`, `InputFormat.xf32` | 11 | `2^-126` | `(2 − 2^-10)·2^127` |
-| bfloat16 (bf16) | `bfloat16` | 8 | `2^-126` | `(2 − 2^-7)·2^127` |
-| binary16 (fp16) | `binary16` | 11 | `2^-14` | `65504` |
-| fp8-E4M3 FNUZ | `e4m3fnuz` | 4 | `2^-7` | `240` |
-| fp8-E5M2 FNUZ | `e5m2fnuz` | 3 | `2^-15` | `57344` |
+| BF16 | `bf16` | 8 | `2^-126` | `(2 − 2^-7)·2^127` |
+| FP16 | `fp16` | 11 | `2^-14` | `65504` |
+| FP8 E4M3 FNUZ | `e4m3fnuz` | 4 | `2^-7` | `240` |
+| FP8 E5M2 FNUZ | `e5m2fnuz` | 3 | `2^-15` | `57344` |
 
 ## Decoded values keep their exponent
 
@@ -56,11 +56,11 @@ def Unpacked.value (x : Unpacked) : ℚ :=
 
 An `Unpacked` value stores the significand `s = m / 2^t`, the exponent `e` and
 the sign, not a single rational. For an input, `t` is its format's stored
-mantissa width: 10 for fp16, 7 for bf16, 23 for binary32. For example fp16
+mantissa width: 10 for FP16, 7 for BF16, 23 for FP32. For example FP16
 `1.5` is `m = 1536`, `e = 0`, `t = 10`: `1536 · 2^(0 − 10) = 1.5`. `value`
 recovers the rational exactly, and alignment reads `e`.
 
-[`Format.decodeNat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L165)
+[`Format.decodeNat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L155)
 extracts the fields and applies the format's rule for special values:
 
 ```lean
@@ -82,28 +82,28 @@ def decodeNat (f : Format) (n : ℕ) : Datum :=
 
 - **Subnormals and zero** get the minimum normal exponent `emin = 1 − bias`
   and no hidden bit, so their significand is below one.
-- **IEEE formats** (binary32, fp16, bf16, tf19) reserve the top exponent
+- **IEEE formats** (FP32, FP16, BF16, tf19) reserve the top exponent
   field for infinities and NaN.
-- **FNUZ formats** (the fp8 formats of CDNA 3) have no infinities: the top
+- **FNUZ formats** (the FP8 formats of CDNA 3) have no infinities: the top
   exponent field holds finite values, and the word that would be negative
   zero is the only NaN.
 
-## XF32: binary32 words, truncated values
+## XF32: FP32 words, truncated values
 
-CDNA 3's XF32 instructions read binary32 words and keep ten mantissa bits.
+CDNA 3's XF32 instructions read FP32 words and keep ten mantissa bits.
 An `InputFormat` says how an instruction reads an operand word:
 
 ```lean
 inductive InputFormat where
   | packed (f : Format)   -- the word is a value of the format
-  | xf32                  -- a binary32 word truncated to tf19
+  | xf32                  -- an FP32 word truncated to tf19
 
 def InputFormat.truncateXF32 (x : Unpacked) : Unpacked := ⟨x.negative, x.m / 2 ^ 13, x.e, 10⟩
 
 def InputFormat.read : (i : InputFormat) → i.Word → Datum
   | .packed f, w => f.decode w
   | .xf32, w =>
-    match binary32.decode w with
+    match fp32.decode w with
     | .finite x => .finite (truncateXF32 x)
     | d => d
 ```
@@ -122,7 +122,7 @@ structure Prepared where
 def prepare {P : Model} (x : BlockInput P) : Option Prepared := do
   let a ← x.a.mapM fun w => (P.a.read w).toFinite
   let b ← x.b.mapM fun w => (P.b.read w).toFinite
-  let c ← (binary32.decode x.c).toFinite
+  let c ← (fp32.decode x.c).toFinite
   return ⟨a, b, c⟩
 ```
 
@@ -139,14 +139,14 @@ of being rounded silently.
 
 ## Proved properties of the encoding layer
 
-- [`MatrixCore.decodeNat_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Prepared.lean#L134)
-  and [`MatrixCore.read_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Prepared.lean#L148):
+- [`MatrixCore.decodeNat_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Prepared.lean#L125)
+  and [`MatrixCore.read_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Prepared.lean#L138):
   every decoded significand, subnormal or not, is below `2^(t + 1)`, so a
   decoded value is less than 2 in magnitude relative to its exponent. The
   accumulator-width proofs use this bound.
-- [`MatrixCore.Unpacked.value_onGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L129):
+- [`MatrixCore.Unpacked.value_onGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L119):
   a decoded value is an integer multiple of `2^(e − t)`.
-- [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L370):
-  within the finite range the correctly rounded binary32 word with the sign of
+- [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L356):
+  within the finite range the correctly rounded FP32 word with the sign of
   the input is unique, which the [independent
   specification](/HardwarePrimitives/amd/specification/) uses to identify the output word.

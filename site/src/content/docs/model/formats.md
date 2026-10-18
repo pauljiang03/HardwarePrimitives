@@ -114,7 +114,7 @@ ignored. The model separates the two concerns:
   `tf32Unpack` extracts the 19 value bits.
 
 The theorem
-[`tf32_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/Supported.lean#L57)
+[`tf32_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/Supported.lean#L56)
 proves that, on register words whose low 13 bits are zero, the register-level
 invocation gives the same bits as the *Accurate Models* specification (`IndependentSpec`). Words whose low
 bits are not zero are rejected rather than silently masked.
@@ -133,7 +133,7 @@ The two FP8 formats differ at the top of their range.
   [`ValueFormat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Format.lean#L13),
   as the operand encoding `e4m3Encoding`.
 
-[`e4m3_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L58), [`e4m3_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L71), [`e5m2_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L64) and [`e5m2_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L78) prove these facts by computation over all 256 words of each format, and the
+[`e4m3_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L45), [`e4m3_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L58), [`e5m2_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L51) and [`e5m2_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L65) prove these facts by computation over all 256 words of each format, and the
 replay compares both decoders with an independent Python decoder on all 512
 words.
 
@@ -142,7 +142,7 @@ values in `e4m3x`, a 9-bit layout with one more exponent bit and E4M3's bias:
 E4M3's top binade is then an ordinary binade, and subnormals keep the minimum
 exponent −6. `widenE4M3` maps each E4M3 word to its `e4m3x` word (the NaNs to
 NaNs), and the decodings agree on all 256
-words ([`e4m3_decode_widen`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L43)), as `tf32Unpack` does for TF32.
+words ([`e4m3_decode_widen`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L31)), as `tf32Unpack` does for TF32.
 
 ## Proved properties of the encoding layer
 

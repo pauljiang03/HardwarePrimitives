@@ -1,10 +1,10 @@
 ---
 title: "4. CDNA 2: pairwise sums"
-description: The block semantics of CDNA 2 (MI210, MI250) - flushed inputs, products converted to binary32, and a balanced tree of binary32 additions with c added last.
+description: The block semantics of CDNA 2 (MI210, MI250) - flushed inputs, products converted to FP32, and a balanced tree of FP32 additions with c added last.
 ---
 
-CDNA 2 does not align its products. It converts each product to binary32 and
-adds the products in a balanced tree of binary32 additions, then adds `c`. The
+CDNA 2 does not align its products. It converts each product to FP32 and
+adds the products in a balanced tree of FP32 additions, then adds `c`. The
 paper calls this configuration `pair_wise_sum`. Inputs and outputs have no
 subnormals: subnormal inputs are flushed to zero, and every `fl{·}` flushes a
 subnormal result to zero.
@@ -13,16 +13,16 @@ subnormal result to zero.
 
 | Variant | Lean model | Inputs | `N_FMA` | Formula |
 | --- | --- | --- | ---: | --- |
-| CDNA 2 fp16 | `cdna2F16` | binary16 | 4 | `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` |
-| CDNA 2 bf16 | `cdna2BF16` | bfloat16 | 2 | `fl{c + fl{p₁ + p₂}}` |
-| CDNA 2 bf16 `_1k` | `cdna2BF16_1k` | bfloat16 | 4 | `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` |
+| CDNA 2 FP16 | `cdna2F16` | FP16 | 4 | `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` |
+| CDNA 2 BF16 | `cdna2BF16` | BF16 | 2 | `fl{c + fl{p₁ + p₂}}` |
+| CDNA 2 BF16 `_1k` | `cdna2BF16_1k` | BF16 | 4 | `fl{c + fl{fl{p₁ + p₂} + fl{p₃ + p₄}}}` |
 
-Each `p_ℓ` in the formulas is `fl{a_ℓ b_ℓ}` of the flushed inputs. The fp32
+Each `p_ℓ` in the formulas is `fl{a_ℓ b_ℓ}` of the flushed inputs. The FP32
 instructions of CDNA 2 are the SFMA ([CDNA 1](/HardwarePrimitives/amd/cdna1/#the-sfma)).
 
 ```lean
 def cdna2F16 : Model :=
-  { a := .packed binary16, b := .packed binary16, nfma := 4, accumulation := .pairWiseSum,
+  { a := .packed fp16, b := .packed fp16, nfma := 4, accumulation := .pairWiseSum,
     subnormals := false }
 ```
 
@@ -41,7 +41,7 @@ operand is.
 ## The pairwise tree
 
 ```lean
-/-- `fl{x}` as a value: binary32 RNE, with subnormal results flushed when `ftz`. -/
+/-- `fl{x}` as a value: FP32 RNE, subnormal results flushed when `ftz`; `none` on overflow. -/
 def flValue (ftz : Bool) (x : ℚ) : Option ℚ := (fl32 ftz x).bind value32
 
 def pairwiseGroupSum (ftz : Bool) : ℕ → List ℚ → Option ℚ
@@ -79,8 +79,8 @@ theorem pairwiseSum_four (P : Model) (x : Prepared) (p₁ p₂ p₃ p₄ : Unpac
       return (if P.subnormals then x else x.flushed).c.value + t
 ```
 
-([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L24),
-[`MatrixCore.pairwiseSum_two`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L42).)
+([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L21),
+[`MatrixCore.pairwiseSum_two`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L39).)
 
 ## Intermediate overflow
 

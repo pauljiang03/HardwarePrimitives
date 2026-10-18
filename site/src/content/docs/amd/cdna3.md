@@ -1,12 +1,12 @@
 ---
 title: "5. CDNA 3: global alignment"
-description: The block semantics of CDNA 3 (MI300A, MI300X) - products aligned to e_max and truncated, the odd and even groups of binary8, the late addition of c, and fixed-width registers.
+description: The block semantics of CDNA 3 (MI300A, MI300X) - products aligned to e_max and truncated, the odd and even groups of FP8, the late addition of c, and fixed-width registers.
 ---
 
 CDNA 3 aligns its products to their largest exponent `e_max`, truncates them
 to a fixed-point grid, adds them exactly, and adds `c` **late**, in a separate
 two-operand alignment. This is Algorithm 1 of the paper (`global_alignment`
-with `late_partial_sum`). For binary8 the odd- and even-indexed products are
+with `late_partial_sum`). For FP8 the odd- and even-indexed products are
 aligned separately first: Algorithm 2 (`odd_even_grouping`). Alignment is
 where CDNA 3 loses information, so this page follows it step by step.
 
@@ -14,14 +14,14 @@ where CDNA 3 loses information, so this page follows it step by step.
 
 | Variant | Lean model | Inputs | `N_FMA` | Configuration |
 | --- | --- | --- | ---: | --- |
-| CDNA 3 fp16 | `cdna3F16` | binary16 | 8 | `globalAlignment` |
-| CDNA 3 bf16 | `cdna3BF16` | bfloat16 | 8 | `globalAlignment` |
-| CDNA 3 XF32 | `cdna3XF32` | XF32 (binary32 read as tf19) | 4 | `globalAlignment` |
-| CDNA 3 binary8 | `cdna3FP8 fa fb` | any mix of E4M3 and E5M2 FNUZ | 16 | `oddEvenGrouping` |
+| CDNA 3 FP16 | `cdna3F16` | FP16 | 8 | `globalAlignment` |
+| CDNA 3 BF16 | `cdna3BF16` | BF16 | 8 | `globalAlignment` |
+| CDNA 3 XF32 | `cdna3XF32` | XF32 (FP32 read as tf19) | 4 | `globalAlignment` |
+| CDNA 3 FP8 | `cdna3FP8 fa fb` | any mix of E4M3 and E5M2 FNUZ | 16 | `oddEvenGrouping` |
 
 ```lean
 def cdna3F16 : Model :=
-  { a := .packed binary16, b := .packed binary16, nfma := 8, accumulation := .globalAlignment,
+  { a := .packed fp16, b := .packed fp16, nfma := 8, accumulation := .globalAlignment,
     productOverflow := true }
 
 def cdna3FP8 (fa fb : Format) : Model :=
@@ -32,7 +32,7 @@ def cdna3FP8 (fa fb : Format) : Model :=
 All four share the features of the paper's table: product alignment
 `(2, 24)`, `e_{c=0} = −126`, late `c` with `align(c, S_{p_i,sum}) =
 (24, 32, RD)`, round to nearest even, and product overflow at `2^128`. The
-fp32 instructions of CDNA 3 are the SFMA ([CDNA 1](/HardwarePrimitives/amd/cdna1/#the-sfma)).
+FP32 instructions of CDNA 3 are the SFMA ([CDNA 1](/HardwarePrimitives/amd/cdna1/#the-sfma)).
 
 ```text
 e_max = max{e_{p_i}}  over nonzero products
@@ -88,7 +88,7 @@ def alignedSum (padding : ℕ) (ps : List Unpacked) : Option ℤ × ℚ :=
   | some e => (some e, sumQ (ps.map fun p => truncMantissa p.value e (23 + padding)))
 ```
 
-[`truncGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Exact.lean#L73)
+[`MatrixCore.truncGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Grid.lean#L13)
 takes the floor of the **magnitude** and restores the sign, as a
 sign-magnitude shifter does. For a negative product this is not rounding down
 (toward −∞). `alignedSum` returns `e_max` and the exact sum `S_{p_i,sum}` of
@@ -100,9 +100,9 @@ theorem alignedSum_error {padding : ℕ} {ps : List Unpacked} {e : ℤ} {S : ℚ
     absQ (sumQ (ps.map Unpacked.value) - S) ≤ ps.length * pow2 (e - (23 + padding : ℕ))
 ```
 
-## Odd and even groups (binary8, Algorithm 2)
+## Odd and even groups (FP8, Algorithm 2)
 
-On binary8, the odd-indexed products `p₁, p₃, …` and the even-indexed products
+On FP8, the odd-indexed products `p₁, p₃, …` and the even-indexed products
 `p₂, p₄, …` are aligned separately, each group to its own largest exponent.
 The group with the smaller exponent is then moved to the common `e_max` and
 **rounded down** (RD) to `23 + padding` mantissa bits, and the two are added
@@ -122,7 +122,7 @@ def productSum (P : Model) (ps : List Unpacked) : Option ℤ × ℚ :=
 
 The group that holds `e_max` is already on that grid, so only the other group
 loses bits. Because the groups are formed by position, the order of the
-products matters on binary8.
+products matters on FP8.
 
 ## Late accumulation of `c`
 
@@ -153,7 +153,7 @@ def alignedAccumulation (P : Model) (x : Prepared) : ℚ :=
 
 - The operand with the smaller exponent loses bits, by **rounding down**,
   not by truncation.
-- On binary8, `s′_c = 0` once `e_max − e_c > 25` (`cCutoff`), a truncation
+- On FP8, `s′_c = 0` once `e_max − e_c > 25` (`cCutoff`), a truncation
   instead of a round down.
 - `c` never sets the products' alignment.
 
@@ -169,7 +169,7 @@ odd/even shift of Algorithm 2 an arithmetic right shift, which rounds down:
 def alignedBits (padding : ℕ) (e : ℤ) (ps : List Unpacked) : List ℤ :=
   ps.map fun p => truncBits p.value (e - (23 + padding : ℕ))
 
-/-- Actual modular signed-word additions, starting from a supplied register. -/
+/-- Modular `w`-bit additions, starting from the register `acc`. -/
 def machineAccumulate (w : ℕ) (acc : BitVec w) : List ℤ → BitVec w
   | [] => acc
   | z :: zs => machineAccumulate w (acc + BitVec.ofInt w z) zs
@@ -190,14 +190,14 @@ theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)
 
 | Theorem | Model | Register width |
 | --- | --- | --- |
-| `cdna3F16_machine_eq` | fp16, `N_FMA = 8` | 30 bits |
-| `cdna3BF16_machine_eq` | bf16, `N_FMA = 8` | 30 bits |
+| `cdna3F16_machine_eq` | FP16, `N_FMA = 8` | 30 bits |
+| `cdna3BF16_machine_eq` | BF16, `N_FMA = 8` | 30 bits |
 | `cdna3XF32_machine_eq` | XF32, `N_FMA = 4` | 29 bits |
-| `cdna3FP8_machine_eq` | binary8, `N_FMA = 16`, any mix of formats | 31 bits |
+| `cdna3FP8_machine_eq` | FP8, `N_FMA = 16`, any mix of formats | 31 bits |
 
 These hold for **every** encoded input, and the tests show they are needed:
-eight fp16 products just below 4 wrap in a 29-bit register.
-[`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L199)
+eight FP16 products just below 4 wrap in a 29-bit register.
+[`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L185)
 adds that every **prefix** of the accumulation is exact at that width, so the
 result does not depend on the order of the additions, even with cancellation.
 The exact accumulator is a sound abstraction of any adder at least this wide;
@@ -205,7 +205,7 @@ the model does not assume which width a particular GPU uses.
 
 ## Example: a small product disappears
 
-CDNA 3 fp16, `c = 0`, one product `1.5 × 1.5` (`e_p = 0`) and one product
+CDNA 3 FP16, `c = 0`, one product `1.5 × 1.5` (`e_p = 0`) and one product
 `2^-12 × 2^-12 = 2^-24` (`e_p = −24`): `e_max = 0`, the grid is `2^-24`, and the
 small product is kept. Write the large product as `2.25 × 1` instead
 (`e_p = 1`): the grid becomes `2^-23`, and the small product is truncated away

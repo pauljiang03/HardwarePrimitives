@@ -49,7 +49,7 @@ These are its definitions, unchanged apart from omitted comments:
 
 ```lean
 structure Model where
-  input : Format                -- input format: fp16, bf16, tf19 (packed TF32), e5m2, e4m3x
+  input : Format                -- input format: FP16, BF16, tf19 (packed TF32), e5m2, e4m3x
   nfma : ℕ                      -- K, the FMA size N_FMA
   alignMantissaBits : ℤ         -- F = 23 + p, mantissa bits kept after alignment
   eAlignMin : Option ℤ          -- the minimum alignment exponent, if any
@@ -101,7 +101,7 @@ def evalBlock {p : Model} (x : BlockInput p) : Except ModelError BlockTrace :=
 | `alignMantissaBits` (F) | Mantissa bits each term keeps after alignment, counted below the alignment exponent: `23 + p` | 23 + `n_eab` |
 | `alignGridExponent` | Exponent of the alignment grid step, `η − F` | |
 | `outputUlpExponent` | Exponent of one unit in the last place of the FP32 output | |
-| `outputMantissaBits` | Mantissa bits of the block output: 23 (binary32), or 13 on the FP8 block FMAs of Ada and Hopper | `NoManBitsOut` |
+| `outputMantissaBits` | Mantissa bits of the block output: 23 (FP32), or 13 on the FP8 block FMAs of Ada and Hopper | `NoManBitsOut` |
 
 Three design choices run through the model:
 
@@ -109,14 +109,14 @@ Three design choices run through the model:
   `Float` nor a floating-point library is used. The only lossy steps are the
   two the hardware performs: the alignment truncation (`truncBits`) and the
   final rounding (`round32 .truncate`, then `truncateMantissa32` to the block
-  output's mantissa bits, which changes nothing for a binary32 output).
+  output's mantissa bits, which changes nothing for an FP32 output).
 - **Bits in, bits out.** Inputs are `BitVec` words and the output is an
   `F32 = BitVec 32`. Theorems can therefore state facts about exact bit
   patterns, including signed zero.
 - **Failure is explicit.** `evalBlock` returns `Except ModelError BlockTrace`.
   It rejects inputs with the wrong number of products, NaN or infinity
   operands, and sums that overflow FP32. The proved theorem
-  [`evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AcceptedDomain.lean#L37)
+  [`evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AcceptedDomain.lean#L36)
   gives the exact accepted domain, so no input is rejected silently.
 
 ## A worked trace

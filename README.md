@@ -18,7 +18,7 @@ the objects of the proofs.
 The models follow Khattak and Mikaitis, *Accurate Models of NVIDIA Tensor
 Cores* ([arXiv:2512.07004](https://arxiv.org/abs/2512.07004)), and Khattak,
 Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
-([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)). Outputs are binary32.
+([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)). Outputs are FP32.
 
 ## Proved properties
 

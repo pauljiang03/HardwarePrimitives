@@ -23,8 +23,8 @@ rather than the model's grid operations:
   `fl{c + fl{p₁ + p₂}}`, with each `p_ℓ` converted by `fl{·}`, the inputs
   flushed, and `fl{·}` stated as round to nearest even with a subnormal result
   replaced by zero;
-- binary32 round to nearest even as a property of the result word over all
-  finite binary32 words, with the overflow threshold stated separately.
+- FP32 round to nearest even as a property of the result word over all
+  finite FP32 words, with the overflow threshold stated separately.
 
 `Spec.Result S a b c w` (and `Spec.PairwiseResult` for CDNA 2) says that `w`
 is the block output for the words `a`, `b`, `c`. The numerical features of
@@ -43,12 +43,12 @@ example (x : BlockInput cdna3BF16) (w : F32) :
   Spec.blockBits_eq_spec Spec.supported_cdna3BF16 x w
 ```
 
-The proof ([`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L129)) bridges each operation,
+The proof ([`MatrixCore.Spec.blockBits_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Equivalence.lean#L124)) bridges each operation,
 proves that the specification's Algorithms 1 and 2 compute the model's
-`S_acc`, and uses the uniqueness of the correctly rounded binary32 word
-([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L370)) to identify the output.
+`S_acc`, and uses the uniqueness of the correctly rounded FP32 word
+([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L356)) to identify the output.
 
-For CDNA 2, [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L161) states the same for
+For CDNA 2, [`MatrixCore.Spec.pairwise_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Specification/Pairwise.lean#L157) states the same for
 `Spec.PairwiseResult`; its proof identifies the specification's `fl{·}` with
 the model's and unfolds the model's pairwise sum.
 
