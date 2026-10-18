@@ -51,15 +51,19 @@ theorem decodeInput_asDecoded (kind : InputKind) (bits : F32) :
   have he8' := field_toNat bits 10 8 9 (by decide) (by decide)
   have hm10 := mantissaBits_toNat bits 10 (by decide)
   have hm7 := mantissaBits_toNat bits 7 (by decide)
+  have he53 := field_toNat bits 3 5 9 (by decide) (by decide)
+  have he52 := field_toNat bits 2 5 9 (by decide) (by decide)
+  have hm3 := mantissaBits_toNat bits 3 (by decide)
+  have hm2 := mantissaBits_toNat bits 2 (by decide)
   by_cases ht : bits.toNat / 2 ^ kind.format.mantissaBits % 2 ^ kind.format.exponentBits =
       2 ^ kind.format.exponentBits - 1 <;>
     by_cases he : bits.toNat / 2 ^ kind.format.mantissaBits % 2 ^ kind.format.exponentBits = 0 <;>
     by_cases hm : bits.toNat % 2 ^ kind.format.mantissaBits = 0 <;>
     by_cases hs : bits.toNat / 2 ^ (kind.format.mantissaBits + kind.format.exponentBits) = 0 <;>
     cases kind <;>
-    dsimp +instances only [decodeInput, InputKind.format, fp16, bf16, tf19,
+    dsimp +instances only [decodeInput, InputKind.format, fp16, bf16, tf19, e4m3x, e5m2,
       Option.map, Input.decoded, classifyNat] at * <;>
-    simp only [beq_iff_eq, BitVec.toNat_eq, he5, he8, he8', hm10, hm7] <;>
+    simp only [beq_iff_eq, BitVec.toNat_eq, he5, he8, he8', hm10, hm7, he53, he52, hm3, hm2] <;>
     simp_all [Classification.finite, BitVec.toNat_add, BitVec.toNat_ushiftRight,
       Nat.shiftRight_eq_div_pow, bne_iff_ne, BitVec.toNat_eq] <;> omega
 
@@ -81,7 +85,7 @@ theorem decodeInput_bounds {kind : InputKind} {bits : F32} {a : Input}
   rw [hs, hmb] at hb
   refine ⟨hb, ?_⟩
   cases kind <;>
-    dsimp +instances only [InputKind.format, fp16, bf16, tf19, classifyNat] at hd <;>
+    dsimp +instances only [InputKind.format, fp16, bf16, tf19, e4m3x, e5m2, classifyNat] at hd <;>
     repeat' (split at hd)
   all_goals
     simp only [Classification.finite, Option.some.injEq, Input.decoded, Decoded.mk.injEq] at hd

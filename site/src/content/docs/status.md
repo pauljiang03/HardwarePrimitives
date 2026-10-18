@@ -42,8 +42,11 @@ The models are described on [the model at a glance](/HardwarePrimitives/tensor-c
   intermediate rounding is exact.
 - **CDNA 3:** monotonicity in the products while the alignment exponents are unchanged, necessary
   and sufficient conditions for an output decrease, a non-monotone family with an exact threshold,
-  correct rounding when alignment loses nothing, fixed-width accumulation, and the FP8 parity law
-  (proven in `wip/mmalgebra`, which builds on the model).
+  correct rounding when alignment loses nothing, fixed-width accumulation, and the FP8 parity law.
+
+**Proven properties of FP8 on Tensor Cores.** The 576-bit TC-EFT on the six FP8 block FMAs; the
+exact non-monotonicity threshold of each; and for FP8 `mma.sync`, an error bound, the correction
+by TC-EFT, an independent specification and a bitvector datapath.
 
 **Cross-checks proven in Lean.** Each model equals an independent specification. The Tensor Core
 model also equals a bitvector datapath, and a second implementation on FloatLib.
@@ -52,10 +55,10 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 | Check | Status |
 | --- | --- |
-| `lake build` (248 targets) | passes, no Lean warnings |
+| `lake build` (255 targets) | passes, no Lean warnings |
 | Axiom audit | only `propext`, `Classical.choice`, `Quot.sound`; no `sorry` |
 | Model = independent specification | proven for all inputs on every model, for every block-output width (FP8 included) |
-| Model = bitvector datapath | proven for all inputs on the 8 FP16/BF16/TF32 variants and the 6 FP8 block FMAs |
+| Model = bitvector datapath | proven for all inputs on the 8 FP16/BF16/TF32 variants, the 6 FP8 block FMAs and FP8 `mma.sync` |
 | Recorded GPU vectors | 35,000 rows of V100, A100 and H100; 125,000 rows of Ada, L40S, H100, H200 and B200 (FP16, BF16, TF32, E4M3, E5M2); 20,000 H100 and H200 FP8 rows of toolbox release v0.1. 0 mismatches |
 | MMA-Sim cross-check | 850,000 cases on 31 instructions (581,052 identical with a nonzero `C`) and 80,000 FP8 `mma.sync` cases, 0 mismatches |
 | AMD vectors and MATLAB models | every published test vector; 600,000 random inner products plus targeted ones; 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics, 0 mismatches |
@@ -76,6 +79,8 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 - **The FP8 `mma.sync` path** of Hopper and B200 follows the structure that *Accurate Models*
   describes. The recorded rows do not separate it from a single block followed by `c`; the
   paper's interleaving experiment does, and that is a kernel-checked theorem.
+- **The FloatLib implementation of the Tensor Core model** covers FP16, BF16, TF32 and B200's E5M2
+  block FMA. The E4M3 block FMAs and the 13-bit outputs of Ada and Hopper FP8 are not ported.
 - **Cross-vendor statements.** `TensorCore` and `MatrixCore` cannot be imported together, so
   every statement that compares the two vendors is two theorems.
 

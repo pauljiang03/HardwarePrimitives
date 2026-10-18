@@ -14,8 +14,11 @@ runtime. The libraries themselves stay free of Mathlib.
 reimplements the block model and the reference EFT.
 
 [`floatlib_eq_reference`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/Representations.lean#L149)
-and its inverse cover every model with FP16, BF16, or TF32 input (any FMA
-size `K`, padding bits, and minimum alignment exponent), every encoded input, and every `D`. They prove that
+and its inverse cover every model with FP16, BF16, TF32 or E5M2 input and an
+FP32 block output (any FMA size `K`, padding bits, and minimum alignment
+exponent), B200's E5M2 block FMA included, every encoded input, and every `D`.
+The E4M3 block FMAs and the 13-bit outputs of Ada and Hopper FP8 are not
+ported. They prove that
 the two implementations produce corresponding **complete observations**:
 TC results, EFT results, error kinds, and branch tags. The correspondence is
 stated through explicit `Equiv`s.

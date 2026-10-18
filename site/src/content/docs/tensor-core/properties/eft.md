@@ -76,7 +76,9 @@ If the check fails, TC-EFT adds all the bits in a register wide enough to hold
 every bit of every term. The reference version uses exact rationals; the
 implementation uses a **576-bit** fixed-point word whose lowest bit is
 `2^-272`. It then rounds once to FP32. This fallback always gives the right
-answer, but it is slower.
+answer, but it is slower. The 576-bit implementation covers fourteen variants:
+the eight FP16, BF16 and TF32 block FMAs and the six FP8 block FMAs of Ada,
+Hopper and B200.
 
 ```lean
 theorem tcEftEncoded_correct ...         -- any returned value is RNE(S)
@@ -85,6 +87,17 @@ theorem EFMachine.tcEft_success ...      -- the 576-bit word never overflows on 
 theorem EFMachine.tcEft_agrees ...       -- 576-bit and reference versions return the same bits
 theorem EFMachine.tcEftWithLean_eq ...   -- using Lean's native Float32 additions changes nothing
 ```
+
+## FP8 through `mma.sync`
+
+An FP8 `mma.sync` on H100, H200 and B200 is not one block: it runs two FP16
+block FMAs and then adds `C` in FP32 (see [the model](/HardwarePrimitives/tensor-core/variants/#fp8-through-mmasync)).
+B200's FP8 block FMA takes the same 32 products and `C` in one block, so the
+576-bit TC-EFT of that block corrects the instruction from any finite `D`, its
+own output included ([`TensorCore.EFMachine.mmaSyncFP8_eft_e5m2`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/EFT/MmaSyncFP8.lean#L64),
+[`TensorCore.EFMachine.mmaSyncFP8_eft_e4m3`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/EFT/MmaSyncFP8.lean#L87)). On the paper's interleaving
+experiment with the extra product in the second group, `mma.sync` returns `1`
+and the correction returns `1 + 2^-23`, the correctly rounded sum.
 
 ## The caveats, plainly
 

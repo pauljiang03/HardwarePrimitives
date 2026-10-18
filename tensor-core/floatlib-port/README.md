@@ -27,7 +27,8 @@ The first build needs network access to fetch Lean, FloatLib and mathlib.
 ## What is proven
 
 `TCFloat.Equivalence.floatlib_eq_reference`: for every encoded input of the
-FP16, BF16 and TF32 models and every supplied `D`, the two implementations
+FP16, BF16, TF32 and E5M2 models with an FP32 output (B200's E5M2 block FMA
+included) and every supplied `D`, the two implementations
 agree on the block output bits, the TC-EFT bits and branch, and the
 validation errors. The port also proves, on its own definitions, the error
 bound, the non-monotonicity threshold `3·2^p`, overlap recovery, and the
@@ -55,6 +56,7 @@ and `Quot.sound` are used.
 
 ## Scope
 
-The FP8 models of the parent are not ported. NaNs and infinities are
+The E4M3 block FMAs and the 13-bit outputs of Ada and Hopper FP8 are not
+ported. NaNs and infinities are
 rejected; exception flags, tiling, scheduling and FP16 outputs are not
 modeled.

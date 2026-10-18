@@ -10,7 +10,7 @@ lake build TensorCoreTests
 
 | Directory | Contents |
 | --- | --- |
-| [`TensorCoreTests/TC/`](TensorCoreTests/TC) | Model regressions, non-monotonicity witnesses, chains |
+| [`TensorCoreTests/TC/`](TensorCoreTests/TC) | Model regressions, non-monotonicity witnesses, chains, FP8 `mma.sync` corrections |
 | [`TensorCoreTests/EFT/`](TensorCoreTests/EFT) | TC-EFT regressions and bounded-execution checks |
 | [`TensorCoreTests/Specification/`](TensorCoreTests/Specification) | Independent-specification audit and negative controls |
 

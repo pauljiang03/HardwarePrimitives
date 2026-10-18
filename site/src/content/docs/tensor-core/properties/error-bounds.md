@@ -72,6 +72,14 @@ bigger than the ulp of the result. In that case the relative error is large,
 however exact the hardware is otherwise. This loss is what TC-EFT exists to
 recover.
 
+## FP8 through `mma.sync`
+
+An FP8 `mma.sync` runs two FP16 block FMAs and adds `C` in FP32 with
+round-to-nearest-even. Against the exact `C + Σ a_k b_k`, its error is at most
+the two blocks' bounds plus half a unit in the last place of the output
+([`TensorCore.mmaSyncFP8_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8Bounds.lean#L157); the final rounding is
+[`TensorCore.round32_nearestEven_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8Bounds.lean#L113)).
+
 ## Chains
 
 For chained block FMAs,

@@ -17,6 +17,12 @@ private def variant : String → Except String EFMachine.Variant
   | "a100-tf32" => pure .ampereTF32
   | "h100-tf32-k4" | "h100-tf32-wmma" => pure .hopperTF32Wmma
   | "h100-tf32" | "h100-tf32-mma" => pure .hopperTF32Mma
+  | "ada-e4m3" => pure .adaE4M3
+  | "ada-e5m2" => pure .adaE5M2
+  | "h100-e4m3" => pure .hopperE4M3
+  | "h100-e5m2" => pure .hopperE5M2
+  | "b200-e4m3" => pure .blackwellE4M3
+  | "b200-e5m2" => pure .blackwellE5M2
   | _ => throw "Unknown EFT path"
 
 private def resultJson : Except EFMachine.Error EFMachine.Result → Json

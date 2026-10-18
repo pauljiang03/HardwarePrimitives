@@ -156,6 +156,38 @@ row.
   [`interleave_test_e5m2`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L60), [`interleave_test_reversed`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L74),
   [`interleave_test_single_block`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L79), [`late_c_witness`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L87), [`separate_groups_excluded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L111)
 
+### How large can the error of an FP8 `mma.sync` be?
+
+**At most the two FP16 blocks' error bounds plus half a unit in the last place
+of the output**, against the exact `C + Σ a_k b_k`.
+
+- **Assumes:** the instruction returns a word.
+- **Classification:** Core theorem.
+- **Lean:** [`TensorCore.mmaSyncFP8_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8Bounds.lean#L157), [`TensorCore.round32_nearestEven_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8Bounds.lean#L113)
+
+### Does TC-EFT correct an FP8 `mma.sync`?
+
+**Yes.** B200's FP8 block FMA takes the same 32 products and `C` in one block,
+so the 576-bit TC-EFT of that block returns `C + Σ a_k b_k` rounded to nearest
+even from any finite `D`, such as the `mma.sync` output.
+
+- **Assumes:** 32 finite operand pairs and a finite `C`.
+- **Classification:** Core theorems, for E4M3 and E5M2.
+- **Lean:** [`TensorCore.EFMachine.mmaSyncFP8_eft_e5m2`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/EFT/MmaSyncFP8.lean#L64), [`TensorCore.EFMachine.mmaSyncFP8_eft_e4m3`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/EFT/MmaSyncFP8.lean#L87)
+
+### Does the FP8 `mma.sync` model match a specification and a datapath?
+
+**Yes, on every input.** An independent specification composes two block
+specifications with an independent round-to-nearest-even specification of the
+final addition, and the model returns a word exactly when the specification
+does, and the same word. A bitvector datapath (the bit conversions, Hopper's
+FP16 block datapath twice, and the bounded FP32 adder) returns the model's
+word.
+
+- **Assumes:** nothing.
+- **Classification:** Core theorems.
+- **Lean:** [`TensorCore.IndependentSpec.mmaSyncFP8_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/MmaSyncFP8Equivalence.lean#L98), [`TensorCore.IndependentSpec.roundsNearestEven_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/Rounding.lean#L244), [`TensorCore.Datapath.mmaSyncFP8_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/MmaSyncFP8.lean#L24)
+
 ## Tensor Core non-monotonicity
 
 ### Can a smaller C give a larger result?
@@ -170,6 +202,18 @@ K equal tiny products, with `C` lowered from 1 to the next FP32 value below 1.
 - **Classification:** Core theorem. It is an exact threshold, and every GPU model has
   a checked concrete example.
 - **Lean:** [`nonmonotone_encoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Monotonicity.lean#L270)
+
+### On the FP8 block FMAs?
+
+**Yes, on all six.** With `K` equal tiny products and zeros, lowering `C` to
+its FP32 predecessor raises the output exactly when `K ≥ 3` on Ada and Hopper,
+which keep 13 bits after alignment and in the output, and exactly when
+`K ≥ 12` on B200, for every `K` up to the FMA size.
+
+- **Assumes:** those products: `2^-14` on Ada and Hopper; on B200, `2^-26` for
+  E5M2 and, with `C = 256`, `2^-18` for E4M3, whose products cannot be smaller.
+- **Classification:** Kernel-checked for every `K`.
+- **Lean:** [`TensorCore.fp8_narrow_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MonotonicityFP8.lean#L28), [`TensorCore.fp8_blackwell_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MonotonicityFP8.lean#L39)
 
 ### How large can the effect be?
 
@@ -236,9 +280,10 @@ of them.
 
 ### Does the fixed-size implementation agree?
 
-**Yes.** The 576-bit implementation never overflows on supported inputs,
-returns a result exactly when the rounded sum is finite, and returns the
-same bits as the reference version. Swapping in Lean's native `Float32`
+**Yes, on all fourteen variants, the six FP8 block FMAs included.** The 576-bit
+implementation never overflows on supported inputs, returns a result exactly
+when the rounded sum is finite, and returns the same bits as the reference
+version. Swapping in Lean's native `Float32`
 additions changes nothing.
 
 - **Assumes:** supported, finite, correctly shaped inputs.
@@ -451,14 +496,13 @@ multiset; yes on CDNA 2 and CDNA 3 FP8.** On FP8 the parity law says
 exactly how much: the output depends on the slots only through the unordered
 pair {multiset of the odd slots, multiset of the even slots}, and a
 permutation preserves it on every input exactly when it preserves the parity
-partition. The parity law is proven in `wip/mmalgebra`, a work-in-progress
-project that builds on the model.
+partition.
 
 - **Assumes:** nothing.
 - **Classification:** Core theorems; kernel-checked witnesses for the order
   dependence.
 - **Lean:** [`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Order.lean#L29), [`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Order.lean#L41),
-  [`MatrixCore.oddEvenGrouping_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Order.lean#L48), [`MMAlgebra.MC.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L173), [`MMAlgebra.MC.cdna3FP8_permute_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L523)
+  [`MatrixCore.oddEvenGrouping_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Order.lean#L48), [`MatrixCore.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ParityLaw.lean#L263), [`MatrixCore.cdna3FP8_permute_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ParityLaw.lean#L613)
 
 ## MC-EFT correction
 

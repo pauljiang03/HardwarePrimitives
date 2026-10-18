@@ -30,13 +30,13 @@ theorem split_sum (ts : List Term) (g : Grid) :
     grind [Rat.add_assoc, Rat.add_comm]
 
 theorem extract_exists {p : Prepared}
-    (hp : wordMagnitudeSum (p.terms.map Term.word) < 2 ^ 555)
+    (hp : wordMagnitudeSum (p.terms.map Term.word) < 2 ^ 556)
     (hd : p.output.magnitude.toNat < 2 ^ 424) : ∃ c, extract p = some c := by
   let hi := (p.terms.map fun t => t.word.split p.grid).map WordSplit.coarse
   let lo := (p.terms.map fun t => t.word.split p.grid).map WordSplit.low
   have hb := split_magnitudeSum p.terms p.grid
-  have hhi : wordMagnitudeSum hi < 2 ^ 555 := by dsimp [hi]; omega
-  have hlo : wordMagnitudeSum lo < 2 ^ 555 := by dsimp [lo]; omega
+  have hhi : wordMagnitudeSum hi < 2 ^ 556 := by dsimp [hi]; omega
+  have hlo : wordMagnitudeSum lo < 2 ^ 556 := by dsimp [lo]; omega
   obtain ⟨h, hh, hmh⟩ := sumWords_exists hi (by omega)
   obtain ⟨o, ho⟩ := p.output.add_exists h.neg (by change _ + h.magnitude.toNat < _; omega)
   have hmo := Word.add_magnitude ho

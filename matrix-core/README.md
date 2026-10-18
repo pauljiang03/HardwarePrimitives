@@ -54,7 +54,7 @@ example : blockBits ones = .ok 0x40800000 := by decide +kernel
 | All | Equality with an independent transcription of the paper's algorithms; exact accepted domain; error bounds, also from the inputs alone; monotonicity in `c`; loss accounting for inner products and `D = AB + C`; the MC-EFT correction, which returns the correctly rounded sum of a block or an inner product from any finite output word, with its fast path from the inputs alone and a 576-bit register version |
 | CDNA 1 and SFMA | Correct rounding; error at most half an ulp; monotone in every product; independent of product order |
 | CDNA 2 | Non-monotone in the products only through flushing; correctly rounded when every intermediate rounding is exact; order dependent |
-| CDNA 3 | Monotone in the products while the alignment exponents are unchanged; necessary and sufficient conditions for an output decrease; a family with an exact threshold; correctly rounded when alignment loses nothing; fixed-width registers of 29 to 31 bits; Algorithm 1 independent of product order |
+| CDNA 3 | Monotone in the products while the alignment exponents are unchanged; necessary and sufficient conditions for an output decrease; a family with an exact threshold; correctly rounded when alignment loses nothing; fixed-width registers of 29 to 31 bits; Algorithm 1 independent of product order; the FP8 parity law: an FP8 block depends on its slots only through the unordered pair {odd slots, even slots} |
 
 Details per generation: [CDNA 1](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/properties/cdna1/),
 [CDNA 2](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/properties/cdna2/),

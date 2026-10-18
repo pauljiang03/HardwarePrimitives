@@ -16,6 +16,7 @@ import TensorCoreTests.TC.Datapath
 import TensorCoreTests.TC.DirectedBinary
 import TensorCoreTests.TC.Features
 import TensorCoreTests.TC.FP8
+import TensorCoreTests.TC.MmaSyncFP8
 import TensorCoreTests.TC.Instruction
 import TensorCoreTests.TC.Monotonicity
 import TensorCoreTests.TC.PublicDomains

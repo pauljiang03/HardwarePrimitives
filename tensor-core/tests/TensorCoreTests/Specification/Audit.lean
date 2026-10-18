@@ -9,7 +9,7 @@ namespace TensorCore.IndependentSpec.Audit
 
 def specificationModules : List Name :=
   [`TensorCore.TC.Specification.Defs, `TensorCore.TC.Specification.Variants,
-    `TensorCore.TC.Specification.Schedule]
+    `TensorCore.TC.Specification.Schedule, `TensorCore.TC.Specification.MmaSyncFP8]
 
 def moduleOf (env : Environment) (n : Name) : Option Name := do
   let idx ← env.getModuleIdxFor? n

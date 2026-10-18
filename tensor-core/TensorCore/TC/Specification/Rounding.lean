@@ -109,4 +109,145 @@ theorem rounds_iff (x : ℚ) (b : F32) (hr : magnitude x ≤ maxFinite) :
     rwa [hab] at ha
   · exact round32_rounds x b
 
+/-! ## Round to nearest, ties to even -/
+
+theorem round32_sign_nearestEven (x : ℚ) (b : F32) (h : round32 .nearestEven x = some b) :
+    (b.toNat / 2147483648 != 0) = decide (x < 0) := by
+  by_cases hz : x = 0
+  · subst x
+    have hzero : round32 .nearestEven 0 = some 0 := by decide +kernel
+    have hb : b = 0 := by simpa only [hzero, Option.some.injEq] using h.symm
+    subst b
+    decide
+  have hr := round32_range h
+  have hm := absQ_pos_of_ne_zero x hz
+  obtain ⟨he1, he2, _, _⟩ := normExp_bounds (absQ x) hm hr
+  obtain ⟨hk0, hk1, hsub, htop⟩ := roundedSignificand_bounds .nearestEven (absQ x) hm hr
+  have hs := carry_spec _ _ he1 he2 hk0 hk1 hsub htop
+  unfold round32 round32Core at h
+  rw [if_neg (Rat.not_lt.mpr hr), if_neg hz] at h
+  generalize hp : carry (normExp (absQ x)) (roundedSignificand .nearestEven (absQ x)) = pair at h hs
+  rcases pair with ⟨e, k⟩
+  dsimp only at h hs
+  rw [if_neg (by omega)] at h
+  cases Option.some.inj h
+  exact encode32_sign _ _ _ hs.1 hs.2.1 hs.2.2.1 hs.2.2.2.1
+
+theorem rneInt_tie_even (t : ℚ) (h : 2 * absQ (t - rneInt t) = 1) : rneInt t % 2 = 0 := by
+  have hf := Rat.floor_le t
+  have hf' := Rat.lt_floor_add_one t
+  unfold rneInt at h ⊢
+  split
+  · rename_i hc
+    rw [if_pos hc] at h
+    rcases hc with hc | ⟨_, hodd⟩
+    · exfalso
+      rw [absQ_of_neg (by push_cast at hf' ⊢; grind)] at h
+      push_cast at h; grind
+    · omega
+  · rename_i hc
+    rw [if_neg hc] at h
+    rw [absQ_of_nonneg (by grind)] at h
+    have : 2 * (t - t.floor) = 1 := by grind
+    have : ¬ t.floor % 2 = 1 := fun h' => hc (Or.inr ⟨this, h'⟩)
+    omega
+
+theorem binade_unique {m : ℚ} {e e' : ℤ}
+    (h : -126 ≤ e ∧ m < pow2 (e + 1) ∧ (e = -126 ∨ pow2 e ≤ m))
+    (h' : -126 ≤ e' ∧ m < pow2 (e' + 1) ∧ (e' = -126 ∨ pow2 e' ≤ m)) : e = e' := by
+  have key : ∀ {a b : ℤ}, (-126 ≤ a ∧ m < pow2 (a + 1) ∧ (a = -126 ∨ pow2 a ≤ m)) →
+      (-126 ≤ b ∧ m < pow2 (b + 1) ∧ (b = -126 ∨ pow2 b ≤ m)) → ¬ a < b := by
+    intro a b ha hb hab
+    rcases hb.2.2 with hb2 | hb2
+    · omega
+    · have := pow2_le_of_le (show a + 1 ≤ b by omega)
+      have := Std.lt_of_lt_of_le ha.2.1 (Rat.le_trans this hb2)
+      grind
+  rcases Int.lt_trichotomy e e' with hlt | heq | hgt
+  · exact absurd hlt (key h h')
+  · exact heq
+  · exact absurd hgt (key h' h)
+
+theorem nearestEven_int_unique {t : ℚ} {k k' : ℤ}
+    (h1 : 2 * absQ (t - k) ≤ 1) (h2 : 2 * absQ (t - k) = 1 → k % 2 = 0)
+    (h1' : 2 * absQ (t - k') ≤ 1) (h2' : 2 * absQ (t - k') = 1 → k' % 2 = 0) : k = k' := by
+  have a1 := (absQ_le_iff (t - k) (1 / 2)).mp (by grind)
+  have a1' := (absQ_le_iff (t - k') (1 / 2)).mp (by grind)
+  have hd1 : k - k' ≤ 1 := by
+    have : ((k - k' : ℤ) : ℚ) ≤ 1 := by push_cast; grind
+    exact_mod_cast this
+  have hd2 : k' - k ≤ 1 := by
+    have : ((k' - k : ℤ) : ℚ) ≤ 1 := by push_cast; grind
+    exact_mod_cast this
+  rcases Int.lt_trichotomy k k' with hlt | heq | hgt
+  · have hk' : k' = k + 1 := by omega
+    subst hk'
+    push_cast at a1'
+    have ha : 2 * absQ (t - k) = 1 := by rw [absQ_of_nonneg (by grind)]; grind
+    have hb : 2 * absQ (t - ((k + 1 : ℤ) : ℚ)) = 1 := by
+      rw [absQ_of_neg (by push_cast; grind)]; push_cast; grind
+    have := h2 ha; have := h2' hb; omega
+  · exact heq
+  · have hk : k = k' + 1 := by omega
+    subst hk
+    push_cast at a1
+    have ha : 2 * absQ (t - k') = 1 := by rw [absQ_of_nonneg (by grind)]; grind
+    have hb : 2 * absQ (t - ((k' + 1 : ℤ) : ℚ)) = 1 := by
+      rw [absQ_of_neg (by push_cast; grind)]; push_cast; grind
+    have := h2' ha; have := h2 hb; omega
+
+theorem round32_nearestEven_rounds (x : ℚ) (b : F32) (h : round32 .nearestEven x = some b) :
+    RoundsNearestEven x b := by
+  refine ⟨round32_sign_nearestEven x b h, ?_⟩
+  by_cases hz : x = 0
+  · subst x
+    have hb : b = 0 := by
+      have h0 : round32 .nearestEven 0 = some 0 := by decide +kernel
+      rw [h0] at h; exact (Option.some.inj h).symm
+    subst hb
+    refine ⟨-126, 0, Int.le_refl _, by decide +kernel, Or.inl rfl, by decide +kernel,
+      fun h => by decide +kernel, by decide +kernel⟩
+  · obtain ⟨b', hb', hv, _, _⟩ := round32_nonzero_spec .nearestEven x hz (round32_range h)
+    rw [h] at hb'
+    cases Option.some.inj hb'
+    have hm := absQ_pos_of_ne_zero x hz
+    obtain ⟨he1, _, he3, he4⟩ := normExp_bounds (absQ x) hm (round32_range h)
+    refine ⟨normExp (absQ x), rneInt (absQ x / pow2 (normExp (absQ x) - 23)), he1, he3, he4.symm,
+      rneInt_dist_le_half _, rneInt_tie_even _, ?_⟩
+    rw [value32_eq, hv]
+    congr 1
+    show signedRounded .nearestEven x = _
+    unfold signedRounded magnitudeRounded roundedSignificand roundSignificand
+    change _ = (if x < 0 then -1 else 1) * _ * pow2 (normExp (absQ x) - 23)
+    split <;> grind
+
+theorem roundsNearestEven_unique (x : ℚ) (a b : F32) (ha : RoundsNearestEven x a)
+    (hb : RoundsNearestEven x b) : a = b := by
+  obtain ⟨hsa, e, k, he1, he2, he3, hk1, hk2, hva⟩ := ha
+  obtain ⟨hsb, e', k', he1', he2', he3', hk1', hk2', hvb⟩ := hb
+  have hee : e = e' := binade_unique (m := absQ x) ⟨he1, he2, he3⟩ ⟨he1', he2', he3'⟩
+  subst hee
+  have hkk : k = k' := nearestEven_int_unique hk1 hk2 hk1' hk2'
+  subst hkk
+  rw [value32_eq] at hva hvb
+  generalize (if x < 0 then -1 else 1) * (k : ℚ) * (2 : ℚ) ^ (e - 23) = v at hva hvb
+  by_cases hz : v = 0
+  · subst v
+    have za := zero_bits a hva
+    have zb := zero_bits b hvb
+    have hsign := hsa.trans hsb.symm
+    apply BitVec.eq_of_toNat_eq
+    rcases za with za | za <;> rcases zb with zb | zb <;> simp_all
+  · exact value32_injective a b v hva hvb hz
+
+/-- FP32 rounding to nearest, ties to even, is the specified relation on the finite range. -/
+theorem roundsNearestEven_iff (x : ℚ) (b : F32) (hr : magnitude x ≤ maxFinite) :
+    RoundsNearestEven x b ↔ round32 .nearestEven x = some b := by
+  constructor
+  · intro h
+    obtain ⟨a, _, ha, _⟩ := round32_finite_exists .nearestEven x hr
+    have hab := roundsNearestEven_unique x a b (round32_nearestEven_rounds x a ha) h
+    rwa [hab] at ha
+  · exact round32_nearestEven_rounds x b
+
 end TensorCore.IndependentSpec

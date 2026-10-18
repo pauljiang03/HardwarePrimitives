@@ -64,4 +64,34 @@ theorem zero_and_dense_scans :
     leadingZeros (((1 : Magnitude) <<< 575) + ((1 : Magnitude) <<< 288)) = 0 ∧
     trailingZeros (((1 : Magnitude) <<< 575) + ((1 : Magnitude) <<< 288)) = 288 := by decide +kernel
 
+/-! ## The FP8 block FMAs -/
+
+/-- Ada and Hopper E4M3: `2 + 2^-13`, which the 13-bit block output truncates to `2`. -/
+def fp8Narrow : List (BitVec 9 × BitVec 9) :=
+  [(widenE4M3 0x38, widenE4M3 0x38), (widenE4M3 0x38, widenE4M3 0x38),
+    (widenE4M3 0x01, widenE4M3 0x18)] ++ List.replicate 13 (0, 0)
+
+/-- Ada E5M2: `1 + 7·2^-17`. -/
+def fp8Small : List (BitVec 8 × BitVec 8) :=
+  [(0x3c, 0x3c)] ++ List.replicate 7 (0x01, 0x38) ++ List.replicate 8 (0, 0)
+
+theorem fp8_blocks :
+    EFMachine.tcEft .adaE4M3 ⟨fp8Narrow, 0⟩ 0x40000000 = .ok (.scalar 0x40000200) ∧
+    EFMachine.tcEft .hopperE4M3 ⟨fp8Narrow ++ List.replicate 16 (0, 0), 0⟩ 0x40000000 =
+      .ok (.scalar 0x40000200) ∧
+    EFMachine.tcEft .adaE5M2 ⟨fp8Small, 0⟩ 0x3f800000 = .ok (.scalar 0x3f8001c0) ∧
+    EFMachine.tcEft .blackwellE4M3
+      ⟨(widenE4M3 0x38, widenE4M3 0x38) :: List.replicate 31 (0, 0), 0x4b800001⟩ 0x4b800001 =
+      .ok (.scalar 0x4b800002) := by decide +kernel
+
+/-- The hardware words those blocks correct. -/
+theorem fp8_block_outputs :
+    (evalBlock (⟨fp8Narrow, 0⟩ : BlockInput adaE4M3F32)).toOption.map (·.output.bits) =
+      some 0x40000000 ∧
+    (evalBlock (⟨fp8Small, 0⟩ : BlockInput adaE5M2F32)).toOption.map (·.output.bits) =
+      some 0x3f800000 ∧
+    (evalBlock (⟨(widenE4M3 0x38, widenE4M3 0x38) :: List.replicate 31 (0, 0), 0x4b800001⟩ :
+      BlockInput blackwellE4M3F32)).toOption.map (·.output.bits) = some 0x4b800001 := by
+  decide +kernel
+
 end TensorCore.Regression.BoundedEFT

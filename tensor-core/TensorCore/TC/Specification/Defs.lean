@@ -104,6 +104,16 @@ def Result (p : Parameters) (x : Input p) (bits : BitVec 32) : Prop :=
     terms p x = some ts ∧ magnitude (accumulated p ts) ≤ maxFinite ∧
       Rounds (accumulated p ts) bits
 
+/-- FP32 round to nearest, ties to even, on the finite range: the sign of `x`, and the value
+`±k·2^(e−23)`, where `2^e` is the binade of `|x|`, at least `2^-126`, and `k` is an integer
+nearest `|x| / 2^(e−23)`, even on a tie. -/
+def RoundsNearestEven (x : ℚ) (bits : BitVec 32) : Prop :=
+  (bits.toNat / 2147483648 != 0) = decide (x < 0) ∧
+  ∃ e k : ℤ, -126 ≤ e ∧ magnitude x < (2 : ℚ) ^ (e + 1) ∧ (e = -126 ∨ (2 : ℚ) ^ e ≤ magnitude x) ∧
+    2 * magnitude (magnitude x / (2 : ℚ) ^ (e - 23) - k) ≤ 1 ∧
+    (2 * magnitude (magnitude x / (2 : ℚ) ^ (e - 23) - k) = 1 → k % 2 = 0) ∧
+    value32 bits = some ((if x < 0 then -1 else 1) * k * (2 : ℚ) ^ (e - 23))
+
 /-- Mathematical output selector. -/
 noncomputable def bits (p : Parameters) (x : Input p) : Option (BitVec 32) := by
   classical

@@ -7,11 +7,11 @@ set_option maxRecDepth 2048
 namespace TCFloat.Equivalence
 open FloatLib.Floats.Formats.BinaryInterchange
 
-def SupportedFormat (f : FloatFormat) : Prop := f=.binary16 ∨ f=.bfloat16 ∨ f=.tf32
+def SupportedFormat (f : FloatFormat) : Prop := f=.binary16 ∨ f=.bfloat16 ∨ f=.tf32 ∨ f=.e5m2
 theorem SupportedFormat.ieee {f : FloatFormat} (h : SupportedFormat f) : f.isIEEE=true := by
-  rcases h with rfl|rfl|rfl <;> decide +kernel
+  rcases h with rfl|rfl|rfl|rfl <;> decide +kernel
 
-/-- The universal equivalence for the FP16, BF16 and TF32 input formats with FP32 output. -/
+/-- The universal equivalence for the FP16, BF16, TF32 and E5M2 input formats with FP32 output. -/
 theorem supportedFormat_equivalence (p : TCModel) (hf : SupportedFormat p.format)
     (x : TensorCore.BlockInput (model p)) (D : TensorCore.F32) :
     Interface.tc p (inputPairs x) x.c.toNat =
@@ -19,6 +19,18 @@ theorem supportedFormat_equivalence (p : TCModel) (hf : SupportedFormat p.format
     Interface.eft p (inputPairs x) x.c.toNat D.toNat =
         (TensorCore.tcEftEncoded x D).toOption.map encodedResult :=
   universal_equivalence p hf.ieee x D
+
+/-- B200's E5M2 block FMA (`blackwellE5M2F32`) is a port model: E5M2 inputs, 32 products, two
+padding bits, no minimum alignment exponent, an FP32 output. -/
+theorem blackwellE5M2_model : model ⟨.e5m2, 32, 2, none⟩ = ⟨⟨2, 5, 15⟩, 32, 25, none, 23⟩ := by decide
+
+theorem blackwellE5M2_equivalence (x : TensorCore.BlockInput (model ⟨.e5m2, 32, 2, none⟩))
+    (D : TensorCore.F32) :
+    Interface.tc ⟨.e5m2, 32, 2, none⟩ (inputPairs x) x.c.toNat =
+        (TensorCore.evalBlock x).toOption.map (fun t => t.output.bits.toNat) ∧
+    Interface.eft ⟨.e5m2, 32, 2, none⟩ (inputPairs x) x.c.toNat D.toNat =
+        (TensorCore.tcEftEncoded x D).toOption.map encodedResult :=
+  supportedFormat_equivalence _ (Or.inr (Or.inr (Or.inr rfl))) x D
 
 theorem trace_related (t : Trace) (hb : ValidBlock t.block) (hw : t.bits < 2^32)
     (hv : TCFloat.value32 t.bits=some t.output) : ∃ s, TraceRel s t := by

@@ -139,11 +139,11 @@ theorem prepare_spec {variant : Variant} {x : BlockInput variant.model} {D : F32
               · omega
               · exact hb.2 t ht
 
-theorem variant_count (variant : Variant) : variant.model.nfma ≤ 16 := by cases variant <;> decide
+theorem variant_count (variant : Variant) : variant.model.nfma ≤ 32 := by cases variant <;> decide
 
 theorem prepare_capacity {variant : Variant} {x : BlockInput variant.model} {D : F32} {p : Prepared}
     (h : prepare variant x D = .ok p) :
-    wordMagnitudeSum (p.terms.map Term.word) < 2 ^ 555 ∧ p.output.magnitude.toNat < 2 ^ 424 := by
+    wordMagnitudeSum (p.terms.map Term.word) < 2 ^ 556 ∧ p.output.magnitude.toNat < 2 ^ 424 := by
   obtain ⟨_, _, _, hlen, ht, hd⟩ := prepare_spec h
   have hc := variant_count variant
   have hb : wordMagnitudeSum (p.terms.map Term.word) ≤ p.terms.length * (2 ^ 550 - 1) := by

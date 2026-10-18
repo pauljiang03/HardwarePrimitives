@@ -53,6 +53,26 @@ exactly 1. Lowering `C` to its FP32 predecessor `1 − 2^-24` makes the output
 Each row has a kernel-checked concrete witness in
 [`tests/TensorCoreTests/TC/Monotonicity.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/tests/TensorCoreTests/TC/Monotonicity.lean).
 
+## The FP8 block FMAs
+
+With `K` equal tiny products and zeros, lowering `C` to its FP32 predecessor
+raises the output exactly when `K` reaches a threshold. Lean checks the
+equivalence for every `K` up to the FMA size
+([`TensorCore.fp8_narrow_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MonotonicityFP8.lean#L28), [`TensorCore.fp8_blackwell_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MonotonicityFP8.lean#L39)).
+
+| Block FMA | Product | `C` | Threshold | Non-monotone? |
+| --- | --- | --- | ---: | --- |
+| Ada E4M3, E5M2 (K = 16) | `2^-7 · 2^-7` | `1` | 3 | yes |
+| Hopper E4M3, E5M2 (K = 32) | `2^-7 · 2^-7` | `1` | 3 | yes |
+| B200 E5M2 (K = 32) | `2^-13 · 2^-13` | `1` | 12 | yes |
+| B200 E4M3 (K = 32) | `2^-9 · 2^-9` | `256` | 12 | yes |
+
+Ada and Hopper keep 13 bits after alignment and in the output: `C = 1 − 2^-24`
+aligns to `1 − 2^-14`, and the products `2^-14` count once the grid is
+`2^-14`. B200 keeps 25 bits and an FP32 output, so its threshold is that of
+H100 FP16, `3·2^2 = 12`. E4M3 products cannot be as small as `2^-26`, so its
+row uses `C = 256`.
+
 ## Larger perturbations
 
 [`nonmonotone_range_encoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MonotonicityRange.lean#L262)

@@ -14,6 +14,12 @@ private def getVariant : String → Option EFMachine.Variant
   | "a100-tf32" => some .ampereTF32
   | "h100-tf32-k4" | "h100-tf32-wmma" => some .hopperTF32Wmma
   | "h100-tf32" | "h100-tf32-mma" => some .hopperTF32Mma
+  | "ada-e4m3" => some .adaE4M3
+  | "ada-e5m2" => some .adaE5M2
+  | "h100-e4m3" => some .hopperE4M3
+  | "h100-e5m2" => some .hopperE5M2
+  | "b200-e4m3" => some .blackwellE4M3
+  | "b200-e5m2" => some .blackwellE5M2
   | _ => none
 
 private def pairs (variant : EFMachine.Variant) : List ℕ → Option (List (variant.model.Word × variant.model.Word))

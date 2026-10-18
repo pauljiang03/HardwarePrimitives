@@ -119,7 +119,7 @@ the stages:
 
 | Stage | Lean result | What it shows |
 | --- | --- | --- |
-| Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Decode.lean#L47), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Decode.lean#L95) | each decoder gives the model's decoded value |
+| Decode | [`Datapath.decodeInput_asDecoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Decode.lean#L47), [`Datapath.decodeC_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Decode.lean#L99) | each decoder gives the model's decoded value |
 | Multiply | [`Datapath.product_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Correctness.lean#L17) | each product register denotes the model's product in denormalized form |
 | Alignment exponent | [`Datapath.alignFold_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Align.lean#L139) | the fold is the maximum over nonzero terms, raised to the minimum alignment exponent |
 | Align | [`Datapath.Term.truncBits_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/Align.lean#L49) | each aligned register holds the model's `truncBits` |
@@ -172,6 +172,13 @@ theorem evalBlock8_eq (v : FP8Variant) (x : BlockInput v.model) :
 [`Datapath.FP8.evalBlock8_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/FP8.lean#L463) holds on every input of the six FP8 models
 (Ada, Hopper and B200; E4M3 in the 9-bit `e4m3x` layout, and E5M2), every
 rejection included.
+
+## FP8 through `mma.sync`
+
+[`TensorCore.Datapath.mmaSyncFP8`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/MmaSyncFP8.lean#L13) runs an FP8 `mma.sync` on bitvectors: the
+bit-level conversions of the operands to FP16, Hopper's FP16 block datapath
+twice, and the bounded FP32 adder of the 576-bit TC-EFT. It returns the
+model's word, or no word, on every input ([`TensorCore.Datapath.mmaSyncFP8_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/MmaSyncFP8.lean#L24)).
 
 ## Comparison with the SMT model of Valpey et al.
 

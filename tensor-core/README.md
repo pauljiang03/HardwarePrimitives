@@ -51,7 +51,9 @@ Four FP16 products `1 × 1` on the V100 model give the FP32 word of `4.0`; the
   every input; error bounds; exact accepted domains.
 - An exact characterization of a family of non-monotonic inputs.
 - TC-EFT, which recovers the correctly rounded sum of a block FMA, with a
-  576-bit exact fallback.
+  576-bit implementation on all fourteen block FMAs, the six FP8 ones included.
+- FP8 `mma.sync`: an error bound, its correction by TC-EFT, an independent
+  specification, and a bitvector datapath, each proven.
 - A bitvector datapath proven equal to the model.
 
 Details: [error bounds](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/properties/error-bounds/),

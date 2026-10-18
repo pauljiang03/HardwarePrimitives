@@ -14,15 +14,15 @@ hypotheses stated in each theorem (see [What is
 proven](/HardwarePrimitives/proofs/theorems/)). The development uses no `sorry` and no
 custom axioms. `scripts/check_axioms.py` audits every public theorem under
 the `TensorCore` namespace and allows only `propext`, `Classical.choice`, and
-`Quot.sound`. The recorded run audited 1,543 theorem roots. The AMD test
-library audits every theorem of `MatrixCore` the same way (1,126 theorems).
+`Quot.sound`. The recorded run audited 1,608 theorem roots. The AMD test
+library audits every theorem of `MatrixCore` the same way (1,167 theorems).
 
 The declarations are also re-checked outside Lean's kernel by
 [con-leche](https://github.com/leanprover/con-leche), an external checker
 proven never to accept a proof of `False`. On 2026-10-18, at revision
 `3b37939` in `--verified` mode, it accepted every declaration of `TensorCore`
-and its tests (169,059, including Lean's own library) and of the AMD model
-`MatrixCore` and its tests (167,239), MC-EFT included. Each library runs it
+and its tests (169,303, including Lean's own library) and of the AMD model
+`MatrixCore` and its tests (167,360), MC-EFT and the FP8 parity law included. Each library runs it
 with `scripts/conleche.sh`. Lean does not record `example`s as declarations, so the kernel-evaluated regression examples are checked by Lean's kernel only.
 
 ## Tested, not proven

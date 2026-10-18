@@ -222,11 +222,9 @@ then the correctly rounded sum, as on CDNA 1.
   when it preserves the parity partition: `2·(8!)² = 3,251,404,800` of the
   `16!` orders. For every mix of formats, two products in one parity class give
   a different word from the same two in different classes
-  ([`MMAlgebra.MC.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L173),
-  [`MMAlgebra.MC.cdna3FP8_permute_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L523),
-  [`MMAlgebra.MC.cdna3FP8_sep_e4m3`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/mmalgebra/MMAlgebraMC/ParityLaw.lean#L201);
-  proven in `wip/mmalgebra`, a work-in-progress project that builds on this
-  model).
+  ([`MatrixCore.cdna3FP8_parityEquiv`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ParityLaw.lean#L263),
+  [`MatrixCore.cdna3FP8_permute_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ParityLaw.lean#L613),
+  [`MatrixCore.cdna3FP8_sep_e4m3`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ParityLaw.lean#L291)).
 - **Sign.** The round-down steps make CDNA 3 asymmetric under negation:
   `c = 1, p₁ = 2^-24 + 2^-32` gives `1`, while the negated input gives
   `−(1 + 2^-23)`

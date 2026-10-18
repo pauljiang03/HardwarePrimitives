@@ -1,19 +1,22 @@
 import TensorCore.Kernels.EFT.WordDefs
 import TensorCore.Kernels.EFT.SplitDefs
 import TensorCore.TC.CanonicalFormatDefs
+import TensorCore.TC.GPUs
 
 /-! Bounded input decoding and exact products. -/
 
 namespace TensorCore.EFMachine
 
 inductive InputKind where
-  | fp16 | bf16 | tf32
+  | fp16 | bf16 | tf32 | e4m3x | e5m2
   deriving Repr, DecidableEq
 
 def InputKind.format : InputKind → Format
   | .fp16 => TensorCore.fp16
   | .bf16 => TensorCore.bf16
   | .tf32 => TensorCore.tf19
+  | .e4m3x => TensorCore.e4m3x
+  | .e5m2 => TensorCore.e5m2
 
 structure Factor where
   negative : Bool
@@ -29,9 +32,9 @@ def decodeFactor (kind : InputKind) (bits : F32) : Option Factor :=
   let e := ((bits >>> f.mantissaBits) &&& (((1 : F32) <<< f.exponentBits) - 1)).setWidth 10
   let m := (bits &&& (((1 : F32) <<< f.mantissaBits) - 1)).setWidth 11
   let negative := (bits >>> (f.mantissaBits + f.exponentBits)) != 0
-  let bias : Grid := match kind with | .fp16 => 241 | _ => 129
-  let top : Grid := match kind with | .fp16 => 31 | _ => 255
-  let mant : Grid := match kind with | .bf16 => 7 | _ => 10
+  let bias : Grid := match kind with | .fp16 | .e5m2 => 241 | .e4m3x => 249 | _ => 129
+  let top : Grid := match kind with | .bf16 | .tf32 => 255 | _ => 31
+  let mant : Grid := match kind with | .bf16 => 7 | .e4m3x => 3 | .e5m2 => 2 | _ => 10
   if e == top then none
   else if e == 0 then
     if m == 0 then some ⟨negative, 0, 256, 0⟩
@@ -82,12 +85,15 @@ def decode32Word (bits : F32) : Option Word := (decode32Term bits).map Term.word
 inductive Variant where
   | v100F16 | ampereF16 | hopperF16 | ampereBF16 | hopperBF16
   | ampereTF32 | hopperTF32Wmma | hopperTF32Mma
+  | adaE4M3 | adaE5M2 | hopperE4M3 | hopperE5M2 | blackwellE4M3 | blackwellE5M2
   deriving Repr, DecidableEq
 
 def Variant.kind : Variant → InputKind
   | .v100F16 | .ampereF16 | .hopperF16 => .fp16
   | .ampereBF16 | .hopperBF16 => .bf16
   | .ampereTF32 | .hopperTF32Wmma | .hopperTF32Mma => .tf32
+  | .adaE4M3 | .hopperE4M3 | .blackwellE4M3 => .e4m3x
+  | .adaE5M2 | .hopperE5M2 | .blackwellE5M2 => .e5m2
 
 def Variant.model : Variant → Model
   | .v100F16 => v100F16F32
@@ -98,14 +104,22 @@ def Variant.model : Variant → Model
   | .ampereTF32 => a100TF32F32
   | .hopperTF32Wmma => hopperTF32WmmaF32
   | .hopperTF32Mma => hopperTF32MmaF32
+  | .adaE4M3 => adaE4M3F32
+  | .adaE5M2 => adaE5M2F32
+  | .hopperE4M3 => hopperE4M3F32
+  | .hopperE5M2 => hopperE5M2F32
+  | .blackwellE4M3 => blackwellE4M3F32
+  | .blackwellE5M2 => blackwellE5M2F32
 
 def Variant.alignmentBits : Variant → Grid
   | .v100F16 => 23
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 24
+  | .adaE4M3 | .adaE5M2 | .hopperE4M3 | .hopperE5M2 => 13
   | _ => 25
 
 def Variant.eAlignMin : Variant → Grid
-  | .v100F16 => 0
+  | .v100F16 | .adaE4M3 | .adaE5M2 | .hopperE4M3 | .hopperE5M2
+  | .blackwellE4M3 | .blackwellE5M2 => 0
   | .ampereF16 | .ampereBF16 | .ampereTF32 => 380
   | _ => 379
 

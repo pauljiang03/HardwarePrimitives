@@ -34,7 +34,7 @@ theorem tcEft_unitInputs_success {variant : Variant} {x : BlockInput variant.mod
     (hc : absQ b.c.value ≤ 1)
     (hp : ∀ ab ∈ b.products, absQ ab.1.value ≤ 1 ∧ absQ ab.2.value ≤ 1)
     (hD : TensorCore.value32 D = some d) :
-    absQ b.exactDot ≤ 17 ∧
+    absQ b.exactDot ≤ 33 ∧
       ∃ r bits, tcEft variant x D = .ok r ∧ r.bits = some bits ∧ NearestEven32 b.exactDot bits := by
   have hlen : b.products.length = variant.model.nfma := by
     unfold TensorCore.prepare at inputs
@@ -54,15 +54,15 @@ theorem tcEft_unitInputs_success {variant : Variant} {x : BlockInput variant.mod
   have hb := sumQ_map_le b.products (fun ab => absQ (ab.1.value * ab.2.value)) 1 hp'
   simp only [List.map_map, Function.comp_def] at hs
   have ha := absQ_add_le b.c.value b.exactProducts
-  have hn : (b.products.length : ℚ) ≤ 16 :=
+  have hn : (b.products.length : ℚ) ≤ 32 :=
     Rat.natCast_le_natCast.mpr (by rw [hlen]; exact variant_count variant)
-  have hbound : absQ b.exactDot ≤ 17 := by
+  have hbound : absQ b.exactDot ≤ 33 := by
     dsimp only [PreparedBlock.exactProducts] at ha
     dsimp only [PreparedBlock.exactDot, PreparedBlock.exactProducts]
     grind
   refine ⟨hbound, tcEft_success shape ?_ hD ?_⟩
   · simp [TensorCore.exactDot, inputs]
-  · have hmax : (17 : ℚ) ≤ maxFinite32 := by decide +kernel
+  · have hmax : (33 : ℚ) ≤ maxFinite32 := by decide +kernel
     exact Rat.le_trans hbound hmax
 
 end TensorCore.EFMachine

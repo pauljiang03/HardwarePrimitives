@@ -111,7 +111,7 @@ def Result.bits : Result → Option F32
   | .scalar b | .boundedExact b => some b
   | .outOfRange => none
 
-/-- Bounded Algorithm 1 on encoded inputs, for each of the eight variants. -/
+/-- Bounded Algorithm 1 on encoded inputs, for each of the fourteen variants. -/
 def tcEft (variant : Variant) (x : BlockInput variant.model) (D : F32) : Except Error Result := do
   let p ← prepare variant x D
   if p.terms.all (fun t => t.word.magnitude == 0) then return .allZero

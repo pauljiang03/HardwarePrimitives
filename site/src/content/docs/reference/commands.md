@@ -33,7 +33,9 @@ The trace also reports `correctedBits`, the TC-EFT result `0x41080000 = 8.5`.
 | `tc_lean_eft_check` | JSON Lines on stdin | native Float32 vs bounded scalar fold |
 
 The variants for `tc_bounded_eft` are `v100-fp16`, `a100-fp16`, `h100-fp16`,
-`a100-bf16`, `h100-bf16`, `a100-tf32`, `h100-tf32-wmma`, and `h100-tf32-mma`.
+`a100-bf16`, `h100-bf16`, `a100-tf32`, `h100-tf32-wmma`, `h100-tf32-mma`,
+`ada-e4m3`, `ada-e5m2`, `h100-e4m3`, `h100-e5m2`, `b200-e4m3` and `b200-e5m2`.
+E4M3 words are given in the 9-bit `e4m3x` layout.
 
 ## Validation scripts
 

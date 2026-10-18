@@ -152,6 +152,12 @@ toolbox's FP8 harness, the same file in both, issues `mma.sync`. See [hardware
 validation](/HardwarePrimitives/tensor-core/validation/). The RTX PRO 6000 runs FP8 `mma.sync`
 as `QMMA.16832` on B200's FP8 block FMA, with `C` inside.
 
+Proven about this model: an error bound
+([error bounds](/HardwarePrimitives/tensor-core/properties/error-bounds/#fp8-through-mmasync)),
+its correction by TC-EFT ([TC-EFT](/HardwarePrimitives/tensor-core/properties/eft/#fp8-through-mmasync)),
+equality with an independent specification ([`TensorCore.IndependentSpec.mmaSyncFP8_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/MmaSyncFP8Equivalence.lean#L98))
+and with a bitvector datapath ([`TensorCore.Datapath.mmaSyncFP8_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Kernels/Datapath/MmaSyncFP8.lean#L24)).
+
 Not modeled: FP4 and FP6, and the Blackwell instructions *Accurate Models*
 does not characterize.
 

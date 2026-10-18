@@ -11,6 +11,7 @@ import TensorCore.Kernels.EFT.Grid
 import TensorCore.Kernels.EFT.Native
 import TensorCore.Kernels.EFT.Preparation
 import TensorCore.Kernels.EFT.Refinement
+import TensorCore.Kernels.EFT.MmaSyncFP8
 import TensorCore.Kernels.EFT.Round
 import TensorCore.Kernels.EFT.Scalar
 import TensorCore.Kernels.EFT.ScalarGuard

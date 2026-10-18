@@ -9,6 +9,26 @@ open EFMachine
 /-- 9-bit exponent registers, enough for alignment exponents from −133 up to 254. -/
 abbrev Exp := BitVec 9
 
+/-- The FP16, BF16 and TF32 variants; the FP8 block FMAs have their own datapath. -/
+inductive Variant where
+  | v100F16 | ampereF16 | hopperF16 | ampereBF16 | hopperBF16
+  | ampereTF32 | hopperTF32Wmma | hopperTF32Mma
+  deriving Repr, DecidableEq
+
+def Variant.toEFMachine : Variant → EFMachine.Variant
+  | .v100F16 => .v100F16
+  | .ampereF16 => .ampereF16
+  | .hopperF16 => .hopperF16
+  | .ampereBF16 => .ampereBF16
+  | .hopperBF16 => .hopperBF16
+  | .ampereTF32 => .ampereTF32
+  | .hopperTF32Wmma => .hopperTF32Wmma
+  | .hopperTF32Mma => .hopperTF32Mma
+
+@[reducible] def Variant.kind (variant : Variant) : InputKind := variant.toEFMachine.kind
+
+@[reducible] def Variant.model (variant : Variant) : Model := variant.toEFMachine.model
+
 /-- F = 23 + p: the mantissa bits each term keeps after alignment. -/
 def alignBits : Variant → BitVec 5
   | .v100F16 => 23
@@ -38,16 +58,16 @@ structure Input where
   biasedExp : Exp
   deriving Repr, DecidableEq
 
-/-- Field extraction for FP16, BF16 and packed TF32 words; infinities and NaNs are rejected. -/
+/-- Field extraction for FP16, BF16, packed TF32 and FP8 words; infinities and NaNs are rejected. -/
 def decodeInput (kind : InputKind) (bits : F32) : Option Input :=
   let f := kind.format
   let e := ((bits >>> f.mantissaBits) &&& (((1 : F32) <<< f.exponentBits) - 1)).setWidth 9
   let m := (bits &&& (((1 : F32) <<< f.mantissaBits) - 1)).setWidth 11
   let negative := (bits >>> (f.mantissaBits + f.exponentBits)) != 0
   -- converts the format's exponent bias to 128
-  let offset : Exp := match kind with | .fp16 => 113 | _ => 1
-  let top : Exp := match kind with | .fp16 => 31 | _ => 255
-  let mant : BitVec 5 := match kind with | .bf16 => 7 | _ => 10
+  let offset : Exp := match kind with | .fp16 | .e5m2 => 113 | .e4m3x => 121 | _ => 1
+  let top : Exp := match kind with | .bf16 | .tf32 => 255 | _ => 31
+  let mant : BitVec 5 := match kind with | .bf16 => 7 | .e4m3x => 3 | .e5m2 => 2 | _ => 10
   if e == top then none
   else if e == 0 then
     if m == 0 then some ⟨negative, 0, 0, 128⟩

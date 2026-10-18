@@ -25,13 +25,17 @@ import TensorCore.TC.InvocationProperties
 import TensorCore.TC.MachineRefinement
 import TensorCore.TC.Monotonicity
 import TensorCore.TC.MonotonicityRange
+import TensorCore.TC.MonotonicityFP8
 import TensorCore.TC.Padding
 import TensorCore.TC.Models
 import TensorCore.TC.MmaSyncFP8
+import TensorCore.TC.MmaSyncFP8Bounds
 import TensorCore.TC.OutputWidth
 import TensorCore.TC.Specification.Composition
 import TensorCore.TC.Specification.Defs
 import TensorCore.TC.Specification.Equivalence
+import TensorCore.TC.Specification.MmaSyncFP8
+import TensorCore.TC.Specification.MmaSyncFP8Equivalence
 import TensorCore.TC.Specification.Variants
 import TensorCore.TC.Specification.OutputWidth
 import TensorCore.TC.Specification.Rounding

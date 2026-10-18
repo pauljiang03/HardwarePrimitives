@@ -28,5 +28,6 @@ import MatrixCore.MC.AlignmentMonotonicity
 import MatrixCore.MC.LossCondition
 import MatrixCore.MC.LosslessAlignment
 import MatrixCore.MC.NonmonotoneFamily
+import MatrixCore.MC.ParityLaw
 
 /-! # Matrix Core model -/
