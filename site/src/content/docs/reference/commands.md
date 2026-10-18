@@ -49,6 +49,7 @@ The variants for `tc_bounded_eft` are `v100-fp16`, `a100-fp16`, `h100-fp16`,
 | `check_eft.py` | EFT proofs, oracles, and the TC-EFT paper's test vectors |
 | `check_bounded_eft.py` | bounded kernel vs reference |
 | `check_docs.py` | every Lean block in the docs elaborates |
+| `conleche.sh` | every declaration re-checked by [con-leche](https://github.com/leanprover/con-leche) from a [lean4export](https://github.com/leanprover/lean4export) export; set `EXPORTER` and `CHECKER` to the two binaries |
 
 The scripts refuse to run under `python -O` or `PYTHONOPTIMIZE`, because
 their checks use `assert`. Run timings are written to `tmp/timings/`, which is

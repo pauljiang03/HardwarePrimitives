@@ -64,6 +64,7 @@ Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
 ```sh
 python3 scripts/check_clean_build.py   # fresh build, axiom audit, examples, oracles, GPU replay
+EXPORTER=… CHECKER=… bash scripts/conleche.sh   # re-check every declaration with con-leche
 ```
 
 - The models reproduce every recorded GPU output of the *Accurate Models*

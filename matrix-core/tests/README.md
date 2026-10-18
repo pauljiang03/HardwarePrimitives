@@ -12,7 +12,7 @@ definitions the proofs use.
 | [`ErrorBounds.lean`](MatrixCoreTests/ErrorBounds.lean) | The actual error against the proven bound on the paper's examples |
 | [`Monotonicity.lean`](MatrixCoreTests/Monotonicity.lean), [`ProductProperties.lean`](MatrixCoreTests/ProductProperties.lean) | Monotonicity in `c`, non-monotonicity in the products and its threshold, correct rounding without alignment loss |
 | [`Chain.lean`](MatrixCoreTests/Chain.lean), [`InnerProduct.lean`](MatrixCoreTests/InnerProduct.lean) | Contracts used downstream, inner products and `D = AB + C` |
-| [`EFT.lean`](MatrixCoreTests/EFT.lean) | The MC-EFT correction on each generation: hardware output, corrected word and path |
+| [`EFT.lean`](MatrixCoreTests/EFT.lean) | The MC-EFT correction on each generation and on inner products, the condition on the inputs, and the 576-bit register version |
 | [`Audit.lean`](MatrixCoreTests/Audit.lean) | Standard axioms only; independence of the specification, with a negative control |
 
 Inputs are written by decoded value and encoded exactly

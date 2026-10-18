@@ -132,4 +132,74 @@ example : mcEft (P := cdna3F16) ⟨[0x7C00] ++ List.replicate 7 0, List.replicat
 example : mcEft (P := cdna3F16) ⟨[0x3C00], [0x3C00], 0⟩ 0 = .error .wrongLength := by
   decide +kernel
 
+/-! ## Inner products of any length -/
+
+/-- CDNA 3 FP16, two blocks: each loses its seven small products. -/
+def dotA : List cdna3F16.a.Word :=
+  [0x4080] ++ List.replicate 7 0x0C00 ++ [0x4080] ++ List.replicate 7 0x0C00
+def dotB : List cdna3F16.b.Word :=
+  [0x3C00] ++ List.replicate 7 0x0C00 ++ [0x3C00] ++ List.replicate 7 0x0C00
+
+example : dotBits cdna3F16 dotA dotB 0 = .ok 0x40900000 := by decide +kernel
+example : rne32 (exactDot cdna3F16 dotA dotB 0) = some 0x40900002 := by decide +kernel
+example : mcEftDot cdna3F16 dotA dotB 0 0x40900000 = .ok (.fast 0x40900002) := by decide +kernel
+
+/-- CDNA 1 FP16, two blocks: each block rounds a tie `1 + 2^-24` to `1`, so the chain loses
+`2^-23` although each block is correctly rounded. -/
+def tieA : List cdna1F16.a.Word := [0x3C00, 0x0C00, 0, 0, 0x0C00, 0, 0, 0]
+
+example : dotBits cdna1F16 tieA tieA 0 = .ok 0x3F800000 := by decide +kernel
+example : rne32 (exactDot cdna1F16 tieA tieA 0) = some 0x3F800001 := by decide +kernel
+example : mcEftDot cdna1F16 tieA tieA 0 0x3F800000 = .ok (.fast 0x3F800001) := by decide +kernel
+
+example : mcEftDot cdna1F16 tieA [0x3C00] 0 0x3F800000 = .error .wrongLength := by decide +kernel
+
+/-! ## MC-EFT in the 576-bit register -/
+
+example : mcEftFixed cdna3Lost 0x40100000 = .ok (.fast 0x40100002) := by decide +kernel
+example : mcEftFixed cdna3Fallback 0x3F800000 = .ok (.exact 0x3F800001) := by decide +kernel
+example : mcEftFixed cdna3Late 0x3F800000 = .ok (.fast 0x3F800001) := by decide +kernel
+example : mcEftFixed cdna3FP8Odd 0xBF800000 = .ok (.fast 0xBF800001) := by decide +kernel
+example : mcEftFixed cdna2Order 0x3F800004 = .ok (.fast 0x3F800003) := by decide +kernel
+example : mcEftDotFixed cdna3F16 dotA dotB 0 0x40900000 = .ok (.fast 0x40900002) := by
+  decide +kernel
+
+/-- Any finite `D` gives the same word. -/
+example : mcEftFixed cdna3Lost 0 = .ok (.fast 0x40100002) ∧
+    mcEftFixed cdna3Lost 0x7F7FFFFF = .ok (.exact 0x40100002) := by decide +kernel
+
+/-- SFMA FP32: a product's lowest bit `2^-298` next to `c = 1` needs the fallback. -/
+example : mcEftFixed (P := sfmaF32) ⟨[0x00000001], [0x00000001], 0x3F800000⟩ 0x3F800000 =
+    .ok (.exact 0x3F800000) := by decide +kernel
+
+/-- SFMA FP32: a product near `2^256` is out of range, and the register does not wrap. -/
+example : mcEftFixed (P := sfmaF32) ⟨[0x7F7FFFFF], [0x7F7FFFFF], 0⟩ 0x7F7FFFFF = .ok .outOfRange := by
+  decide +kernel
+
+/-! ## The fast path from the inputs alone -/
+
+example : (prepare cdna3Lost).map (fun px =>
+    decide (InputFast cdna3F16 px (alignedApriori cdna3F16 px))) = some true := by decide +kernel
+
+/-- The fallback block fails the condition, as it must. -/
+example : (prepare cdna3Fallback).map (fun px =>
+    decide (InputFast cdna3F16 px (alignedApriori cdna3F16 px))) = some false := by decide +kernel
+
+example : (prepare cdna1Order).map (fun px =>
+    decide (InputFast cdna1F16 px (correctRoundingApriori px))) = some true := by decide +kernel
+
+/-- CDNA 2 FP16 with lead product `1.5`. -/
+def cdna2Mid : BlockInput cdna2F16 :=
+  ⟨[0x3E00, 0x0E00, 0x0E00, 0], [0x3C00, 0x1000, 0x1000, 0], 0⟩
+
+example : blockBits cdna2Mid = .ok 0x3FC00004 := by decide +kernel
+example : mcEft cdna2Mid 0x3FC00004 = .ok (.fast 0x3FC00003) := by decide +kernel
+example : (prepare cdna2Mid).map (fun px =>
+    decide (InputFast cdna2F16 px (pairwiseApriori cdna2F16 px))) = some true := by decide +kernel
+
+/-- Sufficient, not necessary: `cdna2Order` takes the fast path, but its sum is near `1`, where
+the condition cannot exclude a `D` just below the binade. -/
+example : (prepare cdna2Order).map (fun px =>
+    decide (InputFast cdna2F16 px (pairwiseApriori cdna2F16 px))) = some false := by decide +kernel
+
 end MatrixCoreTests.EFT

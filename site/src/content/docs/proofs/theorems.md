@@ -498,6 +498,44 @@ final rounding error, less than `N_FMA + 6` units of the cut-off.**
 - **Lean:** [`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA1.lean#L11), [`MatrixCore.pairwise_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA2.lean#L109),
   [`MatrixCore.aligned_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L632), [`MatrixCore.globalAlignment_exact_rounding`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L706)
 
+### Does the fast path follow from the inputs alone?
+
+**Yes, from the exact sum and an error bound.** If the inputs satisfy a
+condition computed from their exact sum and a bound on the error of `D`, the
+check passes for every `D` within that bound. With each generation's a priori
+error bound, the correction of the Matrix Core's own output takes the fast
+path.
+
+- **Assumes:** the condition and an exact sum within the FP32 range.
+- **Classification:** Core theorems. All six conditions of the check follow;
+  the condition is sufficient, not necessary.
+- **Lean:** [`MatrixCore.guard_of_inputs`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L280), [`MatrixCore.aligned_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L422),
+  [`MatrixCore.pairwise_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L415), [`MatrixCore.correctRounding_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L407)
+
+### Inner products of any length
+
+**Yes. The correction of an inner product from its final output is the exact
+`c + Σ a_ℓ b_ℓ` rounded to the nearest FP32 value, for any finite `D`.** From
+the Matrix Core's output, the overlap is the error of `D`, at most the sum of
+the blocks' bounds, plus the low parts.
+
+- **Assumes:** finite inputs of equal length and a finite `D`.
+- **Classification:** Core theorems.
+- **Lean:** [`MatrixCore.mcEftDot_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Dot.lean#L80), [`MatrixCore.dot_overlap`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Dot.lean#L108),
+  [`MatrixCore.mcEftDot_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L454)
+
+### Does the fixed-size implementation agree?
+
+**Yes.** The correction on 576-bit registers, with the split, the check, the
+fast path and the exact fallback all on registers, returns the same result as
+the correction on exact values. No addition wraps.
+
+- **Assumes:** a model whose products lie on `2^-298` with exponents at most
+  `258` and fewer than `2^12` products; every model of the paper qualifies.
+- **Classification:** Core theorem.
+- **Lean:** [`MatrixCore.mcEftFixed_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L1018), [`MatrixCore.mcEftDotFixed_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L1046),
+  [`MatrixCore.paper_models_fitRun`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L1071)
+
 ## Matrix Core number formats and rounding
 
 ### Is FP32 rounding implemented correctly?

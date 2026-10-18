@@ -33,7 +33,9 @@ The models are described on [the model at a glance](/HardwarePrimitives/tensor-c
 **Proven properties of the Matrix Core models**, per generation:
 
 - **All:** per-block error bounds, also from the inputs alone, monotonicity in `c`, and the
-  [MC-EFT correction](/HardwarePrimitives/matrix-core/properties/eft/) of a block from its output.
+  [MC-EFT correction](/HardwarePrimitives/matrix-core/properties/eft/) of a block or an inner
+  product from its output, with its fast path from the inputs alone and a 576-bit register
+  version.
 - **CDNA 1 and the SFMA:** correct rounding, monotonicity in every product, and independence of
   the order of the products.
 - **CDNA 2:** non-monotonicity in the products only through flushing; correct rounding when every
@@ -59,7 +61,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 | AMD vectors and MATLAB models | every published test vector; 600,000 random inner products plus targeted ones; 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics, 0 mismatches |
 | Software oracle cases | 715 blocks, 2,918 rounding cases, 2,033 feature cases, 0 mismatches |
 | FloatLib equivalence | proven; 115,029 + 668,944 comparison cases, 0 mismatches |
-| Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted on 2026-10-13; the `MatrixCore` theorems added since are not yet re-checked |
+| Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted on 2026-10-18 (169,059 and 167,239) |
 
 ## What is not done
 
@@ -90,10 +92,11 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 - **AMD.** No recorded hardware outputs are published; the AMD models rest on the published
   test vectors and on two simulators.
 
-**TC-EFT.** The paper's input-based precondition (17) derives five of the nine conditions of
-the fast-path check for FP32; the other four depend on the particular sum and remain
-assumptions. On the Matrix Cores no input-based condition is proven, the fallback uses exact
-rationals rather than a fixed-width word, and chained blocks are not covered.
+**TC-EFT and MC-EFT.** On Tensor Cores, the paper's input-based precondition (17) derives five
+of the nine conditions of the fast-path check for FP32; the other four depend on the particular
+sum and remain assumptions. On Matrix Cores the condition on the inputs derives every condition,
+but it uses the exact sum and an error bound, and it is sufficient, not necessary. For inner
+products it takes a given error bound.
 
 ## What could come next
 

@@ -1,6 +1,6 @@
 ---
 title: MC-EFT correction
-description: MC-EFT, the error-free transformation for AMD Matrix Cores - the correctly rounded sum of a CDNA 1, 2 or 3 block from its output, the cut-off of each generation, and what the Matrix Core's output buys.
+description: MC-EFT, the error-free transformation for AMD Matrix Cores - the correctly rounded sum of a CDNA 1, 2 or 3 block or inner product from its output, the fast path from the inputs alone, and the 576-bit register version.
 ---
 
 MC-EFT is the error-free transformation for AMD Matrix Cores. It carries the
@@ -8,7 +8,9 @@ algorithm of [TC-EFT](/HardwarePrimitives/tensor-core/properties/eft/), which co
 Tensor Core block with the bits the hardware dropped, over to CDNA 1, 2 and 3.
 It takes the encoded inputs of one block and a finite
 FP32 word `D`, normally the Matrix Core's output, and returns the exact sum
-`S = c + Σ a_ℓ b_ℓ` rounded to the nearest FP32 value (ties to even).
+`S = c + Σ a_ℓ b_ℓ` rounded to the nearest FP32 value (ties to even). It also
+corrects [inner products of any length](#inner-products-of-any-length), and it
+runs entirely [in a 576-bit register](#in-a-576-bit-register).
 
 ## Does it work?
 
@@ -152,6 +154,91 @@ alignment (FP16, BF16, XF32) it follows that `H = D`, the overlap is `0`, and
 the low parts are exactly what alignment dropped: `S = D + Σ low parts`
 ([`MatrixCore.globalAlignment_exact_rounding`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L706)).
 
+## From the inputs alone
+
+The check of the fast path looks at `D`. A condition on the inputs alone
+predicts it. It uses the exact sum `S` of the decoded inputs and a bound `E` on
+the error of `D`; each generation's a priori error bound is such a bound, also
+computed from the inputs. [`MatrixCore.InputFast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L254) holds when, for every `D`
+within `E` of `S`:
+
+- the lowest bit of the nonzero terms is at least `2^-149`;
+- the low parts fit 24 bits above it at the highest cut-off such a `D` can give;
+- the overlap and `H` fit FP32 at the lowest cut-off such a `D` can give.
+
+Lean proves that the check then passes for every finite `D` within `E` of `S`
+([`MatrixCore.guard_of_inputs`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L280)). With each generation's a priori bound, the
+correction of the Matrix Core's own output takes the fast path:
+
+```lean
+theorem aligned_fast (hL : LateModel P)
+    (hacc : P.accumulation = .globalAlignment ∨ P.accumulation = .oddEvenGrouping)
+    (hsub : P.subnormals = true) (h : evalBlock x = .ok t)
+    (hc : InputFast P t.prepared (alignedApriori P t.prepared))
+    (hS : absQ t.prepared.exact < overflowThreshold32) : ∃ b, mcEft x t.d = .ok (.fast b)
+```
+
+([`MatrixCore.aligned_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L422) for CDNA 3, [`MatrixCore.pairwise_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L415) for
+CDNA 2, [`MatrixCore.correctRounding_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L407) for CDNA 1 and the SFMA.) All six
+conditions of the check follow from the inputs. On Tensor Cores, the TC-EFT
+paper's inequality (17) gives five of nine and leaves four as assumptions. The
+price is that the condition uses the exact sum and the error bound, not only the
+exponents.
+
+The condition is sufficient, not necessary. Near a power of two, a `D` just
+below it lowers the cut-off, so the condition can fail for a block that takes
+the fast path. In the kernel-checked tests it holds for the first CDNA 3 row
+below, the CDNA 1 row and a CDNA 2 block with lead product `1.5`, and fails for
+the fallback row, as it must, and for the CDNA 2 order example, whose sum is
+near `1`.
+
+## Inner products of any length
+
+[`MatrixCore.mcEftDot`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Dot.lean#L15) corrects an inner product of any length from its final
+output word `D`: `c` and every product are split at the last bit of `D`. Any
+returned word is the exact `c + Σ a_ℓ b_ℓ` rounded to the nearest FP32 value,
+for any finite `D` ([`MatrixCore.mcEftDot_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Dot.lean#L80)). From the Matrix Core's
+output, the overlap is the error of `D` plus the low parts, and the error is at
+most the sum of the blocks' error bounds ([`MatrixCore.dot_overlap`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Dot.lean#L108)). With any
+bound on that error, the condition of the previous section gives the fast path
+([`MatrixCore.mcEftDot_fast`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Inputs.lean#L454)).
+
+| Inner product | Matrix Core `D` | Correctly rounded `S` | Correction |
+| --- | --- | --- | --- |
+| CDNA 3 FP16, two blocks of the first row below | `0x40900000` | `0x40900002` | fast, `0x40900002` |
+| CDNA 1 FP16, two blocks, each `1 + 2^-24` | `0x3F800000` | `0x3F800001` | fast, `0x3F800001` |
+
+In the CDNA 1 inner product, each block is correctly rounded: it rounds the tie
+`1 + 2^-24` to `1`. The chain still loses `2^-23`, and the correction puts it
+back.
+
+## In a 576-bit register
+
+[`MatrixCore.mcEftFixed`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L992) runs the whole correction on 576-bit two's-complement
+registers in units of `2^-298`, the lowest bit of a product of two FP32 values:
+
+- the terms are registers, split at the cut-off by masks;
+- `H` and the low parts are register additions;
+- the check is a trailing-zero count, masks and comparisons;
+- the fast path is FP32 rounding of register sums, and the exact fallback is one
+  rounding of the register sum, by a leading-zero count, shifts and
+  comparisons.
+
+Exponents and shift counts are small naturals. Lean proves that no addition
+wraps and that the result is that of `mcEft`, on every model whose products lie
+on `2^-298` with exponents at most `258` and that has fewer than `2^12`
+products:
+
+```lean
+theorem mcEftFixed_eq (hP : P.FitsRun) (x : BlockInput P) (D : F32) :
+    mcEftFixed x D = mcEft x D
+```
+
+([`MatrixCore.mcEftFixed_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L1018); the register rounding is [`MatrixCore.roundReg_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Register.lean#L232).)
+Every model of the paper fits ([`MatrixCore.paper_models_fitRun`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L1071)).
+[`MatrixCore.mcEftDotFixed_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Fixed.lean#L1046) gives the same for inner products of fewer than
+`2^12` products.
+
 ## Worked examples
 
 Every row is a kernel-checked test
@@ -192,9 +279,10 @@ Every row is a kernel-checked test
 proofs work for any finite `D`, so the correction does not rely on the model
 matching the hardware. A good `D` buys speed, not correctness.
 
-**2. No theorem says how often the fast path applies.** There is no
-input-based condition like the TC-EFT paper's inequality (17), and no fast-path
-statistics on AMD inputs. A low part below `2^-149` always forces the fallback.
+**2. The condition on the inputs is sufficient, not necessary.** It can fail
+near a power of two for a block that takes the fast path. There are no
+fast-path statistics on AMD inputs, and a low part below `2^-149` always forces
+the fallback.
 
 **3. Finite inputs only.** Infinities and NaNs give an error, and a sum beyond
 the FP32 range gives `.outOfRange` rather than infinity. An exactly zero sum
@@ -205,10 +293,11 @@ core reads them, truncated to ten mantissa bits; the input truncation is not
 corrected. On CDNA 2, `S` uses the inputs before flushing, and the result is
 rounded with subnormals, not flushed.
 
-**5. One block at a time, with exact rationals in the fallback.** Chained
-blocks (`k > N_FMA`) are not covered, and there is no fixed-width
-implementation like the 576-bit word of TC-EFT on Tensor Cores.
+**5. Inner products.** The correction is correct for any length, and the
+register version covers fewer than `2^12` products. For an inner product, the
+condition on the inputs takes a given bound on the error of `D`, such as the sum
+of the blocks' bounds, rather than one computed from the inputs alone.
 
-**6. Not yet re-checked independently.** These theorems are covered by the
-axiom audit (standard axioms only) but were added after the last run of the
-independent proof checker.
+**6. Re-checked independently.** On 2026-10-18 con-leche, an independent Lean
+checker, accepted every declaration of `MatrixCore` and its tests, MC-EFT
+included ([What is tested](/HardwarePrimitives/proofs/tested/#proven-in-lean)).
