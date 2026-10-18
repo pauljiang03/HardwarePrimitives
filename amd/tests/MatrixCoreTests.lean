@@ -11,6 +11,7 @@ import MatrixCoreTests.ErrorBounds
 import MatrixCoreTests.Monotonicity
 import MatrixCoreTests.ProductProperties
 import MatrixCoreTests.InnerProduct
+import MatrixCoreTests.EFT
 import MatrixCoreTests.Audit
 
 /-! # Regression checks -/

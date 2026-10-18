@@ -1,5 +1,12 @@
 {
- "MatrixCore.lean": "1a5a479e9214b505c005b64bbe30f6447b4aa23f276a8480ed2cc28f09a69d80",
+ "MatrixCore.lean": "e34832e8d9ddaaa6db9aef5f1f78baf908e30b03d5c99a9550037056e728b473",
+ "MatrixCore/EFT.lean": "5c5216bfcf79651ac91ad91653043a9e2ac2085b7f597161b6cc448755c19b13",
+ "MatrixCore/EFT/CDNA1.lean": "87f76ecef365efb21253cde7f37428ff0124d6fd6b952c9034defe8423a489d7",
+ "MatrixCore/EFT/CDNA2.lean": "8aa455a2c31eab3451274132bf7e157f8b40f9a6470c15bae419baca594fd1f5",
+ "MatrixCore/EFT/CDNA3.lean": "7c7395ed544bde62d73396eac873f5911571cd085f4035179defde3c1f5a47af",
+ "MatrixCore/EFT/Core.lean": "f8d98f1a546bc3836511ba047ba6c9dfe01dc5240afe22a8648192723f7605ea",
+ "MatrixCore/EFT/Encoded.lean": "5273ec96246facad8d7370e2ef1d6f7899fa0f4cbdabcda64bf8682b9dad3239",
+ "MatrixCore/EFT/Sum32.lean": "dce77de40f708bfed3bf2a66f4472303a1429fb95d99514a52c5aec6ebaa4176",
  "MatrixCore/MC.lean": "7b9086d007ec6c3d1a13568918486765650c25374f252a8ae25e09df6be937e2",
  "MatrixCore/MC/AcceptedDomain.lean": "8ac9c78bea7eaf8c39f8d090c9a2d5ec7708cfb4cc061b04961535046a739996",
  "MatrixCore/MC/Accumulator.lean": "079706b16ed7a2a6ee472c08734e046fc51a5e37ff05c63b752f95f42cbcd992",
