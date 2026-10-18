@@ -4,7 +4,7 @@ import OzakiTC.ADPLabels
 
 The Z3 model of ADP lets the coarsened ESC treat zeros in three ways (`ZERO_POLICY`): as exponent
 `−∞` (the paper's, and `adp`'s), skipped in the block minimum, or with the subnormal exponent
-`−1022`. The estimates alone are proved unsafe in `Ozaki.ADP` (`skipZeros_unsafe`, `field0_unsafe`,
+`−1022`. The estimates alone are proven unsafe in `Ozaki.ADP` (`skipZeros_unsafe`, `field0_unsafe`,
 and on the model's own inputs `zeros_case_caught`, `field0_case_caught`); the model stops a run with
 an unsafe policy at its assertion `[X.4]` before it returns a result.
 

@@ -8,7 +8,7 @@ import MatrixCore.MC.AprioriBounds
 
 /-! # Per-model contracts
 
-What is proved about one accepted block, bundled per configuration and carried to every block of
+What is proven about one accepted block, bundled per configuration and carried to every block of
 an inner product. -/
 
 namespace MatrixCore

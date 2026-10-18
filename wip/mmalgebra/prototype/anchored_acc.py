@@ -1,6 +1,6 @@
 """Accuracy of the zero-overhead anchored chain (c0 = 1.5*2^E, E from the Cauchy-Schwarz bound,
 2^(E-1) >= 2*beta) with the deterministic floor-bias correction (1 - 2^(23-F))/2 ulp per block,
-against native, on H100 / A100 / V100 fp16. Block-granular invariance is proved (AnchoredTC.lean)."""
+against native, on H100 / A100 / V100 fp16. Block-granular invariance is proven (AnchoredTC.lean)."""
 import math, random
 import fastmodels as FM
 from anchor_sim import gen, word_value

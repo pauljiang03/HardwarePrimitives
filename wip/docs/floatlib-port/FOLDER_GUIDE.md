@@ -33,12 +33,12 @@ These claims concern checked interfaces and representations whose metadata and v
 Some proofs follow this argument:
 
 1. A theorem establishes a property of the first-principles implementation.
-2. A proved equivalence connects the relevant first-principles and FloatLib computations.
+2. A proven equivalence connects the relevant first-principles and FloatLib computations.
 3. Rewriting through those equalities establishes the property for the FloatLib implementation.
 
-For example, [`floatlib_error_bound`](TCFloat/Equivalence/PortedTheorems.lean) applies `TensorCore.evalPrepared_error_bound`, then translates the exact input sum, accumulator, output and grid quantities through the proved correspondence. Lean checks that translation and all required hypotheses.
+For example, [`floatlib_error_bound`](TCFloat/Equivalence/PortedTheorems.lean) applies `TensorCore.evalPrepared_error_bound`, then translates the exact input sum, accumulator, output and grid quantities through the proven correspondence. Lean checks that translation and all required hypotheses.
 
-The transported proof depends on the first-principles theorem and the proved equivalence. Separate FloatLib theory modules prove recovery, scalar correction and rounding directly from FloatLib operations.
+The transported proof depends on the first-principles theorem and the proven equivalence. Separate FloatLib theory modules prove recovery, scalar correction and rounding directly from FloatLib operations.
 
 The executable uses FloatLib decoding, exact dyadic multiplication and rounding to FP32. A dependency audit checks its independence from the first-principles `TensorCore` functions. The audit also checks that EFT correction does not call the TC evaluator or the ideal-sum function to obtain its answer.
 
@@ -119,7 +119,7 @@ lake build TCFloat.Equivalence.ScalarCorrection
 | `python3 scripts/check_replay.py` | Compiled Lean model on recorded A100/H100 BF16/TF32 rows, plus model/EFT execution on the saved scalar-coverage corpus. | `replay-report.json` |
 | `python3 scripts/check_tc_eft_paper.py` | Pinned paper generators produce inputs and expected results; compiled Lean executes the blocks, perturbation families and rounding cases. | `eft-paper-report.json` |
 | `python3 scripts/check_edges.py` | Compiled Lean on supplied-D, rounding and invalid-input edge cases; also checks that deliberately contaminated dependency audits fail. | `edges-report.json` |
-| `python3 scripts/check_monotonicity.py` | Compiled Lean on 360 boundary cases around the proved non-monotonicity threshold. | `monotonicity-report.json` |
+| `python3 scripts/check_monotonicity.py` | Compiled Lean on 360 boundary cases around the proven non-monotonicity threshold. | `monotonicity-report.json` |
 
 Run the full suite in the required build context with:
 

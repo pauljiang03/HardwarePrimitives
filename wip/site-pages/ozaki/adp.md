@@ -72,7 +72,7 @@ emulated path and the classical `γₖ` bound on the native path
 
 ## Findings
 
-- **From the Z3 model**, now proved in general: zeros must have exponent `−∞`
+- **From the Z3 model**, now proven in general: zeros must have exponent `−∞`
   in the coarsened ESC; the remap range is slightly smaller than the unsigned
   range; the `+1` in `W` buys one bit in the funnel; the Inf/NaN scan must come
   before ESC. The coarsening theorem holds for every block size, and the funnel
@@ -167,7 +167,7 @@ or a kernel-checked test on the model's own inputs:
 - subnormal inputs;
 - the zero policies ([`zeros_case_caught`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/ADPEncodings.lean#L383)).
 
-The naive signed-byte encoding is proved too ([`naiveDigits_s8`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/ADPEncodings.lean#L110)). The two
+The naive signed-byte encoding is proven too ([`naiveDigits_s8`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/ADPEncodings.lean#L110)). The two
 remaining checks test the Z3 model's own harness.
 
 **Infinities and NaN.** `adp` returns no values where a result is not finite.
@@ -189,6 +189,6 @@ returns the Z3 model's words.
   ([`int8Dot_any_order`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/Int8Semantics.lean#L76), [`int8_wrap_sat_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/Int8Semantics.lean#L135)). Neither hardware model
   has an INT8 instruction, and nothing is validated against INT8 hardware.
 - The routine follows the Z3 model of the paper, not cuBLAS's implementation.
-- Grade A is proved for `adp` on normal or zero entries and for `adpSafe` on
+- Grade A is proven for `adp` on normal or zero entries and for `adpSafe` on
   all entries, with an underflow term; cuBLAS's own handling of subnormal
   inputs is not modeled.

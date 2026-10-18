@@ -2,7 +2,7 @@
 """How often does the rounding test of correctly rounded Ozaki-I and Ozaki-II succeed on an entry?
 
 A CPU simulation of the correctly rounded schemes of `Ozaki/Correct.lean`, in exact arithmetic.
-For one output entry `x . y` each scheme computes an exact value `H` and a proved bound
+For one output entry `x . y` each scheme computes an exact value `H` and a proven bound
 `B >= |x . y - H|`, and accepts when `H - B` and `H + B` round to the same value (`roundEnclosure`,
 `roundingTest`); otherwise it tries the next enclosure and finally takes the exact fallback. The
 matrix multiplier is exact (the Lean proofs show it is on slices and residues), so the slice and

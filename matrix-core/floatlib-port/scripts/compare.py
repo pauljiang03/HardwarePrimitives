@@ -130,7 +130,7 @@ def main():
             bad += len(miss)
             counts.append(f"{regime} {len(miss)}")
             for l, x, y in miss[:3]:
-                print(f"  MISMATCH {l}\n    Matrix-Core {x}   FloatLib {y}")
+                print(f"  MISMATCH {l}\n    MatrixCore {x}   FloatLib {y}")
         print(f"{profile:14} " + "  ".join(counts))
     print(f"{total} inner products, {bad} mismatches")
     sys.exit(1 if bad else 0)

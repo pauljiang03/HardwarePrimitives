@@ -89,7 +89,7 @@ models do not meet it.
 | Naive floating-point summation is exact when the summands fit within a bounded bit span. | `naiveSumBinary_exact_of_bitSpan` | [Numerics/Binary/ScalarSum.lean](Numerics/Binary/ScalarSum.lean) |
 | FP64 DMMA gives an exactly zero result the IEEE 754 sign, and keeps the correctly rounded bits otherwise. | `binary64FmaBits_of_eq_zero`, `binary64FmaBits_of_ne_zero` | [TC/FusedRounding.lean](TC/FusedRounding.lean) |
 
-## Not proved
+## Not proven
 
 - That real GPUs behave like the model. That is tested by replaying recorded GPU outputs: 35,000
   rows of V100, A100 and H100, 125,000 of Ada, L40S, H100, H200 and B200, and 20,000 H100 and H200

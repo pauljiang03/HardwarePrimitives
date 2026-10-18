@@ -12,7 +12,7 @@ exact-fraction oracle computes. With `k = 8` and `11`-bit slices the matrix mult
   the exact fallback on V100 blocks;
 * `tcOzaki2CRD`: the same by Ozaki-II with twelve moduli at most `4096` (`P = 69` for `k = 8`);
 * `tcOzaki1D`: FP64 emulation by Ozaki-I with binary64 recombination and six slices, within its
-  proved bound of the exact product (checked here by exact rational arithmetic). -/
+  proven bound of the exact product (checked here by exact rational arithmetic). -/
 
 open TensorCore Ozaki Ozaki.TC OzakiTCTests.Correct
 

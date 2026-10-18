@@ -3,7 +3,7 @@
 This file mirrors the [Project status](https://pauljiang03.github.io/HardwarePrimitives/status/) page of the website.
 
 Hardware Primitives is a Lean 4 development about the arithmetic of GPU matrix multipliers:
-models of the block FMAs of NVIDIA Tensor Cores and AMD matrix cores, and their proved
+models of the block FMAs of NVIDIA Tensor Cores and AMD matrix cores, and their proven
 properties. This page summarizes what it can do today, how it is checked, what is not done, and
 what could come next. Work in progress that builds on the models is kept in the repository's
 `wip/` folder and is not covered here.
@@ -19,25 +19,25 @@ what could come next. Work in progress that builds on the models is kept in the 
 | NVIDIA Tensor Cores, FP8 `mma.sync` | H100, H200 and B200 (FP16 path with interleaving); RTX PRO 6000 | E4M3, E5M2 |
 | AMD matrix cores | CDNA 1, 2 and 3, and the sequential FMA of FP32 inputs | FP16, BF16 (incl. `_1k`), XF32, FP8 (E4M3 and E5M2 FNUZ, any mix) |
 
-The models are described on [the model at a glance](https://pauljiang03.github.io/HardwarePrimitives/model/) and
-[the AMD model at a glance](https://pauljiang03.github.io/HardwarePrimitives/amd/).
+The models are described on [the model at a glance](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/) and
+[the AMD model at a glance](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/).
 
-**Proved properties of the Tensor Core models.**
+**Proven properties of the Tensor Core models.**
 
 - Per-block error bounds, for every block-output width.
 - When alignment loses nothing, so that a block FMA adds its products exactly.
 - An exact characterization of a family of non-monotonic inputs.
 - TC-EFT: the correctly rounded sum of a block FMA, with a 576-bit exact fallback.
 
-**Proved properties of the matrix core models.**
+**Proven properties of the matrix core models.**
 
 - Per-block error bounds in each branch of the accumulation algorithms.
 - Monotonicity in `c`, and the cases where it fails in the products.
 - How the output depends on the order of the products, including the CDNA 3 FP8 parity law
-  (proved in `wip/mmalgebra`, which builds on the model).
+  (proven in `wip/mmalgebra`, which builds on the model).
 - Fixed-width accumulation on CDNA 3.
 
-**Cross-checks proved in Lean.** Each model equals an independent specification. The Tensor Core
+**Cross-checks proven in Lean.** Each model equals an independent specification. The Tensor Core
 model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 ## How it is checked
@@ -46,13 +46,13 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 | --- | --- |
 | `lake build` (248 targets) | passes, no Lean warnings |
 | Axiom audit | only `propext`, `Classical.choice`, `Quot.sound`; no `sorry` |
-| Model = independent specification | proved for all inputs on every model, for every block-output width (FP8 included) |
-| Model = bitvector datapath | proved for all inputs on the 8 FP16/BF16/TF32 variants and the 6 FP8 block FMAs |
+| Model = independent specification | proven for all inputs on every model, for every block-output width (FP8 included) |
+| Model = bitvector datapath | proven for all inputs on the 8 FP16/BF16/TF32 variants and the 6 FP8 block FMAs |
 | Recorded GPU vectors | 35,000 rows of V100, A100 and H100; 125,000 rows of Ada, L40S, H100, H200 and B200 (FP16, BF16, TF32, E4M3, E5M2); 20,000 H100 and H200 FP8 rows of toolbox release v0.1. 0 mismatches |
 | MMA-Sim cross-check | 850,000 cases on 31 instructions (581,052 identical with a nonzero `C`) and 80,000 FP8 `mma.sync` cases, 0 mismatches |
 | AMD vectors and MATLAB models | every published test vector; 600,000 random inner products plus targeted ones; 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics, 0 mismatches |
 | Software oracle cases | 715 blocks, 2,918 rounding cases, 2,033 feature cases, 0 mismatches |
-| FloatLib equivalence | proved; 115,029 + 668,944 comparison cases, 0 mismatches |
+| FloatLib equivalence | proven; 115,029 + 668,944 comparison cases, 0 mismatches |
 | Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted |
 
 ## What is not done

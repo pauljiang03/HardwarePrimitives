@@ -32,7 +32,7 @@ Every integer of `ozaki2CRZ` (and of `Ozaki.TC.adpCRZ`) has a width set by the f
 What depends on the exponents is exponent arithmetic only: the scaling and fixed-point exponents,
 the shift amounts `e + s`, the slice grids, and the number of ranges that the top-down summation of
 the exact fallback visits. There is no single theorem bounding every intermediate value; the widths
-are proved register by register. -/
+are proven register by register. -/
 
 local notation "ℕ" => Nat
 local notation "ℤ" => Int

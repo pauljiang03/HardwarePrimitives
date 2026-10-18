@@ -12,12 +12,12 @@ and on the AMD matrix-core model in `amd/`, following a set of bit-precise Z3
 models of the schemes. Every theorem uses only Lean's standard axioms, and
 every named declaration is re-checked by
 [con-leche](https://github.com/leanprover/con-leche), an independent Lean
-checker proved never to accept a proof of `False`.
+checker proven never to accept a proof of `False`.
 
 | Scheme | Idea | Read |
 | --- | --- | --- |
-| **Ozaki-I** (Ozaki, Ogita, Oishi and Rump, 2012) | Cut every input into slices of small integers, multiply slice pairs on the matrix multiplier, add the scaled products. | [Ozaki-I, proved end to end](/HardwarePrimitives/ozaki/ozaki-1/) |
-| **Ozaki-II** (Ozaki, Uchino and Imamura, 2025) | Scale the inputs to integers, multiply them modulo a few moduli on the matrix multiplier, rebuild the product with the Chinese remainder theorem. | [Ozaki-II, proved end to end](/HardwarePrimitives/ozaki/ozaki-2/) |
+| **Ozaki-I** (Ozaki, Ogita, Oishi and Rump, 2012) | Cut every input into slices of small integers, multiply slice pairs on the matrix multiplier, add the scaled products. | [Ozaki-I, proven end to end](/HardwarePrimitives/ozaki/ozaki-1/) |
+| **Ozaki-II** (Ozaki, Uchino and Imamura, 2025) | Scale the inputs to integers, multiply them modulo a few moduli on the matrix multiplier, rebuild the product with the Chinese remainder theorem. | [Ozaki-II, proven end to end](/HardwarePrimitives/ozaki/ozaki-2/) |
 | **ADP and ESC** (Schwarz et al., NVIDIA, 2025) | Ozaki-I on INT8 matrix multipliers for FP64, with a slice count chosen from the inputs' exponent spread and a fallback to native FP64. | [ADP and ESC](/HardwarePrimitives/ozaki/adp/) |
 
 Two pages cut across the schemes: [correct rounding](/HardwarePrimitives/ozaki/correct-rounding/)
@@ -25,7 +25,7 @@ for all three, and [what the hardware semantics give](/HardwarePrimitives/ozaki/
 [Related work and novelty](/HardwarePrimitives/ozaki/literature/) places the work in the
 literature.
 
-## What is proved
+## What is proven
 
 - **The matrix multiplier is exact, from the hardware model.** Every scheme
   assumes that the matrix multiplier multiplies its small integers exactly.
@@ -42,7 +42,7 @@ literature.
   per GPU.
 - **Correct rounding.** Each scheme has a variant that returns the round to
   nearest even of the exact product for every input, with the same result on
-  both vendors: Ziv's rounding test checks whether the scheme's proved error
+  both vendors: Ziv's rounding test checks whether the scheme's proven error
   interval rounds to one value, the scheme refines if not, and it ends with an
   exact fallback on the matrix multiplier.
   The whole pipeline runs in integer registers, with one theorem bounding
@@ -80,6 +80,6 @@ FP8 variants; INT8 hardware semantics, out of scope for now on both vendors
 ([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)), so ADP runs on
 an idealized INT8 matrix multiplier; and a GPU implementation. The theorems are about the
 models; that GPUs behave like them rests on the models'
-[validation](/HardwarePrimitives/model/validation/). The full list, with every Lean name,
+[validation](/HardwarePrimitives/tensor-core/validation/). The full list, with every Lean name,
 is in
 [`ozaki/THEOREMS.md`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/THEOREMS.md).

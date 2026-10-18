@@ -5,7 +5,7 @@ import Ozaki.CRT
 `crtBasis ms` computes the weights `wₗ = (M / mₗ) · ((M / mₗ)⁻¹ mod mₗ)` with the extended Euclidean
 algorithm (`xgcdFuel`, `invMod`). Whether a basis is valid is decidable, and so far concrete bases
 were checked by the kernel one by one (`Ozaki.Parameters`, `OzakiTC.Ozaki2Choice`). Here it is
-proved once for all moduli:
+proven once for all moduli:
 
 * `xgcdFuel_spec`: with enough fuel the extended Euclidean algorithm returns `(g, s, t)` with
   `s a + t b = g`, `g ≥ 0`, and `g` dividing `a` and `b`;

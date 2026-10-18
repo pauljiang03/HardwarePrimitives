@@ -23,7 +23,7 @@ in hexadecimal) and prints `F <word>`, `I+`, `I-` or `N`; the example prints
 [`reference-manifest.json`](reference-manifest.json). A change to
 `MatrixCore`'s code fails the pin check until it is pinned again with `--pin`.
 
-## What is proved
+## What is proven
 
 | Statement | Lean |
 | --- | --- |

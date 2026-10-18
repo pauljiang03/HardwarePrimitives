@@ -8,7 +8,7 @@ the objects of the proofs.
 [What is proven](https://pauljiang03.github.io/HardwarePrimitives/proofs/theorems/) ·
 [Status](https://pauljiang03.github.io/HardwarePrimitives/status/)
 
-## Hardware primitives
+## Libraries
 
 Each primitive has its own folder: a standalone Lake project with its library,
 tests, examples, validation scripts and a second implementation on FloatLib.
@@ -24,14 +24,14 @@ Cores* ([arXiv:2512.07004](https://arxiv.org/abs/2512.07004)), and Khattak,
 Mikaitis and Graziani, *Accurate Models of AMD Matrix Cores*
 ([arXiv:2609.14845](https://arxiv.org/abs/2609.14845)). Outputs are FP32.
 
-## Proved properties
+## Proven properties
 
 - **Both libraries:** equality with an independent transcription of the
   published model, for every input; error bounds; exact accepted domains; a
-  second implementation on FloatLib proved equivalent.
+  second implementation on FloatLib proven equivalent.
 - **Tensor Cores:** a characterization of non-monotonicity, and TC-EFT, which
   recovers the correctly rounded sum of a block FMA (with a 576-bit exact
-  fallback); a bitvector datapath proved equal to the model.
+  fallback); a bitvector datapath proven equal to the model.
 - **Matrix cores, per generation:** correct rounding on CDNA 1; on CDNA 2,
   non-monotonicity in the products only through flushing; on CDNA 3, an exact
   characterization of non-monotonicity in the products (a family with an exact

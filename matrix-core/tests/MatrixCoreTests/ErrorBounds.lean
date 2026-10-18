@@ -2,7 +2,7 @@ import MatrixCore
 
 /-! # Output error bounds on the paper's examples
 
-Each check evaluates the actual error `exact − d` and the proved bound. -/
+Each check evaluates the actual error `exact − d` and the proven bound. -/
 
 open MatrixCore
 

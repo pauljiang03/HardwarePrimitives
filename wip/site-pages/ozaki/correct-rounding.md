@@ -11,7 +11,7 @@ claim on this page is a Lean theorem using only Lean's standard axioms.
 
 ## The method: a rounding test, then an exact fallback
 
-Each scheme holds an exact value `H` before its last rounding and a proved
+Each scheme holds an exact value `H` before its last rounding and a proven
 bound `B ≥ |x · y − H|`:
 
 - **Ozaki-I:** `H` is the sum of the slice products computed so far, and `B`
@@ -41,7 +41,7 @@ the method, not a failure: it is slower and never wrong.
 
 The test in step 1 is Ziv's rounding test, classical in correctly rounded
 math libraries. What is new is using it as an early-exit test on Ozaki
-matrix products, with refinement and a proved exact fallback on the matrix
+matrix products, with refinement and a proven exact fallback on the matrix
 multiplier,
 for all three schemes, machine-checked. See
 [Related work and novelty](/HardwarePrimitives/ozaki/literature/) for the prior work
@@ -111,7 +111,7 @@ not GPU time, on
 distributions chosen for the simulation; the entries of one GEMM share rows
 and columns.
 
-### Two rules from the measurements, proved
+### Two rules from the measurements, proven
 
 - **Slice counts that grow with `k`.** The first test uses the slice count
   for the target precision plus `⌈log₂ k⌉` bits; its bound is then at most
@@ -198,7 +198,7 @@ widths do not depend on the inputs' exponents.
   `n · bitlen(max |v|) + 1` ranges, whatever the exponents
   ([`rangesJ_le`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/TopDownSummation.lean#L437)).
 - **The whole pipeline**, from `(significand, exponent)` inputs to the rounded
-  result, is one integer function proved correctly rounded: for Ozaki-I
+  result, is one integer function proven correctly rounded: for Ozaki-I
   ([`ozaki1CRI_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/BoundedInt.lean#L186)), Ozaki-II ([`ozaki2CRJ_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/BoundedOzaki2J.lean#L112)) and ADP-style slicing
   ([`adpCRJ_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/ADPIntJ.lean#L34)), on both vendors (ADP on the Tensor Core side), with
   signed-zero versions ([`ozaki1CRIS_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/BoundedInt.lean#L332), [`ozaki2CRJS_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/BoundedOzaki2J.lean#L174),
@@ -220,7 +220,7 @@ overflows ([`ozaki1CRIC_eq`](https://github.com/pauljiang03/HardwarePrimitives/b
 
 The guards cover the internal arithmetic of the matrix multipliers too: every
 chunk result and partial sum of split-K, and every partial sum of the 32-bit
-register of the INT8 matrix multiplier, which is proved never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/CheckedMultipliers.lean#L52),
+register of the INT8 matrix multiplier, which is proven never to wrap ([`chunkedC_exactOn`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/CheckedMultipliers.lean#L52),
 [`int8DotC_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/Int8Checked.lean#L59)). The signed-zero pipelines have checked versions as well
 ([`ozaki2CRJSC_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/BoundedCheckedSigned.lean#L138), [`adpCRJSC_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/ADPCheckedSigned.lean#L27)); the tightened widths are
 [`ozaki1CRIC_binary64_tight`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/CheckedTight.lean#L38) and its siblings. Kernel-checked tests show the
@@ -255,7 +255,7 @@ MatrixCore's classifications ([`Ozaki.MC.decodeWord_decodeNat`](https://github.c
 
 Every correctly rounded version rounds with a hardware-independent IEEE
 round to nearest even,
-proved for any binary format ([`roundRNE_nearest`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/Binary.lean#L448)). The hardware libraries'
+proven for any binary format ([`roundRNE_nearest`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/Binary.lean#L448)). The hardware libraries'
 own roundings compute the same values: TensorCore's up to the largest finite
 value, where it returns nothing above it ([`round32ValueTC_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/Rounding.lean#L136),
 [`fp64RoundTC_eq`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/IEEE.lean#L33)), and MatrixCore's on every input
@@ -271,7 +271,7 @@ rounds.
 - **In fixed-width integer registers:** slicing, the rounding test, the
   top-down summation of the exact fallback and the final rounding.
 - **Never on a Tensor Core:** the rounding test. A Tensor Core's output is not
-  monotone in its inputs ([non-monotonicity](/HardwarePrimitives/properties/non-monotonicity/)),
+  monotone in its inputs ([non-monotonicity](/HardwarePrimitives/tensor-core/properties/non-monotonicity/)),
   and the rounding test relies on monotone rounding.
 
 ## What is not covered
@@ -279,6 +279,6 @@ rounds.
 - A GPU implementation and measurements: the cost claims come from the model
   and small test matrices.
 - The exactness of the matrix multiplier rests on the hardware models, which
-  are validated against GPUs by measurement, not proved. ADP runs on an
+  are validated against GPUs by measurement, not proven. ADP runs on an
   idealized INT8 matrix multiplier ([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)).
 - NaN payloads and signalling NaNs.

@@ -12,7 +12,7 @@ who wants to read the formal statement.
 Every result here is checked by Lean's kernel. It relies only on Lean's three
 standard axioms (`propext`, `Classical.choice`, `Quot.sound`), with no
 `sorry` and no custom axioms. See [What is tested](/HardwarePrimitives/proofs/tested/)
-for what is tested rather than proved.
+for what is tested rather than proven.
 
 **Classification.** Each entry is classified as one of:
 
@@ -93,7 +93,7 @@ sum is exact too, whatever the order of additions.
 
 ### Can the whole model run in fixed-width bitvector registers?
 
-**Yes.** A [bitvector datapath](/HardwarePrimitives/model/datapath/) decodes, multiplies,
+**Yes.** A [bitvector datapath](/HardwarePrimitives/tensor-core/datapath/) decodes, multiplies,
 aligns, sums and normalizes using bitvector operations only. Its registers
 are sized from the model: `F + 2` bits per aligned term, an accumulator of
 28 to 32 magnitude bits plus a sign bit (30 and 32 on A100 and H100 FP16, the
@@ -150,8 +150,8 @@ row.
 - **Assumes:** nothing; the consequences are evaluations of the model on
   fixed inputs.
 - **Classification:** Core theorems (exact conversions over every word) and
-  kernel-checked witnesses. That GPUs follow the model is tested, not proved:
-  see [hardware validation](/HardwarePrimitives/model/validation/).
+  kernel-checked witnesses. That GPUs follow the model is tested, not proven:
+  see [hardware validation](/HardwarePrimitives/tensor-core/validation/).
 - **Lean:** [`e4m3ToF16_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L91), [`e5m2ToF16_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L106), [`mmaSyncFP8`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L31),
   [`interleave_test_e5m2`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L60), [`interleave_test_reversed`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L74),
   [`interleave_test_single_block`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L79), [`late_c_witness`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L87), [`separate_groups_excluded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MmaSyncFP8.lean#L111)
@@ -344,7 +344,7 @@ partial sum is exact too, whatever the order of additions.
 **For inner products of any length and every finite entry of `D = AB + C`,
 the exact sum equals the output plus the residuals of all the blocks, and the
 error is at most the sum of the blocks' bounds.** Every accepted block also
-satisfies a contract bundling what is proved about it.
+satisfies a contract bundling what is proven about it.
 
 - **Assumes:** each block's output is passed on as the next block's `c`.
 - **Classification:** Core theorems.
@@ -371,7 +371,7 @@ gives a smaller output, and the same holds for inner products of any length.
 On a Tensor Core `C` takes part in alignment and can trigger
 non-monotonicity; on AMD `c` never sets the products' alignment.
 
-- **Assumes:** the model is one of the paper's (all are proved to qualify).
+- **Assumes:** the model is one of the paper's (all are proven to qualify).
 - **Classification:** Core theorem.
 - **Lean:** [`MatrixCore.evalBlock_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Monotonicity.lean#L605), [`MatrixCore.dotBits_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Monotonicity.lean#L629), [`MatrixCore.paper_models_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Monotonicity.lean#L650)
 
@@ -451,7 +451,7 @@ multiset; yes on CDNA 2 and CDNA 3 FP8.** On FP8 the parity law says
 exactly how much: the output depends on the slots only through the unordered
 pair {multiset of the odd slots, multiset of the even slots}, and a
 permutation preserves it on every input exactly when it preserves the parity
-partition. The parity law is proved in `wip/mmalgebra`, a work-in-progress
+partition. The parity law is proven in `wip/mmalgebra`, a work-in-progress
 project that builds on the model.
 
 - **Assumes:** nothing.
@@ -462,7 +462,7 @@ project that builds on the model.
 
 ## MC-EFT correction
 
-[MC-EFT](/HardwarePrimitives/amd/properties/eft/) is TC-EFT carried over to the
+[MC-EFT](/HardwarePrimitives/matrix-core/properties/eft/) is TC-EFT carried over to the
 AMD matrix cores.
 
 ### Is the corrected result right?
@@ -509,14 +509,14 @@ range the correctly rounded word with the sign of `x` is unique.
 - **Classification:** Core theorems.
 - **Lean:** [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/RoundingContract.lean#L312), [`MatrixCore.rne32_isSome_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/RoundingContract.lean#L389), [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Uniqueness.lean#L356)
 
-## What is not proved
+## What is not proven
 
 - **That real GPUs behave like the models.** For the Tensor Cores that rests on
   replaying recorded measurements (see [hardware
-  validation](/HardwarePrimitives/model/validation/)). No recorded AMD hardware
+  validation](/HardwarePrimitives/tensor-core/validation/)). No recorded AMD hardware
   measurements are published, so the AMD model rests on the paper's test
   vectors, the authors' MATLAB models and MMA-Sim (see [hardware
-  validation](/HardwarePrimitives/amd/validation/)).
+  validation](/HardwarePrimitives/matrix-core/validation/)).
 - **The AMD special-value layer** is a definition following the paper's
   description, not derived.
 - **No theorem here is a finite list of cases dressed up as a general result.**

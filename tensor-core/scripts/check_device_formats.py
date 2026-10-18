@@ -68,7 +68,7 @@ def main():
                                      zero_or_subnormal_operands_or_c=special)
         failures += [(gpu, fmt, *m) for m in mismatches]
         failures += [(gpu, fmt + '-profile', *m) for m in profile_mismatches]
-    report['status'] = ('Descriptor and proved-model replay; the minimum alignment exponents are not '
+    report['status'] = ('Descriptor and proven-model replay; the minimum alignment exponents are not '
                         'exercised by these rows')
     report['method'] = ('One descriptor and one model evaluation per row, bitwise comparison with the '
                         'device output and with each other; no new GPU measurements')

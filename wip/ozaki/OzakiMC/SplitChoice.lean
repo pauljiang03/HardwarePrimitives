@@ -3,7 +3,7 @@ import Ozaki.SliceRule
 
 /-! # Choosing the slice width and chunk length per matrix-core variant
 
-The AMD analogue of `OzakiTC.SplitChoice`. On the matrix-core model one knob is proved exact:
+The AMD analogue of `OzakiTC.SplitChoice`. On the matrix-core model one knob is proven exact:
 split-K with `b`-bit slices, chunks of `chunkLen b = 2^(24 − 2b)` products, each chunk on chained
 blocks of `N_FMA` products (`mcSplitK_exactOn`); there is no two-pass matrix multiplier on this
 model. The candidates are every `b` up to what the operand format holds with `2b ≤ 24`

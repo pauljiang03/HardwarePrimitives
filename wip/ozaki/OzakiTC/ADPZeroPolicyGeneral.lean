@@ -6,7 +6,7 @@ import Ozaki.Bounded
 /-! # ADP's unsafe zero policies, in general
 
 `OzakiTC/ADPZeroPolicy.lean` runs the routine with the Z3 model's unsafe zero policies on
-recorded inputs. Here the failures are proved for whole families of inputs:
+recorded inputs. Here the failures are proven for whole families of inputs:
 
 * **Skipping zeros is unsafe for every block size `n ≥ 2` and every inner dimension `k ≥ 2`**
   (`adpPolicy_skip_wrong`), and safe for `n = 1`, where it is the exact estimate

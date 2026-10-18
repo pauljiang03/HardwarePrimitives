@@ -125,7 +125,7 @@ credited here.
   [II](https://www.tuhh.de/ti3/paper/rump/RuOgOi07II.pdf) (full). The 2005
   paper gives accurate dot products with rigorous enclosures, but no rounding
   decision. Part I's AccSum repeats extraction, the splitting Ozaki uses,
-  until the sum is provably faithfully rounded (a magnitude criterion, proved
+  until the sum is provably faithfully rounded (a magnitude criterion, proven
   optimal). Part II's NearSum decides round to nearest from the sign of the
   sum relative to the midpoint next to a faithful result, and stops early
   when that is already decided. These are the closest prior forms of an
@@ -137,7 +137,7 @@ credited here.
   not correctly rounded. **Kulisch's** long accumulator (snippet).
 - **Boldo and Melquiond, IEEE TC 2008** (abstract,
   [HAL](https://hal-ens-lyon.archives-ouvertes.fr/inria-00080427)): correctly
-  rounded sums by rounding to odd, proved in Coq.
+  rounded sums by rounding to odd, proven in Coq.
 - **Ziv's rounding test** (Ziv 1991, metadata; de Dinechin, Lauter, Muller and
   Torres 2013, [abstract](https://hal-ens-lyon.archives-ouvertes.fr/ensl-00693317))
   and CORE-MATH (snippet).
@@ -219,19 +219,19 @@ credited here.
 | Contribution | Verdict | Closest prior work | The difference |
 | --- | --- | --- | --- |
 | Machine-checked Ozaki-I, Ozaki-II and ADP/ESC for every input | New | SMT models; Valpey et al.; pen-and-paper analyses | All-input proofs in an interactive prover with only standard axioms |
-| Exactness of the matrix multiplier derived from validated bit-level NVIDIA and AMD models | New as a proof | The exactness condition on paper; the hardware models, which do not treat Ozaki | The schemes' assumption of an exact matrix multiplier is proved from hardware semantics |
-| The `2^24` exactness bound comes from the binary32 output | Known rule | Ozaki's slice-width formula; Mukunoki et al. 2020 | Proved per variant; new only relative to a matrix multiplier that rounds every partial sum |
-| Full block FMAs of `11`-bit products on A100 and H100 exceed it; bf16 needs `8`-bit slices | Mostly known | The same slice-width formula | Concrete, proved witnesses |
-| NVIDIA and AMD give different wrong answers past the exactness bound | Partly new | Cross-vendor studies by testing and simulation | Proved, Ozaki-specific witnesses |
+| Exactness of the matrix multiplier derived from validated bit-level NVIDIA and AMD models | New as a proof | The exactness condition on paper; the hardware models, which do not treat Ozaki | The schemes' assumption of an exact matrix multiplier is proven from hardware semantics |
+| The `2^24` exactness bound comes from the binary32 output | Known rule | Ozaki's slice-width formula; Mukunoki et al. 2020 | Proven per variant; new only relative to a matrix multiplier that rounds every partial sum |
+| Full block FMAs of `11`-bit products on A100 and H100 exceed it; bf16 needs `8`-bit slices | Mostly known | The same slice-width formula | Concrete, proven witnesses |
+| NVIDIA and AMD give different wrong answers past the exactness bound | Partly new | Cross-vendor studies by testing and simulation | Proven, Ozaki-specific witnesses |
 | σ-split remainder exact for every binary32 value and grid; slicing on integer significands for every grid | Modest | ExtractScalar analyses; FLoPS | Machine-checked binary32 statements with explicit ranges |
-| Ozaki-I error identity and bounds; Ozaki-II truncation bound; native dot-product bounds | New as machine-checked results | Ozaki 2012; Abdelfattah et al. 2025; Uchino et al. 2026; Jeannerod and Rump 2013 | The sharpest published bounds that apply here, proved: an entrywise Ozaki-I bound of Abdelfattah et al.'s shape, Uchino et al.'s truncation bound without its cross term (truncation toward zero), and Jeannerod–Rump's `k·u` |
+| Ozaki-I error identity and bounds; Ozaki-II truncation bound; native dot-product bounds | New as machine-checked results | Ozaki 2012; Abdelfattah et al. 2025; Uchino et al. 2026; Jeannerod and Rump 2013 | The sharpest published bounds that apply here, proven: an entrywise Ozaki-I bound of Abdelfattah et al.'s shape, Uchino et al.'s truncation bound without its cross term (truncation toward zero), and Jeannerod–Rump's `k·u` |
 | ADP: coarsening for every block size, Grade A for the whole routine, a subnormal counterexample, a guarded fix | New | Schwarz et al. (experiments, sketch) | First proof of a linear componentwise bound for the routine, and a failure the experiments did not exercise |
 | Correctly rounded versions: Ziv's rounding test on enclosures, refinement, exact fallback on the matrix multiplier, bounded registers, IEEE special values | Partly new | Mukunoki et al. 2020 (full split); Ozaki et al. 2007 (adaptive faithful); AccSum and NearSum (Rump–Ogita–Oishi 2008, summation); Ziv's test; SWIM 2018 and Lange–Rump enclosures | An early-exit rounding test on truncated Ozaki-I, its extension to Ozaki-II and ADP, and a machine-checked proof on hardware models |
-| Identical results on the NVIDIA and AMD models | Partly new | GEMMul8; HPC Asia 2021 (CPU and GPU); ExBLAS | A proved statement over two vendors' matrix-multiplier models |
+| Identical results on the NVIDIA and AMD models | Partly new | GEMMul8; HPC Asia 2021 (CPU and GPU); ExBLAS | A proven statement over two vendors' matrix-multiplier models |
 | The exact condition for a call to the matrix multiplier, with cancellation and per-architecture differences (CDNA 2's pairwise sums) | New as proofs | The slice-width rule; Fasi et al.'s and Khattak–Mikaitis's measurements of alignment and accumulation | Necessary and sufficient on the models, not a scheduling rule |
-| The cheapest exact configuration per GPU (`10`-bit slices filling the block FMA on A100, H100 and CDNA 3) | Known rule, proved | The slice-width rule `k · 2^(2b) ≤ 2^24` with the FMA size | Every candidate proved exact; evidence that two passes do not pay by instruction count |
+| The cheapest exact configuration per GPU (`10`-bit slices filling the block FMA on A100, H100 and CDNA 3) | Known rule, proven | The slice-width rule `k · 2^(2b) ≤ 2^24` with the FMA size | Every candidate proven exact; evidence that two passes do not pay by instruction count |
 | Fixed-width integer forms of all three correctly rounded schemes, with one theorem bounding every register | New, as far as found | Correctly rounded summation in fixed precision (AccSum, NearSum, long accumulators) | Registers whose widths do not depend on the inputs' exponents, machine-checked |
-| Two passes through `C` recover a full block FMA exactly | New, as far as found | TwoProdFMA and Boldo–Muller's exact FMA error (scalar); TC-EFT's analysis of alignment | The matrix-instruction analogue, for a multi-term truncating adder, proved on the model; by instruction count, narrower slices are cheaper |
+| Two passes through `C` recover a full block FMA exactly | New, as far as found | TwoProdFMA and Boldo–Muller's exact FMA error (scalar); TC-EFT's analysis of alignment | The matrix-instruction analogue, for a multi-term truncating adder, proven on the model; by instruction count, narrower slices are cheaper |
 
 ### How this differs from the most recent work
 
@@ -240,18 +240,18 @@ this work adds, and what each has that this work does not.
 
 | Work | What it does | What this work adds | What it has that this work does not |
 | --- | --- | --- | --- |
-| **Ozaki-II** (Ozaki, Uchino and Imamura 2025) and its error analysis (2026) | CRT-based emulation on INT8 matrix multipliers; the analysis assumes exact INT8 products | Ozaki-II machine-checked on fp16, bf16 and tf32 Tensor Cores and AMD matrix cores, with the exactness of the matrix multiplier proved from the hardware models instead of assumed, and a correctly rounded version | Implementations and performance on INT8 hardware; complex, FP8 and improved-scaling variants |
+| **Ozaki-II** (Ozaki, Uchino and Imamura 2025) and its error analysis (2026) | CRT-based emulation on INT8 matrix multipliers; the analysis assumes exact INT8 products | Ozaki-II machine-checked on fp16, bf16 and tf32 Tensor Cores and AMD matrix cores, with the exactness of the matrix multiplier proven from the hardware models instead of assumed, and a correctly rounded version | Implementations and performance on INT8 hardware; complex, FP8 and improved-scaling variants |
 | **GEMMul8** (Uchino et al.) | CUDA and HIP library for Ozaki-II GEMM, bitwise reproducible | A proof that the NVIDIA and AMD models return identical results, which are also the correctly rounded ones, not only reproducible | A working library on real GPUs |
-| **ADP** (Schwarz et al. 2025, in cuBLAS) | FP64 emulation on INT8 with an exponent-span estimate and a native fallback; Grade A shown by experiment | Grade A proved for the whole routine; a subnormal counterexample and a guardrail that fixes it; the coarsening for every block size; every Z3 test-level check; Inf and NaN results; a correctly rounded version | The production implementation, on real INT8 Tensor Cores (here an idealized INT8 matrix multiplier, [issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)) |
-| **Abdelfattah, Dongarra, Fasi, Mikaitis and Tisseur** (2025) | Error analysis of Ozaki-I on integer units and a slice-count estimator; −0, Inf and NaN not handled | Machine-checked bounds of the same shape for our splitting; IEEE special values handled, with proofs; correct rounding | A slice-count estimator (here: their accumulation by levels and different slice counts per matrix, proved in our splitting; their spare-carry recursion formalized, with a level's size read as a count of diagonals) |
-| **Uchino, Ozaki and Imamura** (2026, Ozaki-II error analysis) | Error bounds for Ozaki-II | Their truncation bound machine-checked, without its cross term for truncation toward zero; correct rounding | Their exhaustively checked scaling slack, taken here as a hypothesis (here: their reconstruction algorithm and constant R64 proved in their setting, and their scaling's Lemma 1) |
-| **Mazumder, Calotoiu and Hoefler** (Sept 2026) | CRT emulation targeting `fl(AB)`, a lower bound on the CRT window, and an "exact emulation" for bounded dynamic range by widening the window | Correct rounding for every input, not only bounded dynamic range: a cheap rounding test decides most entries and a proved exact fallback the rest; exactness derived from hardware models rather than assumed; AMD and special values | A lower bound on the window; Blackwell measurements |
-| **Demmel et al.** (Sept 2026, grading the BLAS) | Grade A defined; cuBLAS's Ozaki-I emulation earns A empirically, the research codes B; the exponent-range criterion for Grade A left open | Grade A proved for the ADP routine as formalized, the exponent condition it needs, a subnormal input that breaks it, and a guardrail that restores it | Empirical grades of shipping libraries, including cuBLAS, which passes their underflow test |
+| **ADP** (Schwarz et al. 2025, in cuBLAS) | FP64 emulation on INT8 with an exponent-span estimate and a native fallback; Grade A shown by experiment | Grade A proven for the whole routine; a subnormal counterexample and a guardrail that fixes it; the coarsening for every block size; every Z3 test-level check; Inf and NaN results; a correctly rounded version | The production implementation, on real INT8 Tensor Cores (here an idealized INT8 matrix multiplier, [issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)) |
+| **Abdelfattah, Dongarra, Fasi, Mikaitis and Tisseur** (2025) | Error analysis of Ozaki-I on integer units and a slice-count estimator; −0, Inf and NaN not handled | Machine-checked bounds of the same shape for our splitting; IEEE special values handled, with proofs; correct rounding | A slice-count estimator (here: their accumulation by levels and different slice counts per matrix, proven in our splitting; their spare-carry recursion formalized, with a level's size read as a count of diagonals) |
+| **Uchino, Ozaki and Imamura** (2026, Ozaki-II error analysis) | Error bounds for Ozaki-II | Their truncation bound machine-checked, without its cross term for truncation toward zero; correct rounding | Their exhaustively checked scaling slack, taken here as a hypothesis (here: their reconstruction algorithm and constant R64 proven in their setting, and their scaling's Lemma 1) |
+| **Mazumder, Calotoiu and Hoefler** (Sept 2026) | CRT emulation targeting `fl(AB)`, a lower bound on the CRT window, and an "exact emulation" for bounded dynamic range by widening the window | Correct rounding for every input, not only bounded dynamic range: a cheap rounding test decides most entries and a proven exact fallback the rest; exactness derived from hardware models rather than assumed; AMD and special values | A lower bound on the window; Blackwell measurements |
+| **Demmel et al.** (Sept 2026, grading the BLAS) | Grade A defined; cuBLAS's Ozaki-I emulation earns A empirically, the research codes B; the exponent-range criterion for Grade A left open | Grade A proven for the ADP routine as formalized, the exponent condition it needs, a subnormal input that breaks it, and a guardrail that restores it | Empirical grades of shipping libraries, including cuBLAS, which passes their underflow test |
 | **FP8 and FP4 emulation** (2025–26: FP8 Tensor Cores, FP8 Ozaki-II, FP4 limbs, *Ozaki 2.5*) | Emulation on lower-precision matrix multipliers | — | Coverage of FP8 and FP4 matrix multipliers, which this work defers |
 | **Valpey, Li, Pai and Gopalakrishnan** (NFM 2025) | SMT models of Volta, Turing and Ampere Tensor Cores; SMT analysis of the Markidis and Ootomo–Yokota corrections | Proofs for every input and every length in an interactive prover, for the Ozaki schemes, on NVIDIA and AMD | SMT automation, and the multiword correction algorithms |
 | **Khattak and Mikaitis** (2025, NVIDIA) and **Khattak, Mikaitis and Graziani** (2026, AMD) | Bit-accurate models; multiword emulation compared across vendors by simulation | Theorems on models that follow theirs, for every input, for the Ozaki schemes | Wider architecture coverage, and simulation of multiword methods |
-| **Cross-vendor reproducibility** (2026: bitwise-equivalence checking, NVIDIA versus AMD mismatches) | Detecting and measuring result mismatches between vendors | Proved identical correctly rounded Ozaki results on the two vendors' models, and proved witnesses where naive configurations differ (NVIDIA truncates, AMD rounds) | Measurements on real workloads and hardware |
-| **Mukunoki, Ozaki, Ogita and Imamura** (ISC 2020), the correctly rounded baseline | Correctly rounded Ozaki GEMM on Tensor Cores by a complete split and correctly rounded summation, about four times slower | An early exit: a proved rounding test decides most entries after a few slices, and only undecided ones take the exact fallback; machine-checked | A GPU implementation and measured performance |
+| **Cross-vendor reproducibility** (2026: bitwise-equivalence checking, NVIDIA versus AMD mismatches) | Detecting and measuring result mismatches between vendors | Proven identical correctly rounded Ozaki results on the two vendors' models, and proven witnesses where naive configurations differ (NVIDIA truncates, AMD rounds) | Measurements on real workloads and hardware |
+| **Mukunoki, Ozaki, Ogita and Imamura** (ISC 2020), the correctly rounded baseline | Correctly rounded Ozaki GEMM on Tensor Cores by a complete split and correctly rounded summation, about four times slower | An early exit: a proven rounding test decides most entries after a few slices, and only undecided ones take the exact fallback; machine-checked | A GPU implementation and measured performance |
 
 ### What this work does not claim
 
@@ -260,7 +260,7 @@ this work adds, and what each has that this work does not.
 - The exactness-bound, slice-width or bf16 rules as discoveries.
 - Any performance: there is no GPU implementation yet.
 - That real GPUs match the models: the models are validated by measurement,
-  not proved.
+  not proven.
 - That cuBLAS's ADP equals the formalized routine, which follows the paper.
 
 ## Open questions

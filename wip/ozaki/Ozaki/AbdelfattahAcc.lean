@@ -23,7 +23,7 @@ Here:
 * **Accumulation by levels** (`levelAcc`, `levelAcc_error`). Each level is added exactly along
   its own tree, and the `ψ` level sums are added left to right: the error is at most
   `(ψ − 1) 2^(−p) Σⱼ |Lⱼ|`, by Jeannerod and Rump (`sumWith_error_jr`). Their (4.9) states
-  `Ĉ = (1 + Θ) ∘ C̃` with `|θ| ≤ γ_{ψ−1}`; the standard summation bound, which is what is proved
+  `Ĉ = (1 + Θ) ∘ C̃` with `|θ| ≤ γ_{ψ−1}`; the standard summation bound, which is what is proven
   here, is relative to `Σⱼ |Lⱼ|` (equal to `|C̃|` only when the level sums share a sign), with the
   sharper constant `(ψ − 1) u` and no condition on `ψ u`.
 * **Ozaki-I accumulated by levels** (`ozaki1Levels_error`): for any partition of the exact slice

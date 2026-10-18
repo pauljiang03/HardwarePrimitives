@@ -1,5 +1,5 @@
 ---
-title: Ozaki-I, proved end to end
+title: Ozaki-I, proven end to end
 description: The complete Lean proof of Ozaki-I on the Tensor Core and AMD matrix-core models, from exact slicing to the binary32 or binary64 result, for dot products of any length, and a variant that is always correctly rounded.
 ---
 
@@ -18,7 +18,7 @@ assertion checks one fact on its test matrices; the Lean theorem states it for
 every input. Each Z3 label (`[S1.13]`, `[M.3]`, …) maps to a Lean theorem or a
 kernel-checked test in
 [`ozaki/THEOREMS.md`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/THEOREMS.md),
-which also lists what is not proved.
+which also lists what is not proven.
 
 ## The algorithm for one output entry
 
@@ -236,14 +236,14 @@ bounding every register, and with IEEE special values. All of it is on the
 
 - **The hardware models.** The theorems are about the Tensor Core and
   matrix-core models; that GPUs behave like them rests on the models'
-  [validation](/HardwarePrimitives/model/validation/).
+  [validation](/HardwarePrimitives/tensor-core/validation/).
 - **The matrix multiplier's conditions.** Slices fit the input format (`b ≤ 11` for fp16
   and tf32, `b ≤ 8` for bf16) and `2b ≤ F`; with split-K, chunks of
   `2^(24 − 2b)` terms.
 - **Off the matrix multiplier.** The slicing, the rounding test, the exact
   fallback and the final rounding are one integer function, with one theorem bounding every
   register ([correct rounding](/HardwarePrimitives/ozaki/correct-rounding/)). The binary32
-  σ-trick is proved only for grids in `[2^-149, 2^104]`; the integer slicing
+  σ-trick is proven only for grids in `[2^-149, 2^104]`; the integer slicing
   covers every grid.
 - **TensorCore's rounding.** The schemes and the σ-trick round with IEEE's
   round to nearest even. TensorCore's own rounding agrees with it up to the

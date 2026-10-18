@@ -14,9 +14,9 @@ models" below):
 The Z3 models take the matrix multiplier to have fp16 inputs and binary32 round-to-nearest
 additions. Here the matrix multiplier is a hardware model of this repository: the NVIDIA Tensor Core model of
 [`TensorCore`](../../tensor-core/README.md) and the AMD matrix-core model of [`MatrixCore`](../../matrix-core/README.md).
-The scheme itself is proved once, for any matrix multiplier, and each hardware model is shown to
+The scheme itself is proven once, for any matrix multiplier, and each hardware model is shown to
 satisfy what the scheme needs. Every labeled check of the three Z3 models has a Lean theorem or a
-kernel-checked test, except the ones listed under [what is not proved](THEOREMS.md#not-proved).
+kernel-checked test, except the ones listed under [what is not proven](THEOREMS.md#not-proven).
 
 Beyond the Z3 models:
 
@@ -31,7 +31,7 @@ Beyond the Z3 models:
   correctly rounded scheme, native GEMM, plain Ozaki-I and Ozaki-II, and the ADP routine, whose
   Inf and NaN results match the Z3 model's.
 * **One rounding on both vendors.** Every scheme rounds with IEEE's round to nearest even;
-  TensorCore's and MatrixCore's own roundings are proved to compute the same values on their ranges.
+  TensorCore's and MatrixCore's own roundings are proven to compute the same values on their ranges.
 * **Fixed-width integer arithmetic.** Each correctly rounded scheme is also one integer function
   from `(significand, exponent)` inputs, with one theorem bounding every register; no width depends
   on the inputs' exponents.
@@ -64,7 +64,7 @@ recorded outputs and an exact-arithmetic oracle by kernel evaluation, and audit 
 **Independent re-check.** [`scripts/conleche.sh`](scripts/conleche.sh) exports every module of
 `TensorCore`, `MatrixCore` and the Ozaki libraries, with their tests, and re-checks every
 declaration with [con-leche](https://github.com/leanprover/con-leche), an external Lean checker
-proved never to accept a proof of `False`. On 2026-10-13, con-leche at revision `3b37939`, in
+proven never to accept a proof of `False`. On 2026-10-13, con-leche at revision `3b37939`, in
 `--verified` mode, accepted every declaration: 168,810 for `TensorCore` and its tests, 166,049 for
 `MatrixCore` and its tests, 175,851 for the Ozaki core with the Tensor Core side and its tests,
 and 171,967 with the AMD side (each count includes Lean's own library). Lean does not record
@@ -80,7 +80,7 @@ modules evaluate large terms in the kernel, the largest for about two minutes ea
 | --- | --- |
 | [`Ozaki`](Ozaki.lean) | The schemes for any matrix multiplier: slicing, recombination, CRT reconstruction and their error bounds (including the sharpest published ones that apply), ADP's slice encodings, ESC, fixed point and Grade-A bound, native GEMM's bounds, split-K, correct rounding (Ziv's rounding test, the exact fallback, the bound that counts only nonzero positions), fixed-width integer forms of every correctly rounded scheme with one theorem bounding every register, a hardware-independent IEEE round to nearest for any binary format, IEEE special values and signed zeros, and the Z3 models' parameters. It imports only Lean's standard library. |
 | [`OzakiTC`](OzakiTC.lean) | The NVIDIA instantiation: exact integer blocks and chains on the Tensor Core model, the exact condition with cancellation, the matrix multiplier on all eight GPU variants, split-K, the two-pass recovery, the choice of slices, chunks and passes, IEEE rounding and TensorCore's agreement with it, the σ-trick, both schemes in binary32 and FP64, the INT8 matrix multiplier and its semantics, the full ADP routine with its guardrail, zero policies, Z3 test-level checks and special values, and every correctly rounded version. |
-| [`OzakiMC`](OzakiMC.lean) | The AMD instantiation: exact integer blocks, chains and inner products on the CDNA 1, 2 and 3 models, the exact condition per architecture, the matrix multiplier on the SFMA, fp16, bf16 and XF32 variants, split-K, the choice of slices and chunks, binary32 rounding (proved IEEE's), both schemes in binary32 and FP64, and their correctly rounded, fixed-width and special-value versions. |
+| [`OzakiMC`](OzakiMC.lean) | The AMD instantiation: exact integer blocks, chains and inner products on the CDNA 1, 2 and 3 models, the exact condition per architecture, the matrix multiplier on the SFMA, fp16, bf16 and XF32 variants, split-K, the choice of slices and chunks, binary32 rounding (proven IEEE's), both schemes in binary32 and FP64, and their correctly rounded, fixed-width and special-value versions. |
 | [`tests/`](tests/README.md) | Regression tests against the Z3 models' outputs and an exact-fraction oracle, and the axiom audits. |
 | [`examples/`](examples/README.md) | Worked examples. |
 | [`data/`](data/) | The Z3 models' inputs and outputs, and correctly rounded reference products, as binary32 and binary64 words. |
@@ -131,7 +131,7 @@ With split-K:
   `8`-bit slices (`Ozaki.TC.v100_fp64CR`, `Ozaki.TC.a100BF16_fp64CR`).
 
 Every working-precision rounding is `Ozaki.roundRNE`, a hardware-independent IEEE round to nearest
-even proved for any binary format (`Ozaki.roundRNE_nearest`), with IEEE overflow: values that
+even proven for any binary format (`Ozaki.roundRNE_nearest`), with IEEE overflow: values that
 round to at most the largest finite value succeed. Its instances are `Ozaki.rne32Q` and
 `Ozaki.rne64`. The hardware libraries' own roundings compute the same values:
 
@@ -149,7 +149,7 @@ rounded versions return the same value on both for the same inputs.
 ## Correct rounding
 
 Each scheme holds an exact value `H` before its last rounding (the slice products added exactly,
-the reconstructed product, the recombined fixed-point product) and a proved bound
+the reconstructed product, the recombined fixed-point product) and a proven bound
 `B ≥ |x · y − H|`. If `H − B` and `H + B` round to the same value, so does `x · y`, which lies
 between them: rounding to nearest is monotone, which Lean proves from the nearest-value property
 alone (`Ozaki.round_monotone`). Otherwise the next configuration is tried, more slices or moduli,
@@ -191,7 +191,7 @@ a two's-complement register that never wraps (`Ozaki.fixedSum_eq`, `Ozaki.ozaki1
 **Each scheme is one integer function.** From `(significand, exponent)` inputs through integer
 slicing or conversion, the matrix multiplier, the integer rounding test, the exact fallback and
 the final rounding,
-correctly rounded Ozaki-I, Ozaki-II and ADP-style slicing are integer functions proved correctly
+correctly rounded Ozaki-I, Ozaki-II and ADP-style slicing are integer functions proven correctly
 rounded, with signed-zero versions (`Ozaki.ozaki1CRI_eq`, `Ozaki.ozaki2CRJ_eq`,
 `Ozaki.TC.adpCRJ_eq`, `Ozaki.ozaki1CRIS_eq`). For Ozaki-II and ADP the bound of the rounding test is
 itself an integer built from the scaled integers the matrix multiplier already multiplies (`Ozaki.enclosureTestB_eq`).
@@ -210,9 +210,9 @@ returns exactly what the unchecked pipeline returns (`Ozaki.ozaki1CRIC_eq`,
 | ADP-style, FP64 (up to `11` slices of width up to `81`) | 259 | 17 |
 
 The guards cover the internals of the matrix multipliers too (split-K's partial sums, the 32-bit
-register of the INT8 matrix multiplier, proved never to wrap) and the signed-zero pipelines. Kernel tests show the guards fail
+register of the INT8 matrix multiplier, proven never to wrap) and the signed-zero pipelines. Kernel tests show the guards fail
 at narrower widths. Comparisons, bit lengths and shift amounts are not guarded
-([THEOREMS.md](THEOREMS.md#not-proved)).
+([THEOREMS.md](THEOREMS.md#not-proven)).
 
 **How often the fallback runs, measured.** A CPU simulation of the schemes with exact arithmetic
 ([`scripts/fallback_sim.py`](scripts/fallback_sim.py), [`data/fallback-sim.json`](data/fallback-sim.json))
@@ -225,7 +225,7 @@ about 2 % fallback); with the bound that counts only nonzero positions, the test
 on entries with no shared nonzero; and low-precision inputs are cheaper on the exact fallback
 directly. Ozaki-II decides almost every entry with the rounding test at twelve moduli. These are
 model costs on chosen distributions, not GPU time. Both rules
-are proved: slice counts chosen for precision `t + ⌈log₂ k⌉` remove the factor `k` from the bound of
+are proven: slice counts chosen for precision `t + ⌈log₂ k⌉` remove the factor `k` from the bound of
 the first test (`Ozaki.ozaki1Bound_le_cr`), which brings binary64 fallbacks to about `0 %` on
 well-conditioned data in the rerun; and taking the exact fallback first when it is cheaper
 never costs more (`Ozaki.ozaki1CRA_cost_le`).
@@ -337,7 +337,7 @@ What changes from the Z3 models:
   `Ozaki.TC.evalBlock_exact_needs_binary32`): eight products `±2^22` on A100 return `0`. It is
   the precise boundary, not a scheduling rule, since the sums are known only after computing them.
 * **The choice of slices, chunks and passes.** Every candidate configuration on every variant is
-  proved exact for every length, and a cost in block FMAs picks the cheapest
+  proven exact for every length, and a cost in block FMAs picks the cheapest
   (`Ozaki.TC.candidates_exact`, `Ozaki.TC.h100F16_best`). Wherever a block FMA holds more than four
   products, `10`-bit slices that fill it win: on H100 fp16, FP64 at `k = 1024`, 1344 blocks
   against 3840 for `11`-bit chunks of four and 1920 for two passes. The conservative rule allows
@@ -472,8 +472,8 @@ What the model shows:
 
 The proofs concern the models. That GPUs behave like them rests on the validation of `TensorCore`
 and `MatrixCore`. As in the Z3 models, the CRT residues and reconstruction are exact integer
-arithmetic; Ozaki-I's power-of-two rescaling is proved exact when its exponent is in range
+arithmetic; Ozaki-I's power-of-two rescaling is proven exact when its exponent is in range
 (`Ozaki.TC.scaled_slice_product_exact`). Not covered: FP8 variants, and INT8 hardware semantics,
 which are out of scope for now on both vendors
 ([issue #2](https://github.com/pauljiang03/HardwarePrimitives/issues/2)): ADP runs on an idealized INT8
-matrix multiplier. [THEOREMS.md](THEOREMS.md#not-proved) lists the rest.
+matrix multiplier. [THEOREMS.md](THEOREMS.md#not-proven) lists the rest.

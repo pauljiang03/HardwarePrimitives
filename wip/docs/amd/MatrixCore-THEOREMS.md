@@ -1,4 +1,4 @@
-# What is proved
+# What is proven
 
 The main results Lean has checked, in plain language. The linked file has the exact statement
 and every assumption. All results depend only on Lean's standard axioms (`propext`,
@@ -121,7 +121,7 @@ On NVIDIA Tensor Cores any term holding the alignment exponent, a product or `c`
 | CDNA 2 and CDNA 3 binary8 depend on positions: a permutation of the products changes `d`. | `pairWiseSum_order_dependent`, `oddEvenGrouping_order_dependent` | [MC/Order.lean](MC/Order.lean) |
 | CDNA 3 is sign-asymmetric: negating every input does not negate `d`. | `globalAlignment_sign_asymmetric` | [MC/Order.lean](MC/Order.lean) |
 
-How much of the order matters on CDNA 3 binary8 is proved in the work-in-progress project
+How much of the order matters on CDNA 3 binary8 is proven in the work-in-progress project
 [`wip/mmalgebra/`](../../wip/mmalgebra/README.md), which builds on this library:
 
 | What it says | Lean name | File |
@@ -141,7 +141,7 @@ How much of the order matters on CDNA 3 binary8 is proved in the work-in-progres
 
 ## The FloatLib implementation
 
-Proved in the separate project [`floatlib-port/`](../floatlib-port/README.md), which builds with
+Proven in the separate project [`floatlib-port/`](../floatlib-port/README.md), which builds with
 mathlib and FloatLib.
 
 | What it says | Lean name | File |
@@ -150,7 +150,7 @@ mathlib and FloatLib.
 | Every model's contract (with its output error bound) and the chaining theorems hold for the FloatLib implementation: a finite FloatLib output is FloatLib's own `fl{S_acc}` (on SFMA and CDNA 1, FloatLib's nearest-even rounding of the exact sum), and a finite FloatLib inner product is a run of linked blocks satisfying the contracts. | `MCFloat.Equivalence.floatlib_contract`, `floatlib_cdna1F16`, …, `floatlib_dot_blocks`, `floatlib_dot_error`, `floatlib_dot_exact_error`, `floatlib_c_monotone` | [Contracts.lean](../floatlib-port/MCFloat/Contracts.lean) |
 | FloatLib's binary32 round-to-nearest-even of any rational is `rne32`'s word, with `±∞` exactly where `rne32` overflows. | `MCFloat.Equivalence.round32_bits` | [Equivalence/Rounding.lean](../floatlib-port/MCFloat/Equivalence/Rounding.lean) |
 
-## Not proved
+## Not proven
 
 * That AMD GPUs behave like the model. The paper's hardware observations are replayed as tests,
   and the model is compared with the authors' MATLAB models ([differential testing](../docs/differential.md)).

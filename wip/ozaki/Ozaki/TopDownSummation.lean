@@ -487,7 +487,7 @@ theorem signSumJ_eq {W : ℕ} {ts : List (ℤ × ℤ)} (hW : bitlen ts.length < 
 summation. One top-down summation with threshold `2^(bitlen n + p + 3)`; if nothing is left over,
 round `N 2^q` exactly; if the sum is below half the smallest subnormal, return `0`; otherwise answer
 the comparisons of `roundByCmp` with the sign oracle on the residuals and one query term, refusing
-any query outside the bounds proved to suffice (so every query term is below
+any query outside the bounds proven to suffice (so every query term is below
 `2^(bitlen |N| + p + 6)`). -/
 def roundSumJ (p : ℕ) (emin emax : ℤ) (W : ℕ) (ts : List (ℤ × ℤ)) : Option ℚ :=
   match topDownSumAllJ W (bitlen (nonzero ts).length + p + 3) ts with

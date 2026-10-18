@@ -4,7 +4,7 @@ import TensorCore.Scalar.Precision
 
 namespace TensorCore.IEEE
 
-/-- Finite conversion returns the proved result for an input within the format's range. -/
+/-- Finite conversion returns the proven result for an input within the format's range. -/
 def finiteBits (f : BinaryFormat) (mode : BinaryRoundingMode) (x : ℚ)
     (hr : absQ x ≤ f.layout.maxFinite) : Word f :=
   (roundBinary f.layout mode x).get ((roundBinary_isSome_iff _ _ _).mpr ⟨f.valid, hr⟩)

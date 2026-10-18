@@ -3,7 +3,7 @@ import MatrixCore
 /-! # Fixed-width accumulation
 
 `evalBlockMachine w` accumulates the CDNA 3 products in `w`-bit registers; these cases show that
-the proved widths are needed. -/
+the proven widths are needed. -/
 
 open MatrixCore
 

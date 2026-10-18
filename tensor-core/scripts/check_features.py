@@ -91,7 +91,7 @@ def main():
     configs = [(0, 0, None), (0, 2, -133), (0, 0, 4), (4, 0, None), (8, 1, -132), (16, 2, -133)]
     configs += [(k, e, f) for k in [1, 3, 7, 17, 37, 64]
                 for e in [0, 1, 2, 5, 9, 24] for f in [None, -132, 4]]
-    # The proved conservative threshold, including its largest permitted minimum alignment exponent.
+    # The proven conservative threshold, including its largest permitted minimum alignment exponent.
     configs += [(k, 253, f) for k in [1, 17, 64] for f in [None, 127]]
     configs += [(k, 156, f) for k in [1, 17, 64] for f in [None, 30]]
     boundary16 = [0, 0x8000, 1, 0x8001, 0x3ff, 0x83ff, 0x400, 0x8400,

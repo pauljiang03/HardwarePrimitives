@@ -2,27 +2,40 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
+// Pages moved from /model/, /properties/ and /amd/ to sections named after the repository folders.
+const moved = (from, to, pages) =>
+  Object.fromEntries(pages.map((page) => [
+    `/${from}${page && `/${page}`}`,
+    `/HardwarePrimitives/${to}/${page && `${page}/`}`,
+  ]));
+
 export default defineConfig({
   site: 'https://pauljiang03.github.io',
   base: '/HardwarePrimitives',
   trailingSlash: 'always',
   devToolbar: { enabled: false },
-  // Old URLs (renamed pages) forward to their current pages.
+  // Old URLs forward to their current pages.
   redirects: {
     '/overview': '/HardwarePrimitives/',
-    '/model/conversion': '/HardwarePrimitives/model/normalization/',
     '/proofs/trust': '/HardwarePrimitives/proofs/tested/',
-    '/model/profiles': '/HardwarePrimitives/model/variants/',
+    '/model/conversion': '/HardwarePrimitives/tensor-core/normalization/',
+    '/model/profiles': '/HardwarePrimitives/tensor-core/variants/',
     '/amd/getting-started': '/HardwarePrimitives/quick-start/',
-    '/amd/notation': '/HardwarePrimitives/amd/formats/',
-    '/amd/architectures': '/HardwarePrimitives/amd/',
+    '/amd/notation': '/HardwarePrimitives/matrix-core/formats/',
+    '/amd/architectures': '/HardwarePrimitives/matrix-core/',
     '/amd/theorems': '/HardwarePrimitives/proofs/theorems/',
+    ...moved('model', 'tensor-core', ['', 'formats', 'products', 'alignment', 'accumulation', 'normalization',
+      'variants', 'instructions', 'specification', 'datapath', 'validation', 'scope']),
+    ...moved('properties', 'tensor-core/properties', ['error-bounds', 'non-monotonicity', 'eft']),
+    ...moved('amd', 'matrix-core', ['', 'formats', 'products', 'cdna1', 'cdna2', 'cdna3', 'normalization',
+      'instructions', 'specification', 'validation', 'scope', 'properties/cdna1', 'properties/cdna2',
+      'properties/cdna3', 'properties/eft']),
   },
   integrations: [
     starlight({
       title: 'Hardware Primitives',
       description:
-        'Lean 4 models of the matrix multipliers of NVIDIA Tensor Cores (Volta to Blackwell) and AMD matrix cores (CDNA 1 to 3), and their proved properties: error bounds, non-monotonicity, TC-EFT and MC-EFT.',
+        'Lean 4 models of the matrix multipliers of NVIDIA Tensor Cores (Volta to Blackwell) and AMD matrix cores (CDNA 1 to 3), and their proven properties: error bounds, non-monotonicity, TC-EFT and MC-EFT.',
       customCss: ['./src/styles/theme.css'],
       expressiveCode: {
         themes: ['github-dark-dimmed', 'github-light'],
@@ -41,51 +54,51 @@ export default defineConfig({
         {
           label: 'Modeling NVIDIA Tensor Cores',
           items: [
-            { label: 'The model at a glance', slug: 'model' },
-            { label: '1. Formats and decoding', slug: 'model/formats' },
-            { label: '2. Exact products in denormalized form', slug: 'model/products' },
-            { label: '3. Alignment', slug: 'model/alignment' },
-            { label: '4. Accumulation', slug: 'model/accumulation' },
-            { label: '5. Normalization and final rounding', slug: 'model/normalization' },
-            { label: '6. Variants and their numerical features', slug: 'model/variants' },
-            { label: '7. Instructions and chaining', slug: 'model/instructions' },
-            { label: '8. Independent specification', slug: 'model/specification' },
-            { label: '9. Bitvector datapath', slug: 'model/datapath' },
-            { label: '10. Hardware validation', slug: 'model/validation' },
-            { label: 'Modeling scope and limits', slug: 'model/scope' },
+            { label: 'The model at a glance', slug: 'tensor-core' },
+            { label: '1. Formats and decoding', slug: 'tensor-core/formats' },
+            { label: '2. Exact products in denormalized form', slug: 'tensor-core/products' },
+            { label: '3. Alignment', slug: 'tensor-core/alignment' },
+            { label: '4. Accumulation', slug: 'tensor-core/accumulation' },
+            { label: '5. Normalization and final rounding', slug: 'tensor-core/normalization' },
+            { label: '6. Variants and their numerical features', slug: 'tensor-core/variants' },
+            { label: '7. Instructions and chaining', slug: 'tensor-core/instructions' },
+            { label: '8. Independent specification', slug: 'tensor-core/specification' },
+            { label: '9. Bitvector datapath', slug: 'tensor-core/datapath' },
+            { label: '10. Hardware validation', slug: 'tensor-core/validation' },
+            { label: 'Modeling scope and limits', slug: 'tensor-core/scope' },
           ],
         },
         {
           label: 'Properties of Tensor Cores',
           items: [
-            { label: 'Error bounds', slug: 'properties/error-bounds' },
-            { label: 'Non-monotonicity', slug: 'properties/non-monotonicity' },
-            { label: 'TC-EFT correction', slug: 'properties/eft' },
+            { label: 'Error bounds', slug: 'tensor-core/properties/error-bounds' },
+            { label: 'Non-monotonicity', slug: 'tensor-core/properties/non-monotonicity' },
+            { label: 'TC-EFT correction', slug: 'tensor-core/properties/eft' },
           ],
         },
         {
           label: 'Modeling AMD matrix cores',
           items: [
-            { label: 'The model at a glance', slug: 'amd' },
-            { label: '1. Formats and decoding', slug: 'amd/formats' },
-            { label: '2. Exact products in denormalized form', slug: 'amd/products' },
-            { label: '3. CDNA 1: correct rounding', slug: 'amd/cdna1' },
-            { label: '4. CDNA 2: pairwise sums', slug: 'amd/cdna2' },
-            { label: '5. CDNA 3: global alignment', slug: 'amd/cdna3' },
-            { label: '6. Normalization and final rounding', slug: 'amd/normalization' },
-            { label: '7. Instructions and chaining', slug: 'amd/instructions' },
-            { label: '8. Independent specification', slug: 'amd/specification' },
-            { label: '9. Hardware validation', slug: 'amd/validation' },
-            { label: 'Modeling scope and limits', slug: 'amd/scope' },
+            { label: 'The model at a glance', slug: 'matrix-core' },
+            { label: '1. Formats and decoding', slug: 'matrix-core/formats' },
+            { label: '2. Exact products in denormalized form', slug: 'matrix-core/products' },
+            { label: '3. CDNA 1: correct rounding', slug: 'matrix-core/cdna1' },
+            { label: '4. CDNA 2: pairwise sums', slug: 'matrix-core/cdna2' },
+            { label: '5. CDNA 3: global alignment', slug: 'matrix-core/cdna3' },
+            { label: '6. Normalization and final rounding', slug: 'matrix-core/normalization' },
+            { label: '7. Instructions and chaining', slug: 'matrix-core/instructions' },
+            { label: '8. Independent specification', slug: 'matrix-core/specification' },
+            { label: '9. Hardware validation', slug: 'matrix-core/validation' },
+            { label: 'Modeling scope and limits', slug: 'matrix-core/scope' },
           ],
         },
         {
           label: 'Properties of matrix cores',
           items: [
-            { label: 'CDNA 1', slug: 'amd/properties/cdna1' },
-            { label: 'CDNA 2', slug: 'amd/properties/cdna2' },
-            { label: 'CDNA 3', slug: 'amd/properties/cdna3' },
-            { label: 'MC-EFT correction', slug: 'amd/properties/eft' },
+            { label: 'CDNA 1', slug: 'matrix-core/properties/cdna1' },
+            { label: 'CDNA 2', slug: 'matrix-core/properties/cdna2' },
+            { label: 'CDNA 3', slug: 'matrix-core/properties/cdna3' },
+            { label: 'MC-EFT correction', slug: 'matrix-core/properties/eft' },
           ],
         },
         {

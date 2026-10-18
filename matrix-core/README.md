@@ -8,7 +8,7 @@ notation.
 
 A standalone Lake project with its own numerics; it does not depend on
 `TensorCore`. Documentation: [the AMD model at a
-glance](https://pauljiang03.github.io/HardwarePrimitives/amd/).
+glance](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/).
 
 ## Coverage
 
@@ -46,19 +46,19 @@ def ones : BlockInput cdna1F16 := ⟨List.replicate 4 0x3C00, List.replicate 4 0
 example : blockBits ones = .ok 0x40800000 := by decide +kernel
 ```
 
-## Proved properties
+## Proven properties
 
-| Generation | Proved |
+| Generation | Proven |
 | --- | --- |
 | All | Equality with an independent transcription of the paper's algorithms; exact accepted domain; error bounds, also from the inputs alone; monotonicity in `c`; loss accounting for inner products and `D = AB + C`; the MC-EFT correction, which returns the correctly rounded sum from any finite output word |
 | CDNA 1 and SFMA | Correct rounding; error at most half an ulp; monotone in every product; independent of product order |
 | CDNA 2 | Non-monotone in the products only through flushing; correctly rounded when every intermediate rounding is exact; order dependent |
 | CDNA 3 | Monotone in the products while the alignment exponents are unchanged; necessary and sufficient conditions for an output decrease; a family with an exact threshold; correctly rounded when alignment loses nothing; fixed-width registers of 29 to 31 bits; Algorithm 1 independent of product order |
 
-Details per generation: [CDNA 1](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna1/),
-[CDNA 2](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna2/),
-[CDNA 3](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/cdna3/),
-[MC-EFT](https://pauljiang03.github.io/HardwarePrimitives/amd/properties/eft/).
+Details per generation: [CDNA 1](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/properties/cdna1/),
+[CDNA 2](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/properties/cdna2/),
+[CDNA 3](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/properties/cdna3/),
+[MC-EFT](https://pauljiang03.github.io/HardwarePrimitives/matrix-core/properties/eft/).
 
 Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
@@ -70,7 +70,7 @@ Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 - Differential testing against the authors' MATLAB models (600,000 random
   inner products, 20,000 targeted FP8) and MMA-Sim's CDNA 3 FP8 semantics
   (90,000), with no unexplained difference ([method and counts](docs/differential.md)).
-- A second implementation on FloatLib, proved to give the same observation for
+- A second implementation on FloatLib, proven to give the same observation for
   every input ([`floatlib-port/`](floatlib-port/README.md)).
 
 No recorded AMD hardware outputs are published; the model rests on the

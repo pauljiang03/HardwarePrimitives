@@ -12,7 +12,7 @@ on V100 fp16 blocks (Ozaki-II) and the split-K INT8 matrix multiplier (ADP):
 * signed zeros: products that are all `−0` give `−0`, products that cancel give `+0`
   (`tcOzaki2CRJS`, `adpCRJS`);
 * every integer bounded: the checked `ozaki2CRJC` and `adpCRJC` return the unchecked results at the
-  proved widths (`264` and `24`, `264` and `25` bits), and `none` when the data or the exponent
+  proven widths (`264` and `24`, `264` and `25` bits), and `none` when the data or the exponent
   registers are too narrow;
 * IEEE special values on stored data (`tcOzaki2CRJI`, `adpCRJI`): a NaN input, `Inf · 0`, an
   overflow to `+Inf`, and `−0`, each against the specification `dotIEEE`. -/

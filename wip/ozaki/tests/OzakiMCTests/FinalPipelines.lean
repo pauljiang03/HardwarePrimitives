@@ -5,7 +5,7 @@ import OzakiMC.IEEEBounded
 
 The cases of `tests/OzakiTCTests/FinalPipelines.lean` for Ozaki-II on CDNA 3 fp16 blocks with
 split-K, checked by kernel evaluation: the configuration and the jumping exact fallback alone
-against the binary64 round to nearest, signed zeros, the checked function at the proved widths and
+against the binary64 round to nearest, signed zeros, the checked function at the proven widths and
 with too narrow registers, and IEEE special values on stored data. -/
 
 open MatrixCore Ozaki Ozaki.MC Ozaki.Checked

@@ -78,7 +78,7 @@ are right, and why.
   is `29331463` ([`cdna3F16_full_blockFMA`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/Limits.lean#L34)). Configurations that rely on luck
   give different wrong answers on the two vendors.
 - **The rounding test cannot run on a Tensor Core.** A Tensor Core's output
-  is not monotone in its inputs ([non-monotonicity](/HardwarePrimitives/properties/non-monotonicity/)),
+  is not monotone in its inputs ([non-monotonicity](/HardwarePrimitives/tensor-core/properties/non-monotonicity/)),
   and the rounding test relies on monotone rounding, so it runs on exact
   values.
 
@@ -122,7 +122,7 @@ full block FMAs of the widest slices fit the exactness bound ([`full_blockFMAs_f
 
 For each variant, the model gives every exact configuration: a slice width `b`
 up to the input format's limit, a chunk length, one or two passes. Each
-candidate is proved exact for every length ([`candidates_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/SplitChoice.lean#L118),
+candidate is proven exact for every length ([`candidates_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/SplitChoice.lean#L118),
 [`mcCandidates_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/SplitChoice.lean#L48)). The cost counts block FMAs on the matrix multiplier for the
 `s(s+1)/2` slice products of Ozaki-I, with the slice count from a stated
 normwise rule ([`slicesFor`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/SliceRule.lean#L25), [`slicing_term_le_maxAbs`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/SliceRule.lean#L30)). At `k = 1024`:
@@ -139,7 +139,7 @@ normwise rule ([`slicesFor`](https://github.com/pauljiang03/HardwarePrimitives/b
 The theorems are [`h100F16_best`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/SplitChoice.lean#L187), [`cdna3F16_best`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/SplitChoice.lean#L92) and the others in
 [`OzakiTC/SplitChoice.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/SplitChoice.lean)
 and [`OzakiMC/SplitChoice.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/SplitChoice.lean).
-The chosen configurations are proved exact and correctly rounded
+The chosen configurations are proven exact and correctly rounded
 ([`h100F16_fp64CR10`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/SplitChoice.lean#L248), [`cdna3F16_fp64CR10`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/SplitChoice.lean#L113)).
 
 Two findings:
@@ -158,7 +158,7 @@ Two findings:
 **Ozaki-II and ADP.** The same choice for Ozaki-II picks the fewest
 pairwise-coprime moduli up to `2^(b+1)` whose product covers `2k · 2^(2P)`,
 with `P` set so the truncation error meets the same target as Ozaki-I's slice
-rule ([`moduliFor_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/ModuliRule.lean#L104)); every candidate is proved exact
+rule ([`moduliFor_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/Ozaki/ModuliRule.lean#L104)); every candidate is proven exact
 ([`ozaki2Candidates_ok`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiTC/Ozaki2Choice.lean#L61), [`mcRunCandidates_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/wip/ozaki/OzakiMC/Ozaki2Choice.lean#L77)). In FP64 Ozaki-II is
 cheaper than Ozaki-I on every variant, by `1.4×` to `2×` in block FMAs
 (H100 fp16 at `k = 1024`: 768 against 1344; CDNA 3 fp16: 1536 against 2688;

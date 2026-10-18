@@ -4,7 +4,7 @@ import Ozaki.Ozaki2
 /-! # Correct rounding by enclosure
 
 Before its last rounding, each Ozaki scheme holds an exact value `H` (the exactly added slice
-products, or the reconstructed product of the truncated inputs), and a proved bound
+products, or the reconstructed product of the truncated inputs), and a proven bound
 `B ≥ |x · y − H|`. If `H − B` and `H + B` round to the same value `w`, every value between them
 rounds to `w`, the exact product `x · y` included, because rounding to nearest is monotone
 (`round_monotone`). Monotonicity needs only that every result is a nearest representable value; the

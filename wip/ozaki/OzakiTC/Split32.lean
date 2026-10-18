@@ -14,7 +14,7 @@ the first addition rounds `a` to the nearest multiple of `2^g`, ties to even; th
 `−149 ≤ g ≤ 104`, and every slice width `b ≤ 21`, with IEEE binary32 addition (`add32`; `TensorCore`'s
 correctly rounded `fp32Add` returns the same sums, `add32_of_fp32Add`): `hi = rne(a / 2^g) · 2^g`
 and `lo = a − hi`, both binary32 values. This is the Z3
-model's lemma `[Z.1]` (proved there for `|a| ≤ 1` and `b = 11`), for all exponents. Its
+model's lemma `[Z.1]` (proven there for `|a| ≤ 1` and `b = 11`), for all exponents. Its
 coefficient is `roundNearestEven`, the one `Ozaki.Split` uses, so the binary32 computation of a
 slice is the slice of the scheme library (`sigma_slice`). -/
 

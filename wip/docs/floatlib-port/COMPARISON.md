@@ -16,7 +16,7 @@ The statement uses the independent `Interface.tcChecked` and `Interface.eftCheck
 
 The correspondence includes explicit representation proofs:
 
-| Representation | Proved correspondence |
+| Representation | Proven correspondence |
 |---|---|
 | Encoded words | `wordEquiv`: `BitVec w ≃ Fin (2^w)`, preserving every bit |
 | Complete encoded blocks | `inputEquiv`, with both inverse laws; includes arbitrary product-list lengths |
@@ -28,7 +28,7 @@ This does not identify unrestricted unchecked implementation types. An unchecked
 
 ## Every arithmetic stage is connected
 
-The following equalities are proved under the stated representation invariants. RTZ denotes FloatLib's IEEE round-toward-zero mode, which this port uses to implement the parent's final truncation; on the parent's finite domain the two give the same bits. RNE denotes rounding to nearest with ties to even.
+The following equalities are proven under the stated representation invariants. RTZ denotes FloatLib's IEEE round-toward-zero mode, which this port uses to implement the parent's final truncation; on the parent's finite domain the two give the same bits. RNE denotes rounding to nearest with ties to even.
 
 | Stage | Bridge theorem(s) |
 |---|---|
@@ -67,11 +67,11 @@ The table follows the manuscript's section and theorem numbering. Port identifie
 | IV.11: scalar correction and one final RNE rounding | `floatlib_scalar_correct_on_grid`, `scalar_correct`, `encodedAlgorithm_nearest` |
 | Reference full EFT, including the exact alternative described in IV-B | `algorithm_correct`, `algorithm_range`, `floatlib_eq_reference` |
 
-The flowback criteria cover an **arbitrary chosen summand** and the rounded outputs before and after its perturbation. The two alignment grids are parameters and may differ. The sufficient condition includes representability assumptions. C-specialized criteria are proved in [Behavior.lean](TCFloat/Behavior.lean).
+The flowback criteria cover an **arbitrary chosen summand** and the rounded outputs before and after its perturbation. The two alignment grids are parameters and may differ. The sufficient condition includes representability assumptions. C-specialized criteria are proven in [Behavior.lean](TCFloat/Behavior.lean).
 
 The paper scalar theorems justify the instruction sequence under chosen-grid, coefficient-bound and absolute-range conditions. The executable guard uses the lowest bit actually set in the low parts as its common grid, with the restriction `-149 ≤ λ ≤ 104`, matching the TC-EFT paper's generator. The manuscript allows choosing a suitable common grid and states sufficient conditions without prescribing a unique grid-search algorithm. The equivalence theorem proves equality of executable branch decisions; the chosen-grid theorems establish the paper's mathematical conditions. Failure of the executable guard does not assert that scalar summation is impossible.
 
-Some bridge proofs transport first-principles theorems through proved equalities. The FloatLib executable and its recovery, scalar-correction, and rounding proofs are defined in separate modules.
+Some bridge proofs transport first-principles theorems through proven equalities. The FloatLib executable and its recovery, scalar-correction, and rounding proofs are defined in separate modules.
 
 ## Reproducible proof boundary
 

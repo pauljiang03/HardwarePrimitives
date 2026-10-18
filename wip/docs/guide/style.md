@@ -22,7 +22,7 @@ source root under `tests/`.
 ## Trusted foundation
 
 The project introduces no additional arithmetic postulates. Its basic types and
-operations come from Lean's standard library; correctness results are proved in Lean.
+operations come from Lean's standard library; correctness results are proven in Lean.
 The axiom audit permits only `propext`, `Classical.choice`, and `Quot.sound` and checks
 every compiled public theorem in the full development. Foundational definitions and
 building blocks belong to `Numerics`; application assumptions are explicit arguments,

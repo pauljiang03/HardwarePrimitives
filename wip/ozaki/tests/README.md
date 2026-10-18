@@ -1,7 +1,7 @@
 # Tests
 
 `lake build` builds both test libraries, so every check below runs on every build. Each check is
-an `example` proved by kernel evaluation (`decide +kernel`) of the definitions the theorems are
+an `example` proven by kernel evaluation (`decide +kernel`) of the definitions the theorems are
 about.
 
 ## The Z3 models' outputs
@@ -127,7 +127,7 @@ integer rounding tests decide as many entries as the rational ones, or nearly (O
 [OzakiTCTests/FinalPipelines.lean](OzakiTCTests/FinalPipelines.lean) and
 [OzakiMCTests/FinalPipelines.lean](OzakiMCTests/FinalPipelines.lean) run the integer Ozaki-II and
 ADP pipelines with the jumping exact fallback on four entries per case, signed zeros, the checked
-versions at their proved widths and failing at narrower ones, and the IEEE special cases. The library files carry their
+versions at their proven widths and failing at narrower ones, and the IEEE special cases. The library files carry their
 own kernel checks of the integer pieces: a register that wraps mid-sum, ties, binary32 normal,
 subnormal and overflowing results, heavy cancellation, a tie after cancellation, and an end-to-end
 binary32 tie through the exact fallback.

@@ -1,7 +1,7 @@
 # Tests
 
 `MatrixCoreTests` is built by `lake build`, so every check runs on every
-build. The regressions are `example`s proved by kernel evaluation of the same
+build. The regressions are `example`s proven by kernel evaluation of the same
 definitions the proofs use.
 
 | Module | Contents |
@@ -9,7 +9,7 @@ definitions the proofs use.
 | [`Paper/`](MatrixCoreTests/Paper) | Every test vector of the paper's Section 4 for CDNA 1, 2 and 3, with the output reported for the hardware |
 | [`Formats.lean`](MatrixCoreTests/Formats.lean), [`Special.lean`](MatrixCoreTests/Special.lean) | Extreme words of every format, FNUZ conventions, XF32, infinities and NaN |
 | [`Machine.lean`](MatrixCoreTests/Machine.lean) | The fixed-width register widths, and inputs that wrap one bit narrower |
-| [`ErrorBounds.lean`](MatrixCoreTests/ErrorBounds.lean) | The actual error against the proved bound on the paper's examples |
+| [`ErrorBounds.lean`](MatrixCoreTests/ErrorBounds.lean) | The actual error against the proven bound on the paper's examples |
 | [`Monotonicity.lean`](MatrixCoreTests/Monotonicity.lean), [`ProductProperties.lean`](MatrixCoreTests/ProductProperties.lean) | Monotonicity in `c`, non-monotonicity in the products and its threshold, correct rounding without alignment loss |
 | [`Chain.lean`](MatrixCoreTests/Chain.lean), [`InnerProduct.lean`](MatrixCoreTests/InnerProduct.lean) | Contracts used downstream, inner products and `D = AB + C` |
 | [`EFT.lean`](MatrixCoreTests/EFT.lean) | The MC-EFT correction on each generation: hardware output, corrected word and path |

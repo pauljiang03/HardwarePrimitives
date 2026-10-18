@@ -3,7 +3,7 @@ import Ozaki.Binary
 /-! # Slicing binary-format values with bounded integer operations
 
 The scheme's split (`Ozaki.split`) is defined in exact rational arithmetic, and the binary32 σ-trick
-that computes it in hardware (`OzakiTC.Split32`) is proved only for grids in `[2^-149, 2^104]`. This
+that computes it in hardware (`OzakiTC.Split32`) is proven only for grids in `[2^-149, 2^104]`. This
 file gives an implementation that works for every grid: every entry is an integer pair `(m, e)`
 worth `m · 2^e`, as a binary format stores it, and a slice is computed with integer operations on
 the significands.

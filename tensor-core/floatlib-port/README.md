@@ -24,7 +24,7 @@ The first build needs network access to fetch Lean, FloatLib and mathlib.
 `check_all.py` writes `test-results/summary.json`. For a manual build, run
 `python3 scripts/prepare_reference.py`, then `lake build`.
 
-## What is proved
+## What is proven
 
 `TCFloat.Equivalence.floatlib_eq_reference`: for every encoded input of the
 FP16, BF16 and TF32 models and every supplied `D`, the two implementations

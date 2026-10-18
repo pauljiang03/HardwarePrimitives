@@ -11,7 +11,7 @@
   "oracle": "Lean instruction outputs compared with independent exact rational arithmetic per ordered block FMA",
   "source_sha256": {
     "scripts/check_instruction_groups.py": "86178ed6ff03fb37578acfa5662867c405935087f10699153add32c9f3d0c469",
-    "scripts/check_features.py": "026b4c3ec1fe9c265248c1b8b998aaad8c9285105a9f85d60c55a3329db98ef0",
+    "scripts/check_features.py": "a66798028bb39deed5def89c9a57beb70d5ebebd6b0f9ee2ab4a79c1ddbe5ac6",
     "examples/InstructionGroups.lean": "c3c768a255c62bdd44579ee7a20328fb9254e37f03e35055bef0cdffe3964703"
   }
 }

@@ -6,7 +6,7 @@ Khattak and Mikaitis, *Accurate Models of NVIDIA Tensor Cores*
 ([arXiv:2512.07004](https://arxiv.org/abs/2512.07004)).
 
 A standalone Lake project. Documentation: [the Tensor Core
-model](https://pauljiang03.github.io/HardwarePrimitives/model/).
+model](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/).
 
 ## Coverage
 
@@ -45,18 +45,18 @@ example : ((evalBlock ones).toOption.map fun t => t.output.bits) =
 Four FP16 products `1 × 1` on the V100 model give the FP32 word of `4.0`; the
 `example` checks the bits in the kernel. More in [`examples/`](examples/README.md).
 
-## Proved properties
+## Proven properties
 
 - Equality with an independent transcription of the published model, for
   every input; error bounds; exact accepted domains.
 - An exact characterization of a family of non-monotonic inputs.
 - TC-EFT, which recovers the correctly rounded sum of a block FMA, with a
   576-bit exact fallback.
-- A bitvector datapath proved equal to the model.
+- A bitvector datapath proven equal to the model.
 
-Details: [error bounds](https://pauljiang03.github.io/HardwarePrimitives/properties/error-bounds/),
-[non-monotonicity](https://pauljiang03.github.io/HardwarePrimitives/properties/non-monotonicity/),
-[TC-EFT](https://pauljiang03.github.io/HardwarePrimitives/properties/eft/).
+Details: [error bounds](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/properties/error-bounds/),
+[non-monotonicity](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/properties/non-monotonicity/),
+[TC-EFT](https://pauljiang03.github.io/HardwarePrimitives/tensor-core/properties/eft/).
 
 Every theorem depends only on `propext`, `Classical.choice` and `Quot.sound`.
 
@@ -70,7 +70,7 @@ python3 scripts/check_clean_build.py   # fresh build, axiom audit, examples, ora
   toolbox bit for bit (35,000 rows at v0.5, 125,000 at commit 79143bd, 20,000
   at v0.1).
 - No mismatch with Microsoft's MMA-Sim on 850,000 cases.
-- A second implementation on FloatLib, proved to give the same observation for
+- A second implementation on FloatLib, proven to give the same observation for
   every input ([`floatlib-port/`](floatlib-port/README.md)).
 
 ## Layout

@@ -5,7 +5,7 @@ output: no split-K or split-K by 2, 4 or 8 with serial or pairwise reduction, st
 first block FMA or in the epilogue, atomic split-K in two arrival orders, a CUDA-core fallback
 (sequential binary32 FMA), and the same program on different GPUs. For each pair against the
 reference (no split-K, C in the epilogue) the script reports whether the two are bitwise equal by
-the algebra, the proved bound on |t1 - t2| / M (M = sum |a_l b_l| + |c|) for inputs with normal
+the algebra, the proven bound on |t1 - t2| / M (M = sum |a_l b_l| + |c|) for inputs with normal
 operands, the worst case found by an adversarial search, and the typical difference on four
 kinds of data. These are modeled programs: the internals of cuBLAS and rocBLAS are not public.
 

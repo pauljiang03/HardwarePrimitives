@@ -19,19 +19,19 @@ library audits every theorem of `MatrixCore` the same way (824 theorems).
 
 The declarations are also re-checked outside Lean's kernel by
 [con-leche](https://github.com/leanprover/con-leche), an external checker
-proved never to accept a proof of `False`. On 2026-10-13, at revision
+proven never to accept a proof of `False`. On 2026-10-13, at revision
 `3b37939` in `--verified` mode, it accepted every declaration of `TensorCore`
 and its tests (168,810, including Lean's own library) and of the AMD model
 `MatrixCore` and its tests (166,049); the `MatrixCore` theorems added since
 have not been re-checked. Lean does not record `example`s as declarations, so the kernel-evaluated regression examples are checked by Lean's kernel only.
 
-## Tested, not proved
+## Tested, not proven
 
 - **Agreement with GPUs**: on the recorded measurements only (35,000 rows of
   V100, A100 and H100; 125,000 rows of Ada, L40S, H100, H200 and B200 with
   FP16, BF16, TF32, E4M3 and E5M2 inputs; 20,000 H100 and H200 FP8 rows of
   the toolbox's release v0.1), with the
-  [coverage gaps](/HardwarePrimitives/model/validation/#what-the-rows-dont-cover) noted
+  [coverage gaps](/HardwarePrimitives/tensor-core/validation/#what-the-rows-dont-cover) noted
   there.
 - **The accumulator input of the recorded FP8 outputs**: Ada and L40S
   accumulate `C` in the block FMA; the H100 and H200 outputs of commit 79143bd
@@ -43,8 +43,8 @@ have not been re-checked. Lean does not record `example`s as declarations, so th
   instructions of V100 to B200 and the RTX PRO 6000 (581,052 identical with a
   nonzero `C`, `wgmma` and `tcgen05.mma` included) and 80,000 FP8 `mma.sync`
   cases composed from MMA-Sim's FP16 `mma.sync`, 0 mismatches
-  ([details](/HardwarePrimitives/model/validation/#cross-check-against-mma-sim)).
-- **FP8 decoding**: proved for every E4M3 and E5M2 word in Lean, and also
+  ([details](/HardwarePrimitives/tensor-core/validation/#cross-check-against-mma-sim)).
+- **FP8 decoding**: proven for every E4M3 and E5M2 word in Lean, and also
   compared with an independent Python decoder on all 512 words.
 - **Agreement with Python oracles**: exact-rational reimplementations of
   the same *Accurate Models* semantics.
@@ -54,10 +54,10 @@ have not been re-checked. Lean does not record `example`s as declarations, so th
   models (600,000 random inner products, and 20,000 targeted FP8 ones);
   and 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics. No
   recorded AMD hardware outputs are published
-  ([details](/HardwarePrimitives/amd/validation/)).
-- **Native Float32**: `tcEftWithLean_eq` is proved against Lean's float
+  ([details](/HardwarePrimitives/matrix-core/validation/)).
+- **Native Float32**: `tcEftWithLean_eq` is proven against Lean's float
   *model*. That the compiled `Float32` addition matches the model is checked
-  by `check_lean_eft.py`, not proved.
+  by `check_lean_eft.py`, not proven.
 
 ## Trusted
 

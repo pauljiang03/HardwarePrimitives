@@ -10,7 +10,7 @@ rev = "0d91825727839f597fd06b22fdd038ea21480f0c"
 [[lean_lib]]
 name = "MCFloat"
 
-# Compile verified Matrix-Core definitions for the equivalence proofs.
+# Compile verified MatrixCore definitions for the equivalence proofs.
 [[lean_lib]]
 name = "MatrixCore"
 srcDir = "reference-compat"

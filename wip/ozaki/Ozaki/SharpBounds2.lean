@@ -32,7 +32,7 @@ Two generalizations of the bounds of `Ozaki.SharpBounds`.
   multiple of `M`, and the reconstructed product is within `ε`; the error bound of Ozaki-II gains
   `ε 2^(−s)` twice (before and through the final rounding). For the plain left-to-right binary64
   accumulation `ε = n 2^-53 2^(b+1) Σ|wⱼ|` by Jeannerod and Rump (`crtAccFP64_error`). Their
-  implementation splits the large weights to keep products exact; any accumulator with a proved `ε`
+  implementation splits the large weights to keep products exact; any accumulator with a proven `ε`
   plugs into `ozaki2Approx_error`, but theirs is not modeled here. -/
 
 local notation "ℕ" => Nat

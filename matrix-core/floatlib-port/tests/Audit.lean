@@ -42,7 +42,7 @@ elab "independence_audit" : command => do
   let env ← getEnv
   for root in executableRoots do
     let bad := fromMatrixCore env root
-    unless bad.isEmpty do throwError "{root} depends on Matrix-Core declarations {bad}"
+    unless bad.isEmpty do throwError "{root} depends on MatrixCore declarations {bad}"
   let deps := ((reach env ``MCFloat.dot).run {}).2
   for used in [``FloatLib.Floats.Formats.BinaryInterchange.Model.toDyadic?,
       ``FloatLib.Floats.Formats.BinaryInterchange.Model.roundRatWithRounding,
@@ -50,7 +50,7 @@ elab "independence_audit" : command => do
       ``FloatLib.Floats.Formats.BinaryInterchange.Model.isInf,
       ``FloatLib.Numerics.Dyadic.mul] do
     unless deps.contains used do throwError "MCFloat.dot does not use {used}"
-  logInfo m!"independence_audit: {executableRoots.length} executable roots reach no Matrix-Core \
+  logInfo m!"independence_audit: {executableRoots.length} executable roots reach no MatrixCore \
     declaration ({deps.size} constants reachable from MCFloat.dot); FloatLib decoding, \
     classification, products and rounding are used"
 
@@ -69,8 +69,8 @@ def badImplementation : ℚ := MatrixCore.pow2 3 + MCFloat.pow2 3
 
 elab "negative_control" : command => do
   let bad := fromMatrixCore (← getEnv) ``badImplementation
-  if bad.isEmpty then throwError "negative control: the audit missed a Matrix-Core dependency"
-  logInfo m!"negative_control: detected {bad.size} Matrix-Core dependencies"
+  if bad.isEmpty then throwError "negative control: the audit missed a MatrixCore dependency"
+  logInfo m!"negative_control: detected {bad.size} MatrixCore dependencies"
 
 end MCFloatTests.Audit
 

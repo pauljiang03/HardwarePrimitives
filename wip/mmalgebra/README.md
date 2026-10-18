@@ -20,21 +20,21 @@ The models fall into three algebras:
 
 The FP8 block FMAs add two more. Blackwell FP8 is rigid. Ada and Hopper FP8 keep a 13-bit mantissa
 after alignment, so an empty block FMA truncates its accumulator input to a 13-bit mantissa
-(proved for every finite input): their algebra is rigid with **truncation nodes**, an empty block
+(proven for every finite input): their algebra is rigid with **truncation nodes**, an empty block
 over an addition, which the next nonempty block absorbs. CDNA 3 FP8 is **parity-rigid**: a block
 depends on its slots only through the unordered pair {multiset of the odd slots, multiset of the
-even slots} (the parity law, proved), and a slot permutation preserves the output on every input
+even slots} (the parity law, proven), and a slot permutation preserves the output on every input
 exactly when it preserves the parity partition. An enumeration of every term over three products
 separates all classes of the three FP8 algebras (28 on Blackwell, 43 on Ada and Hopper, 40 on
 CDNA 3), and one input with three products gives four different results on Ada, Hopper, Blackwell
 and CDNA 3 (kernel-checked).
 
 The laws are complete: terms with distinct normal forms differ on some input, and already on an
-input with at most three nonzero products. This is proved in Lean for terms with additions on the
+input with at most three nonzero products. This is proven in Lean for terms with additions on the
 fp16 models of V100, A100, H100, CDNA 1, CDNA 2 and CDNA 3, for chains on the bf16 and tf32 Tensor
 Cores, CDNA 1 bf16 and CDNA 3 bf16 and xf32, and for terms on the bf16 and tf32 Tensor Cores, SFMA
 and CDNA 3 bf16 and xf32 on inputs whose products are multiples of `2^-149`; on the FP8 block FMAs
-it is proved for chains on Ada, Hopper, Blackwell and CDNA 3, and for terms with additions on
+it is proven for chains on Ada, Hopper, Blackwell and CDNA 3, and for terms with additions on
 Blackwell on every input (every FP8 product is a multiple of `2^-149`); it is checked exhaustively
 over three and four products on every model (see the status below). The consequences: split-K, stream-K and moving `C` give
 different bits on every model; a natural abstraction, "each MMA instruction is one rounding", is
@@ -67,31 +67,31 @@ project is a work in progress.
 
 | Part | Status |
 | --- | --- |
-| Multiset and zero laws, restriction to a support (Tensor Core model, every variant) | Proved in Lean |
-| Completeness for chains and for terms with additions: two terms are equivalent exactly when their normal forms agree (V100, A100, H100 fp16 and CDNA 3 fp16: rigid; CDNA 1 fp16: correctly rounded trees; CDNA 2 fp16: binary summation trees) | Proved in Lean on every input, with kernel-checked fingerprint tables |
-| Completeness for chains (A100 and H100 bf16 and tf32, CDNA 1 bf16, CDNA 3 bf16 and xf32) | Proved in Lean on every input |
-| Completeness for terms with additions (A100 and H100 bf16 and tf32, SFMA, CDNA 3 bf16 and xf32) | Proved in Lean on inputs whose products are multiples of `2^-149` |
+| Multiset and zero laws, restriction to a support (Tensor Core model, every variant) | Proven in Lean |
+| Completeness for chains and for terms with additions: two terms are equivalent exactly when their normal forms agree (V100, A100, H100 fp16 and CDNA 3 fp16: rigid; CDNA 1 fp16: correctly rounded trees; CDNA 2 fp16: binary summation trees) | Proven in Lean on every input, with kernel-checked fingerprint tables |
+| Completeness for chains (A100 and H100 bf16 and tf32, CDNA 1 bf16, CDNA 3 bf16 and xf32) | Proven in Lean on every input |
+| Completeness for terms with additions (A100 and H100 bf16 and tf32, SFMA, CDNA 3 bf16 and xf32) | Proven in Lean on inputs whose products are multiples of `2^-149` |
 | Completeness for terms on CDNA 1 bf16 (not all separated) and CDNA 2 bf16, and off the binary32 grid on the bf16 Tensor Cores, SFMA and CDNA 3 bf16 | Enumeration only ([prototype](prototype/README.md)) |
 | Completeness for tf32 and CDNA 3 xf32 terms off the binary32 grid | Not yet covered |
 | FP8 algebras: Blackwell rigid, Ada and Hopper rigid with truncation nodes, CDNA 3 parity-rigid | Enumeration of every term over 3 products, all classes separated ([prototype](prototype/README.md)) |
-| Completeness for chains on the FP8 block FMAs: two chains from `+0` are equivalent exactly when their ordered partitions agree (Ada, Hopper, Blackwell; E4M3 and E5M2); on CDNA 3 FP8 two chains that differ in the ordered partition, or in how some block splits its products into the two parity groups, differ on some input (every mix of E4M3 and E5M2) | Proved in Lean on every input, with kernel-checked base witnesses |
-| Completeness for terms with additions on Blackwell FP8: two terms are equivalent exactly when their rigid normal forms agree | Proved in Lean on every input (every FP8 product is a multiple of `2^-149`), with kernel-checked fingerprint tables |
+| Completeness for chains on the FP8 block FMAs: two chains from `+0` are equivalent exactly when their ordered partitions agree (Ada, Hopper, Blackwell; E4M3 and E5M2); on CDNA 3 FP8 two chains that differ in the ordered partition, or in how some block splits its products into the two parity groups, differ on some input (every mix of E4M3 and E5M2) | Proven in Lean on every input, with kernel-checked base witnesses |
+| Completeness for terms with additions on Blackwell FP8: two terms are equivalent exactly when their rigid normal forms agree | Proven in Lean on every input (every FP8 product is a multiple of `2^-149`), with kernel-checked fingerprint tables |
 | Completeness for terms with additions on Ada, Hopper and CDNA 3 FP8 | Enumeration only ([prototype](prototype/README.md)): an addition can leave more than 13 mantissa bits, which a following empty block truncates on Ada and Hopper |
-| On Ada and Hopper FP8 an empty block FMA truncates `c` to a 13-bit mantissa (`+0` if that is zero); on Blackwell FP8 it passes `c` through | Proved in Lean on every finite input |
-| CDNA 3 FP8 parity law; a slot permutation preserves every output exactly when it preserves the parity partition; separating witnesses for every mix of E4M3 and E5M2 | Proved in Lean |
+| On Ada and Hopper FP8 an empty block FMA truncates `c` to a 13-bit mantissa (`+0` if that is zero); on Blackwell FP8 it passes `c` through | Proven in Lean on every finite input |
+| CDNA 3 FP8 parity law; a slot permutation preserves every output exactly when it preserves the parity partition; separating witnesses for every mix of E4M3 and E5M2 | Proven in Lean |
 | One input with four different results on Ada, Hopper, Blackwell and CDNA 3 FP8 | Kernel-checked in Lean on both models |
 | Pinned accumulation on CDNA 3 FP8 needs one pin in each parity group; pinned FP8 is bitwise identical on Ada, Hopper and CDNA 3 | Kernel-checked instance in Lean; simulated ([`fp8_pinned.py`](prototype/fp8_pinned.py)) |
-| Reduction of completeness to supports of at most 3 products | Proved in Lean (an ordered partition is determined by its pairwise patterns; a tree by its restrictions to triples of leaves); exhaustive for chains over up to 6 products and terms over 4 |
-| An fp16 Tensor Core block never returns `−0`; neither does any Tensor Core block whose products are multiples of `2^-149` | Proved in Lean |
+| Reduction of completeness to supports of at most 3 products | Proven in Lean (an ordered partition is determined by its pairwise patterns; a tree by its restrictions to triples of leaves); exhaustive for chains over up to 6 products and terms over 4 |
+| An fp16 Tensor Core block never returns `−0`; neither does any Tensor Core block whose products are multiples of `2^-149` | Proven in Lean |
 | Base witnesses on CDNA 1, 2 and 3; one-instruction swap witnesses on V100, A100, CDNA 1–3 | Kernel-checked in Lean |
 | Laws and normal forms on all modeled variants | Random testing and exhaustive enumeration over 2, 3 and 4 products ([prototype](prototype/README.md)) |
-| CDNA 1 merge laws (`[x] [J] = [x J]`, `[x] ⊕ [y] = [x y]`) and CDNA 2 `c`-split law | Proved in Lean on every input |
-| How far apart two schedules can be: structural bound, divergence, shared work | Proved for any matrix multiplier with a binary32 addition; block contracts and divergence proved for the Tensor Core models (V100, A100, H100), SFMA, CDNA 1, CDNA 2 and CDNA 3 (fp16) |
-| Inside the exact region (integer operands, `\|c\| + Σ\|aᵢbᵢ\|` at most `2^24`) every schedule returns the exact sum | Proved on every Tensor Core model and on CDNA 1, 2 and 3 |
-| Every schedule is an exact matrix multiplier in the sense of the Ozaki schemes, so Ozaki-I, Ozaki-II and their correctly rounded versions give the same bits under every schedule | Proved on every Tensor Core model and on CDNA 1, 2 and 3 |
+| CDNA 1 merge laws (`[x] [J] = [x J]`, `[x] ⊕ [y] = [x y]`) and CDNA 2 `c`-split law | Proven in Lean on every input |
+| How far apart two schedules can be: structural bound, divergence, shared work | Proven for any matrix multiplier with a binary32 addition; block contracts and divergence proven for the Tensor Core models (V100, A100, H100), SFMA, CDNA 1, CDNA 2 and CDNA 3 (fp16) |
+| Inside the exact region (integer operands, `\|c\| + Σ\|aᵢbᵢ\|` at most `2^24`) every schedule returns the exact sum | Proven on every Tensor Core model and on CDNA 1, 2 and 3 |
+| Every schedule is an exact matrix multiplier in the sense of the Ozaki schemes, so Ozaki-I, Ozaki-II and their correctly rounded versions give the same bits under every schedule | Proven on every Tensor Core model and on CDNA 1, 2 and 3 |
 | How different modeled BLAS programs are (bounds, worst cases, typical differences) | Prototype study ([`blas_programs.py`](prototype/blas_programs.py)) |
-| Every schedule is exact when the positive and the negative products each total below `2^24` | Proved in Lean (Tensor Core models) |
-| Pinned accumulation (a cancelling pin pair `±2^α` in every block FMA) and anchored accumulation (start at `1.5·2^α`) make every schedule agree, on a fixed-point grid | Proved in Lean for the Tensor Core models (pinned also on CDNA 3, with the conditions on `c` derived); kernel-checked demonstration on V100, A100 and H100 and counterexamples on CDNA 1 and 2; simulated accuracy and cost; not yet run on a GPU |
+| Every schedule is exact when the positive and the negative products each total below `2^24` | Proven in Lean (Tensor Core models) |
+| Pinned accumulation (a cancelling pin pair `±2^α` in every block FMA) and anchored accumulation (start at `1.5·2^α`) make every schedule agree, on a fixed-point grid | Proven in Lean for the Tensor Core models (pinned also on CDNA 3, with the conditions on `c` derived); kernel-checked demonstration on V100, A100 and H100 and counterexamples on CDNA 1 and 2; simulated accuracy and cost; not yet run on a GPU |
 
 ## Build and run
 

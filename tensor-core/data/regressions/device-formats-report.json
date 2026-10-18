@@ -43,6 +43,6 @@
     "descriptor_profile_disagreements": 0,
     "zero_or_subnormal_operands_or_c": 0
   },
-  "status": "Descriptor and proved-model replay; the minimum alignment exponents are not exercised by these rows",
+  "status": "Descriptor and proven-model replay; the minimum alignment exponents are not exercised by these rows",
   "method": "One descriptor and one model evaluation per row, bitwise comparison with the device output and with each other; no new GPU measurements"
 }

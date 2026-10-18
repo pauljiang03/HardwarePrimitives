@@ -87,11 +87,11 @@ def main():
     hashes = {name: token_hash(text) for name, text in src.items()}
     if "--pin" in sys.argv:
         MANIFEST.write_text(json.dumps(hashes, indent=1, sort_keys=True) + "\n")
-        print(f"Pinned {len(hashes)} Matrix-Core sources in {MANIFEST.name}")
+        print(f"Pinned {len(hashes)} MatrixCore sources in {MANIFEST.name}")
     pinned = json.loads(MANIFEST.read_text())
     changed = sorted(n for n in set(pinned) | set(hashes) if pinned.get(n) != hashes.get(n))
     if changed:
-        sys.exit("Matrix-Core sources differ from the pinned manifest (re-pin with --pin): " +
+        sys.exit("MatrixCore sources differ from the pinned manifest (re-pin with --pin): " +
                  ", ".join(changed))
     for name, text in src.items():
         target = OUT / name
@@ -100,7 +100,7 @@ def main():
             text = scoped_notation(text)
         if not target.exists() or target.read_text() != text:
             target.write_text(text)
-    print(f"Verified {len(src)} Matrix-Core sources against the manifest; "
+    print(f"Verified {len(src)} MatrixCore sources against the manifest; "
           "compatibility copy prepared with scoped ℕ/ℤ/ℚ notation")
 
 

@@ -4,7 +4,7 @@ description: What Hardware Primitives can do today, how it is checked, what is n
 ---
 
 Hardware Primitives is a Lean 4 development about the arithmetic of GPU matrix multipliers:
-models of the block FMAs of NVIDIA Tensor Cores and AMD matrix cores, and their proved
+models of the block FMAs of NVIDIA Tensor Cores and AMD matrix cores, and their proven
 properties. This page summarizes what it can do today, how it is checked, what is not done, and
 what could come next. Work in progress that builds on the models is kept in the repository's
 `wip/` folder and is not covered here.
@@ -20,20 +20,20 @@ what could come next. Work in progress that builds on the models is kept in the 
 | NVIDIA Tensor Cores, FP8 `mma.sync` | H100, H200 and B200 (FP16 path with interleaving); RTX PRO 6000 | E4M3, E5M2 |
 | AMD matrix cores | CDNA 1, 2 and 3, and the sequential FMA of FP32 inputs | FP16, BF16 (incl. `_1k`), XF32, FP8 (E4M3 and E5M2 FNUZ, any mix) |
 
-The models are described on [the model at a glance](/HardwarePrimitives/model/) and
-[the AMD model at a glance](/HardwarePrimitives/amd/).
+The models are described on [the model at a glance](/HardwarePrimitives/tensor-core/) and
+[the AMD model at a glance](/HardwarePrimitives/matrix-core/).
 
-**Proved properties of the Tensor Core models.**
+**Proven properties of the Tensor Core models.**
 
 - Per-block error bounds, for every block-output width.
 - When alignment loses nothing, so that a block FMA adds its products exactly.
 - An exact characterization of a family of non-monotonic inputs.
 - TC-EFT: the correctly rounded sum of a block FMA, with a 576-bit exact fallback.
 
-**Proved properties of the matrix core models**, per generation:
+**Proven properties of the matrix core models**, per generation:
 
 - **All:** per-block error bounds, also from the inputs alone, monotonicity in `c`, and the
-  [MC-EFT correction](/HardwarePrimitives/amd/properties/eft/) of a block from its output.
+  [MC-EFT correction](/HardwarePrimitives/matrix-core/properties/eft/) of a block from its output.
 - **CDNA 1 and the SFMA:** correct rounding, monotonicity in every product, and independence of
   the order of the products.
 - **CDNA 2:** non-monotonicity in the products only through flushing; correct rounding when every
@@ -41,9 +41,9 @@ The models are described on [the model at a glance](/HardwarePrimitives/model/) 
 - **CDNA 3:** monotonicity in the products while the alignment exponents are unchanged, necessary
   and sufficient conditions for an output decrease, a non-monotone family with an exact threshold,
   correct rounding when alignment loses nothing, fixed-width accumulation, and the FP8 parity law
-  (proved in `wip/mmalgebra`, which builds on the model).
+  (proven in `wip/mmalgebra`, which builds on the model).
 
-**Cross-checks proved in Lean.** Each model equals an independent specification. The Tensor Core
+**Cross-checks proven in Lean.** Each model equals an independent specification. The Tensor Core
 model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 ## How it is checked
@@ -52,13 +52,13 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 | --- | --- |
 | `lake build` (248 targets) | passes, no Lean warnings |
 | Axiom audit | only `propext`, `Classical.choice`, `Quot.sound`; no `sorry` |
-| Model = independent specification | proved for all inputs on every model, for every block-output width (FP8 included) |
-| Model = bitvector datapath | proved for all inputs on the 8 FP16/BF16/TF32 variants and the 6 FP8 block FMAs |
+| Model = independent specification | proven for all inputs on every model, for every block-output width (FP8 included) |
+| Model = bitvector datapath | proven for all inputs on the 8 FP16/BF16/TF32 variants and the 6 FP8 block FMAs |
 | Recorded GPU vectors | 35,000 rows of V100, A100 and H100; 125,000 rows of Ada, L40S, H100, H200 and B200 (FP16, BF16, TF32, E4M3, E5M2); 20,000 H100 and H200 FP8 rows of toolbox release v0.1. 0 mismatches |
 | MMA-Sim cross-check | 850,000 cases on 31 instructions (581,052 identical with a nonzero `C`) and 80,000 FP8 `mma.sync` cases, 0 mismatches |
 | AMD vectors and MATLAB models | every published test vector; 600,000 random inner products plus targeted ones; 90,000 FP8 inner products against MMA-Sim's CDNA 3 semantics, 0 mismatches |
 | Software oracle cases | 715 blocks, 2,918 rounding cases, 2,033 feature cases, 0 mismatches |
-| FloatLib equivalence | proved; 115,029 + 668,944 comparison cases, 0 mismatches |
+| FloatLib equivalence | proven; 115,029 + 668,944 comparison cases, 0 mismatches |
 | Independent proof checker | every declaration of `TensorCore`, `MatrixCore` and their tests accepted on 2026-10-13; the `MatrixCore` theorems added since are not yet re-checked |
 
 ## What is not done
@@ -92,7 +92,7 @@ model also equals a bitvector datapath, and a second implementation on FloatLib.
 
 **TC-EFT.** The paper's input-based precondition (17) derives five of the nine conditions of
 the fast-path check for FP32; the other four depend on the particular sum and remain
-assumptions. On the matrix cores no input-based condition is proved, the fallback uses exact
+assumptions. On the matrix cores no input-based condition is proven, the fallback uses exact
 rationals rather than a fixed-width word, and chained blocks are not covered.
 
 ## What could come next

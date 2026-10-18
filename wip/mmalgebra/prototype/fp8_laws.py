@@ -1,7 +1,7 @@
 """Random tests of the empty-block laws on the FP8 models.
 
 On each NVIDIA FP8 model: does an empty block return c, or c truncated to a 13-bit mantissa (a
-zero result +0; proved in Lean for Ada and Hopper, tc_empty_block_trunc13)? Is an empty block absorbed
+zero result +0; proven in Lean for Ada and Hopper, tc_empty_block_trunc13)? Is an empty block absorbed
 by a following nonempty block, and is it the identity on block outputs? On CDNA 3 FP8: does an
 empty block return c? Accumulators are random binary32 words with exponents in [-30, 30]; blocks
 hold 1 to 4 random products (E4M3 operands of magnitude at most 448, every finite E5M2 operand;

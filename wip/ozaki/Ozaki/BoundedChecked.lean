@@ -2574,7 +2574,7 @@ def ckXs : List (ℤ × ℤ) := [(5000000000000001, -60), (-7000000000000003, -5
 def ckYs : List (ℤ × ℤ) := [(4503599627370497, -52), (6000000000000007, -70), (-1, -1074),
   (1, -950)]
 
-/-- At the proved widths the checked function agrees with the unchecked one, through the rounding
+/-- At the proven widths the checked function agrees with the unchecked one, through the rounding
 test and through the exact fallback. -/
 example : Checked.ozaki1CRIC ⟨332, 24⟩ exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs =
     some (ozaki1CRI exactMultiplier 53 (-1022) 1023 11 96 [5, 6] 175 ckXs ckYs) := by decide +kernel

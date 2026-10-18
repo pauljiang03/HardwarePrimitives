@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Re-check every named declaration with con-leche, an external Lean checker proved never to accept
+# Re-check every named declaration with con-leche, an external Lean checker proven never to accept
 # a proof of False (https://github.com/leanprover/con-leche). Exports each library set with
 # lean4export (https://github.com/leanprover/lean4export) and checks it in --verified mode.
 #
