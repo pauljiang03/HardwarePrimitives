@@ -3,14 +3,15 @@ title: Quick start
 description: Build the Lean project and run the worked examples.
 ---
 
-Install [elan](https://github.com/leanprover/elan), Python 3, and Git. The
-repository pins its Lean version in
-[`lean-toolchain`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/lean-toolchain).
+Install [elan](https://github.com/leanprover/elan), Python 3, and Git. Each
+hardware primitive has its own folder and Lake project, `tensor-core/` and
+`matrix-core/`, and each pins its Lean version in its own
+[`lean-toolchain`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/lean-toolchain).
 The checks need no GPU, CUDA, or MATLAB.
 
 ```sh
 git clone https://github.com/pauljiang03/HardwarePrimitives.git
-cd HardwarePrimitives
+cd HardwarePrimitives/tensor-core
 lake build                                  # library, regression library, native adapters
 lake env lean examples/GettingStarted.lean
 lake env lean examples/NonMonotonicity.lean
@@ -35,6 +36,8 @@ exact bits, so the files check their own answers.
 
 ## Full validation
 
+From `tensor-core/`:
+
 ```sh
 python3 scripts/check_clean_build.py
 ```
@@ -44,7 +47,8 @@ theorem. It also checks every example and documentation code block, and
 compares the executables with independent exact-arithmetic oracles and the
 recorded hardware vectors. It writes `data/regressions/clean-build.json`.
 
-The FloatLib implementation is a separate Lake project:
+The FloatLib implementation is a separate Lake project in
+`tensor-core/floatlib-port/`:
 
 ```sh
 cd floatlib-port
@@ -64,11 +68,11 @@ python3 scripts/check_equivalence.py
 
 ## The AMD model
 
-The AMD matrix-core model is a standalone Lake project in `amd/`, with its
-own pinned toolchain:
+The AMD matrix-core model is a standalone Lake project in `matrix-core/`, with
+its own pinned toolchain. From the repository root:
 
 ```sh
-cd amd
+cd matrix-core
 lake build                                  # library, paper regressions, audit
 lake env lean examples/GettingStarted.lean
 python3 scripts/check.py                    # clean build, examples, documentation blocks

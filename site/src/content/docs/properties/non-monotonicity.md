@@ -51,11 +51,11 @@ exactly 1. Lowering `C` to its FP32 predecessor `1 − 2^-24` makes the output
 | H100 | 16 | 2 | 12 | yes |
 
 Each row has a kernel-checked concrete witness in
-[`tests/TensorCoreTests/TC/Monotonicity.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tests/TensorCoreTests/TC/Monotonicity.lean).
+[`tests/TensorCoreTests/TC/Monotonicity.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/tests/TensorCoreTests/TC/Monotonicity.lean).
 
 ## Larger perturbations
 
-[`nonmonotone_range_encoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/MonotonicityRange.lean#L262)
+[`nonmonotone_range_encoded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/MonotonicityRange.lean#L262)
 generalizes the result to `C = 1 − j·2^-24` for `1 ≤ j ≤ 2^23`. It gives the
 exact set of `j` for which the output exceeds 1, namely
 `j ≤ min(2^23, K/2^p − 2)`, a closed form for the output, and the largest
@@ -63,7 +63,7 @@ output in the family.
 
 ## Necessary and sufficient conditions in general
 
-[`flowback_necessary` and `flowback_sufficient`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Flowback.lean#L200)
+[`flowback_necessary` and `flowback_sufficient`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Flowback.lean#L200)
 cover arbitrary inputs. Call the products recovered by the finer grid the
 *flowback* ω, and the change in the aligned `C` term ΔA. An output increase
 **requires** `ω > ΔA`. The condition is **sufficient** when both

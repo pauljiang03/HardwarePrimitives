@@ -24,7 +24,7 @@ theorem correctRounding_nearestEven {P : Model} (hacc : P.accumulation = .correc
 ```
 
 Each SFMA step is the value nearest to `c + a·b`
-([`MatrixCore.sfma_step_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CompositionProperties.lean#L79)),
+([`MatrixCore.sfma_step_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/CompositionProperties.lean#L79)),
 so an FP32 inner product is a chain of correctly rounded fused multiply-adds,
 `c` and `p₁` first. A chain is not the correctly rounded inner product: it
 rounds after every product ([example](/HardwarePrimitives/amd/cdna1/#the-sfma)).
@@ -42,7 +42,7 @@ theorem correctRounding_error {P : Model} (hacc : P.accumulation = .correctRound
 
 From the inputs alone, with `A = Σ|p_ℓ| + |c|`, the error is at most
 `2^-24 · A + 2^-150`
-([`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L67)).
+([`MatrixCore.correctRounding_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/AprioriBounds.lean#L67)).
 For inner products of any length the blocks' bounds add up
 ([instructions and chaining](/HardwarePrimitives/amd/instructions/#proved-properties-of-chains)).
 
@@ -57,13 +57,13 @@ theorem correctRounding_exact_monotone {P : Model} (hacc : P.accumulation = .cor
     (he : exactDot P x.a x.b x.c ≤ exactDot P x'.a x'.b x'.c) : wordValue t.d ≤ wordValue t'.d
 ```
 
-- [`MatrixCore.correctRounding_product_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L58):
+- [`MatrixCore.correctRounding_product_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ProductMonotonicity.lean#L58):
   raising any products and `c` never lowers the output.
-- [`MatrixCore.correctRounding_not_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L100),
+- [`MatrixCore.correctRounding_not_nonmonotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ProductMonotonicity.lean#L100),
   with instances `cdna1F16_not_nonmonotone`, `cdna1BF16_not_nonmonotone` and
   `sfmaF32_not_nonmonotone`: no pair of inputs has larger products, the same
   `c`, and a smaller output.
-- [`MatrixCore.runBlocks_correctRounding_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L76):
+- [`MatrixCore.runBlocks_correctRounding_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ProductMonotonicity.lean#L76):
   the same for inner products of any length, block by block.
 
 This is the contrast with CDNA 2, CDNA 3 and the NVIDIA Tensor Cores, which
@@ -73,7 +73,7 @@ are all non-monotone in some input.
 
 The exact sum does not depend on the order of the products, so neither does
 the output
-([`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L29)).
+([`MatrixCore.accumulate_perm`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Order.lean#L29)).
 Rounding to nearest even is symmetric, so negating the exact sum negates the
 output:
 
@@ -90,11 +90,11 @@ theorem correctRounding_neg {P : Model} (hacc : P.accumulation = .correctRoundin
 A block is accepted exactly when its inputs are finite and the exact sum is
 below the overflow threshold `2^128 − 2^103`; products may exceed `2^128`
 inside the block
-([`MatrixCore.correctRounding_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CorrectRounding.lean#L38)).
+([`MatrixCore.correctRounding_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/CorrectRounding.lean#L38)).
 
 ## MC-EFT correction
 
 The [MC-EFT correction](/HardwarePrimitives/amd/properties/eft/) from the
 block's output returns that output, since it is already the correctly rounded
 sum
-([`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA1.lean#L11)).
+([`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA1.lean#L11)).

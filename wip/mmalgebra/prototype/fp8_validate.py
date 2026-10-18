@@ -1,13 +1,13 @@
 """Validation of the FP8 port (fp8models.py).
 
 1. The recorded FP8 outputs of Ada, L40S, H100, H200 and B200 (the Accurate Models toolbox's
-   validation vectors at commit 79143bd, vendored in ../../../vendor/matlab-tensor-core-79143bd),
+   validation vectors at commit 79143bd, vendored in ../../../tensor-core/vendor/matlab-tensor-core-79143bd),
    replayed through the port as the repository replays them through the Lean models
    (scripts/check_device_replay.py): c accumulated in the block FMA on Ada and L40S, c = 0 on H100
    and H200 (wgmma), and c added after the block FMA with round-to-nearest-even on B200.
 2. The sparse evaluators of the enumeration against the full blocks, on random blocks.
-3. CDNA 3 binary8 against the Lean model (`mc_eval`, built in ../../../amd), on the random and
-   targeted cases of ../../../amd/scripts/fp8_cases.py, including mixed E4M3 x E5M2 operands.
+3. CDNA 3 binary8 against the Lean model (`mc_eval`, built in ../../../matrix-core), on the random and
+   targeted cases of ../../../matrix-core/scripts/fp8_cases.py, including mixed E4M3 x E5M2 operands.
 """
 import pathlib
 import random
@@ -17,9 +17,9 @@ from fractions import Fraction as Q
 from fp8models import *
 
 ROOT = pathlib.Path(__file__).resolve().parents[3]
-VENDOR = ROOT / 'vendor' / 'matlab-tensor-core-79143bd' / 'model_validation'
-MC_EVAL = ROOT / 'amd' / '.lake' / 'build' / 'bin' / 'mc_eval'
-sys.path.insert(0, str(ROOT / 'amd' / 'scripts'))
+VENDOR = ROOT / 'tensor-core' / 'vendor' / 'matlab-tensor-core-79143bd' / 'model_validation'
+MC_EVAL = ROOT / 'matrix-core' / '.lake' / 'build' / 'bin' / 'mc_eval'
+sys.path.insert(0, str(ROOT / 'matrix-core' / 'scripts'))
 import fp8_cases  # noqa: E402
 
 MODELS = {('Ada', 'E4M3'): ADA, ('L40S', 'E4M3'): ADA, ('H100', 'E4M3'): HOPPER,

@@ -9,8 +9,8 @@ and negative-zero operands, subnormal operands, TF32's wide exponent range, and 
 The predictions come from the models, not from hand computation:
 
 * NVIDIA: `scripts/targeted/TensorCoreCases.lean`, `#eval` of `TensorCore.runBlocks`, run from
-  the repository root;
-* AMD: `scripts/targeted/MatrixCoreCases.lean`, `#eval` of `MatrixCore.dotBits`, run from `amd/`.
+  `tensor-core/`;
+* AMD: `scripts/targeted/MatrixCoreCases.lean`, `#eval` of `MatrixCore.dotBits`, run from `matrix-core/`.
 
 `scripts/targeted_validation.py` runs both scripts and writes the JSON. For the 56 cases that come
 from kernel-checked theorems, it also checks that the `#eval` output equals the value each theorem

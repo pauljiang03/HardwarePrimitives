@@ -66,8 +66,8 @@ have not been re-checked. Lean does not record `example`s as declarations, so th
 - The Python harnesses that compare outputs. Their pass/fail rests largely on
   `assert`; every script refuses to run under `python -O` or `PYTHONOPTIMIZE`.
 - The authenticity of the vendored measurement files. They are pinned by
-  SHA-256 in [`vendor/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/SOURCES.json)
-  and in [`vendor/matlab-tensor-core-79143bd/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/vendor/matlab-tensor-core-79143bd/SOURCES.json)
+  SHA-256 in [`vendor/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/vendor/SOURCES.json)
+  and in [`vendor/matlab-tensor-core-79143bd/SOURCES.json`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/vendor/matlab-tensor-core-79143bd/SOURCES.json)
   but cannot be independently re-measured without GPUs.
 
 ## Assumed

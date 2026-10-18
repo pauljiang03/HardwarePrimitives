@@ -2,7 +2,7 @@ import MatrixCore
 
 /-! Targeted hardware-validation cases on the AMD matrix-core model.
 
-Run from `amd/`: `lake env lean ../wip/ozaki/scripts/targeted/MatrixCoreCases.lean`.
+Run from `matrix-core/`: `lake env lean ../wip/ozaki/scripts/targeted/MatrixCoreCases.lean`.
 Each `#eval` prints one line per inner product, `MC|id|model|c|a|b|output|value|exact`, where the
 words are decimal naturals (converted to hex by `targeted_validation.py`), `output` is the model's
 output word (or `ERR <error>`), `value` its value and `exact` the exact `c + Σ aᵢbᵢ`. Every

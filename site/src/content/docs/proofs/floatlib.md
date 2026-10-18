@@ -3,7 +3,7 @@ title: FloatLib cross-check
 description: A second implementation of the model and reference EFT, built on LeanDojo FloatLib and proved equivalent.
 ---
 
-[`floatlib-port/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/floatlib-port)
+[`floatlib-port/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/tensor-core/floatlib-port)
 is a separate Lake project. It reimplements the block model and the
 reference EFT on top of [LeanDojo FloatLib](https://github.com/lean-dojo/FloatLib),
 with its own toolchain (Lean 4.34 with Mathlib), dependency graph, and
@@ -11,7 +11,7 @@ runtime.
 
 ## The equivalence theorem
 
-[`floatlib_eq_reference`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/floatlib-port/TCFloat/Equivalence/Representations.lean#L149)
+[`floatlib_eq_reference`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/floatlib-port/TCFloat/Equivalence/Representations.lean#L149)
 and its inverse cover every model with FP16, BF16, or TF32 input (any FMA
 size `K`, padding bits, and minimum alignment exponent), every encoded input, and every `D`. They prove that
 the two implementations produce corresponding **complete observations**:
@@ -25,7 +25,7 @@ byte-identical to the current sources.
 ## Running it
 
 ```sh
-cd floatlib-port
+cd tensor-core/floatlib-port
 python3 scripts/check_all.py          # builds proofs, audits axioms and independence
 python3 scripts/check_equivalence.py  # 115,029 command observations, 668,944 decoding cases
 ```

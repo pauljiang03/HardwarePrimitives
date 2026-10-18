@@ -58,7 +58,7 @@ def PreparedBlock.alignedBits (b : PreparedBlock) : List ℤ :=
   b.terms.map fun t => truncBits t.value b.alignGridExponent
 ```
 
-[`truncBits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Exact.lean#L70)
+[`truncBits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Exact.lean#L70)
 takes the floor of the **magnitude** and restores the sign. This is the
 sign-magnitude shifter of the hardware: it **truncates** the magnitude and
 keeps the sign. For a negative term this is not the same as rounding down

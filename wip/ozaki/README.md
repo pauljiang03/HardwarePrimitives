@@ -13,7 +13,7 @@ models" below):
 
 The Z3 models take the matrix multiplier to have fp16 inputs and binary32 round-to-nearest
 additions. Here the matrix multiplier is a hardware model of this repository: the NVIDIA Tensor Core model of
-[`TensorCore`](../../README.md) and the AMD matrix-core model of [`MatrixCore`](../../amd/README.md).
+[`TensorCore`](../../tensor-core/README.md) and the AMD matrix-core model of [`MatrixCore`](../../matrix-core/README.md).
 The scheme itself is proved once, for any matrix multiplier, and each hardware model is shown to
 satisfy what the scheme needs. Every labeled check of the three Z3 models has a Lean theorem or a
 kernel-checked test, except the ones listed under [what is not proved](THEOREMS.md#not-proved).
@@ -47,7 +47,7 @@ Beyond the Z3 models:
 
 ## Build and run
 
-`ozaki/` is a standalone Lake project that requires the two models by path (`..` and `../amd`);
+`ozaki/` is a standalone Lake project that requires the two models by path (`../tensor-core` and `../matrix-core`);
 all three use Lean 4.33.1. From this directory:
 
 ```sh

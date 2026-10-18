@@ -45,7 +45,7 @@ def resolve(name, decls):
     if len(hits) > 1:
         # A name shared by the NVIDIA and AMD libraries means the NVIDIA one; write
         # `MatrixCore.Name` for the AMD one.
-        hits = [h for h in hits if not h[1][0].startswith('amd/')] or hits
+        hits = [h for h in hits if not h[1][0].startswith('matrix-core/')] or hits
     if len(hits) > 1:
         # An unqualified name means the least-nested declaration (e.g. not ExtractionGrid.*).
         depth = min(h[0].count('.') for h in hits)

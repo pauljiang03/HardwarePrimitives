@@ -27,7 +27,7 @@ theorem pairwise_error {P : Model} (hacc : P.accumulation = .pairWiseSum)
 
 From the inputs alone (`N_FMA ≤ 4`), with `x′` the inputs after flushing and
 `A′ = Σ|p′_ℓ| + |c′|`, the error is at most `|exact − exact′| + 2^-21 · A′ + 2^-120`
-([`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AprioriBounds.lean#L460)).
+([`MatrixCore.pairwise_apriori`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/AprioriBounds.lean#L460)).
 The flushing term is not small in relative terms: a product with a subnormal
 operand is lost whole.
 
@@ -36,7 +36,7 @@ operand is lost whole.
 ### In `c`: monotone
 
 For the same `a` and `b`, a larger `c` never gives a smaller output
-([`MatrixCore.evalBlock_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L605)).
+([`MatrixCore.evalBlock_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Monotonicity.lean#L605)).
 
 ### In the products: flushing is the only cause
 
@@ -44,7 +44,7 @@ CDNA 2 is not monotone in the products. On FP16, raise a product from
 `−2^-10` (`2^-15 · −2^5`, a subnormal operand) to `−2^-11` (`2^-14 · −2^3`,
 normal operands): the first is flushed to zero and the second is kept, so the
 output falls from `0` to `−2^-11`
-([`MatrixCore.cdna2F16_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L125);
+([`MatrixCore.cdna2F16_nonmonotonic`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ProductMonotonicity.lean#L125);
 the BF16 variants have such pairs too).
 
 Flushing is the only mechanism. Every conversion, every pairwise sum and the
@@ -70,7 +70,7 @@ and `cdna2BF16_1k_product_monotone`. The condition concerns `a` and `b` only;
 
 As on every configuration, an output decrease requires that the accumulation
 loss `R = exact − S_acc` grows by more than the gain in the exact sum
-([`MatrixCore.output_decrease_requires_loss`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/LossCondition.lean#L42)).
+([`MatrixCore.output_decrease_requires_loss`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/LossCondition.lean#L42)).
 On CDNA 2 that loss is the flushing and rounding of the inputs and partial
 sums.
 
@@ -100,7 +100,7 @@ with a subnormal result replaced by a zero of the same sign
 The pairs are rounded separately, so the output depends on the positions of
 the products: `1, s, s, 0` and `s, s, 1, 0` with `s = 2^-23 + 2^-24` give
 `1 + 2^-21` and `1 + 2^-22 + 2^-23`
-([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Order.lean#L41);
+([`MatrixCore.pairWiseSum_order_dependent`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Order.lean#L41);
 [example](/HardwarePrimitives/amd/cdna2/#example)).
 
 ## MC-EFT correction
@@ -111,6 +111,6 @@ cut-off is the last bit of `D`. With `D` the block's output, the overlap
 `D − H` is exactly the low parts plus every rounding error of the block (each
 conversion, each pairwise addition and the final rounding) minus what flushing
 removed
-([`MatrixCore.pairwise_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA2.lean#L109)).
+([`MatrixCore.pairwise_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA2.lean#L109)).
 On the order example above the hardware returns `1 + 2^-21`, and the
 correction returns `1 + 3·2^-23`.

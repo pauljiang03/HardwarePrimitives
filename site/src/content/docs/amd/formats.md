@@ -10,7 +10,7 @@ the minimum normal exponent).
 
 ## Formats
 
-A [`MatrixCore.Format`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L18)
+A [`MatrixCore.Format`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Format.lean#L18)
 is a layout of exponent bits, stored mantissa bits and bias, with its rule for
 special values:
 
@@ -60,7 +60,7 @@ mantissa width: 10 for FP16, 7 for BF16, 23 for FP32. For example FP16
 `1.5` is `m = 1536`, `e = 0`, `t = 10`: `1536 · 2^(0 − 10) = 1.5`. `value`
 recovers the rational exactly, and alignment reads `e`.
 
-[`Format.decodeNat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L155)
+[`Format.decodeNat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Format.lean#L155)
 extracts the fields and applies the format's rule for special values:
 
 ```lean
@@ -139,14 +139,14 @@ of being rounded silently.
 
 ## Proved properties of the encoding layer
 
-- [`MatrixCore.decodeNat_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Prepared.lean#L125)
-  and [`MatrixCore.read_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Prepared.lean#L138):
+- [`MatrixCore.decodeNat_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Prepared.lean#L125)
+  and [`MatrixCore.read_bounded`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Prepared.lean#L138):
   every decoded significand, subnormal or not, is below `2^(t + 1)`, so a
   decoded value is less than 2 in magnitude relative to its exponent. The
   accumulator-width proofs use this bound.
-- [`MatrixCore.Unpacked.value_onGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L119):
+- [`MatrixCore.Unpacked.value_onGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Format.lean#L119):
   a decoded value is an integer multiple of `2^(e − t)`.
-- [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L356):
+- [`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Uniqueness.lean#L356):
   within the finite range the correctly rounded FP32 word with the sign of
   the input is unique, which the [independent
   specification](/HardwarePrimitives/amd/specification/) uses to identify the output word.

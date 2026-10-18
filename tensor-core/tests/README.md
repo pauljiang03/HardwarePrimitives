@@ -16,7 +16,7 @@ lake build TensorCoreTests
 
 ## Checks
 
-Run from the repository root with plain `python3`; the scripts refuse to run
+Run from `tensor-core/` with plain `python3`; the scripts refuse to run
 under `-O`.
 
 | Script | Checks |

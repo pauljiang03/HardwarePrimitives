@@ -10,7 +10,7 @@ minimum normal exponent).
 
 ## Formats
 
-A [`Format`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Defs.lean#L7)
+A [`Format`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Defs.lean#L7)
 is a triple of stored mantissa bits, exponent bits, and bias:
 
 ```lean
@@ -51,7 +51,7 @@ FP16 `1.5` is significand `1536`, exponent `0`, 10 mantissa bits:
 `1536 · 2^(0 − 10) = 1.5`. `value` recovers the rational exactly,
 and alignment reads `exponent`.
 
-[`classifyNat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Encoding.lean#L8)
+[`classifyNat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Encoding.lean#L8)
 implements standard IEEE field extraction:
 
 ```lean
@@ -78,7 +78,7 @@ Points to note:
   significand is zero, zero never takes part in choosing the
   [alignment exponent](/HardwarePrimitives/model/alignment/).
 - **Infinity and NaN** map to `none` through
-  [`Classification.finite`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Encoding.lean#L23),
+  [`Classification.finite`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Encoding.lean#L23),
   and the block is rejected with `ModelError.nonfiniteInput`. The model covers
   finite arithmetic only.
 
@@ -109,12 +109,12 @@ ignored. The model separates the two concerns:
 
 - `tf19 : Format` is the 19-bit value format (1 sign, 8 exponent, 10 mantissa
   bits) that the block model uses.
-- [`tf32Register`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Format.lean#L51)
+- [`tf32Register`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Format.lean#L51)
   is an `OperandEncoding` whose 32-bit words must have 13 zero low bits.
   `tf32Unpack` extracts the 19 value bits.
 
 The theorem
-[`tf32_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/Supported.lean#L56)
+[`tf32_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/Supported.lean#L56)
 proves that, on register words whose low 13 bits are zero, the register-level
 invocation gives the same bits as the *Accurate Models* specification (`IndependentSpec`). Words whose low
 bits are not zero are rejected rather than silently masked.
@@ -130,10 +130,10 @@ The two FP8 formats differ at the top of their range.
   holds finite values (256 to 448, the largest at `0x7e`), and its only NaNs
   are `S.1111.111` (`0x7f`, `0xff`). The IEEE rule would make `0x78` an
   infinity, so E4M3 is decoded by the `finiteTopNaN` rule of
-  [`ValueFormat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Format.lean#L13),
+  [`ValueFormat`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Format.lean#L13),
   as the operand encoding `e4m3Encoding`.
 
-[`e4m3_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L45), [`e4m3_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L58), [`e5m2_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L51) and [`e5m2_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L65) prove these facts by computation over all 256 words of each format, and the
+[`e4m3_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L45), [`e4m3_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L58), [`e5m2_specials`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L51) and [`e5m2_max`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L65) prove these facts by computation over all 256 words of each format, and the
 replay compares both decoders with an independent Python decoder on all 512
 words.
 
@@ -142,11 +142,11 @@ values in `e4m3x`, a 9-bit layout with one more exponent bit and E4M3's bias:
 E4M3's top binade is then an ordinary binade, and subnormals keep the minimum
 exponent −6. `widenE4M3` maps each E4M3 word to its `e4m3x` word (the NaNs to
 NaNs), and the decodings agree on all 256
-words ([`e4m3_decode_widen`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/FP8.lean#L31)), as `tf32Unpack` does for TF32.
+words ([`e4m3_decode_widen`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/FP8.lean#L31)), as `tf32Unpack` does for TF32.
 
 ## Proved properties of the encoding layer
 
-- [`signedFiniteBinaryBijection`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/Numerics/Binary/SignedBijection.lean#L130):
+- [`signedFiniteBinaryBijection`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/Numerics/Binary/SignedBijection.lean#L130):
   finite encodings correspond one to one with representable values paired
   with a zero sign. Subnormals and both zeros are included, and both inverse
   laws are proved.

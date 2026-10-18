@@ -44,7 +44,7 @@ The Lean model implements these five steps directly.
 </div>
 
 The whole model is about 120 lines, in
-[`TensorCore/TC/Block.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Block.lean).
+[`TensorCore/TC/Block.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Block.lean).
 These are its definitions, unchanged apart from omitted comments:
 
 ```lean
@@ -116,7 +116,7 @@ Three design choices run through the model:
 - **Failure is explicit.** `evalBlock` returns `Except ModelError BlockTrace`.
   It rejects inputs with the wrong number of products, NaN or infinity
   operands, and sums that overflow FP32. The proved theorem
-  [`evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AcceptedDomain.lean#L36)
+  [`evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/AcceptedDomain.lean#L36)
   gives the exact accepted domain, so no input is rejected silently.
 
 ## A worked trace

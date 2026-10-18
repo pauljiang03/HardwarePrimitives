@@ -58,9 +58,9 @@ The FP32 instructions of CDNA 1, 2 and 3 are a sequential FMA,
 `(…((c + p₁) + p₂) + …)`: `sfmaF32` is a `correct_rounding` block with
 `N_FMA = 1`, chained by `dotBits`. `c` and `p₁` are combined first, and the
 result is the `c` of the rest
-([`MatrixCore.dotBits_sfma_cons`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CompositionProperties.lean#L61));
+([`MatrixCore.dotBits_sfma_cons`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/CompositionProperties.lean#L61));
 each step is the FP32 value nearest to `c + a·b`, ties to even
-([`MatrixCore.sfma_step_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CompositionProperties.lean#L79)):
+([`MatrixCore.sfma_step_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/CompositionProperties.lean#L79)):
 
 ```lean
 import MatrixCore
@@ -82,20 +82,20 @@ of length `k`; `m` and `n` do not change the arithmetic.
 
 ## Proved properties of chains
 
-- [`MatrixCore.dotBits_exact_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/InnerProduct.lean#L166):
+- [`MatrixCore.dotBits_exact_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/InnerProduct.lean#L166):
   the exact `c + Σ_ℓ a_ℓ b_ℓ` of the whole vectors equals the output plus the
   residuals `exact − d` of all the blocks.
-- [`MatrixCore.dotBits_exact_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/InnerProduct.lean#L176):
+- [`MatrixCore.dotBits_exact_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/InnerProduct.lean#L176):
   if every accepted block's residual is bounded by `B`, the output is within
   the sum of the blocks' bounds of the exact inner product.
-- [`MatrixCore.mfma_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MFMA.lean#L44):
+- [`MatrixCore.mfma_error`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/MFMA.lean#L44):
   each entry of `D = AB + C` is the observed inner product of its row and
   column, and a finite entry is within the sum of its blocks' bounds of the
   exact `c_ij + Σ_ℓ a_iℓ b_ℓj`.
-- [`MatrixCore.evalBlock_contract`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Contract.lean#L36)
-  and [`MatrixCore.dotBits_blocks`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Contract.lean#L178):
+- [`MatrixCore.evalBlock_contract`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Contract.lean#L36)
+  and [`MatrixCore.dotBits_blocks`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Contract.lean#L178):
   every accepted block satisfies a contract bundling what is proved about it,
   with its output error bound, and any such property carries to every block of
   an inner product.
-- [`MatrixCore.dotBits_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Monotonicity.lean#L629):
+- [`MatrixCore.dotBits_c_monotone`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Monotonicity.lean#L629):
   an inner product of any length is monotone in its initial `c`.

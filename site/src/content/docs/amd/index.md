@@ -12,7 +12,7 @@ and to the published hardware observations.
 The library, Matrix-Core, follows Khattak, Mikaitis and Graziani,
 *[Accurate Models of AMD Matrix Cores](https://arxiv.org/abs/2609.14845)*
 (arXiv 2609.14845), and uses that paper's notation throughout. It lives in the
-[`amd/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/amd)
+[`amd/`](https://github.com/pauljiang03/HardwarePrimitives/tree/main/matrix-core)
 folder as a standalone Lake project, with its own numerical foundation: it
 does not depend on the Tensor Core library, and the two cannot be imported
 into the same file.
@@ -84,9 +84,9 @@ correctly rounded sum of a block of any generation from its output.
 </div>
 
 The block is defined in
-[`amd/MatrixCore/MC/Eval.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Eval.lean)
+[`amd/MatrixCore/MC/Eval.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Eval.lean)
 from the stages in
-[`Stages.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/Stages.lean).
+[`Stages.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/Stages.lean).
 These are its definitions, unchanged apart from omitted comments:
 
 ```lean
@@ -161,7 +161,7 @@ Three design choices run through the model, as on the Tensor Core side:
 - **Bits in, bits out.** Inputs are `BitVec` words of the input formats and the
   output is an `F32 = BitVec 32`.
 - **Failure is explicit.** `evalBlock` returns `Except ModelError (BlockTrace P)`,
-  and [`MatrixCore.evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L36)
+  and [`MatrixCore.evalBlock_success_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/AcceptedDomain.lean#L36)
   gives the exact accepted domain. `blockOutcome` gives the infinity or NaN
   the hardware returns where the finite model rejects an input
   ([normalization and final rounding](/HardwarePrimitives/amd/normalization/#special-values)).
@@ -213,7 +213,7 @@ as `1.5 × 1.5` and as `2.25 × 1`.
 The products have the same values, but the exponent the alignment sees is the
 sum of the input exponents, so the second block aligns on a coarser grid. Both
 rows are checked in Lean
-([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L176)):
+([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ProductMonotonicity.lean#L176)):
 
 ```lean
 import MatrixCore

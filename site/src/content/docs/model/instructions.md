@@ -68,7 +68,7 @@ FP16 block FMAs, then `C` added the same way), and the
 
 ## Proved properties of chains
 
-- [`runBlocks_residual_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Composition.lean#L93):
+- [`runBlocks_residual_ledger`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Composition.lean#L93):
   the exact sum of all inputs equals the final output plus the sum of the
   losses recorded by every block FMA, alignment and final rounding included.
 - `zero_products_passthrough`: a block FMA whose products are all zero returns its

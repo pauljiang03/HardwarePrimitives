@@ -88,7 +88,7 @@ def alignedSum (padding : ℕ) (ps : List Unpacked) : Option ℤ × ℚ :=
   | some e => (some e, sumQ (ps.map fun p => truncMantissa p.value e (23 + padding)))
 ```
 
-[`MatrixCore.truncGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Grid.lean#L13)
+[`MatrixCore.truncGrid`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Grid.lean#L13)
 takes the floor of the **magnitude** and restores the sign, as a
 sign-magnitude shifter does. For a negative product this is not rounding down
 (toward −∞). `alignedSum` returns `e_max` and the exact sum `S_{p_i,sum}` of
@@ -197,7 +197,7 @@ theorem evalBlockMachine_eq {P : Model} (x : BlockInput P) (w carryBits : ℕ)
 
 These hold for **every** encoded input, and the tests show they are needed:
 eight FP16 products just below 4 wrap in a 29-bit register.
-[`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/MachineRefinement.lean#L185)
+[`MatrixCore.machinePrefix_exact`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/MachineRefinement.lean#L185)
 adds that every **prefix** of the accumulation is exact at that width, so the
 result does not depend on the order of the additions, even with cancellation.
 The exact accumulator is a sound abstraction of any adder at least this wide;

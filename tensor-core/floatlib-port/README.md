@@ -15,7 +15,7 @@ definitions and proves the two implementations equal.
 ## Build and check
 
 ```sh
-cd floatlib-port
+cd tensor-core/floatlib-port
 python3 scripts/check_all.py           # prepare the pinned parent sources, build, run every check
 python3 scripts/check_equivalence.py   # compare with a snapshot of the current parent sources
 ```

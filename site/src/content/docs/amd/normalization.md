@@ -105,7 +105,7 @@ and zero when it is subnormal.
 - A nonzero `S_acc` that rounds or flushes to zero keeps its sign.
 
 The paper does not test zero signs; the [paper
-notes](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/docs/paper-notes.md)
+notes](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/docs/paper-notes.md)
 record the choice.
 
 ## How the rounding is specified
@@ -116,14 +116,14 @@ that does not mention it:
 - **Nearest even:** `NearestEven32 x w` says that `w` decodes to a finite value
   at least as close to `x` as any finite FP32 value, with an even last bit
   when two are equally close.
-  [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/RoundingContract.lean#L312)
+  [`MatrixCore.rne32_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/RoundingContract.lean#L312)
   proves that every result of `rne32` meets it.
 - **Uniqueness:** within the finite range, the correctly rounded word with the
   sign of the input is unique
-  ([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Uniqueness.lean#L356)).
+  ([`MatrixCore.rne32_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Uniqueness.lean#L356)).
 - **The block output:** on every model with subnormals, `d` is the nearest
   FP32 value to `S_acc`, ties to even
-  ([`MatrixCore.evalBlock_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/AcceptedDomain.lean#L54)).
+  ([`MatrixCore.evalBlock_nearestEven`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/AcceptedDomain.lean#L54)).
 
 ## Special values
 

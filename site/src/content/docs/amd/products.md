@@ -18,7 +18,7 @@ def Unpacked.mul (a b : Unpacked) : Unpacked :=
 def Prepared.p (x : Prepared) : List Unpacked := List.zipWith Unpacked.mul x.a x.b
 ```
 
-[`Unpacked.mul`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/Numerics/Format.lean#L79)
+[`Unpacked.mul`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/Numerics/Format.lean#L79)
 multiplies the integer significands exactly, adds the exponents and adds the
 mantissa widths (an FP16 × FP16 product has 20 mantissa bits). Nothing is
 rounded, and the value is exact:
@@ -58,7 +58,7 @@ Two products with the same value can have different exponents. Take FP16
 On CDNA 3 the first puts the alignment grid one bit **finer** than the second,
 so the other products keep a bit more, and the two blocks of
 [the worked trace](/HardwarePrimitives/amd/#a-worked-trace) give different outputs
-([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/ProductMonotonicity.lean#L176)).
+([`MatrixCore.cdna3F16_products_not_determined`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/ProductMonotonicity.lean#L176)).
 The output of CDNA 3 is therefore not a function of the products' values.
 
 A **subnormal operand** makes the difference extreme. Its significand is below

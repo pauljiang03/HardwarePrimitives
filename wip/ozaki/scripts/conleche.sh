@@ -17,8 +17,8 @@ check() { # name dir modules...
   "$CHECKER" --verified --jobs=4 "$OUT/$name.ndjson" > "$OUT/$name.txt" 2>&1 || { echo "FAIL check $name"; tail -5 "$OUT/$name.txt"; return 1; }
   echo "ok   $name: $(tail -1 "$OUT/$name.txt")"
 }
-(cd "$ROOT" && lake build TensorCore TensorCoreTests >/dev/null) && (cd "$ROOT/amd" && lake build MatrixCore MatrixCoreTests >/dev/null) || exit 1
-check tensorcore "$ROOT" $(mods "$ROOT" TensorCore) TensorCore $(mods "$ROOT/tests" TensorCoreTests) TensorCoreTests
-check matrixcore "$ROOT/amd" $(mods "$ROOT/amd" MatrixCore) MatrixCore $(mods "$ROOT/amd/tests" MatrixCoreTests) MatrixCoreTests
+(cd "$ROOT/tensor-core" && lake build TensorCore TensorCoreTests >/dev/null) && (cd "$ROOT/matrix-core" && lake build MatrixCore MatrixCoreTests >/dev/null) || exit 1
+check tensorcore "$ROOT/tensor-core" $(mods "$ROOT/tensor-core" TensorCore) TensorCore $(mods "$ROOT/tensor-core/tests" TensorCoreTests) TensorCoreTests
+check matrixcore "$ROOT/matrix-core" $(mods "$ROOT/matrix-core" MatrixCore) MatrixCore $(mods "$ROOT/matrix-core/tests" MatrixCoreTests) MatrixCoreTests
 check ozaki-tc "$ROOT/wip/ozaki" $(mods "$ROOT/wip/ozaki" Ozaki) Ozaki $(mods "$ROOT/wip/ozaki" OzakiTC) OzakiTC $(mods "$ROOT/wip/ozaki/tests" OzakiTCTests) OzakiTCTests
 check ozaki-mc "$ROOT/wip/ozaki" $(mods "$ROOT/wip/ozaki" Ozaki) Ozaki $(mods "$ROOT/wip/ozaki" OzakiMC) OzakiMC $(mods "$ROOT/wip/ozaki/tests" OzakiMCTests) OzakiMCTests

@@ -95,8 +95,8 @@ project is a work in progress.
 
 ## Build and run
 
-`mmalgebra/` is a standalone Lake project that requires the two models by path (`..` and
-`../amd`) and the Ozaki project (`../ozaki`), whose exactness theorems it builds on; all use Lean
+`mmalgebra/` is a standalone Lake project that requires the two models by path (`../tensor-core` and
+`../matrix-core`) and the Ozaki project (`../ozaki`), whose exactness theorems it builds on; all use Lean
 4.33.1. Build the models and `ozaki/` in their own directories first, then, from this directory:
 
 ```sh

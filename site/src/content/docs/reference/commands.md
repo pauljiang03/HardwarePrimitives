@@ -3,6 +3,8 @@ title: Commands
 description: Executable adapters, the tc launcher, and validation scripts.
 ---
 
+Run the commands on this page from `tensor-core/`.
+
 ## The `tc` launcher
 
 ```sh

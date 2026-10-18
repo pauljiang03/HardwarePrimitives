@@ -27,7 +27,7 @@ for any input words, infinities and NaN included.
 ## Build
 
 ```sh
-cd amd
+cd matrix-core
 lake build                    # MatrixCore, the paper's test vectors, the axiom audit
 python3 scripts/check.py      # clean build, examples, documentation blocks
 ```

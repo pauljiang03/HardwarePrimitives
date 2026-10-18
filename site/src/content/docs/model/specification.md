@@ -12,7 +12,7 @@ namespace, and the theorems relating it to the model end in `_eq_spec`. Lean pro
 
 ## How the specification differs
 
-[`TensorCore/TC/Specification/Defs.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/Defs.lean)
+[`TensorCore/TC/Specification/Defs.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/Defs.lean)
 imports only Lean's standard library and a notation file. It shares no
 definitions with the implementation and is written in a different style:
 
@@ -73,18 +73,18 @@ theorem evalBlock_eq_specM {p : Model} (x : BlockInput p) :
       bitsM (parametersOf p) p.outputMantissaBits (inputOf x)
 ```
 
-[`IndependentSpec.evalBlock_eq_specM`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L103) holds on every encoded input of every
-model, with no hypothesis on the output width; [`IndependentSpec.fp8_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L174)
+[`IndependentSpec.evalBlock_eq_specM`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/OutputWidth.lean#L103) holds on every encoded input of every
+model, with no hypothesis on the output width; [`IndependentSpec.fp8_eq_spec`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/OutputWidth.lean#L174)
 states the Ada and Hopper FP8 instances, and `machine_eq_specM` and
 `runBlocks_eq_specM` extend it to fixed-width accumulators and to chains. For
 `m ≥ 23` the two specifications select the same word
-([`IndependentSpec.bitsM_eq_bits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Specification/OutputWidth.lean#L124)), so `evalBlock_eq_spec` is the FP32
+([`IndependentSpec.bitsM_eq_bits`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Specification/OutputWidth.lean#L124)), so `evalBlock_eq_spec` is the FP32
 case.
 
 ## Checking independence
 
 Independence is checked mechanically. The audit in
-[`tests/TensorCoreTests/Specification/Audit.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tests/TensorCoreTests/Specification/Audit.lean)
+[`tests/TensorCoreTests/Specification/Audit.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/tests/TensorCoreTests/Specification/Audit.lean)
 walks every constant used by the specification's types **and proof terms**,
 transitively, and fails if any comes from the implementation rather than
 `Init`, `Std`, or `Lean`. The recorded run audited 184 specification

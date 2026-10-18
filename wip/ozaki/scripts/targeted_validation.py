@@ -3,9 +3,9 @@
 
 Every predicted output word comes from an `#eval` of the models, not from this script:
 
-* `scripts/targeted/TensorCoreCases.lean` evaluates `TensorCore.runBlocks` (NVIDIA), run from the
-  repository root;
-* `scripts/targeted/MatrixCoreCases.lean` evaluates `MatrixCore.dotBits` (AMD), run from `amd/`.
+* `scripts/targeted/TensorCoreCases.lean` evaluates `TensorCore.runBlocks` (NVIDIA), run from
+  `tensor-core/`;
+* `scripts/targeted/MatrixCoreCases.lean` evaluates `MatrixCore.dotBits` (AMD), run from `matrix-core/`.
 
 This script runs both (or reads their saved output), formats the words as hex, attaches each
 case's purpose, suggested instruction, Lean source and the meaning of a mismatch, and checks the
@@ -574,11 +574,11 @@ def main():
     if "--tc" in args:
         tc = read_lines(args[args.index("--tc") + 1])
     else:
-        tc = lean_lines(ROOT, "wip/ozaki/scripts/targeted/TensorCoreCases.lean")
+        tc = lean_lines(os.path.join(ROOT, "tensor-core"), "../wip/ozaki/scripts/targeted/TensorCoreCases.lean")
     if "--mc" in args:
         mc = read_lines(args[args.index("--mc") + 1])
     else:
-        mc = lean_lines(os.path.join(ROOT, "amd"), "../wip/ozaki/scripts/targeted/MatrixCoreCases.lean")
+        mc = lean_lines(os.path.join(ROOT, "matrix-core"), "../wip/ozaki/scripts/targeted/MatrixCoreCases.lean")
     cases = build(tc, mc)
     counts = {}
     for c in cases:

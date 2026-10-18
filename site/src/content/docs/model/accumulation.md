@@ -19,7 +19,7 @@ the library also models a finite register and proves the two agree.
 
 ## A fixed-width register model
 
-[`TensorCore/TC/Accumulator.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/Accumulator.lean)
+[`TensorCore/TC/Accumulator.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/Accumulator.lean)
 describes accumulation as a hardware register would perform it: `w`-bit
 two's-complement additions that wrap on overflow, applied one aligned term at
 a time.
@@ -61,7 +61,7 @@ These widths count the two's complement sign bit. Without it they are 28, 30
 and 32 bits; the A100 and H100 values are the adder widths *Accurate Models*
 reports (§4.1.2 and §4.1.6).
 
-[`evalBlock_machinePrefix`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/TensorCore/TC/AlignmentExponent.lean#L184)
+[`evalBlock_machinePrefix`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/tensor-core/TensorCore/TC/AlignmentExponent.lean#L184)
 goes further. Every **prefix** of the accumulation is exact at that width,
 so the result does not depend on the order of additions, even with
 cancellation.

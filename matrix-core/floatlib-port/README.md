@@ -11,7 +11,7 @@ mathlib), so `MatrixCore` itself stays free of mathlib.
 ## Build and check
 
 ```sh
-cd amd/floatlib-port
+cd matrix-core/floatlib-port
 python3 scripts/check.py        # pin check, build, proofs, audit, comparison with mc_eval
 echo "cdna1F16 3c00,3c00,3c00,3c00 3c00,3c00,3c00,3c00 0" | .lake/build/bin/mc_floatlib
 ```

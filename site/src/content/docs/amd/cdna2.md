@@ -79,8 +79,8 @@ theorem pairwiseSum_four (P : Model) (x : Prepared) (p₁ p₂ p₃ p₄ : Unpac
       return (if P.subnormals then x else x.flushed).c.value + t
 ```
 
-([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L21),
-[`MatrixCore.pairwiseSum_two`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/PairWiseSum.lean#L39).)
+([`MatrixCore.pairwiseSum_four`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/PairWiseSum.lean#L21),
+[`MatrixCore.pairwiseSum_two`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/PairWiseSum.lean#L39).)
 
 ## Intermediate overflow
 

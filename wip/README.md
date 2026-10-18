@@ -12,7 +12,7 @@ does not cover it, and the root checks do not build it.
 | [`docs/`](docs/) | Earlier guides, the reviewer guide, the status file, the theorem indexes and the test walkthrough; not maintained |
 
 `ozaki/` and `mmalgebra/` are standalone Lake projects that require
-`TensorCore` and [`MatrixCore`](../amd/README.md) by relative path:
+[`TensorCore`](../tensor-core/README.md) and [`MatrixCore`](../matrix-core/README.md) by relative path:
 
 ```sh
 cd wip/ozaki && lake build && python3 -B scripts/check.py

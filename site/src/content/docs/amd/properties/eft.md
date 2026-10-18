@@ -27,9 +27,9 @@ theorem mcEft_isSome_iff (h : mcEft x D = .ok r) (hp : prepare x = some px) :
     r.bits.isSome = true ↔ absQ px.exact < overflowThreshold32
 ```
 
-([`MatrixCore.mcEft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/Encoded.lean#L64),
-[`MatrixCore.mcEft_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/Encoded.lean#L108),
-[`MatrixCore.mcEft_isSome_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/Encoded.lean#L115).)
+([`MatrixCore.mcEft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Encoded.lean#L64),
+[`MatrixCore.mcEft_correct`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Encoded.lean#L108),
+[`MatrixCore.mcEft_isSome_iff`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Encoded.lean#L115).)
 The result is `.fast b` (the FP32 path), `.exact b` (the exact fallback) or
 `.outOfRange`. An infinity or NaN among the inputs or in `D`, or vectors of the
 wrong length, give an error instead.
@@ -44,7 +44,7 @@ wrong length, give an error instead.
 3. **Sum the high parts** to get `H`. The overlap is `εₒ = D − H`.
 4. **Add the low parts back:** `S = D − εₒ + Σ low parts`, and round once to
    FP32
-   ([`MatrixCore.EftSplit.recovery`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/Core.lean#L139)).
+   ([`MatrixCore.EftSplit.recovery`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Core.lean#L139)).
 
 ## The cut-off of each generation
 
@@ -75,10 +75,10 @@ passes:
 
 When the check passes, every FP32 step before the last one is exact, so the
 fast path returns the correctly rounded sum
-([`MatrixCore.EftSplit.fastPath_sound`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/Core.lean#L155)).
+([`MatrixCore.EftSplit.fastPath_sound`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Core.lean#L155)).
 The key lemma is that FP32 summation is exact when all the bits lie on one grid
 within one span of 24 bits inside the FP32 range
-([`MatrixCore.naiveSum32_exact_of_bitSpan`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/Sum32.lean#L119)).
+([`MatrixCore.naiveSum32_exact_of_bitSpan`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/Sum32.lean#L119)).
 
 ### The exact fallback
 
@@ -95,7 +95,7 @@ generation has its own exact statement.
 
 The output is already the correctly rounded sum, so the correction from the
 output returns the output
-([`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA1.lean#L11);
+([`MatrixCore.correctRounding_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA1.lean#L11);
 `cdna1F16_eft`, `cdna1BF16_eft`, `sfmaF32_eft`).
 
 ### CDNA 2: the overlap is every rounding error
@@ -117,7 +117,7 @@ theorem pairwise_eft (hacc : P.accumulation = .pairWiseSum) (h : evalBlock x = .
     PairwiseOverlap t
 ```
 
-([`MatrixCore.pairwise_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA2.lean#L109);
+([`MatrixCore.pairwise_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA2.lean#L109);
 `cdna2F16_eft`, `cdna2BF16_eft`, `cdna2BF16_1k_eft`.) The bound goes through
 the [CDNA 2 error bound](/HardwarePrimitives/amd/properties/cdna2/#error-bounds),
 which can be large under cancellation, so nothing here says the CDNA 2 overlap
@@ -140,7 +140,7 @@ structure AlignedOverlap (t : BlockTrace P) : Prop where
   loss : t.prepared.exact - t.sAcc = sumQ t.split.lows - keptLow P t.prepared t.split.q
 ```
 
-([`MatrixCore.aligned_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA3.lean#L632);
+([`MatrixCore.aligned_eft`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L632);
 `cdna3F16_eft`, `cdna3BF16_eft`, `cdna3XF32_eft`, `cdna3FP8_eft`.) What
 alignment dropped is the low parts minus the kept part. The kept part is
 usually not zero: the cut-off is normally the last bit of `D`, above the
@@ -150,12 +150,12 @@ After cancellation, the last bit of `D` can lie at or below the alignment grid.
 If also `e_c ≤ e_max`, the final rounding is exact (`D = S_acc`). With global
 alignment (FP16, BF16, XF32) it follows that `H = D`, the overlap is `0`, and
 the low parts are exactly what alignment dropped: `S = D + Σ low parts`
-([`MatrixCore.globalAlignment_exact_rounding`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/EFT/CDNA3.lean#L706)).
+([`MatrixCore.globalAlignment_exact_rounding`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/EFT/CDNA3.lean#L706)).
 
 ## Worked examples
 
 Every row is a kernel-checked test
-([`EFT.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/tests/MatrixCoreTests/EFT.lean)).
+([`EFT.lean`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/tests/MatrixCoreTests/EFT.lean)).
 "Correction" is the result from the matrix core's own `D`.
 
 | Block | Inputs | Matrix core `D` | Correctly rounded `S` | Correction |

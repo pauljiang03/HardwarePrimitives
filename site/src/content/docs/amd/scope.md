@@ -17,7 +17,7 @@ description: What the Lean model of AMD matrix cores covers, the modeling choice
 ## Choices the paper leaves open
 
 The model fixes these, and the
-[paper notes](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/docs/paper-notes.md)
+[paper notes](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/docs/paper-notes.md)
 record why:
 
 - **NaN.** The GPUs return a NaN with a negative sign; its payload is not

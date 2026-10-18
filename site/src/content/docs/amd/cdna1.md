@@ -66,7 +66,7 @@ theorem correctRounding_success_iff {P : Model} (hacc : P.accumulation = .correc
 The FP32 instructions compute `(…((c + p₁) + p₂) + …)`: `sfmaF32` blocks of one
 product, chained through `c` by `dotBits`. `c` and `p₁` are combined first,
 and the result is the `c` of the rest
-([`MatrixCore.dotBits_sfma_cons`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/amd/MatrixCore/MC/CompositionProperties.lean#L61)).
+([`MatrixCore.dotBits_sfma_cons`](https://github.com/pauljiang03/HardwarePrimitives/blob/main/matrix-core/MatrixCore/MC/CompositionProperties.lean#L61)).
 Each step is one correctly rounded fused multiply-add:
 
 ```lean
